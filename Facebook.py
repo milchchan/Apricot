@@ -15,7 +15,7 @@ from System import Object, Byte, UInt32, Double, Char, String, Uri, DateTime, Ti
 from System.Collections.Generic import List, Stack, Dictionary, KeyValuePair
 from System.Configuration import ConfigurationManager, ConfigurationUserLevel, ExeConfigurationFileMap
 from System.Diagnostics import Trace
-from System.Globalization import NumberStyles, CultureInfo
+from System.Globalization import CultureInfo, NumberStyles
 from System.IO import Stream, FileStream, StreamReader, StreamWriter, Path, Directory, File, DirectoryInfo, FileInfo, FileMode, FileAccess, FileShare
 from System.Reflection import Assembly
 from System.Text import StringBuilder, Encoding, UTF8Encoding
