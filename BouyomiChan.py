@@ -22,6 +22,7 @@ from Apricot import Balloon, Message, Script
 def tryConnect(address, port):
 	try:
 		return TcpClient(address, port)
+	
 	except:
 		return None
 
