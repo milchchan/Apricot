@@ -79,10 +79,10 @@ def update():
 						entryList.Add(entry)
 
 				finally:			
-					if stream != None:
+					if stream is not None:
 						stream.Close()
 			
-					if response != None:
+					if response is not None:
 						response.Close()
 
 			except Exception, e:
@@ -145,7 +145,7 @@ def getTermList(dictionary, text):
 
 		if dictionary.ContainsKey(s[0]):
 			for term in dictionary[s[0]]:
-				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm == None else selectedTerm.Length):
+				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
 					selectedTerm = term
 		
 		if String.IsNullOrEmpty(selectedTerm):
@@ -161,7 +161,7 @@ def getTermList(dictionary, text):
 def onTick(timer, e):
 	global username, password
 
-	if String.IsNullOrEmpty(username) == False and String.IsNullOrEmpty(password) == False:
+	if not String.IsNullOrEmpty(username) and not String.IsNullOrEmpty(password):
 		update()
 
 	timer.Stop()
@@ -176,8 +176,8 @@ def onOpened(s, e):
 	def onSignInClick(source, rea):
 		config = None
 		directoryInfo = DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name))
-		imageBrush = None
-		textBrush = None
+		backgroundBrush = None
+		textColor = SystemColors.ControlTextBrush
 		
 		if directoryInfo.Exists:
 			fileName = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
@@ -189,13 +189,13 @@ def onOpened(s, e):
 					exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
 					config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-		if config == None:
+		if config is None:
 			config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
 			directoryInfo = None
 
 		if config.HasFile:
-			if config.AppSettings.Settings["BackgroundImage"] != None:
-				fileInfo = FileInfo(config.AppSettings.Settings["BackgroundImage"].Value if directoryInfo == None else System.IO.Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["BackgroundImage"].Value));
+			if config.AppSettings.Settings["BackgroundImage"] is not None:
+				fileInfo = FileInfo(config.AppSettings.Settings["BackgroundImage"].Value if directoryInfo is None else Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["BackgroundImage"].Value));
 				fs = None
 				bi = BitmapImage()
 
@@ -209,37 +209,47 @@ def onOpened(s, e):
 					bi.EndInit()
 
 				finally:
-					if fs != None:
+					if fs is not None:
 						fs.Close()
 
-				imageBrush = ImageBrush(bi)
-				imageBrush.TileMode = TileMode.Tile
-				imageBrush.ViewportUnits = BrushMappingMode.Absolute
-				imageBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
-				imageBrush.Stretch = Stretch.None
+				backgroundBrush = ImageBrush(bi)
+				backgroundBrush.TileMode = TileMode.Tile
+				backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
+				backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
+				backgroundBrush.Stretch = Stretch.None
 
-				if imageBrush.CanFreeze:
-					imageBrush.Freeze()
+				if backgroundBrush.CanFreeze:
+					backgroundBrush.Freeze()
 
-			if config.AppSettings.Settings["TextColor"] != None:
+			if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
+				if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
+					backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
+
+					if backgroundBrush.CanFreeze:
+						backgroundBrush.Freeze()
+
+			if config.AppSettings.Settings["TextColor"] is not None:
 				if config.AppSettings.Settings["TextColor"].Value.Length > 0:
-					textBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value))
+					textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
+				
+		textBrush = SolidColorBrush(textColor)
 
-					if textBrush.CanFreeze:
-						textBrush.Freeze()
+		if textBrush.CanFreeze:
+			textBrush.Freeze()
 
 		window = Window()
 
 		stackPanel1 = StackPanel()
+		stackPanel1.UseLayoutRounding = True
 		stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
 		stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
 		stackPanel1.Orientation = Orientation.Vertical
-
+		
 		stackPanel2 = StackPanel()
 		stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
 		stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
 		stackPanel2.Orientation = Orientation.Vertical
-		stackPanel2.Background = SystemColors.WindowBrush if imageBrush == None else imageBrush
+		stackPanel2.Background = SystemColors.ControlBrush if backgroundBrush is None else backgroundBrush
 
 		linearGradientBrush = LinearGradientBrush()
 		gradientStop1 = GradientStop(Color.FromArgb(0, 0, 0, 0), 0)
@@ -260,6 +270,18 @@ def onOpened(s, e):
 		stackPanel3.Orientation = Orientation.Vertical
 		stackPanel3.Background = linearGradientBrush
 
+		solidColorBrush1 = SolidColorBrush(Colors.Black)
+		solidColorBrush1.Opacity = 0.25
+
+		if solidColorBrush1.CanFreeze:
+			solidColorBrush1.Freeze()
+
+		border1 = Border()
+		border1.HorizontalAlignment = HorizontalAlignment.Stretch
+		border1.VerticalAlignment = VerticalAlignment.Stretch
+		border1.BorderThickness = Thickness(0, 0, 0, 1)
+		border1.BorderBrush = solidColorBrush1
+
 		stackPanel4 = StackPanel()
 		stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
 		stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
@@ -272,7 +294,7 @@ def onOpened(s, e):
 		stackPanel5.Orientation = Orientation.Vertical
 
 		usernameLabel = Label()
-		usernameLabel.Foreground = SystemColors.ControlTextBrush if textBrush == None else textBrush
+		usernameLabel.Foreground = textBrush
 
 		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 			usernameLabel.Content = "ユーザ名"
@@ -280,8 +302,6 @@ def onOpened(s, e):
 			usernameLabel.Content = "Username"
 
 		RenderOptions.SetClearTypeHint(usernameLabel, ClearTypeHint.Enabled)
-
-		textColor = SystemColors.ControlText if textBrush == None else textBrush.Color
 
 		dropShadowEffect = DropShadowEffect()
 		dropShadowEffect.BlurRadius = 1
@@ -308,7 +328,7 @@ def onOpened(s, e):
 		stackPanel6.Orientation = Orientation.Vertical
 
 		passwordLabel = Label()
-		passwordLabel.Foreground = SystemColors.ControlTextBrush if textBrush == None else textBrush
+		passwordLabel.Foreground = textBrush
 
 		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 			passwordLabel.Content = "パスワード"
@@ -326,14 +346,16 @@ def onOpened(s, e):
 		stackPanel4.Children.Add(stackPanel6)
 		stackPanel4.Children.Add(passwordBox)
 			
-		stackPanel3.Children.Add(stackPanel4)
+		border1.Child = stackPanel4
+
+		stackPanel3.Children.Add(border1)
 		stackPanel2.Children.Add(stackPanel3)
 		stackPanel1.Children.Add(stackPanel2)
 
 		def onClick(source, args):
 			global username, password
 
-			if String.IsNullOrEmpty(usernameTextBox.Text) == False and String.IsNullOrEmpty(passwordBox.Password) == False:
+			if not String.IsNullOrEmpty(usernameTextBox.Text) and not String.IsNullOrEmpty(passwordBox.Password):
 				username = usernameTextBox.Text
 				password = passwordBox.Password
 				context = TaskScheduler.FromCurrentSynchronizationContext()
@@ -353,13 +375,13 @@ def onOpened(s, e):
 									exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
 									config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-						if config == None:
+						if config is None:
 							config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
 							directoryInfo = None
 
 						if config.HasFile:
-							if config.AppSettings.Settings["Scripts"] != None:
-								di = DirectoryInfo(config.AppSettings.Settings["Scripts"].Value if directoryInfo == None else System.IO.Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["Scripts"].Value));
+							if config.AppSettings.Settings["Scripts"] is not None:
+								di = DirectoryInfo(config.AppSettings.Settings["Scripts"].Value if directoryInfo is None else Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["Scripts"].Value));
 													
 								for fileInfo in di.GetFiles("*.py"):
 									fs1 = None
@@ -372,14 +394,14 @@ def onOpened(s, e):
 										lines = sr.ReadToEnd()
 
 									finally:
-										if sr != None:
+										if sr is not None:
 											sr.Close()
 
-										if fs1 != None:
+										if fs1 is not None:
 											fs1.Close()
 
-									if lines != None:
-										if Regex.IsMatch(lines, "\\# Twitter.py", RegexOptions.CultureInvariant):
+									if lines is not None:
+										if Regex.IsMatch(lines, "\\# Gmail.py", RegexOptions.CultureInvariant):
 											lines = Regex.Replace(lines, "username\\s*=\\s*\"\"", String.Format("username = \"{0}\"", username), RegexOptions.CultureInvariant)
 											lines = Regex.Replace(lines, "password\\s*=\\s*\"\"", String.Format("password = \"{0}\"", password), RegexOptions.CultureInvariant)
 											fs2 = None
@@ -391,10 +413,10 @@ def onOpened(s, e):
 												sw.Write(lines)
 
 											finally:
-												if sw != None:
+												if sw is not None:
 													sw.Close()
 
-												if fs2 != None:
+												if fs2 is not None:
 													fs2.Close()
 
 					except Exception, e:
@@ -405,7 +427,7 @@ def onOpened(s, e):
 					global menuItem
 	
 					for window in Application.Current.Windows:
-						if window == Application.Current.MainWindow and window.ContextMenu != None:
+						if window is Application.Current.MainWindow and window.ContextMenu is not None:
 							if window.ContextMenu.Items.Contains(menuItem):
 								window.ContextMenu.Items.Remove(menuItem)
 								window.ContextMenu.Opened -= onOpened
@@ -419,17 +441,17 @@ def onOpened(s, e):
 
 			window.Close()
 
-		solidColorBrush = SolidColorBrush(Colors.White)
-		solidColorBrush.Opacity = 0.5
+		solidColorBrush2 = SolidColorBrush(Colors.White)
+		solidColorBrush2.Opacity = 0.5
 
-		if solidColorBrush.CanFreeze:
-			solidColorBrush.Freeze()
+		if solidColorBrush2.CanFreeze:
+			solidColorBrush2.Freeze()
 
-		border = Border()
-		border.HorizontalAlignment = HorizontalAlignment.Stretch
-		border.VerticalAlignment = VerticalAlignment.Stretch
-		border.BorderThickness = Thickness(0, 1, 0, 0)
-		border.BorderBrush = solidColorBrush
+		border2 = Border()
+		border2.HorizontalAlignment = HorizontalAlignment.Stretch
+		border2.VerticalAlignment = VerticalAlignment.Stretch
+		border2.BorderThickness = Thickness(0, 1, 0, 0)
+		border2.BorderBrush = solidColorBrush2
 
 		signInButton = Button()
 		signInButton.HorizontalAlignment = HorizontalAlignment.Right
@@ -445,8 +467,8 @@ def onOpened(s, e):
 
 		signInButton.Click += onClick
 
-		border.Child = signInButton
-		stackPanel1.Children.Add(border)
+		border2.Child = signInButton
+		stackPanel1.Children.Add(border2)
 		usernameTextBox.Focus()
 			
 		window.Owner = Application.Current.MainWindow
@@ -473,12 +495,12 @@ def onStart(s, e):
 	global timer, menuItem, separator
 	
 	if String.IsNullOrEmpty(username) or String.IsNullOrEmpty(password):
-		if menuItem == None:
+		if menuItem is None:
 			menuItem = MenuItem()
 			menuItem.Header = "Gmail"
 
 		for window in Application.Current.Windows:
-			if window == Application.Current.MainWindow and window.ContextMenu != None:
+			if window is Application.Current.MainWindow and window.ContextMenu is not None:
 				if not window.ContextMenu.Items.Contains(menuItem):
 					window.ContextMenu.Opened += onOpened
 					window.ContextMenu.Items.Insert(window.ContextMenu.Items.Count - 4, menuItem)

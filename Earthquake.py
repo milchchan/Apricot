@@ -57,7 +57,7 @@ def update():
 									elif attribute.Name.Equals("outbreak_datetime"):
 										entry.Created = entry.Modified = DateTime.Parse(attribute.Value)
 						
-						if epicenter != None:
+						if epicenter is not None:
 							if String.IsNullOrEmpty(maxLevel):
 								maxLevel = "N/A"
 
@@ -69,10 +69,10 @@ def update():
 							entryList.Add(entry)
 
 				finally:			
-					if stream != None:
+					if stream is not None:
 						stream.Close()
 			
-					if response != None:
+					if response is not None:
 						response.Close()
 
 			except Exception, e:
@@ -135,7 +135,7 @@ def getTermList(dictionary, text):
 
 		if dictionary.ContainsKey(s[0]):
 			for term in dictionary[s[0]]:
-				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm == None else selectedTerm.Length):
+				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
 					selectedTerm = term
 		
 		if String.IsNullOrEmpty(selectedTerm):

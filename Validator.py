@@ -40,20 +40,20 @@ def parseSequence(xmlNode, directoryInfo, warningList, errorList):
 		elif childNode1.Name.Equals("motion"):
 			for childNode2 in childNode1.ChildNodes:
 				if childNode2.Name.Equals("image"):
-					if childNode2.InnerText.Length > 0 and File.Exists(Path.Combine(directoryInfo.FullName, childNode2.InnerText)) == False:
-						if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")) == False:
+					if childNode2.InnerText.Length > 0 and not File.Exists(Path.Combine(directoryInfo.FullName, childNode2.InnerText)):
+						if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 							errorList.Add(String.Format("指定されたファイルが見つかりません。 \"{0}\"", childNode2.InnerText))
 						else:
 							errorList.Add(String.Format("Could not find the specified file. \"{0}\"", childNode2.InnerText))
 
 		elif childNode1.Name.Equals("sound"):
-			if childNode1.InnerText.Length > 0 and File.Exists(Path.Combine(directoryInfo.FullName, childNode1.InnerText)) == False:
+			if childNode1.InnerText.Length > 0 and not File.Exists(Path.Combine(directoryInfo.FullName, childNode1.InnerText)):
 				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 					errorList.Add(String.Format("指定されたファイルが見つかりません。 \"{0}\"", childNode1.InnerText))
 				else:
 					errorList.Add(String.Format("Could not find the specified file. \"{0}\"", childNode1.InnerText))
 
-def createStackPanel(text, brush):
+def createStackPanel(brush, text):
 	stackPanel1 = StackPanel()
 	stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
 	stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
@@ -79,25 +79,32 @@ def createStackPanel(text, brush):
 	stackPanel2.Orientation = Orientation.Vertical
 	stackPanel2.Background = linearGradientBrush
 	
-	solidColorBrush = SolidColorBrush(Colors.White)
-	solidColorBrush.Opacity = 0.5
+	solidColorBrush1 = SolidColorBrush(Colors.White)
+	solidColorBrush1.Opacity = 0.5
 
-	if solidColorBrush.CanFreeze:
-		solidColorBrush.Freeze()
+	if solidColorBrush1.CanFreeze:
+		solidColorBrush1.Freeze()
 
-	border = Border()
-	border.HorizontalAlignment = HorizontalAlignment.Stretch
-	border.VerticalAlignment = VerticalAlignment.Stretch
-	border.Padding = Thickness(10, 5, 10, 5)
-	border.BorderThickness = Thickness(0, 1, 0, 0)
-	border.BorderBrush = solidColorBrush
+	border1 = Border()
+	border1.HorizontalAlignment = HorizontalAlignment.Stretch
+	border1.VerticalAlignment = VerticalAlignment.Stretch
+	border1.Padding = Thickness(0)
+	border1.BorderThickness = Thickness(0, 1, 0, 0)
+	border1.BorderBrush = solidColorBrush1
 	
-	label = Label()
-	label.Foreground = SystemColors.ControlTextBrush
-	label.Content = text
+	solidColorBrush2 = SolidColorBrush(Colors.Black)
+	solidColorBrush2.Opacity = 0.25
 
-	RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
-			
+	if solidColorBrush2.CanFreeze:
+		solidColorBrush2.Freeze()
+
+	border2 = Border()
+	border2.HorizontalAlignment = HorizontalAlignment.Stretch
+	border2.VerticalAlignment = VerticalAlignment.Stretch
+	border2.Padding = Thickness(10, 5, 10, 5)
+	border2.BorderThickness = Thickness(0, 0, 0, 1)
+	border2.BorderBrush = solidColorBrush2
+
 	dropShadowEffect = DropShadowEffect()
 	dropShadowEffect.BlurRadius = 1
 	dropShadowEffect.Color = Colors.Black if Math.Max(Math.Max(SystemColors.ControlTextColor.R, SystemColors.ControlTextColor.G), SystemColors.ControlTextColor.B) > Byte.MaxValue / 2 else Colors.White;
@@ -108,10 +115,23 @@ def createStackPanel(text, brush):
 	if dropShadowEffect.CanFreeze:
 		dropShadowEffect.Freeze()
 
-	border.Effect = dropShadowEffect
-	border.Child = label
+	border3 = Border()
+	border3.HorizontalAlignment = HorizontalAlignment.Stretch
+	border3.VerticalAlignment = VerticalAlignment.Stretch
+	border3.Padding = Thickness(0)
+	border3.Effect = dropShadowEffect
 
-	stackPanel2.Children.Add(border)
+	label = Label()
+	label.Foreground = SystemColors.ControlTextBrush
+	label.Content = text
+
+	RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
+	
+	border3.Child = label
+	border2.Child = border3
+	border1.Child = border2
+
+	stackPanel2.Children.Add(border1)
 	stackPanel1.Children.Add(stackPanel2)
 
 	return stackPanel1
@@ -172,13 +192,18 @@ def onClick(s, e):
 				errorList.Add(e.clsException.Message)
 
 			finally:
-				if fs != None:
+				if fs is not None:
 					fs.Close()
 
 		def onCompleted(task):
 			window = Window()
+			stackPanel3 = StackPanel()
+			
+			def onLoaded(sender, args):
+				stackPanel3.Width = Math.Ceiling(stackPanel3.ActualWidth)
 
 			stackPanel1 = StackPanel()
+			stackPanel1.UseLayoutRounding = True
 			stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
 			stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
 			stackPanel1.Orientation = Orientation.Vertical
@@ -189,27 +214,26 @@ def onClick(s, e):
 			stackPanel2.Orientation = Orientation.Vertical
 			stackPanel2.Background = SystemColors.WindowBrush
 
-			stackPanel3 = StackPanel()
 			stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
 			stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
 			stackPanel3.Orientation = Orientation.Vertical
 
 			if errorList.Count == 0:
 				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-					stackPanel3.Children.Add(createStackPanel("有効なスクリプトです。", Brushes.Lime))
+					stackPanel3.Children.Add(createStackPanel(Brushes.Lime, "有効なスクリプトです。"))
 				else:
-					stackPanel3.Children.Add(createStackPanel("Valid.", Brushes.Lime))
+					stackPanel3.Children.Add(createStackPanel(Brushes.Lime, "Valid."))
 
 			for warning in warningList:
-				stackPanel3.Children.Add(createStackPanel(warning, Brushes.Yellow))
+				stackPanel3.Children.Add(createStackPanel(Brushes.Yellow, warning))
 
 			for error in errorList:
-				stackPanel3.Children.Add(createStackPanel(error, Brushes.Red))
+				stackPanel3.Children.Add(createStackPanel(Brushes.Red, error))
 
 			stackPanel2.Children.Add(stackPanel3)
 			stackPanel1.Children.Add(stackPanel2)
 
-			def onCloseClick(sender1, e1):
+			def onCloseClick(sender, args):
 				window.Close()
 
 			solidColorBrush = SolidColorBrush(Colors.White)
@@ -253,6 +277,7 @@ def onClick(s, e):
 			window.SizeToContent = SizeToContent.WidthAndHeight
 			window.Background = SystemColors.ControlBrush
 			window.Content = stackPanel1
+			window.Loaded += onLoaded
 			window.Show()
 
 	Task.Factory.StartNew(onValidate).ContinueWith(onCompleted, context)
@@ -262,7 +287,7 @@ def onStart(s, e):
 	global menuItem, separator
 	
 	for window in Application.Current.Windows:
-		if window == Application.Current.MainWindow and window.ContextMenu != None:
+		if window is Application.Current.MainWindow and window.ContextMenu is not None:
 			if not window.ContextMenu.Items.Contains(menuItem):
 				menuItem.Click += onClick
 				window.ContextMenu.Items.Insert(window.ContextMenu.Items.Count - 4, menuItem)

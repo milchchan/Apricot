@@ -91,7 +91,7 @@ def onStart(s, e):
 	global menuItem, separator
 	
 	for window in Application.Current.Windows:
-		if window == Application.Current.MainWindow and window.ContextMenu != None:
+		if window is Application.Current.MainWindow and window.ContextMenu is not None:
 			if not window.ContextMenu.Items.Contains(menuItem):
 				window.ContextMenu.Opened += onOpened
 				window.ContextMenu.Items.Insert(window.ContextMenu.Items.Count - 4, menuItem)

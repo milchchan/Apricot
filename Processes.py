@@ -61,7 +61,7 @@ def onTick(s, e):
 			if isUpdated:
 				previousTermList = List[String]()
 
-				if dictionary == None:
+				if dictionary is None:
 					dictionary = Dictionary[Char, List[String]]()
 
 					for word in Script.Instance.Words:
@@ -75,7 +75,7 @@ def onTick(s, e):
 					previousTermList.AddRange(getTermList(dictionary, mainWindowTitle))
 			
 				for term in getTermList(dictionary, kvp.Value):
-					if previousTermList.Contains(term) == False and termList.Contains(term) == False:
+					if not previousTermList.Contains(term) and not termList.Contains(term):
 						termList.Add(term)
 	
 		if termList.Count > 0:
@@ -113,7 +113,7 @@ def getTermList(dictionary, text):
 
 		if dictionary.ContainsKey(s[0]):
 			for term in dictionary[s[0]]:
-				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm == None else selectedTerm.Length):
+				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
 					selectedTerm = term
 		
 		if String.IsNullOrEmpty(selectedTerm):

@@ -7,20 +7,24 @@ clr.AddReferenceByPartialName("mscorlib")
 clr.AddReferenceByPartialName("System")
 clr.AddReferenceByPartialName("System.Configuration")
 clr.AddReferenceByPartialName("System.Xml")
+clr.AddReferenceByPartialName("WindowsBase")
 clr.AddReferenceByPartialName("PresentationCore")
 clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot")
 
-from System import String, Boolean, Int32, Int64, Double, Convert, Type, Environment, GC
-from System.IO import File, Directory, FileInfo, DirectoryInfo, Path
+from System import Boolean, Byte, Int32, Int64, Double, String, Convert, Type, Environment, Math, GC
+from System.IO import FileStream, File, Directory, FileInfo, DirectoryInfo, Path, FileMode, FileAccess, FileShare
 from System.Collections.Generic import List
 from System.Configuration import ConfigurationManager, ConfigurationUserLevel, ExeConfigurationFileMap, ConfigurationSaveMode
 from System.Diagnostics import Process, ProcessStartInfo
 from System.Globalization import CultureInfo
 from System.Reflection import Assembly
 from System.Threading.Tasks import Task
-from System.Windows import Application, Window, FontSizeConverter, HorizontalAlignment, VerticalAlignment, Thickness, RoutedEventHandler
-from System.Windows.Controls import MenuItem, Separator, StackPanel, TextBox, Button, Orientation
+from System.Windows import Application, Window, WindowStartupLocation, WindowStyle, ResizeMode, SizeToContent, FontSizeConverter, HorizontalAlignment, VerticalAlignment, Point, Rect, Thickness, SystemColors
+from System.Windows.Controls import MenuItem, Separator, Border, StackPanel, Label, TextBox, Button, Orientation
+from System.Windows.Media import Color, Colors, ColorConverter, SolidColorBrush, LinearGradientBrush, GradientStop, RenderOptions, ClearTypeHint, ImageBrush, TileMode, BrushMappingMode, Stretch
+from System.Windows.Media.Effects import DropShadowEffect
+from System.Windows.Media.Imaging import BitmapImage, BitmapCacheOption, BitmapCreateOptions
 from System.Xml import XmlDocument, XmlNode, XmlAttribute, XmlNodeType
 from Apricot import Script
 
@@ -32,48 +36,216 @@ def onOpened(s, e):
 	menuItem.Items.Clear()
 
 	learningMenuItem = MenuItem()
-	updateMenuItem = MenuItem()
-	
-	stackPanel = StackPanel()
-	stackPanel.HorizontalAlignment = HorizontalAlignment.Left
-	stackPanel.VerticalAlignment = VerticalAlignment.Top
-	stackPanel.Orientation = Orientation.Horizontal
-	
-	textBox = TextBox()
-	textBox.Width = 240
-	
-	def onMouseUp(sender, mbea):
-		mbea.Handled = True
-			
-	def onKeyDown(sender, kea):
-		kea.Handled = True
-		
-	textBox.MouseUp += onMouseUp
-	updateMenuItem.KeyDown += onKeyDown
-	
-	button = Button()
-	button.Margin = Thickness(10, 0, 0, 0)
-	button.Padding = Thickness(5, 0, 5, 0)
-	button.IsDefault = True
 	
 	if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-		learningMenuItem.Header = "言葉を教える"
-		button.Content = "教える"
+		learningMenuItem.Header = "言葉を教える..."
 	else:
-		learningMenuItem.Header = "Learning"
-		button.Content = "Learn"
+		learningMenuItem.Header = "Learn..."
 		
 	def onClick(sender, rea):
-		if not String.IsNullOrEmpty(textBox.Text):
-			Script.Instance.Learn(textBox.Text)
+		config = None
+		directoryInfo = DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name))
+		backgroundBrush = None
+		textColor = SystemColors.ControlTextBrush
+			
+		if directoryInfo.Exists:
+			fileName = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
+		
+			for fileInfo in directoryInfo.EnumerateFiles("*.config"):
+				if fileName.Equals(Path.GetFileNameWithoutExtension(fileInfo.Name)):
+					exeConfigurationFileMap = ExeConfigurationFileMap()
+				
+					exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
+					config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-	button.Click += onClick
+		if config is None:
+			config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
+			directoryInfo = None
+
+		if config.HasFile:
+			if config.AppSettings.Settings["BackgroundImage"] is not None:
+				fileInfo = FileInfo(config.AppSettings.Settings["BackgroundImage"].Value if directoryInfo is None else Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["BackgroundImage"].Value));
+				fs = None
+				bi = BitmapImage()
+
+				try:
+					fs = FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read)
+
+					bi.BeginInit()
+					bi.StreamSource = fs
+					bi.CacheOption = BitmapCacheOption.OnLoad
+					bi.CreateOptions = BitmapCreateOptions.None
+					bi.EndInit()
+
+				finally:
+					if fs is not None:
+						fs.Close()
+
+				backgroundBrush = ImageBrush(bi)
+				backgroundBrush.TileMode = TileMode.Tile
+				backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
+				backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
+				backgroundBrush.Stretch = Stretch.None
+
+				if backgroundBrush.CanFreeze:
+					backgroundBrush.Freeze()
+
+			if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
+				if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
+					backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
+
+					if backgroundBrush.CanFreeze:
+						backgroundBrush.Freeze()
+
+			if config.AppSettings.Settings["TextColor"] is not None:
+				if config.AppSettings.Settings["TextColor"].Value.Length > 0:
+					textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
+
+		textBrush = SolidColorBrush(textColor)
+
+		if textBrush.CanFreeze:
+			textBrush.Freeze()
+
+		window = Window()
+
+		stackPanel1 = StackPanel()
+		stackPanel1.UseLayoutRounding = True
+		stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel1.Orientation = Orientation.Vertical
+
+		stackPanel2 = StackPanel()
+		stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel2.Orientation = Orientation.Vertical
+		stackPanel2.Background = SystemColors.ControlBrush if backgroundBrush is None else backgroundBrush
+
+		linearGradientBrush = LinearGradientBrush()
+		gradientStop1 = GradientStop(Color.FromArgb(0, 0, 0, 0), 0)
+		gradientStop2 = GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1)
+
+		linearGradientBrush.StartPoint = Point(0.5, 0)
+		linearGradientBrush.EndPoint = Point(0.5, 1)
+		linearGradientBrush.Opacity = 0.1
+		linearGradientBrush.GradientStops.Add(gradientStop1)
+		linearGradientBrush.GradientStops.Add(gradientStop2)
+
+		if linearGradientBrush.CanFreeze:
+			linearGradientBrush.Freeze()
+
+		stackPanel3 = StackPanel()
+		stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel3.Orientation = Orientation.Vertical
+		stackPanel3.Background = linearGradientBrush
+
+		solidColorBrush1 = SolidColorBrush(Colors.Black)
+		solidColorBrush1.Opacity = 0.25
+
+		if solidColorBrush1.CanFreeze:
+			solidColorBrush1.Freeze()
+
+		border1 = Border()
+		border1.HorizontalAlignment = HorizontalAlignment.Stretch
+		border1.VerticalAlignment = VerticalAlignment.Stretch
+		border1.BorderThickness = Thickness(0, 0, 0, 1)
+		border1.BorderBrush = solidColorBrush1
+
+		stackPanel4 = StackPanel()
+		stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel4.Orientation = Orientation.Vertical
+		stackPanel4.Margin = Thickness(10, 10, 10, 20)
+
+		stackPanel5 = StackPanel()
+		stackPanel5.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel5.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel5.Orientation = Orientation.Vertical
+
+		label = Label()
+		label.Foreground = textBrush
+
+		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+			label.Content = "教える言葉"
+		else:
+			label.Content = "Word"
+
+		RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
+			
+		textColor = SystemColors.ControlText if textBrush is None else textBrush.Color
+
+		dropShadowEffect = DropShadowEffect()
+		dropShadowEffect.BlurRadius = 1
+		dropShadowEffect.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White;
+		dropShadowEffect.Direction = 270
+		dropShadowEffect.Opacity = 0.5
+		dropShadowEffect.ShadowDepth = 1
+
+		if dropShadowEffect.CanFreeze:
+			dropShadowEffect.Freeze()
+
+		stackPanel5.Effect = dropShadowEffect
+		stackPanel5.Children.Add(label)
+
+		textBox = TextBox()
+		textBox.Width = 240
+			
+		stackPanel4.Children.Add(stackPanel5)
+		stackPanel4.Children.Add(textBox)
+			
+		border1.Child = stackPanel4
+
+		stackPanel3.Children.Add(border1)
+		stackPanel2.Children.Add(stackPanel3)
+		stackPanel1.Children.Add(stackPanel2)
+
+		def onLearnClick(source, rea):
+			if not String.IsNullOrEmpty(textBox.Text):
+				Script.Instance.Learn(textBox.Text)
+
+			window.Close()
+
+		solidColorBrush2 = SolidColorBrush(Colors.White)
+		solidColorBrush2.Opacity = 0.5
+
+		if solidColorBrush2.CanFreeze:
+			solidColorBrush2.Freeze()
+
+		border2 = Border()
+		border2.HorizontalAlignment = HorizontalAlignment.Stretch
+		border2.VerticalAlignment = VerticalAlignment.Stretch
+		border2.BorderThickness = Thickness(0, 1, 0, 0)
+		border2.BorderBrush = solidColorBrush2
+
+		learnButton = Button()
+		learnButton.HorizontalAlignment = HorizontalAlignment.Right
+		learnButton.VerticalAlignment = VerticalAlignment.Center
+		learnButton.Margin = Thickness(10, 10, 10, 10)
+		learnButton.Padding = Thickness(10, 2, 10, 2)
+		learnButton.IsDefault = True
+
+		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+			learnButton.Content = "教える"
+		else:
+			learnButton.Content = "Learn"
+
+		learnButton.Click += onLearnClick
+
+		border2.Child = learnButton
+		stackPanel1.Children.Add(border2)
+		textBox.Focus()
+			
+		window.Owner = Application.Current.MainWindow
+		window.Title = Application.Current.MainWindow.Title
+		window.WindowStartupLocation = WindowStartupLocation.CenterOwner
+		window.ResizeMode = ResizeMode.NoResize
+		window.SizeToContent = SizeToContent.WidthAndHeight
+		window.Background = SystemColors.ControlBrush
+		window.Content = stackPanel1
+		window.Show()
 	
-	stackPanel.Children.Add(textBox)
-	stackPanel.Children.Add(button)
+	learningMenuItem.Click += onClick
 	
-	updateMenuItem.Header = stackPanel
-	learningMenuItem.Items.Add(updateMenuItem)
 	menuItem.Items.Add(learningMenuItem)
 	menuItem.Items.Add(Separator())
 
@@ -90,12 +262,12 @@ def onOpened(s, e):
 				exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
 				config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-	if config == None:
+	if config is None:
 		config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
 		directoryInfo = None
 
 	if config.HasFile:
-		if config.AppSettings.Settings["ActivateThreshold"] != None:
+		if config.AppSettings.Settings["ActivateThreshold"] is not None:
 			threshold = Int64.Parse(config.AppSettings.Settings["ActivateThreshold"].Value)
 			
 			childMenuItem = MenuItem()
@@ -240,7 +412,7 @@ def onOpened(s, e):
 			menuItem9.Header = "Stripes 1"
 			menuItem10.Header = "Stripes 2"
 		
-		if config.AppSettings.Settings["BackgroundColor"] != None and config.AppSettings.Settings["BackgroundImage"] != None and config.AppSettings.Settings["TextColor"] != None and config.AppSettings.Settings["LinkColor"]:
+		if config.AppSettings.Settings["BackgroundColor"] is not None and config.AppSettings.Settings["BackgroundImage"] is not None and config.AppSettings.Settings["TextColor"] is not None and config.AppSettings.Settings["LinkColor"]:
 			backColor = config.AppSettings.Settings["BackgroundColor"].Value
 			backImage = config.AppSettings.Settings["BackgroundImage"].Value
 			textColor = config.AppSettings.Settings["TextColor"].Value
@@ -378,7 +550,7 @@ def onOpened(s, e):
 		childMenuItem.Items.Add(menuItem10)
 		menuItem.Items.Add(childMenuItem)
 		
-		if config.AppSettings.Settings["DropShadow"] != None:
+		if config.AppSettings.Settings["DropShadow"] is not None:
 			dropShadow = Boolean.Parse(config.AppSettings.Settings["DropShadow"].Value)
 			
 			childMenuItem = MenuItem()
@@ -400,7 +572,7 @@ def onOpened(s, e):
 		
 		menuItem.Items.Add(Separator())
 			
-		if config.AppSettings.Settings["FontFamily"] != None:
+		if config.AppSettings.Settings["FontFamily"] is not None:
 			fontFamilyName = config.AppSettings.Settings["FontFamily"].Value
 			
 			childMenuItem = MenuItem()
@@ -427,7 +599,7 @@ def onOpened(s, e):
 			
 			menuItem.Items.Add(childMenuItem)
 			
-		if config.AppSettings.Settings["FontSize"] != None:
+		if config.AppSettings.Settings["FontSize"] is not None:
 			fontSize = config.AppSettings.Settings["FontSize"].Value
 			
 			fontSizeConverter = FontSizeConverter()
@@ -455,7 +627,7 @@ def onOpened(s, e):
 				
 			menuItem.Items.Add(childMenuItem)
 				
-			if config.AppSettings.Settings["LineHeight"] != None:
+			if config.AppSettings.Settings["LineHeight"] is not None:
 				lineHeight = Double.Parse(config.AppSettings.Settings["LineHeight"].Value)
 				maxLineHeight = Convert.ToInt32(fontSizeConverter.ConvertFromString(fontSize)) * 2
 				
@@ -486,7 +658,7 @@ def onOpened(s, e):
 			
 				menuItem.Items.Add(childMenuItem2)
 				
-		if config.AppSettings.Settings["FrameRate"] != None:
+		if config.AppSettings.Settings["FrameRate"] is not None:
 			frameRate = Double.Parse(config.AppSettings.Settings["FrameRate"].Value)
 			
 			childMenuItem = MenuItem()
@@ -514,7 +686,7 @@ def onOpened(s, e):
 			menuItem.Items.Add(Separator())
 			menuItem.Items.Add(childMenuItem)
 
-		if config.AppSettings.Settings["Subscriptions"] != None:
+		if config.AppSettings.Settings["Subscriptions"] is not None:
 			path = config.AppSettings.Settings["Subscriptions"].Value
 			
 			childMenuItem = MenuItem()
@@ -555,7 +727,7 @@ def onOpened(s, e):
 			childMenuItem.Items.Add(editMenuItem)
 			childMenuItem.Items.Add(Separator())
 			
-			if directoryInfo != None:
+			if directoryInfo is not None:
 				fileInfo = FileInfo(Path.Combine(directoryInfo.FullName, path))
 			
 				if fileInfo.Exists:
@@ -586,7 +758,7 @@ def onOpened(s, e):
 								
 								parsedMenuItem = parseOutline(mi, xmlNode)
 								
-								if parsedMenuItem == None:
+								if parsedMenuItem is None:
 									m.Items.Add(mi)
 								else:
 									m.Items.Add(parsedMenuItem)
@@ -617,7 +789,7 @@ def onOpened(s, e):
 			menuItem.Items.Add(Separator())
 			menuItem.Items.Add(childMenuItem)
 
-		if config.AppSettings.Settings["Timeout"] != None:
+		if config.AppSettings.Settings["Timeout"] is not None:
 			timeout = Int32.Parse(config.AppSettings.Settings["Timeout"].Value)
 			
 			childMenuItem = MenuItem()
@@ -645,10 +817,10 @@ def onOpened(s, e):
 			menuItem.Items.Add(Separator())
 			menuItem.Items.Add(childMenuItem)
 
-		if config.AppSettings.Settings["Cache"] != None:
+		if config.AppSettings.Settings["Cache"] is not None:
 			path = config.AppSettings.Settings["Cache"].Value
 			
-			if directoryInfo != None:
+			if directoryInfo is not None:
 				path = Path.Combine(directoryInfo.FullName, path)
 				
 			childMenuItem = MenuItem()
@@ -683,18 +855,14 @@ def onOpened(s, e):
 		
 		menuItem.Items.Add(childMenuItem)
 
-def onKeyDown(s, e):
-	e.Handled = False
-
 def onStart(s, e):
 	global menuItem, separator
 	
 	for window in Application.Current.Windows:
-		if window == Application.Current.MainWindow and window.ContextMenu != None:
+		if window is Application.Current.MainWindow and window.ContextMenu is not None:
 			if not window.ContextMenu.Items.Contains(menuItem):
 				window.ContextMenu.Opened += onOpened
 				window.ContextMenu.Items.Insert(window.ContextMenu.Items.Count - 4, menuItem)
-				window.ContextMenu.AddHandler(Button.KeyDownEvent, RoutedEventHandler(onKeyDown), True)
 				
 				if not clr.GetClrType(Separator).IsInstanceOfType(window.ContextMenu.Items[10]):
 					separator = Separator()

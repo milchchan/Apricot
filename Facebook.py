@@ -51,7 +51,7 @@ class JsonDecoder(Object):
 
 	@staticmethod
 	def decode(json):
-		if json != None:
+		if json is not None:
 			charArray = json.ToCharArray()
 			index = 0
 			value, index, success = JsonDecoder.parseValue(charArray, index, True)
@@ -368,26 +368,26 @@ def update():
 					streamReader = StreamReader(stream)
 					json = JsonDecoder.decode(streamReader.ReadToEnd())
 
-					if json != None:
+					if json is not None:
 						if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
 							if json.ContainsKey("data"):
-								if json["data"] != None:
+								if json["data"] is not None:
 									if clr.GetClrType(Array).IsInstanceOfType(json["data"]):
 										for obj in json["data"]:
-											if obj != None:
+											if obj is not None:
 												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
 													entry = Entry()
 													userId = None
 
 													if obj.ContainsKey("id"):
-														if obj["id"] != None:
+														if obj["id"] is not None:
 															array = obj["id"].Split('_')
 
 															if array.Length == 2:
 																entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
 													
 													if obj.ContainsKey("from"):
-														if obj["from"] != None:
+														if obj["from"] is not None:
 															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
 																entry.Author = obj["from"]["name"]
 
@@ -395,15 +395,15 @@ def update():
 																	userId = obj["from"]["id"]
 																
 													if obj.ContainsKey("created_time"):
-														if obj["created_time"] != None:
+														if obj["created_time"] is not None:
 															entry.Created = DateTime.Parse(obj["created_time"])
 
 													if obj.ContainsKey("updated_time"):
-														if obj["updated_time"] != None:
+														if obj["updated_time"] is not None:
 															entry.Modified = DateTime.Parse(obj["updated_time"])
 
 													if obj.ContainsKey("message"):
-														if obj["message"] != None:
+														if obj["message"] is not None:
 															title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 
 															if title.Length > 100:
@@ -411,18 +411,18 @@ def update():
 
 															entry.Title = title
 
-													if entry.Resource != None and userId != None:
+													if entry.Resource is not None and userId is not None:
 														entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
 														entryList.Add(entry)
 					
 				finally:
-					if streamReader != None:
+					if streamReader is not None:
 						streamReader.Close()
 
-					if stream != None:
+					if stream is not None:
 						stream.Close()
 				
-					if response != None:
+					if response is not None:
 						response.Close()
 
 			except Exception, e:
@@ -440,7 +440,7 @@ def update():
 				if entry.Created > dt:
 					dt = entry.Created
 
-				if entry.Created > dateTime and String.IsNullOrEmpty(entry.Title) == False:
+				if entry.Created > dateTime and not String.IsNullOrEmpty(entry.Title):
 					newEntryList.Add(entry)
 
 			if dt > dateTime:
@@ -478,7 +478,7 @@ def update():
 def onTick(timer, e):
 	global accessToken
 
-	if accessToken != None:
+	if accessToken is not None:
 		update()
 
 	timer.Stop()
@@ -513,7 +513,7 @@ def post(text, filename):
 				if entry.Created > dt:
 					dt = entry.Created
 
-				if entry.Created > dateTime and String.IsNullOrEmpty(entry.Title) == False:
+				if entry.Created > dateTime and not String.IsNullOrEmpty(entry.Title):
 					newEntryList.Add(entry)
 
 			if dt > dateTime:
@@ -599,7 +599,6 @@ def post(text, filename):
 			byteList.AddRange(Encoding.GetEncoding(encoding).GetBytes(contents.ToString()))
 			
 			uploadRequest.PreAuthenticate = True
-			uploadRequest.AllowWriteStreamBuffering = True
 			uploadRequest.ContentType = String.Format("multipart/form-data; boundary={0}", boundary)
 			uploadRequest.Method = WebRequestMethods.Http.Post
 			uploadRequest.ContentLength = byteList.Count
@@ -623,22 +622,22 @@ def post(text, filename):
 
 						json = JsonDecoder.decode(uploadStreamReader.ReadToEnd())
 
-						if json != None:
+						if json is not None:
 							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
 								if json.ContainsKey("id"):
 									isUploaded = True
 					
 					finally:
-						if uploadStreamReader != None:
+						if uploadStreamReader is not None:
 							uploadStreamReader.Close()
 
-						if uploadResponseStream != None:
+						if uploadResponseStream is not None:
 							uploadResponseStream.Close()
 
-						if uploadResponse != None:
+						if uploadResponse is not None:
 							uploadResponse.Close()
 
-						if uploadRequestStream != None:
+						if uploadRequestStream is not None:
 							uploadRequestStream.Close()
 
 					if isUploaded:
@@ -652,26 +651,26 @@ def post(text, filename):
 							updateStreamReader = StreamReader(updateStream)
 							json = JsonDecoder.decode(updateStreamReader.ReadToEnd())
 
-							if json != None:
+							if json is not None:
 								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
 									if json.ContainsKey("data"):
-										if json["data"] != None:
+										if json["data"] is not None:
 											if clr.GetClrType(Array).IsInstanceOfType(json["data"]):
 												for obj in json["data"]:
-													if obj != None:
+													if obj is not None:
 														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
 															entry = Entry()
 															userId = None
 
 															if obj.ContainsKey("id"):
-																if obj["id"] != None:
+																if obj["id"] is not None:
 																	array = obj["id"].Split('_')
 
 																	if array.Length == 2:
 																		entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
 													
 															if obj.ContainsKey("from"):
-																if obj["from"] != None:
+																if obj["from"] is not None:
 																	if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
 																		entry.Author = obj["from"]["name"]
 
@@ -679,15 +678,15 @@ def post(text, filename):
 																			userId = obj["from"]["id"]
 																
 															if obj.ContainsKey("created_time"):
-																if obj["created_time"] != None:
+																if obj["created_time"] is not None:
 																	entry.Created = DateTime.Parse(obj["created_time"])
 
 															if obj.ContainsKey("updated_time"):
-																if obj["updated_time"] != None:
+																if obj["updated_time"] is not None:
 																	entry.Modified = DateTime.Parse(obj["updated_time"])
 
 															if obj.ContainsKey("message"):
-																if obj["message"] != None:
+																if obj["message"] is not None:
 																	title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 
 																	if title.Length > 100:
@@ -695,18 +694,18 @@ def post(text, filename):
 
 																	entry.Title = title
 
-															if entry.Resource != None and userId != None:
+															if entry.Resource is not None and userId is not None:
 																entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
 																entryList.Add(entry)
 					
 						finally:
-							if updateStreamReader != None:
+							if updateStreamReader is not None:
 								updateStreamReader.Close()
 
-							if updateStream != None:
+							if updateStream is not None:
 								updateStream.Close()
 				
-							if updateResponse != None:
+							if updateResponse is not None:
 								updateResponse.Close()
 
 				except Exception, e:
@@ -733,41 +732,43 @@ def post(text, filename):
 		def onExecute():
 			if NetworkInterface.GetIsNetworkAvailable():
 				try:
-					postRequestStream = None
 					postResponse = None
 					postResponseStream = None
 					postStreamReader = None
 					isPosted = False
 
 					try:
-						bytes = Encoding.ASCII.GetBytes(String.Empty)
+						postRequestStream = None
 
-						postRequestStream = postRequest.GetRequestStream()
-						postRequestStream.Write(bytes, 0, bytes.Length)
+						try:
+							bytes = Encoding.ASCII.GetBytes(String.Empty)
+							postRequestStream = postRequest.GetRequestStream()
+							postRequestStream.Write(bytes, 0, bytes.Length)
+						
+						finally:
+							if postRequestStream is not None:
+								postRequestStream.Close()
+
 						postResponse = postRequest.GetResponse()
-
 						postResponseStream = postResponse.GetResponseStream()
 						postStreamReader = StreamReader(postResponseStream)
 
 						json = JsonDecoder.decode(postStreamReader.ReadToEnd())
 
-						if json != None:
+						if json is not None:
 							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
 								if json.ContainsKey("id"):
 									isPosted = True
 					
 					finally:
-						if postStreamReader != None:
+						if postStreamReader is not None:
 							postStreamReader.Close()
 
-						if postResponseStream != None:
+						if postResponseStream is not None:
 							postResponseStream.Close()
 
-						if postResponse != None:
+						if postResponse is not None:
 							postResponse.Close()
-
-						if postRequestStream != None:
-							postRequestStream.Close()
 
 					if isPosted:
 						updateResponse = None
@@ -780,26 +781,26 @@ def post(text, filename):
 							updateStreamReader = StreamReader(updateStream)
 							json = JsonDecoder.decode(updateStreamReader.ReadToEnd())
 
-							if json != None:
+							if json is not None:
 								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
 									if json.ContainsKey("data"):
-										if json["data"] != None:
+										if json["data"] is not None:
 											if clr.GetClrType(Array).IsInstanceOfType(json["data"]):
 												for obj in json["data"]:
-													if obj != None:
+													if obj is not None:
 														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
 															entry = Entry()
 															userId = None
 
 															if obj.ContainsKey("id"):
-																if obj["id"] != None:
+																if obj["id"] is not None:
 																	array = obj["id"].Split('_')
 
 																	if array.Length == 2:
 																		entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
 													
 															if obj.ContainsKey("from"):
-																if obj["from"] != None:
+																if obj["from"] is not None:
 																	if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
 																		entry.Author = obj["from"]["name"]
 
@@ -807,15 +808,15 @@ def post(text, filename):
 																			userId = obj["from"]["id"]
 																
 															if obj.ContainsKey("created_time"):
-																if obj["created_time"] != None:
+																if obj["created_time"] is not None:
 																	entry.Created = DateTime.Parse(obj["created_time"])
 
 															if obj.ContainsKey("updated_time"):
-																if obj["updated_time"] != None:
+																if obj["updated_time"] is not None:
 																	entry.Modified = DateTime.Parse(obj["updated_time"])
 
 															if obj.ContainsKey("message"):
-																if obj["message"] != None:
+																if obj["message"] is not None:
 																	title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 
 																	if title.Length > 100:
@@ -823,18 +824,18 @@ def post(text, filename):
 
 																	entry.Title = title
 
-															if entry.Resource != None and userId != None:
+															if entry.Resource is not None and userId is not None:
 																entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
 																entryList.Add(entry)
 					
 						finally:
-							if updateStreamReader != None:
+							if updateStreamReader is not None:
 								updateStreamReader.Close()
 
-							if updateStream != None:
+							if updateStream is not None:
 								updateStream.Close()
 				
-							if updateResponse != None:
+							if updateResponse is not None:
 								updateResponse.Close()
 
 				except Exception, e:
@@ -853,7 +854,7 @@ def getTermList(dictionary, text):
 
 		if dictionary.ContainsKey(s[0]):
 			for term in dictionary[s[0]]:
-				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm == None else selectedTerm.Length):
+				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
 					selectedTerm = term
 		
 		if String.IsNullOrEmpty(selectedTerm):
@@ -871,23 +872,24 @@ def onOpened(s, e):
 
 	menuItem.Items.Clear()
 
-	if accessToken == None:
+	if accessToken is None:
 		def onLogInClick(source, rea):
 			window = Window()
 
 			stackPanel = StackPanel()
+			stackPanel.UseLayoutRounding = True
 			stackPanel.HorizontalAlignment = HorizontalAlignment.Stretch
 			stackPanel.VerticalAlignment = VerticalAlignment.Stretch
 			stackPanel.Orientation = Orientation.Vertical
 
 			def onWebBrowserNavigated(sender, nea):
-				if nea.Uri.AbsoluteUri.StartsWith("http://www.facebook.com/connect/login_success.html", StringComparison.Ordinal):
+				if Regex.IsMatch(nea.Uri.AbsoluteUri, "^http(s)?://www\\.facebook\\.com/connect/login_success\\.html", RegexOptions.CultureInvariant):
 					for match in Regex.Matches(nea.Uri.Query, "\\??(?<1>.+?)=(?<2>.*?)(?:&|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline):
 						if match.Groups[1].Value.Equals("code"):
 							sb = StringBuilder()
 							d = Dictionary[String, String]()
 							d.Add("client_id", appId)
-							d.Add("redirect_uri", "http://www.facebook.com/connect/login_success.html")
+							d.Add("redirect_uri", "https://www.facebook.com/connect/login_success.html")
 							d.Add("client_secret", appSecret)
 							d.Add("code", match.Groups[2].Value)
 
@@ -918,13 +920,13 @@ def onOpened(s, e):
 													dictionary.Add(m.Groups[1].Value, m.Groups[2].Value)
 
 										finally:
-											if streamReader != None:
+											if streamReader is not None:
 												streamReader.Close()
 
-											if stream != None:
+											if stream is not None:
 												stream.Close()
 				
-											if response != None:
+											if response is not None:
 												response.Close()
 
 										if dictionary.ContainsKey("access_token"):
@@ -941,13 +943,13 @@ def onOpened(s, e):
 														exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
 														config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-											if config == None:
+											if config is None:
 												config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
 												directoryInfo = None
 
 											if config.HasFile:
-												if config.AppSettings.Settings["Scripts"] != None:
-													di = DirectoryInfo(config.AppSettings.Settings["Scripts"].Value if directoryInfo == None else System.IO.Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["Scripts"].Value));
+												if config.AppSettings.Settings["Scripts"] is not None:
+													di = DirectoryInfo(config.AppSettings.Settings["Scripts"].Value if directoryInfo is None else Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["Scripts"].Value));
 													
 													for fileInfo in di.GetFiles("*.py"):
 														fs1 = None
@@ -960,14 +962,14 @@ def onOpened(s, e):
 															lines = sr.ReadToEnd()
 
 														finally:
-															if sr != None:
+															if sr is not None:
 																sr.Close()
 
-															if fs1 != None:
+															if fs1 is not None:
 																fs1.Close()
 
-														if lines != None:
-															if Regex.IsMatch(lines, "\\# Facebook.py", RegexOptions.CultureInvariant):
+														if lines is not None:
+															if Regex.IsMatch(lines, "\\#\\s*Facebook.py", RegexOptions.CultureInvariant):
 																lines = Regex.Replace(lines, "accessToken\\s*=\\s*None", String.Format("accessToken = \"{0}\"", dictionary["access_token"]), RegexOptions.CultureInvariant)
 																fs2 = None
 																sw = None
@@ -978,10 +980,10 @@ def onOpened(s, e):
 																	sw.Write(lines)
 
 																finally:
-																	if sw != None:
+																	if sw is not None:
 																		sw.Close()
 
-																	if fs2 != None:
+																	if fs2 is not None:
 																		fs2.Close()
 
 									except Exception, e:
@@ -998,6 +1000,18 @@ def onOpened(s, e):
 
 							break
 
+			solidColorBrush1 = SolidColorBrush(Colors.Black)
+			solidColorBrush1.Opacity = 0.25
+
+			if solidColorBrush1.CanFreeze:
+				solidColorBrush1.Freeze()
+
+			border1 = Border()
+			border1.HorizontalAlignment = HorizontalAlignment.Stretch
+			border1.VerticalAlignment = VerticalAlignment.Stretch
+			border1.BorderThickness = Thickness(0, 0, 0, 1)
+			border1.BorderBrush = solidColorBrush1
+
 			webBrowser = WebBrowser()
 			webBrowser.HorizontalAlignment = HorizontalAlignment.Stretch
 			webBrowser.VerticalAlignment = VerticalAlignment.Stretch
@@ -1005,13 +1019,14 @@ def onOpened(s, e):
 			webBrowser.Height = 480
 			webBrowser.Navigated += onWebBrowserNavigated
 			
-			stackPanel.Children.Add(webBrowser)
+			border1.Child = webBrowser
+			stackPanel.Children.Add(border1)
 
 			def onWindowLoaded(sender, args):
 				sb = StringBuilder()
 				d = Dictionary[String, String]()
 				d.Add("client_id", appId)
-				d.Add("redirect_uri", "http://www.facebook.com/connect/login_success.html")
+				d.Add("redirect_uri", "https://www.facebook.com/connect/login_success.html")
 				d.Add("scope", "offline_access, read_stream, publish_stream")
 				d.Add("display", "popup")
 
@@ -1026,17 +1041,17 @@ def onOpened(s, e):
 			def onCloseClick(source, args):
 				window.Close()
 
-			solidColorBrush = SolidColorBrush(Colors.White)
-			solidColorBrush.Opacity = 0.5
+			solidColorBrush2 = SolidColorBrush(Colors.White)
+			solidColorBrush2.Opacity = 0.5
 
-			if solidColorBrush.CanFreeze:
-				solidColorBrush.Freeze()
+			if solidColorBrush2.CanFreeze:
+				solidColorBrush2.Freeze()
 
-			border = Border()
-			border.HorizontalAlignment = HorizontalAlignment.Stretch
-			border.VerticalAlignment = VerticalAlignment.Stretch
-			border.BorderThickness = Thickness(0, 1, 0, 0)
-			border.BorderBrush = solidColorBrush
+			border2 = Border()
+			border2.HorizontalAlignment = HorizontalAlignment.Stretch
+			border2.VerticalAlignment = VerticalAlignment.Stretch
+			border2.BorderThickness = Thickness(0, 1, 0, 0)
+			border2.BorderBrush = solidColorBrush2
 
 			closeButton = Button()
 			closeButton.HorizontalAlignment = HorizontalAlignment.Right
@@ -1052,8 +1067,8 @@ def onOpened(s, e):
 
 			closeButton.Click += onCloseClick
 
-			border.Child = closeButton
-			stackPanel.Children.Add(border)
+			border2.Child = closeButton
+			stackPanel.Children.Add(border2)
 			
 			window.Owner = Application.Current.MainWindow
 			window.Title = Application.Current.MainWindow.Title
@@ -1068,9 +1083,9 @@ def onOpened(s, e):
 		logInMenuItem = MenuItem()
 
 		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-			logInMenuItem.Header = "ログイン"
+			logInMenuItem.Header = "ログイン..."
 		else:
-			logInMenuItem.Header = "Log In"
+			logInMenuItem.Header = "Log In..."
 
 		logInMenuItem.Click += onLogInClick
 
@@ -1109,14 +1124,14 @@ def onOpened(s, e):
 		for window in Application.Current.Windows:
 			if clr.GetClrType(Agent).IsInstanceOfType(window):
 				for message in window.Balloon.Messages:
-					stack.Push(String.Format("\"{0}: {1}\"", sb.ToString(), message.Text))
+					stack.Push(String.Format("\"{0}: {1}\"", sb.ToString(), Regex.Replace(message.Text, Environment.NewLine, String.Empty, RegexOptions.CultureInvariant)))
 
 		while stack.Count > 0:
 			comboBoxItem = ComboBoxItem()
 			comboBoxItem.Content = stack.Pop()
 			comboBox.Items.Add(comboBoxItem)
 
-			if comboBox.SelectedItem == None:
+			if comboBox.SelectedItem is None:
 				comboBox.SelectedItem = comboBoxItem
 	
 		checkBox = CheckBox()
@@ -1187,7 +1202,7 @@ def onStart(s, e):
 	global timer, menuItem, separator
 	
 	for window in Application.Current.Windows:
-		if window == Application.Current.MainWindow and window.ContextMenu != None:
+		if window is Application.Current.MainWindow and window.ContextMenu is not None:
 			if not window.ContextMenu.Items.Contains(menuItem):
 				window.ContextMenu.Opened += onOpened
 				window.ContextMenu.Items.Insert(window.ContextMenu.Items.Count - 4, menuItem)
