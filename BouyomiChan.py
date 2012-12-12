@@ -32,7 +32,7 @@ def speech(text):
 			if process.ProcessName.Equals("BouyomiChan"):
 				tcpClient = tryConnect("127.0.0.1", 50001)
 		
-				if tcpClient != None:
+				if tcpClient is not None:
 					ns = None
 					bs = None
 					bw = None
@@ -52,13 +52,13 @@ def speech(text):
 						bw.Write(bytes)
 				
 					finally:
-						if bs != None:
+						if bs is not None:
 							bs.Close()
 					
-						if bw != None:
+						if bw is not None:
 							bw.Close()
 					
-						if ns != None:
+						if ns is not None:
 							ns.Close()		
 	
 						tcpClient.Close()
