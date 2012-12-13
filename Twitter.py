@@ -13,13 +13,12 @@ clr.AddReferenceByPartialName("PresentationCore")
 clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot")
 
-from System import Object, Byte, UInt32, Double, Char, String, Uri, DateTime, TimeSpan, Array, Convert, Random, Environment, StringComparison, Guid, Math, BitConverter, Action
+from System import Object, Byte, Boolean, UInt32, Double, Char, String, Uri, DateTime, TimeSpan, Array, Convert, Random, Environment, StringComparison, Guid, Math, BitConverter, Action
 from System.IO import Stream, FileStream, StreamReader, StreamWriter, Path, Directory, File, DirectoryInfo, FileInfo, FileMode, FileAccess, FileShare
-from System.Collections.Generic import List, LinkedList, Queue, Stack, Dictionary, SortedDictionary, KeyValuePair, HashSet
+from System.Collections.Generic import List, Queue, Stack, Dictionary, SortedDictionary, KeyValuePair, HashSet
 from System.Configuration import ConfigurationManager, ConfigurationUserLevel, ExeConfigurationFileMap
 from System.Diagnostics import Process, Trace
 from System.Globalization import CultureInfo, NumberStyles, DateTimeStyles
-from System.Linq import Enumerable
 from System.Reflection import Assembly
 from System.Security.Cryptography import HMACSHA1
 from System.Text import StringBuilder, Encoding, UTF8Encoding
@@ -27,11 +26,9 @@ from System.Text.RegularExpressions import Regex, Match, Capture, RegexOptions
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskContinuationOptions, TaskScheduler
 from System.Net import ServicePointManager, WebRequest, WebResponse, HttpWebRequest, HttpWebResponse, WebClient, WebRequestMethods, HttpRequestHeader
 from System.Net.NetworkInformation import NetworkInterface
-from System.Windows import Application, Window, WindowStartupLocation, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Point, Rect, Thickness, RoutedEventHandler, SystemColors
+from System.Windows import Application, Window, WindowStartupLocation, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Thickness, RoutedEventHandler, SystemColors
 from System.Windows.Controls import MenuItem, Separator, StackPanel, Border, Label, TextBox, ComboBox, ComboBoxItem, Button, CheckBox, WebBrowser, Orientation
-from System.Windows.Media import Color, ColorConverter, Colors, SolidColorBrush, LinearGradientBrush, GradientStop, ImageBrush, TileMode, BrushMappingMode, Stretch, RenderOptions, ClearTypeHint
-from System.Windows.Media.Effects import DropShadowEffect
-from System.Windows.Media.Imaging import BitmapImage, BitmapCacheOption, BitmapCreateOptions
+from System.Windows.Media import Colors, SolidColorBrush, Stretch
 from System.Windows.Threading import DispatcherTimer, DispatcherPriority
 from System.Xml import XmlDocument
 from Microsoft.Win32 import OpenFileDialog
@@ -62,7 +59,7 @@ class JsonDecoder(Object):
 
 	@staticmethod
 	def decode(json):
-		if json != None:
+		if json is not None:
 			charArray = json.ToCharArray()
 			index = 0
 			value, index, success = JsonDecoder.parseValue(charArray, index, True)
@@ -349,504 +346,13 @@ class JsonDecoder(Object):
 
 		return JsonDecoder.TOKEN_NONE, index
 
-class Countup(Object):
-	def __init__(self, initialCount):
-		self.__currentCount = initialCount
-
-	def currentCount(self):
-		return self.__currentCount
-
-	def addCount(self):
-		self.__currentCount += 1
-
-class NaiveBayes(Object):
-	def __init__(self, words):
-		self.wordDictionary = Dictionary[Char, List[String]]()
-
-		for word in words:
-			if word.Length > 0:
-				if not self.wordDictionary.ContainsKey(word[0]):
-					self.wordDictionary.Add(word[0], List[String]())
-
-				self.wordDictionary[word[0]].Add(word)
-
-		self.trainingDataDictionary = Dictionary[String, KeyValuePair[Dictionary[String, Countup], Countup]]()
-
-	def train(self, document, category):
-		if self.trainingDataDictionary.ContainsKey(category):
-			self.trainingDataDictionary[category].Value.addCount()
-		else:
-			self.trainingDataDictionary.Add(category, KeyValuePair[Dictionary[String, Countup], Countup](Dictionary[String, Countup](), Countup(1)))
-
-		for word in self.getWordList(self.wordDictionary, document):
-			if self.trainingDataDictionary[category].Key.ContainsKey(word):
-				self.trainingDataDictionary[category].Key[word].addCount()
-			else:
-				self.trainingDataDictionary[category].Key.Add(word, Countup(1))
-
-	def classify(self, document):
-		a = 1.0
-		best = None
-		max = Double.MinValue
-		hashSet = HashSet[String]()
-
-		for kvp in self.trainingDataDictionary.Values:
-			for s in kvp.Key.Keys:
-				if not hashSet.Contains(s):
-					hashSet.Add(s)
-
-		wordList = self.getWordList(self.wordDictionary, document)
-		sum = 0.0
-
-		for kvp in self.trainingDataDictionary.Values:
-			sum += kvp.Value.currentCount()
-
-		for kvp in self.trainingDataDictionary:
-			# NaiveBayes
-			# P(X|Y1,...,Yn)=P(Y1,...,Yn|X)P(X)
-			probability = Math.Log(kvp.Value.Value.currentCount() / sum, Math.E)
-
-			for word in wordList:
-				s = 0.0
-
-				for countup in kvp.Value.Key.Values:
-					s += countup.currentCount()
-
-				probability += Math.Log(((kvp.Value.Key[word].currentCount() if kvp.Value.Key.ContainsKey(word) else 0) + a) / (s + a * hashSet.Count), Math.E)
-
-			if max < probability:
-				max = probability
-				best = kvp.Key
-
-		return best
-
-	def getWordList(self, dictionary, text):
-		stringBuilder = StringBuilder(text)
-		selectedWordList = List[String]()
-
-		while stringBuilder.Length > 0:
-			s = stringBuilder.ToString()
-			selectedWord = None
-
-			if dictionary.ContainsKey(s[0]):
-				for word in dictionary[s[0]]:
-					if s.StartsWith(word, StringComparison.Ordinal) and word.Length > (0 if selectedWord == None else selectedWord.Length):
-						selectedWord = word
-
-			if String.IsNullOrEmpty(selectedWord):
-				stringBuilder.Remove(0, 1)
-			else:
-				selectedWordList.Add(selectedWord)
-				stringBuilder.Remove(0, selectedWord.Length)
-
-		return selectedWordList
-
-def ask(text):
-	global username, password, consumerKey, consumerSecret, oauthToken, oauthTokenSecret
-
-	wordList = List[String]()
-	documentDictionary = Dictionary[String, List[String]]()
-	reverseDictionary = Dictionary[String, LinkedList[String]]()
-	wordDictionary = Dictionary[Char, List[String]]()
-	context = TaskScheduler.FromCurrentSynchronizationContext()
-	
-	bodyStringBuilder = StringBuilder()
-	authWebClient = WebClient()
-	dictionary = Dictionary[String, String]()
-	stringBuilder = StringBuilder()
-	updateWebClient = WebClient()
-
-	if String.IsNullOrEmpty(oauthToken) or String.IsNullOrEmpty(oauthTokenSecret):
-		sortedDictionary = createCommonParameters(consumerKey)
-		sortedDictionary.Add("x_auth_mode", "client_auth")
-		sortedDictionary.Add("x_auth_username", username)
-		sortedDictionary.Add("x_auth_password", password)
-
-		for kvp in sortedDictionary:
-			if kvp.Key.StartsWith("x_auth_", StringComparison.Ordinal):
-				if bodyStringBuilder.Length > 0:
-					bodyStringBuilder.Append('&')
-
-				bodyStringBuilder.Append(kvp.Key)
-				bodyStringBuilder.Append('=')
-				bodyStringBuilder.Append(kvp.Value)
-
-		hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&")))
-		signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/access_token"), sortedDictionary))))
-
-		sortedDictionary.Add("oauth_signature", signature)
-
-		authWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-		authWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
-
-	def onLoad():
-		fs1 = None
-		sr1 = None
-		fs2 = None
-		sr2 = None
-
-		try:
-			fs1 = FileStream("Words.json", FileMode.Open, FileAccess.Read, FileShare.Read)
-			sr1 = StreamReader(fs1, UTF8Encoding(False), True)
-			json = JsonDecoder.decode(sr1.ReadToEnd())
-			
-			if json != None:
-				if clr.GetClrType(Array).IsInstanceOfType(json):
-					for obj in json:
-						if obj != None:
-							if clr.GetClrType(String).IsInstanceOfType(obj):
-								wordList.Add(obj)
-
-			fs2 = FileStream("Training.json", FileMode.Open, FileAccess.Read, FileShare.Read)
-			sr2 = StreamReader(fs2, UTF8Encoding(False), True)
-			json = JsonDecoder.decode(sr2.ReadToEnd())
-			
-			if json != None:
-				if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-					for kvp in json:
-						if kvp.Value != None:
-							if clr.GetClrType(Array).IsInstanceOfType(kvp.Value):
-								list = List[String]()
-
-								for s in kvp.Value:
-									if clr.GetClrType(String).IsInstanceOfType(s):
-										list.Add(s)
-						
-								documentDictionary.Add(kvp.Key, list)
-
-		except Exception, e:
-			Trace.WriteLine(e.clsException.Message)
-			Trace.WriteLine(e.clsException.StackTrace)
-
-		finally:
-			if sr2 != None:
-				sr2.Close()
-
-			if fs2 != None:
-				fs2.Close()
-
-			if sr1 != None:
-				sr1.Close()
-
-			if fs1 != None:
-				fs1.Close()
-	
-	def onLoaded(task):
-		reverseDictionary.Add("自分", LinkedList[String]())
-	
-		for character in Script.Instance.Characters:
-			wordList.Add(character.Name)
-			reverseDictionary["自分"].AddLast(character.Name)
-
-		tempWordDictionary = Dictionary[Char, List[String]]()
-
-		for word in wordList:
-			if word.Length > 0:
-				if not tempWordDictionary.ContainsKey(word[0]):
-					tempWordDictionary.Add(word[0], List[String]())
-
-				tempWordDictionary[word[0]].Add(word)
-
-		blockTermList = getTermList(tempWordDictionary, text)
-		hashSet = HashSet[String]()
-	
-		for word in Script.Instance.Words:
-			wordList.Add(word.Name)
-
-			if not blockTermList.Contains(word.Name):
-				for attribute in word.Attributes:
-					if not reverseDictionary.ContainsKey(attribute):
-						reverseDictionary.Add(attribute, LinkedList[String]())
-
-					reverseDictionary[attribute].AddLast(word.Name)
-
-					if not hashSet.Contains(attribute):
-						hashSet.Add(attribute)
-	
-		for word in wordList:
-			if word.Length > 0:
-				if not wordDictionary.ContainsKey(word[0]):
-					wordDictionary.Add(word[0], List[String]())
-
-				wordDictionary[word[0]].Add(word)
-	
-		for list in documentDictionary.Values:
-			for i in range(0, list.Count):
-				list[i] = Regex.Replace(list[i], "\\$\\{\\*}", String.Concat("${", String.Join("|", hashSet), "}"), RegexOptions.CultureInvariant)
-
-	def onTrain(task):
-		termList = getTermList(wordDictionary, text)
-		naiveBayes = NaiveBayes(wordList)
-		cacheDictionary = Dictionary[String, String]()
-		isEmpty = True
-
-		for kvp in reverseDictionary:
-			n = kvp.Value.Count
-			array = Array.CreateInstance(String, n)
-			kvp.Value.CopyTo(array, 0)
-			r = Random(Environment.TickCount)
-
-			while n > 1:
-				k = r.Next(n)
-				n -= 1
-				temp = array[n]
-				array[n] = array[k]
-				array[k] = temp
-
-			kvp.Value.Clear()
-
-			for s in array:
-				kvp.Value.AddLast(s)
-		
-		for value in documentDictionary.Values:
-			for i in range(value.Count):
-				index = 0
-				sb = StringBuilder()
-				
-				for match in Regex.Matches(value[i], "\\$\\{(?<1>.+?)(?:\\|(?<1>.+?))*}", RegexOptions.CultureInvariant | RegexOptions.Singleline):
-					if match.Index - index > 0:
-						sb.Append(value[i].Substring(index, match.Index - index))
-
-					index = match.Index
-
-					if cacheDictionary.ContainsKey(match.Value):
-						sb.Append(cacheDictionary[match.Value])
-						index = match.Index + match.Length
-					
-					else:
-						for capture in match.Groups[1].Captures:
-							if reverseDictionary.ContainsKey(capture.Value):
-								if reverseDictionary[capture.Value].Count > 0:
-									isReplaced = False
-
-									for term in termList:
-										linkedListNode = reverseDictionary[capture.Value].Find(term)
-
-										if linkedListNode != None:
-											sb.Append(linkedListNode.Value)
-											index = match.Index + match.Length
-											cacheDictionary.Add(match.Value, linkedListNode.Value)
-											reverseDictionary[capture.Value].Remove(linkedListNode)
-											reverseDictionary[capture.Value].AddLast(linkedListNode)
-											isReplaced = True
-
-											break
-
-									if isReplaced:
-										break
-
-						else:
-							for capture in match.Groups[1].Captures:
-								if reverseDictionary.ContainsKey(capture.Value):
-									if reverseDictionary[capture.Value].Count > 0:
-										linkedListNode = reverseDictionary[capture.Value].First
-										sb.Append(linkedListNode.Value)
-										index = match.Index + match.Length
-										cacheDictionary.Add(match.Value, linkedListNode.Value)
-										reverseDictionary[capture.Value].Remove(linkedListNode)
-										reverseDictionary[capture.Value].AddLast(linkedListNode)
-
-										break
-
-				if value[i].Length - index > 0:
-					sb.Append(value[i].Substring(index, value[i].Length - index))
-
-				value[i] = sb.ToString()
-
-			if value.Exists(lambda x: getTermList(wordDictionary, x).Exists(lambda y: termList.Exists(lambda z: y.Equals(z)))):
-				isEmpty = False
-
-		if not isEmpty:
-			for kvp in documentDictionary:
-				for s in kvp.Value:
-					if not Regex.IsMatch(s, "\\$\\{.+?}", RegexOptions.CultureInvariant | RegexOptions.Singleline):
-						naiveBayes.train(s, kvp.Key)
-
-		return naiveBayes
-
-	def onTrained(task):
-		category = task.Result.classify(text)
-		tempDictionary = Dictionary[Char, List[String]]()
-		sequenceList = List[Sequence]()
-		isCompleted = True
-
-		for word in Script.Instance.Words:
-			if word.Name.Length > 0:
-				if not tempDictionary.ContainsKey(word.Name[0]):
-					tempDictionary.Add(word.Name[0], List[String]())
-
-				tempDictionary[word.Name[0]].Add(word.Name)
-
-		availableTermList = getTermList(tempDictionary, text)
-
-		if category == None:
-			if availableTermList.Count > 0:
-				for sequence in Script.Instance.Sequences:
-					if sequence.Name.Equals("Activate"):
-						sequenceList.Add(sequence)
-
-				preparedSequences = Script.Instance.Prepare(sequenceList, None, availableTermList)
-
-				if not Script.Instance.TryEnqueue(preparedSequences):
-					sequenceList.Clear()
-
-					for sequence in Script.Instance.Sequences:
-						if sequence.Name.Equals("Ignore"):
-							sequenceList.Add(sequence)
-
-					preparedSequences = Script.Instance.Prepare(sequenceList, text, availableTermList)
-					
-					if not Script.Instance.TryEnqueue(preparedSequences):
-						preparedSequences = Script.Instance.Prepare(sequenceList, text, Enumerable.Empty[String]())
-
-						if not Script.Instance.TryEnqueue(preparedSequences):
-							isCompleted = False
-
-			else:
-				for sequence in Script.Instance.Sequences:
-					if sequence.Name.Equals("Ignore"):
-						sequenceList.Add(sequence)
-
-				preparedSequences = Script.Instance.Prepare(sequenceList, text, Enumerable.Empty[String]())
-
-				if not Script.Instance.TryEnqueue(preparedSequences):
-					isCompleted = False
-
-		else:
-			for sequence in Script.Instance.Sequences:
-				if sequence.Name.Equals(category):
-					sequenceList.Add(sequence)
-
-			preparedSequences = Script.Instance.Prepare(sequenceList, text, availableTermList)
-
-			if availableTermList.Count > 0:
-				if not Script.Instance.TryEnqueue(preparedSequences):
-					preparedSequences = Script.Instance.Prepare(sequenceList, text, Enumerable.Empty[String]())
-
-					if not Script.Instance.TryEnqueue(preparedSequences):
-						sequenceList.Clear()
-
-						for sequence in Script.Instance.Sequences:
-							if sequence.Name.Equals("Activate"):
-								sequenceList.Add(sequence)
-
-						preparedSequences = Script.Instance.Prepare(sequenceList, None, availableTermList)
-
-						if not Script.Instance.TryEnqueue(preparedSequences):
-							sequenceList.Clear()
-
-							for sequence in Script.Instance.Sequences:
-								if sequence.Name.Equals("Ignore"):
-									sequenceList.Add(sequence)
-
-							preparedSequences = Script.Instance.Prepare(sequenceList, text, availableTermList)
-							
-							if not Script.Instance.TryEnqueue(preparedSequences):
-								preparedSequences = Script.Instance.Prepare(sequenceList, text, Enumerable.Empty[String]())
-
-								if not Script.Instance.TryEnqueue(preparedSequences):
-									isCompleted = False
-
-			elif not Script.Instance.TryEnqueue(preparedSequences):
-				sequenceList.Clear()
-
-				for sequence in Script.Instance.Sequences:
-					if sequence.Name.Equals("Ignore"):
-						sequenceList.Add(sequence)
-
-				preparedSequences = Script.Instance.Prepare(sequenceList, text, Enumerable.Empty[String]())
-
-				if not Script.Instance.TryEnqueue(preparedSequences):
-					isCompleted = False
-				
-		if isCompleted:
-			d = Dictionary[String, StringBuilder]()
-				
-			for sequence in preparedSequences:
-				for o in sequence:
-					if clr.GetClrType(Message).IsInstanceOfType(o):
-						if d.ContainsKey(sequence.Owner):
-							d[sequence.Owner].Append(o.Text)
-						else:
-							for kvp in d:
-								stringBuilder.AppendFormat(" \"{0}: {1}\"", kvp.Key, kvp.Value.ToString())
-
-							d.Clear()
-							d.Add(sequence.Owner, StringBuilder(o.Text))
-
-			for kvp in d:
-				stringBuilder.AppendFormat(" \"{0}: {1}\"", kvp.Key, kvp.Value.ToString())
-
-			if stringBuilder.Length > 0:
-				stringBuilder.Insert(0, text)
-				stringBuilder.Append(" #apricotan")
-
-	def onPrepare(task):
-		try:
-			if NetworkInterface.GetIsNetworkAvailable() and (String.IsNullOrEmpty(oauthToken) or String.IsNullOrEmpty(oauthTokenSecret)) and bodyStringBuilder.Length > 0:
-				bytes = authWebClient.UploadData(Uri("https://api.twitter.com/oauth/access_token"), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(bodyStringBuilder.ToString()))
-
-				for s in Encoding.ASCII.GetString(bytes).Split('&'):
-					index = s.IndexOf('=')
-
-					if index == -1:
-						dictionary.Add(s, String.Empty)
-					else:
-						dictionary.Add(s.Substring(0, index), s.Substring(index + 1))
-				
-		except Exception, e:
-			Trace.WriteLine(e.clsException.Message)
-			Trace.WriteLine(e.clsException.StackTrace)
-
-	def onReady(task):
-		global consumerKey, consumerSecret, oauthToken, oauthTokenSecret
-	
-		if stringBuilder.Length > 0:
-			for kvp in dictionary:
-				if kvp.Key.Equals("oauth_token"):
-					oauthToken = kvp.Value
-				elif kvp.Key.Equals("oauth_token_secret"):
-					oauthTokenSecret = kvp.Value
-
-			if String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False:
-				sortedDictionary = createCommonParameters(consumerKey)
-				sortedDictionary.Add("oauth_token", oauthToken)
-				sortedDictionary.Add("status", urlEncode(stringBuilder.ToString()))
-
-				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri(String.Concat("http://api.twitter.com/1/statuses/update.xml?status=", urlEncode(stringBuilder.ToString()))), sortedDictionary))))
-			
-				sortedDictionary.Add("oauth_signature", signature)
-
-				updateWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-				updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
-
-				sortedDictionary = createCommonParameters(consumerKey)
-				sortedDictionary.Add("oauth_token", oauthToken)
-
-				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("http://api.twitter.com/1/statuses/home_timeline.xml"), sortedDictionary))))
-			
-				sortedDictionary.Add("oauth_signature", signature)
-		
-	def onUpdate(task):
-		if NetworkInterface.GetIsNetworkAvailable() and String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False and stringBuilder.Length > 0:
-			try:
-				updateWebClient.UploadData(Uri(String.Concat("http://api.twitter.com/1/statuses/update.xml?status=", urlEncode(stringBuilder.ToString()))), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Empty))
-
-			except Exception, e:
-				Trace.WriteLine(e.clsException.Message)
-				Trace.WriteLine(e.clsException.StackTrace)
-
-	Task.Factory.StartNew(onLoad, TaskCreationOptions.LongRunning).ContinueWith(onLoaded, context).ContinueWith[NaiveBayes](onTrain, TaskContinuationOptions.LongRunning).ContinueWith(Action[Task[NaiveBayes]](onTrained), context).ContinueWith(onPrepare, TaskContinuationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning)
-
 def update():
 	global username, password, consumerKey, consumerSecret, oauthToken, oauthTokenSecret
 	
 	bodyStringBuilder = StringBuilder()
 	webClient = WebClient()
 	dictionary = Dictionary[String, String]()
-	request = WebRequest.Create("http://api.twitter.com/1/statuses/home_timeline.xml")
+	request = WebRequest.Create("https://api.twitter.com/1.1/statuses/home_timeline.json")
 	entryList = List[Entry]()
 	context = TaskScheduler.FromCurrentSynchronizationContext()
 
@@ -899,59 +405,105 @@ def update():
 			elif kvp.Key.Equals("oauth_token_secret"):
 				oauthTokenSecret = kvp.Value
 
-		if String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False:
+		if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
 			sortedDictionary = createCommonParameters(consumerKey)
 			sortedDictionary.Add("oauth_token", oauthToken)
 
 			hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-			signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("http://api.twitter.com/1/statuses/home_timeline.xml"), sortedDictionary))))
+			signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary))))
 			
 			sortedDictionary.Add("oauth_signature", signature)
 
 			request.Method = WebRequestMethods.Http.Get
 			request.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-			request.ContentType = "application/x-www-form-urlencoded"
+			request.ContentType = "application/json"
+
+			return True
+
+		return False
 
 	def onUpdate(task):
-		if NetworkInterface.GetIsNetworkAvailable() and String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False:
+		if NetworkInterface.GetIsNetworkAvailable() and task.Result:
 			try:
 				response = None
 				stream = None
+				streamReader = None
 
 				try:
 					response = request.GetResponse()
 					stream = response.GetResponseStream()
-					doc = XmlDocument()
-					doc.Load(stream)
-			
-					for statusXmlNode in doc.SelectNodes("/statuses/status"):
-						entry = Entry()
-						id = String.Empty
-						author = String.Empty
+					streamReader = StreamReader(stream)
+					json = JsonDecoder.decode(streamReader.ReadToEnd())
 
-						for xmlNode in statusXmlNode.ChildNodes:
-							if xmlNode.Name.Equals("id"):
-								id = xmlNode.InnerText
-							elif xmlNode.Name.Equals("text"):
-								entry.Title = Regex.Replace(xmlNode.InnerText, "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
-							elif xmlNode.Name.Equals("created_at"):
-								entry.Created = entry.Modified = DateTime.ParseExact(xmlNode.InnerText, "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
-							elif xmlNode.Name.Equals("user"):
-								for childXmlNode in xmlNode.ChildNodes:
-									if childXmlNode.Name.Equals("screen_name"):
-										author = childXmlNode.InnerText
-									elif childXmlNode.Name.Equals("profile_image_url"):
-										entry.Image = Uri(childXmlNode.InnerText)
-				
-						entry.Resource = Uri(String.Concat("http://twitter.com/", author, "/statuses/", id))
-						entry.Author = author
-						entryList.Add(entry)
+					if json is not None:
+						if clr.GetClrType(Array).IsInstanceOfType(json):
+							for obj in json:
+								if obj is not None:
+									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+										entry = Entry()
+										idStr = String.Empty
+										imageUriList = List[Uri]()
+										screenName = String.Empty
+
+										if obj.ContainsKey("id_str"):
+											if obj["id_str"] is not None:
+												idStr = obj["id_str"]
+
+										if obj.ContainsKey("text"):
+											if obj["text"] is not None:
+												entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+											
+										if obj.ContainsKey("entities"):
+											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]):
+												if obj["entities"].ContainsKey("media"):
+													if clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
+														for o in obj["entities"]["media"]:
+															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o):
+																if o.ContainsKey("media_url_https") and o.ContainsKey("type"):
+																	if o["type"].Equals("photo"):
+																		imageUriList.Add(Uri(o["media_url_https"]))
+
+										if obj.ContainsKey("created_at"):
+											if obj["created_at"] is not None:
+												entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
+
+										if obj.ContainsKey("user"):
+											if obj["user"] is not None:
+												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
+													user = obj["user"]
+
+													if user is not None:
+														if user.ContainsKey("screen_name"):
+															if user["screen_name"] is not None:
+																screenName = user["screen_name"]
+
+														if user.ContainsKey("profile_image_url_https"):
+															if user["profile_image_url_https"] is not None:
+																imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
+																
+										if imageUriList.Count == 1:
+											entry.Image = imageUriList[0]
+
+										elif imageUriList.Count > 1:
+											sb = StringBuilder()
+
+											for uri in imageUriList:
+												sb.AppendFormat("<img src=\"{0}\" />", uri.ToString())
+
+											entry.Description = sb.ToString()
+
+										entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
+										entry.Author = screenName
+										entryList.Add(entry)
 
 				finally:
-					if stream != None:
+					if streamReader is not None:
+						streamReader.Close()
+
+					if stream is not None:
 						stream.Close()
 				
-					if response != None:
+					if response is not None:
 						response.Close()
 
 			except Exception, e:
@@ -969,7 +521,7 @@ def update():
 				if entry.Created > dt:
 					dt = entry.Created
 
-				if entry.Created > dateTime and String.IsNullOrEmpty(entry.Title) == False:
+				if entry.Created > dateTime and not String.IsNullOrEmpty(entry.Title):
 					newEntryList.Add(entry)
 
 			if dt > dateTime:
@@ -1002,92 +554,117 @@ def update():
 						if Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, termList)):
 							break
 
-	Task.Factory.StartNew(onAuth, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
+	Task.Factory.StartNew(onAuth, TaskCreationOptions.LongRunning).ContinueWith[Boolean](onReady, context).ContinueWith(Action[Task[Boolean]](onUpdate), TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
 
 def search(query):
-	entryList = List[Entry]()
+	global consumerKey, consumerSecret, oauthToken, oauthTokenSecret
+	
+	if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
+		entryList = List[Entry]()
 
-	def onSearch():
-		if NetworkInterface.GetIsNetworkAvailable():
-			try:
-				request = WebRequest.Create(String.Concat("http://search.twitter.com/search.atom?q=", urlEncode(query)))
-				request.Method = WebRequestMethods.Http.Get
-				request.ContentType = "application/x-www-form-urlencoded"
-				response = None
-				stream = None
+		sortedDictionary = createCommonParameters(consumerKey)
+		sortedDictionary.Add("oauth_token", oauthToken)
+		sortedDictionary.Add("q", urlEncode(query))
 
+		hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
+		signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri(String.Concat("https://api.twitter.com/1.1/search/tweets.json?q=", urlEncode(query))), sortedDictionary))))
+		
+		sortedDictionary.Add("oauth_signature", signature)
+
+		request = WebRequest.Create(String.Concat("https://api.twitter.com/1.1/search/tweets.json?q=", urlEncode(query)))
+		request.Method = WebRequestMethods.Http.Get
+		request.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
+		request.ContentType = "application/json"
+
+		def onSearch():
+			if NetworkInterface.GetIsNetworkAvailable():
 				try:
-					response = request.GetResponse()
-					stream = response.GetResponseStream()
-					doc = XmlDocument()
-					doc.Load(stream)
-			
-					for childNode in doc.DocumentElement.ChildNodes:
-						if childNode.Name.Equals("entry"):
-							entry = Entry()
+					response = None
+					stream = None
+					streamReader = None
+
+					try:
+						response = request.GetResponse()
+						stream = response.GetResponseStream()
+						streamReader = StreamReader(stream)
+						json = JsonDecoder.decode(streamReader.ReadToEnd())
+
+						if json is not None:
+							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
+								if json.ContainsKey("statuses"):
+									if clr.GetClrType(Array).IsInstanceOfType(json["statuses"]):
+										for status in json["statuses"]:
+											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(status):
+												
+												entry = Entry()
+												idStr = String.Empty
+												screenName = String.Empty
+
+												if status.ContainsKey("id_str"):
+													if status["id_str"] is not None:
+														idStr = status["id_str"]
+
+												if status.ContainsKey("text"):
+													if status["text"] is not None:
+														text = Regex.Replace(status["text"], "[\r\n]|\\#apricotan", String.Empty, RegexOptions.CultureInvariant).Trim()
+
+														if text.StartsWith("\"", StringComparison.Ordinal) and text.EndsWith("\"", StringComparison.Ordinal):
+															text = text.Trim("\"".ToCharArray())
+
+														entry.Title = text
+
+												if status.ContainsKey("created_at"):
+													if status["created_at"] is not None:
+														entry.Created = entry.Modified = DateTime.ParseExact(status["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
+
+												if status.ContainsKey("user"):
+													if status["user"] is not None:
+														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(status["user"]):
+															user = status["user"]
+
+															if user is not None:
+																if user.ContainsKey("screen_name"):
+																	if user["screen_name"] is not None:
+																		screenName = user["screen_name"]
+
+																if user.ContainsKey("profile_image_url_https"):
+																	if user["profile_image_url_https"] is not None:
+																		entry.Image = Uri(user["profile_image_url_https"])
+
+												if screenName.StartsWith("apricotan", StringComparison.Ordinal):
+													continue
+												
+												entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
+												entry.Author = screenName
+												entryList.Add(entry)
+
+					finally:
+						if streamReader is not None:
+							streamReader.Close()
+
+						if stream is not None:
+							stream.Close()
 				
-							for xmlNode in childNode.ChildNodes:
-								if xmlNode.Name.Equals("link"):
-									type = None
+						if response is not None:
+							response.Close()
 
-									for attribute in xmlNode.Attributes:
-										if attribute.Name.Equals("type"):
-											type = attribute.Value
-									
-									if not String.IsNullOrEmpty(type):
-										for attribute in xmlNode.Attributes:
-											if attribute.Name.Equals("href"):
-												if type.Equals("text/html"):
-													entry.Resource = Uri(attribute.Value)
-												elif type.StartsWith("image", StringComparison.Ordinal):
-													entry.Image = Uri(attribute.Value)
-								elif xmlNode.Name.Equals("title"):
-									text = Regex.Replace(xmlNode.InnerText, "\\#apricotan", String.Empty, RegexOptions.CultureInvariant).Trim()
+				except Exception, e:
+					Trace.WriteLine(e.clsException.Message)
+					Trace.WriteLine(e.clsException.StackTrace)
 
-									if text.StartsWith("\"", StringComparison.Ordinal) and text.EndsWith("\"", StringComparison.Ordinal):
-										text = text.Trim("\"".ToCharArray())
+		def onCompleted(task):
+			global recentEntryList
 
-									entry.Title = text
-								elif xmlNode.Name.Equals("published"):
-									entry.Created = DateTime.Parse(xmlNode.InnerText)
-								elif xmlNode.Name.Equals("updated"):
-									entry.Modified = DateTime.Parse(xmlNode.InnerText)
-								elif xmlNode.Name.Equals("author"):
-									for node in xmlNode.ChildNodes:
-										if node.Name.Equals("name"):
-											entry.Author = node.InnerText
-				
-							if entry.Resource != None and String.IsNullOrEmpty(entry.Title) == False:
-								if not String.IsNullOrEmpty(entry.Author):
-									if entry.Author.StartsWith("apricotan", StringComparison.Ordinal):
-										continue
-						
-								entryList.Add(entry)
-			
-				finally:
-					if stream != None:
-						stream.Close()
-				
-					if response != None:
-						response.Close()
+			if entryList.Count > 0:
+				recentEntryList.Clear()
+				recentEntryList.AddRange(entryList)
 
-			except Exception, e:
-				Trace.WriteLine(e.clsException.Message)
-				Trace.WriteLine(e.clsException.StackTrace)
-
-	def onCompleted(task):
-		global recentEntryList
-
-		if entryList.Count > 0:
-			recentEntryList.Clear()
-			recentEntryList.AddRange(entryList)
-
-	Task.Factory.StartNew(onSearch, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
+		Task.Factory.StartNew(onSearch, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
 
 def onTick(timer, e):
 	global username, password, oauthToken, oauthTokenSecret
 
-	if (String.IsNullOrEmpty(username) == False and String.IsNullOrEmpty(password) == False) or (String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False):
+	if (not String.IsNullOrEmpty(username) and not String.IsNullOrEmpty(password)) or (not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret)):
 		update()
 
 	search("#apricotan")
@@ -1104,7 +681,7 @@ def post(text, filename):
 	authWebClient = WebClient()
 	dictionary = Dictionary[String, String]()
 	byteList = List[Byte]()
-	timelineRequest = WebRequest.Create("http://api.twitter.com/1/statuses/home_timeline.xml")
+	timelineRequest = WebRequest.Create("https://api.twitter.com/1.1/statuses/home_timeline.json")
 	entryList = List[Entry]()
 	context = TaskScheduler.FromCurrentSynchronizationContext()
 
@@ -1162,7 +739,7 @@ def post(text, filename):
 				if entry.Created > dt:
 					dt = entry.Created
 
-				if entry.Created > dateTime and String.IsNullOrEmpty(entry.Title) == False:
+				if entry.Created > dateTime and not String.IsNullOrEmpty(entry.Title):
 					newEntryList.Add(entry)
 
 			if dt > dateTime:
@@ -1209,12 +786,12 @@ def post(text, filename):
 				elif kvp.Key.Equals("oauth_token_secret"):
 					oauthTokenSecret = kvp.Value
 
-			if String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False and isLoadable:
+			if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret) and isLoadable:
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
 
 				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1/account/verify_credentials.json"), sortedDictionary))))
+				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
 
 				sortedDictionary.Add("realm", "http://api.twitter.com/")
 				sortedDictionary.Add("oauth_signature", signature)
@@ -1258,15 +835,18 @@ def post(text, filename):
 				byteList.AddRange(Encoding.GetEncoding(encoding).GetBytes(contents.ToString()))
 			
 				uploadRequest.PreAuthenticate = True
-				uploadRequest.AllowWriteStreamBuffering = True
 				uploadRequest.ContentType = String.Format("multipart/form-data; boundary={0}", boundary)
 				uploadRequest.Method = WebRequestMethods.Http.Post
 				uploadRequest.Headers.Add("X-Verify-Credentials-Authorization", createHttpAuthorizationHeader(sortedDictionary))
-				uploadRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1/account/verify_credentials.json")
+				uploadRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1.1/account/verify_credentials.json")
 				uploadRequest.ContentLength = byteList.Count
 
+				return True
+
+			return False
+
 		def onUpload(task):
-			if NetworkInterface.GetIsNetworkAvailable() and isLoadable and String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False:
+			if NetworkInterface.GetIsNetworkAvailable() and isLoadable and task.Result:
 				try:
 					requestStream = None
 					response = None
@@ -1288,13 +868,13 @@ def post(text, filename):
 								dictionary.Add("/image/url", xmlNode.InnerText)
 				
 					finally:
-						if responseStream != None:
+						if responseStream is not None:
 							responseStream.Close()
 
-						if response != None:
+						if response is not None:
 							response.Close()
 
-						if requestStream != None:
+						if requestStream is not None:
 							requestStream.Close()
 
 				except Exception, e:
@@ -1316,82 +896,129 @@ def post(text, filename):
 			else:
 				sb.Append(text)
 
-			if String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False:
+			if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
 				sortedDictionary.Add("status", urlEncode(sb.ToString()))
 
 				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri(String.Concat("http://api.twitter.com/1/statuses/update.xml?status=", urlEncode(sb.ToString()))), sortedDictionary))))
+				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(sb.ToString()))), sortedDictionary))))
 			
 				sortedDictionary.Add("oauth_signature", signature)
+				sortedDictionary.Remove("status")
 
 				updateWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-				updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
+				updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/json")
 
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
 
 				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("http://api.twitter.com/1/statuses/home_timeline.xml"), sortedDictionary))))
+				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary))))
 			
 				sortedDictionary.Add("oauth_signature", signature)
 		
 				timelineRequest.Method = WebRequestMethods.Http.Get
 				timelineRequest.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-				timelineRequest.ContentType = "application/x-www-form-urlencoded"
+				timelineRequest.ContentType = "application/json"
+
+				return True
+
+			return False
 		
 		def onUpdate(task):
-			if NetworkInterface.GetIsNetworkAvailable() and String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False:
+			if NetworkInterface.GetIsNetworkAvailable() and task.Result:
 				try:
-					updateWebClient.UploadData(Uri(String.Concat("http://api.twitter.com/1/statuses/update.xml?status=", urlEncode(sb.ToString()))), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Empty))
+					updateWebClient.UploadData(Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(sb.ToString()))), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Empty))
 				
 					response = None
 					stream = None
+					streamReader = None
 
 					try:
 						response = timelineRequest.GetResponse()
 						stream = response.GetResponseStream()
-						doc = XmlDocument()
-						doc.Load(stream)
-			
-						for statusXmlNode in doc.SelectNodes("/statuses/status"):
-							entry = Entry()
-							id = String.Empty
-							author = String.Empty
-				
-							for xmlNode in statusXmlNode.ChildNodes:
-								if xmlNode.Name.Equals("id"):
-									id = xmlNode.InnerText
-								elif xmlNode.Name.Equals("text"):
-									entry.Title = Regex.Replace(xmlNode.InnerText, "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
-								elif xmlNode.Name.Equals("created_at"):
-									entry.Created = entry.Modified = DateTime.ParseExact(xmlNode.InnerText, "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
-								elif xmlNode.Name.Equals("user"):
-									for childXmlNode in xmlNode.ChildNodes:
-										if childXmlNode.Name.Equals("screen_name"):
-											author = childXmlNode.InnerText
-										elif childXmlNode.Name.Equals("profile_image_url"):
-											entry.Image = Uri(childXmlNode.InnerText)
-				
-							entry.Resource = Uri(String.Concat("http://twitter.com/", author, "/statuses/", id))
-							entry.Author = author
-							entryList.Add(entry)
+						streamReader = StreamReader(stream)
+						json = JsonDecoder.decode(streamReader.ReadToEnd())
+
+						if json is not None:
+							if clr.GetClrType(Array).IsInstanceOfType(json):
+								for obj in json:
+									if obj is not None:
+										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+											entry = Entry()
+											idStr = String.Empty
+											imageUriList = List[Uri]()
+											screenName = String.Empty
+
+											if obj.ContainsKey("id_str"):
+												if obj["id_str"] is not None:
+													idStr = obj["id_str"]
+
+											if obj.ContainsKey("text"):
+												if obj["text"] is not None:
+													entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+											
+											if obj.ContainsKey("entities"):
+												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]):
+													if obj["entities"].ContainsKey("media"):
+														if clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
+															for o in obj["entities"]["media"]:
+																if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o):
+																	if o.ContainsKey("media_url_https") and o.ContainsKey("type"):
+																		if o["type"].Equals("photo"):
+																			imageUriList.Add(Uri(o["media_url_https"]))
+
+											if obj.ContainsKey("created_at"):
+												if obj["created_at"] is not None:
+													entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
+
+											if obj.ContainsKey("user"):
+												if obj["user"] is not None:
+													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
+														user = obj["user"]
+
+														if user is not None:
+															if user.ContainsKey("screen_name"):
+																if user["screen_name"] is not None:
+																	screenName = user["screen_name"]
+
+															if user.ContainsKey("profile_image_url_https"):
+																if user["profile_image_url_https"] is not None:
+																	imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
+										
+											if imageUriList.Count == 1:
+												entry.Image = imageUriList[0]
+
+											elif imageUriList.Count > 1:
+												descriptionStringBuilder = StringBuilder()
+
+												for uri in imageUriList:
+													descriptionStringBuilder.AppendFormat("<img src=\"{0}\" />", uri.ToString())
+
+												entry.Description = descriptionStringBuilder.ToString()
+
+											entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
+											entry.Author = screenName
+											entryList.Add(entry)
 
 					finally:
-						if stream != None:
+						if streamReader is not None:
+							streamReader.Close()
+
+						if stream is not None:
 							stream.Close()
 				
-						if response != None:
+						if response is not None:
 							response.Close()
 
 				except Exception, e:
 					Trace.WriteLine(e.clsException.Message)
 					Trace.WriteLine(e.clsException.StackTrace)
 
-		Task.Factory.StartNew(onPrepare, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpload, TaskContinuationOptions.LongRunning).ContinueWith(onUploaded, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
+		Task.Factory.StartNew(onPrepare, TaskCreationOptions.LongRunning).ContinueWith[Boolean](onReady, context).ContinueWith(Action[Task[Boolean]](onUpload), TaskContinuationOptions.LongRunning).ContinueWith[Boolean](onUploaded, context).ContinueWith(Action[Task[Boolean]](onUpdate), TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
 	else:
-		updateRequest = WebRequest.Create("https://upload.twitter.com/1/statuses/update_with_media.json" if isLoadable else String.Concat("http://api.twitter.com/1/statuses/update.xml?status=", urlEncode(text)))
+		updateRequest = WebRequest.Create("https://api.twitter.com/1.1/statuses/update_with_media.json" if isLoadable else String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(text)))
 		
 		def onReady(task):
 			global consumerKey, consumerSecret, oauthToken, oauthTokenSecret
@@ -1402,7 +1029,7 @@ def post(text, filename):
 				elif kvp.Key.Equals("oauth_token_secret"):
 					oauthTokenSecret = kvp.Value
 
-			if String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False:
+			if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
 				
@@ -1434,16 +1061,18 @@ def post(text, filename):
 			
 					updateRequest.ContentType = String.Format("multipart/form-data; boundary={0}", boundary)
 				else:
-					updateRequest.ContentType = "application/x-www-form-urlencoded"
+					updateRequest.ContentType = "application/json"
 					sortedDictionary.Add("status", urlEncode(text))
 
 				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://upload.twitter.com/1/statuses/update_with_media.json" if isLoadable else String.Concat("http://api.twitter.com/1/statuses/update.xml?status=", urlEncode(text))), sortedDictionary))))
+				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/1.1/statuses/update_with_media.json" if isLoadable else String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(text))), sortedDictionary))))
 			
 				sortedDictionary.Add("oauth_signature", signature)
 
+				if sortedDictionary.ContainsKey("status"):
+					sortedDictionary.Remove("status")
+
 				updateRequest.PreAuthenticate = True
-				updateRequest.AllowWriteStreamBuffering = True
 				updateRequest.Method = WebRequestMethods.Http.Post
 				updateRequest.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
 				updateRequest.ContentLength = byteList.Count
@@ -1452,71 +1081,126 @@ def post(text, filename):
 				sortedDictionary.Add("oauth_token", oauthToken)
 
 				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("http://api.twitter.com/1/statuses/home_timeline.xml"), sortedDictionary))))
+				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary))))
 			
 				sortedDictionary.Add("oauth_signature", signature)
 
 				timelineRequest.Method = WebRequestMethods.Http.Get
 				timelineRequest.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-				timelineRequest.ContentType = "application/x-www-form-urlencoded"
+				timelineRequest.ContentType = "application/json"
+
+				return True
+
+			return False
 
 		def onUpdate(task):
-			if NetworkInterface.GetIsNetworkAvailable() and String.IsNullOrEmpty(oauthToken) == False and String.IsNullOrEmpty(oauthTokenSecret) == False:
+			if NetworkInterface.GetIsNetworkAvailable() and task.Result:
 				try:
-					requestStream = None
-
+					updateResponse = None
+	
 					try:
-						requestStream = updateRequest.GetRequestStream()
-						requestStream.Write(byteList.ToArray(), 0, byteList.Count)
+						requestStream = None
+
+						try:
+							requestStream = updateRequest.GetRequestStream()
+							requestStream.Write(byteList.ToArray(), 0, byteList.Count)
+
+						finally:
+							if requestStream is not None:
+								requestStream.Close()
+					
+						updateResponse = updateRequest.GetResponse()
 
 					finally:
-						if requestStream != None:
-							requestStream.Close()
+						if updateResponse is not None:
+							updateResponse.Close()
 
 					response = None
 					stream = None
+					streamReader = None
 
 					try:
 						response = timelineRequest.GetResponse()
 						stream = response.GetResponseStream()
-						doc = XmlDocument()
-						doc.Load(stream)
-			
-						for statusXmlNode in doc.SelectNodes("/statuses/status"):
-							entry = Entry()
-							id = String.Empty
-							author = String.Empty
-				
-							for xmlNode in statusXmlNode.ChildNodes:
-								if xmlNode.Name.Equals("id"):
-									id = xmlNode.InnerText
-								elif xmlNode.Name.Equals("text"):
-									entry.Title = Regex.Replace(xmlNode.InnerText, "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
-								elif xmlNode.Name.Equals("created_at"):
-									entry.Created = entry.Modified = DateTime.ParseExact(xmlNode.InnerText, "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
-								elif xmlNode.Name.Equals("user"):
-									for childXmlNode in xmlNode.ChildNodes:
-										if childXmlNode.Name.Equals("screen_name"):
-											author = childXmlNode.InnerText
-										elif childXmlNode.Name.Equals("profile_image_url"):
-											entry.Image = Uri(childXmlNode.InnerText)
-				
-							entry.Resource = Uri(String.Concat("http://twitter.com/", author, "/statuses/", id))
-							entry.Author = author
-							entryList.Add(entry)
+						streamReader = StreamReader(stream)
+						json = JsonDecoder.decode(streamReader.ReadToEnd())
+
+						if json is not None:
+							if clr.GetClrType(Array).IsInstanceOfType(json):
+								for obj in json:
+									if obj is not None:
+										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+											entry = Entry()
+											idStr = String.Empty
+											imageUriList = List[Uri]()
+											screenName = String.Empty
+
+											if obj.ContainsKey("id_str"):
+												if obj["id_str"] is not None:
+													idStr = obj["id_str"]
+
+											if obj.ContainsKey("text"):
+												if obj["text"] is not None:
+													entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+											
+											if obj.ContainsKey("entities"):
+												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]):
+													if obj["entities"].ContainsKey("media"):
+														if clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
+															for o in obj["entities"]["media"]:
+																if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o):
+																	if o.ContainsKey("media_url_https") and o.ContainsKey("type"):
+																		if o["type"].Equals("photo"):
+																			imageUriList.Add(Uri(o["media_url_https"]))
+
+											if obj.ContainsKey("created_at"):
+												if obj["created_at"] is not None:
+													entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
+
+											if obj.ContainsKey("user"):
+												if obj["user"] is not None:
+													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
+														user = obj["user"]
+
+														if user is not None:
+															if user.ContainsKey("screen_name"):
+																if user["screen_name"] is not None:
+																	screenName = user["screen_name"]
+
+															if user.ContainsKey("profile_image_url_https"):
+																if user["profile_image_url_https"] is not None:
+																	imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
+
+											if imageUriList.Count == 1:
+												entry.Image = imageUriList[0]
+
+											elif imageUriList.Count > 1:
+												descriptionStringBuilder = StringBuilder()
+
+												for uri in imageUriList:
+													descriptionStringBuilder.AppendFormat("<img src=\"{0}\" />", uri.ToString())
+
+												entry.Description = descriptionStringBuilder.ToString()
+
+											entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
+											entry.Author = screenName
+											entryList.Add(entry)
 
 					finally:
-						if stream != None:
+						if streamReader is not None:
+							streamReader.Close()
+
+						if stream is not None:
 							stream.Close()
 				
-						if response != None:
+						if response is not None:
 							response.Close()
 
 				except Exception, e:
 					Trace.WriteLine(e.clsException.Message)
 					Trace.WriteLine(e.clsException.StackTrace)
 
-		Task.Factory.StartNew(onPrepare, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
+		Task.Factory.StartNew(onPrepare, TaskCreationOptions.LongRunning).ContinueWith[Boolean](onReady, context).ContinueWith(Action[Task[Boolean]](onUpdate), TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
 
 def onOpened(s, e):
 	global menuItem, username, password, consumerKey, consumerSecret, oauthToken, oauthTokenSecret
@@ -1557,13 +1241,13 @@ def onOpened(s, e):
 									dictionary.Add(s.Substring(0, index), s.Substring(index + 1))
 
 						finally:
-							if streamReader != None:
+							if streamReader is not None:
 								streamReader.Close()
 										
-							if stream != None:
+							if stream is not None:
 								stream.Close()
 				
-							if response != None:
+							if response is not None:
 								response.Close()
 
 				except Exception, e:
@@ -1576,17 +1260,31 @@ def onOpened(s, e):
 					pinTextBox = TextBox()
 					
 					stackPanel1 = StackPanel()
+					stackPanel1.UseLayoutRounding = True
 					stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
 					stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
 					stackPanel1.Orientation = Orientation.Vertical
+
+					solidColorBrush1 = SolidColorBrush(Colors.Black)
+					solidColorBrush1.Opacity = 0.25
+
+					if solidColorBrush1.CanFreeze:
+						solidColorBrush1.Freeze()
+
+					border1 = Border()
+					border1.HorizontalAlignment = HorizontalAlignment.Stretch
+					border1.VerticalAlignment = VerticalAlignment.Stretch
+					border1.BorderThickness = Thickness(0, 0, 0, 1)
+					border1.BorderBrush = solidColorBrush1
 
 					webBrowser = WebBrowser()
 					webBrowser.HorizontalAlignment = HorizontalAlignment.Stretch
 					webBrowser.VerticalAlignment = VerticalAlignment.Stretch
 					webBrowser.Width = 640
-					webBrowser.Height = 650
-			
-					stackPanel1.Children.Add(webBrowser)
+					webBrowser.Height = 480
+					
+					border1.Child = webBrowser
+					stackPanel1.Children.Add(border1)
 
 					def onWindowLoaded(sender, args):
 						webBrowser.Navigate(Uri(String.Concat("https://api.twitter.com/oauth/authorize?oauth_token=", dictionary["oauth_token"])))
@@ -1637,13 +1335,13 @@ def onOpened(s, e):
 														exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
 														config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-											if config == None:
+											if config is None:
 												config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
 												directoryInfo = None
 
 											if config.HasFile:
-												if config.AppSettings.Settings["Scripts"] != None:
-													di = DirectoryInfo(config.AppSettings.Settings["Scripts"].Value if directoryInfo == None else System.IO.Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["Scripts"].Value));
+												if config.AppSettings.Settings["Scripts"] is not None:
+													di = DirectoryInfo(config.AppSettings.Settings["Scripts"].Value if directoryInfo is None else Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["Scripts"].Value));
 													
 													for fileInfo in di.GetFiles("*.py"):
 														fs1 = None
@@ -1656,14 +1354,14 @@ def onOpened(s, e):
 															lines = sr.ReadToEnd()
 
 														finally:
-															if sr != None:
+															if sr is not None:
 																sr.Close()
 
-															if fs1 != None:
+															if fs1 is not None:
 																fs1.Close()
 
-														if lines != None:
-															if Regex.IsMatch(lines, "\\# Twitter.py", RegexOptions.CultureInvariant):
+														if lines is not None:
+															if Regex.IsMatch(lines, "\\#\\s*Twitter.py", RegexOptions.CultureInvariant):
 																lines = Regex.Replace(lines, "oauthToken\\s*=\\s*None", String.Format("oauthToken = \"{0}\"", d["oauth_token"]), RegexOptions.CultureInvariant)
 																lines = Regex.Replace(lines, "oauthTokenSecret\\s*=\\s*None", String.Format("oauthTokenSecret = \"{0}\"", d["oauth_token_secret"]), RegexOptions.CultureInvariant)
 																fs2 = None
@@ -1675,20 +1373,20 @@ def onOpened(s, e):
 																	sw.Write(lines)
 
 																finally:
-																	if sw != None:
+																	if sw is not None:
 																		sw.Close()
 
-																	if fs2 != None:
+																	if fs2 is not None:
 																		fs2.Close()
 
 									finally:
-										if streamReader != None:
+										if streamReader is not None:
 											streamReader.Close()
 										
-										if stream != None:
+										if stream is not None:
 											stream.Close()
 				
-										if response != None:
+										if response is not None:
 											response.Close()
 
 							except Exception, e:
@@ -1711,17 +1409,17 @@ def onOpened(s, e):
 					def onCancelClick(source, args):
 						window.Close()
 
-					solidColorBrush = SolidColorBrush(Colors.White)
-					solidColorBrush.Opacity = 0.5
+					solidColorBrush2 = SolidColorBrush(Colors.White)
+					solidColorBrush2.Opacity = 0.5
 
-					if solidColorBrush.CanFreeze:
-						solidColorBrush.Freeze()
+					if solidColorBrush2.CanFreeze:
+						solidColorBrush2.Freeze()
 
-					border = Border()
-					border.HorizontalAlignment = HorizontalAlignment.Stretch
-					border.VerticalAlignment = VerticalAlignment.Stretch
-					border.BorderThickness = Thickness(0, 1, 0, 0)
-					border.BorderBrush = solidColorBrush
+					border2 = Border()
+					border2.HorizontalAlignment = HorizontalAlignment.Stretch
+					border2.VerticalAlignment = VerticalAlignment.Stretch
+					border2.BorderThickness = Thickness(0, 1, 0, 0)
+					border2.BorderBrush = solidColorBrush2
 
 					stackPanel2 = StackPanel()
 					stackPanel2.HorizontalAlignment = HorizontalAlignment.Right
@@ -1767,8 +1465,8 @@ def onOpened(s, e):
 					stackPanel2.Children.Add(pinTextBox)
 					stackPanel2.Children.Add(verifyButton)
 					stackPanel2.Children.Add(cancelButton)
-					border.Child = stackPanel2
-					stackPanel1.Children.Add(border)
+					border2.Child = stackPanel2
+					stackPanel1.Children.Add(border2)
 			
 					window.Owner = Application.Current.MainWindow
 					window.Title = Application.Current.MainWindow.Title
@@ -1785,23 +1483,15 @@ def onOpened(s, e):
 		signInMenuItem = MenuItem()
 
 		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-			signInMenuItem.Header = "サインイン"
+			signInMenuItem.Header = "サインイン..."
 		else:
-			signInMenuItem.Header = "Sign in"
+			signInMenuItem.Header = "Sign in..."
 
 		signInMenuItem.Click += onSignInClick
 
 		menuItem.Items.Add(signInMenuItem)
 
 	else:
-		isAskable = False
-
-		for sequence in Script.Instance.Sequences:
-			if sequence.Name.Equals("Greet") or sequence.Name.Equals("Hate") or sequence.Name.Equals("Interest") or sequence.Name.Equals("Thank") or sequence.Name.Equals("Ignore"):
-				isAskable = True
-
-				break
-	
 		sb = StringBuilder()
 
 		for character in Script.Instance.Characters:
@@ -1816,197 +1506,6 @@ def onOpened(s, e):
 		def onKeyDown(sender, kea):
 			kea.Handled = True
 
-		if isAskable:
-			askMenuItem = MenuItem()
-		
-			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-				askMenuItem.Header = "話しかける..."
-			else:
-				askMenuItem.Header = "Ask..."
-
-			def onClick(sender, args):
-				config = None
-				directoryInfo = DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name))
-				imageBrush = None
-				textBrush = None
-			
-				if directoryInfo.Exists:
-					fileName = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
-		
-					for fileInfo in directoryInfo.EnumerateFiles("*.config"):
-						if fileName.Equals(Path.GetFileNameWithoutExtension(fileInfo.Name)):
-							exeConfigurationFileMap = ExeConfigurationFileMap()
-				
-							exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
-							config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
-	
-				if config == None:
-					config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-					directoryInfo = None
-
-				if config.HasFile:
-					if config.AppSettings.Settings["BackgroundImage"] != None:
-						fileInfo = FileInfo(config.AppSettings.Settings["BackgroundImage"].Value if directoryInfo == None else System.IO.Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["BackgroundImage"].Value));
-						fs = None
-						bi = BitmapImage()
-
-						try:
-							fs = FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read)
-
-							bi.BeginInit()
-							bi.StreamSource = fs
-							bi.CacheOption = BitmapCacheOption.OnLoad
-							bi.CreateOptions = BitmapCreateOptions.None
-							bi.EndInit()
-
-						finally:
-							if fs != None:
-								fs.Close()
-
-						imageBrush = ImageBrush(bi)
-						imageBrush.TileMode = TileMode.Tile
-						imageBrush.ViewportUnits = BrushMappingMode.Absolute
-						imageBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
-						imageBrush.Stretch = Stretch.None
-
-						if imageBrush.CanFreeze:
-							imageBrush.Freeze()
-
-					if config.AppSettings.Settings["TextColor"] != None:
-						if config.AppSettings.Settings["TextColor"].Value.Length > 0:
-							textBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value))
-
-							if textBrush.CanFreeze:
-								textBrush.Freeze()
-
-				window = Window()
-
-				stackPanel1 = StackPanel()
-				stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel1.Orientation = Orientation.Vertical
-
-				stackPanel2 = StackPanel()
-				stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel2.Orientation = Orientation.Vertical
-				stackPanel2.Background = SystemColors.WindowBrush if imageBrush == None else imageBrush
-
-				linearGradientBrush = LinearGradientBrush()
-				gradientStop1 = GradientStop(Color.FromArgb(0, 0, 0, 0), 0)
-				gradientStop2 = GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1)
-
-				linearGradientBrush.StartPoint = Point(0.5, 0)
-				linearGradientBrush.EndPoint = Point(0.5, 1)
-				linearGradientBrush.Opacity = 0.1
-				linearGradientBrush.GradientStops.Add(gradientStop1)
-				linearGradientBrush.GradientStops.Add(gradientStop2)
-
-				if linearGradientBrush.CanFreeze:
-					linearGradientBrush.Freeze()
-
-				stackPanel3 = StackPanel()
-				stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel3.Orientation = Orientation.Vertical
-				stackPanel3.Background = linearGradientBrush
-
-				stackPanel4 = StackPanel()
-				stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel4.Orientation = Orientation.Vertical
-				stackPanel4.Margin = Thickness(10, 10, 10, 20)
-
-				stackPanel5 = StackPanel()
-				stackPanel5.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel5.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel5.Orientation = Orientation.Vertical
-
-				label = Label()
-				label.Foreground = SystemColors.ControlTextBrush if textBrush == None else textBrush
-
-				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-					label.Content = "話しかける一言"
-				else:
-					label.Content = "Message"
-
-				RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
-			
-				textColor = SystemColors.ControlText if textBrush == None else textBrush.Color
-
-				dropShadowEffect = DropShadowEffect()
-				dropShadowEffect.BlurRadius = 1
-				dropShadowEffect.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White;
-				dropShadowEffect.Direction = 270
-				dropShadowEffect.Opacity = 0.5
-				dropShadowEffect.ShadowDepth = 1
-
-				if dropShadowEffect.CanFreeze:
-					dropShadowEffect.Freeze()
-
-				stackPanel5.Effect = dropShadowEffect
-				stackPanel5.Children.Add(label)
-
-				textBox = TextBox()
-				textBox.Width = 240
-			
-				stackPanel4.Children.Add(stackPanel5)
-				stackPanel4.Children.Add(textBox)
-			
-				stackPanel3.Children.Add(stackPanel4)
-				stackPanel2.Children.Add(stackPanel3)
-				stackPanel1.Children.Add(stackPanel2)
-
-				def onAskClick(source, rea):
-					if not String.IsNullOrEmpty(textBox.Text):
-						ask(textBox.Text)
-
-					window.Close()
-
-				solidColorBrush = SolidColorBrush(Colors.White)
-				solidColorBrush.Opacity = 0.5
-
-				if solidColorBrush.CanFreeze:
-					solidColorBrush.Freeze()
-
-				border = Border()
-				border.HorizontalAlignment = HorizontalAlignment.Stretch
-				border.VerticalAlignment = VerticalAlignment.Stretch
-				border.BorderThickness = Thickness(0, 1, 0, 0)
-				border.BorderBrush = solidColorBrush
-
-				askButton = Button()
-				askButton.HorizontalAlignment = HorizontalAlignment.Right
-				askButton.VerticalAlignment = VerticalAlignment.Center
-				askButton.Margin = Thickness(10, 10, 10, 10)
-				askButton.Padding = Thickness(10, 2, 10, 2)
-				askButton.IsDefault = True
-
-				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-					askButton.Content = "話しかける"
-				else:
-					askButton.Content = "Ask"
-
-				askButton.Click += onAskClick
-
-				border.Child = askButton
-				stackPanel1.Children.Add(border)
-				textBox.Focus()
-			
-				window.Owner = Application.Current.MainWindow
-				window.Title = Application.Current.MainWindow.Title
-				window.WindowStartupLocation = WindowStartupLocation.CenterOwner
-				window.ResizeMode = ResizeMode.NoResize
-				window.SizeToContent = SizeToContent.WidthAndHeight
-				window.Background = SystemColors.ControlBrush
-				window.Content = stackPanel1
-				window.Show()
-
-			askMenuItem.Click += onClick
-
-			menuItem.Items.Add(askMenuItem)
-			menuItem.Items.Add(Separator())
-		
 		tweetMenuItem = MenuItem()
 		tweetMenuItem.KeyDown += onKeyDown
 
@@ -2025,14 +1524,14 @@ def onOpened(s, e):
 		for window in Application.Current.Windows:
 			if clr.GetClrType(Agent).IsInstanceOfType(window):
 				for message in window.Balloon.Messages:
-					stack.Push(String.Format("\"{0}: {1}\" #apricotan", sb.ToString(), message.Text))
+					stack.Push(String.Format("\"{0}: {1}\" #apricotan", sb.ToString(), Regex.Replace(message.Text, Environment.NewLine, String.Empty, RegexOptions.CultureInvariant)))
 
 		while stack.Count > 0:
 			comboBoxItem = ComboBoxItem()
 			comboBoxItem.Content = stack.Pop()
 			comboBox.Items.Add(comboBoxItem)
 
-			if comboBox.SelectedItem == None:
+			if comboBox.SelectedItem is None:
 				comboBox.SelectedItem = comboBoxItem
 	
 		checkBox = CheckBox()
@@ -2194,7 +1693,7 @@ def getTermList(dictionary, text):
 
 		if dictionary.ContainsKey(s[0]):
 			for term in dictionary[s[0]]:
-				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm == None else selectedTerm.Length):
+				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
 					selectedTerm = term
 		
 		if String.IsNullOrEmpty(selectedTerm):
@@ -2214,7 +1713,7 @@ def onStart(s, e):
 	global timer, menuItem, separator
 	
 	for window in Application.Current.Windows:
-		if window == Application.Current.MainWindow and window.ContextMenu != None:
+		if window is Application.Current.MainWindow and window.ContextMenu is not None:
 			if not window.ContextMenu.Items.Contains(menuItem):
 				window.ContextMenu.Opened += onOpened
 				window.ContextMenu.Items.Insert(window.ContextMenu.Items.Count - 4, menuItem)
