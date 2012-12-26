@@ -939,9 +939,10 @@ def ask(text):
 			signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(stringBuilder.ToString()))), sortedDictionary))))
 			
 			sortedDictionary.Add("oauth_signature", signature)
+			sortedDictionary.Remove("status")
 
 			updateWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-			updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/json")
+			updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
 
 			for character in Script.Instance.Characters:
 				likesRequest = WebRequest.Create(String.Format("http://social.apricotan.net/likes?character_name={0}&user_name={1}&limit=50", urlEncode(character.Name), urlEncode(username)))
@@ -956,7 +957,7 @@ def ask(text):
 	def onUpdate(task):
 		if NetworkInterface.GetIsNetworkAvailable() and stringBuilder.Length > 0 and task.Result:
 			try:
-				json = Json.decode(Encoding.UTF8.GetString(updateWebClient.UploadData(Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(stringBuilder.ToString()))), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Empty))))
+				json = Json.decode(Encoding.UTF8.GetString(updateWebClient.UploadData(Uri("https://api.twitter.com/1.1/statuses/update.json"), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Concat("status=", urlEncode(stringBuilder.ToString()))))))
 
 				if json is not None and verifyDictionary.ContainsKey("name") and verifyDictionary.ContainsKey("password"):
 					if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
@@ -4857,9 +4858,9 @@ def urlEncode(value):
 def generateNonce():
 	random = Random(Environment.TickCount)
 	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	sb = StringBuilder(64)
+	sb = StringBuilder(32)
 
-	for i in range(0, 64):
+	for i in range(0, 32):
 		sb.Append(letters[random.Next(letters.Length)])
 
 	return sb.ToString()

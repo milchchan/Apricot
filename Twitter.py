@@ -908,8 +908,8 @@ def post(text, filename):
 				sortedDictionary.Remove("status")
 
 				updateWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-				updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/json")
-
+				updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
+				
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
 
@@ -929,7 +929,7 @@ def post(text, filename):
 		def onUpdate(task):
 			if NetworkInterface.GetIsNetworkAvailable() and task.Result:
 				try:
-					updateWebClient.UploadData(Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(sb.ToString()))), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Empty))
+					updateWebClient.UploadData(Uri("https://api.twitter.com/1.1/statuses/update.json"), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Concat("status=", urlEncode(sb.ToString()))))
 				
 					response = None
 					stream = None
@@ -1018,7 +1018,7 @@ def post(text, filename):
 
 		Task.Factory.StartNew(onPrepare, TaskCreationOptions.LongRunning).ContinueWith[Boolean](onReady, context).ContinueWith(Action[Task[Boolean]](onUpload), TaskContinuationOptions.LongRunning).ContinueWith[Boolean](onUploaded, context).ContinueWith(Action[Task[Boolean]](onUpdate), TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
 	else:
-		updateRequest = WebRequest.Create("https://api.twitter.com/1.1/statuses/update_with_media.json" if isLoadable else String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(text)))
+		updateRequest = WebRequest.Create("https://api.twitter.com/1.1/statuses/update_with_media.json" if isLoadable else "https://api.twitter.com/1.1/statuses/update.json")
 		
 		def onReady(task):
 			global consumerKey, consumerSecret, oauthToken, oauthTokenSecret
@@ -1061,7 +1061,8 @@ def post(text, filename):
 			
 					updateRequest.ContentType = String.Format("multipart/form-data; boundary={0}", boundary)
 				else:
-					updateRequest.ContentType = "application/json"
+					byteList.AddRange(Encoding.ASCII.GetBytes(String.Concat("status=", urlEncode(text))))
+					updateRequest.ContentType = "application/x-www-form-urlencoded"
 					sortedDictionary.Add("status", urlEncode(text))
 
 				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
@@ -1673,9 +1674,9 @@ def urlEncode(value):
 def generateNonce():
 	random = Random(Environment.TickCount)
 	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	sb = StringBuilder(64)
+	sb = StringBuilder(32)
 
-	for i in range(0, 64):
+	for i in range(0, 32):
 		sb.Append(letters[random.Next(letters.Length)])
 
 	return sb.ToString()
