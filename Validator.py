@@ -12,7 +12,7 @@ clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot")
 
 from System import Byte, String, Environment, Math
-from System.IO import FileStream, Path, Directory, DirectoryInfo, File, FileInfo, FileMode, FileAccess, FileShare
+from System.IO import FileStream, Path, Directory, File, FileMode, FileAccess, FileShare
 from System.Collections.Generic import List
 from System.Globalization import CultureInfo
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskContinuationOptions, TaskScheduler
@@ -24,10 +24,10 @@ from System.Xml import XmlDocument
 from Apricot import Script
 from Microsoft.Win32 import OpenFileDialog
 
-def parseSequence(xmlNode, directoryInfo, warningList, errorList):
+def parseSequence(xmlNode, directory, warningList, errorList):
 	for childNode1 in xmlNode.ChildNodes:
 		if childNode1.Name.Equals("sequence"):
-			parseSequence(childNode1, directoryInfo, warningList, errorList)
+			parseSequence(childNode1, directory, warningList, errorList)
 
 		elif childNode1.Name.Equals("message"):
 			if childNode1.InnerText.Length == 0:
@@ -40,14 +40,14 @@ def parseSequence(xmlNode, directoryInfo, warningList, errorList):
 		elif childNode1.Name.Equals("motion"):
 			for childNode2 in childNode1.ChildNodes:
 				if childNode2.Name.Equals("image"):
-					if childNode2.InnerText.Length > 0 and not File.Exists(Path.Combine(directoryInfo.FullName, childNode2.InnerText)):
+					if childNode2.InnerText.Length > 0 and not File.Exists(Path.Combine(directory, childNode2.InnerText)):
 						if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 							errorList.Add(String.Format("指定されたファイルが見つかりません。 \"{0}\"", childNode2.InnerText))
 						else:
 							errorList.Add(String.Format("Could not find the specified file. \"{0}\"", childNode2.InnerText))
 
 		elif childNode1.Name.Equals("sound"):
-			if childNode1.InnerText.Length > 0 and not File.Exists(Path.Combine(directoryInfo.FullName, childNode1.InnerText)):
+			if childNode1.InnerText.Length > 0 and not File.Exists(Path.Combine(directory, childNode1.InnerText)):
 				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 					errorList.Add(String.Format("指定されたファイルが見つかりません。 \"{0}\"", childNode1.InnerText))
 				else:
@@ -148,7 +148,7 @@ def onClick(s, e):
 		openFileDialog.Filter = "XML files (*.xml)|*.xml"
 	
 	if openFileDialog.ShowDialog() == True:
-		fileInfo = FileInfo(openFileDialog.FileName)
+		fileName = openFileDialog.FileName
 		warningList = List[String]()
 		errorList = List[String]()
 
@@ -158,7 +158,7 @@ def onClick(s, e):
 			fs = None
 
 			try:
-				fs = FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read)
+				fs = FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read)
 
 				doc = XmlDocument()
 				doc.Load(fs)
@@ -180,7 +180,7 @@ def onClick(s, e):
 
 							for childNode2 in childNode1.ChildNodes:
 								if childNode2.Name.Equals("sequence"):
-									parseSequence(childNode2, fileInfo.Directory, warningList, errorList)
+									parseSequence(childNode2, Path.GetDirectoryName(fileName), warningList, errorList)
 
 				else:
 					if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):

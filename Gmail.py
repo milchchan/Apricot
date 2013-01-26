@@ -13,7 +13,7 @@ clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot")
 
 from System import Byte, Char, String, Uri, DateTime, TimeSpan, StringComparison, Environment, Math
-from System.IO import Stream, FileStream, StreamReader, StreamWriter, Path, DirectoryInfo, FileInfo, FileMode, FileAccess, FileShare
+from System.IO import Stream, FileStream, StreamReader, StreamWriter, Path, Directory, File, FileMode, FileAccess, FileShare
 from System.Collections.Generic import List, Dictionary
 from System.Configuration import ConfigurationManager, ConfigurationUserLevel, ExeConfigurationFileMap
 from System.Diagnostics import Trace
@@ -175,32 +175,31 @@ def onOpened(s, e):
 
 	def onSignInClick(source, rea):
 		config = None
-		directoryInfo = DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name))
+		directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name)
 		backgroundBrush = None
 		textColor = SystemColors.ControlTextBrush
 		
-		if directoryInfo.Exists:
-			fileName = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
+		if Directory.Exists(directory):
+			fileName1 = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
 		
-			for fileInfo in directoryInfo.EnumerateFiles("*.config"):
-				if fileName.Equals(Path.GetFileNameWithoutExtension(fileInfo.Name)):
+			for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+				if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
 					exeConfigurationFileMap = ExeConfigurationFileMap()
-				
-					exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
+					exeConfigurationFileMap.ExeConfigFilename = fileName2
 					config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
 		if config is None:
 			config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-			directoryInfo = None
+			directory = None
 
 		if config.HasFile:
 			if config.AppSettings.Settings["BackgroundImage"] is not None:
-				fileInfo = FileInfo(config.AppSettings.Settings["BackgroundImage"].Value if directoryInfo is None else Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["BackgroundImage"].Value));
+				fileName = config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value);
 				fs = None
 				bi = BitmapImage()
 
 				try:
-					fs = FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read)
+					fs = FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read)
 
 					bi.BeginInit()
 					bi.StreamSource = fs
@@ -363,33 +362,30 @@ def onOpened(s, e):
 				def onSave():
 					try:
 						config = None
-						directoryInfo = DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name))
+						directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name)
 			
-						if directoryInfo.Exists:
-							fileName = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
+						if Directory.Exists(directory):
+							fileName1 = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
 		
-							for fileInfo in directoryInfo.EnumerateFiles("*.config"):
-								if fileName.Equals(Path.GetFileNameWithoutExtension(fileInfo.Name)):
+							for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+								if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
 									exeConfigurationFileMap = ExeConfigurationFileMap()
-				
-									exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
+									exeConfigurationFileMap.ExeConfigFilename = fileName2
 									config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
 						if config is None:
 							config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-							directoryInfo = None
+							directory = None
 
 						if config.HasFile:
 							if config.AppSettings.Settings["Scripts"] is not None:
-								di = DirectoryInfo(config.AppSettings.Settings["Scripts"].Value if directoryInfo is None else Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["Scripts"].Value));
-													
-								for fileInfo in di.GetFiles("*.py"):
+								for fileName in Directory.EnumerateFiles(config.AppSettings.Settings["Scripts"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["Scripts"].Value), "*.py"):
 									fs1 = None
 									sr = None
 									lines = None
 
 									try:
-										fs1 = FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read)
+										fs1 = FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read)
 										sr = StreamReader(fs1, UTF8Encoding(False), True)
 										lines = sr.ReadToEnd()
 
@@ -408,7 +404,7 @@ def onOpened(s, e):
 											sw = None
 
 											try:
-												fs2 = FileStream(fileInfo.FullName, FileMode.Create, FileAccess.Write, FileShare.Read)
+												fs2 = FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read)
 												sw = StreamWriter(fs2, UTF8Encoding(False))
 												sw.Write(lines)
 

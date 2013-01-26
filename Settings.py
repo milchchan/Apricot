@@ -13,7 +13,7 @@ clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot")
 
 from System import Boolean, Byte, Int32, Int64, Double, String, Convert, Type, Environment, Math, GC
-from System.IO import FileStream, File, Directory, FileInfo, DirectoryInfo, Path, FileMode, FileAccess, FileShare
+from System.IO import FileStream, Path, Directory, File, FileMode, FileAccess, FileShare
 from System.Collections.Generic import List
 from System.Configuration import ConfigurationManager, ConfigurationUserLevel, ExeConfigurationFileMap, ConfigurationSaveMode
 from System.Diagnostics import Process, ProcessStartInfo
@@ -44,32 +44,30 @@ def onOpened(s, e):
 		
 	def onClick(sender, rea):
 		config = None
-		directoryInfo = DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name))
+		directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name)
 		backgroundBrush = None
 		textColor = SystemColors.ControlTextBrush
 			
-		if directoryInfo.Exists:
-			fileName = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
+		if Directory.Exists(directory):
+			fileName1 = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
 		
-			for fileInfo in directoryInfo.EnumerateFiles("*.config"):
-				if fileName.Equals(Path.GetFileNameWithoutExtension(fileInfo.Name)):
+			for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+				if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
 					exeConfigurationFileMap = ExeConfigurationFileMap()
-				
-					exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
+					exeConfigurationFileMap.ExeConfigFilename = fileName2
 					config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
 		if config is None:
 			config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-			directoryInfo = None
+			directory = None
 
 		if config.HasFile:
 			if config.AppSettings.Settings["BackgroundImage"] is not None:
-				fileInfo = FileInfo(config.AppSettings.Settings["BackgroundImage"].Value if directoryInfo is None else Path.Combine(directoryInfo.FullName, config.AppSettings.Settings["BackgroundImage"].Value));
 				fs = None
 				bi = BitmapImage()
 
 				try:
-					fs = FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read)
+					fs = FileStream(config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read)
 
 					bi.BeginInit()
 					bi.StreamSource = fs
@@ -250,21 +248,20 @@ def onOpened(s, e):
 	menuItem.Items.Add(Separator())
 
 	config = None
-	directoryInfo = DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name))
+	directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name)
 	
-	if directoryInfo.Exists:
-		fileName = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
+	if Directory.Exists(directory):
+		fileName1 = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
 		
-		for fileInfo in directoryInfo.EnumerateFiles("*.config"):
-			if fileName.Equals(Path.GetFileNameWithoutExtension(fileInfo.Name)):
+		for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+			if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
 				exeConfigurationFileMap = ExeConfigurationFileMap()
-				
-				exeConfigurationFileMap.ExeConfigFilename = fileInfo.FullName
+				exeConfigurationFileMap.ExeConfigFilename = fileName2
 				config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
 	if config is None:
 		config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-		directoryInfo = None
+		directory = None
 
 	if config.HasFile:
 		if config.AppSettings.Settings["ActivateThreshold"] is not None:
@@ -466,14 +463,14 @@ def onOpened(s, e):
 			
 			menuItem4.Click += onClick4
 			
-			if backColor.Equals("#FFF2F2F2") and backImage.Equals("Assets\\Background-Noize1.png") and textColor.Equals("#FF000000") and linkColor.Equals("#FFFF0099"):
+			if backColor.Equals("#FFF2F2F2") and backImage.Equals("Assets\\Background-Noize1.png") and textColor.Equals("#FF000000") and linkColor.Equals("#FFDD1A00"):
 				menuItem5.IsChecked = True
 				
 			def onClick5(sender, args):
 				config.AppSettings.Settings["BackgroundColor"].Value = "#FFF2F2F2"
 				config.AppSettings.Settings["BackgroundImage"].Value = "Assets\\Background-Noize1.png"
 				config.AppSettings.Settings["TextColor"].Value = "#FF000000"
-				config.AppSettings.Settings["LinkColor"].Value = "#FFFF0099"
+				config.AppSettings.Settings["LinkColor"].Value = "#FFDD1A00"
 				config.Save(ConfigurationSaveMode.Modified)
 			
 			menuItem5.Click += onClick5
@@ -502,14 +499,14 @@ def onOpened(s, e):
 			
 			menuItem7.Click += onClick7
 
-			if backColor.Equals("#FFFCFCFC") and backImage.Equals("Assets\\Background-Paper.png") and textColor.Equals("#FF000000") and linkColor.Equals("#FFDD1A00"):
+			if backColor.Equals("#FFFCFCFC") and backImage.Equals("Assets\\Background-Paper.png") and textColor.Equals("#FF000000") and linkColor.Equals("#FFFF0099"):
 				menuItem8.IsChecked = True
 				
 			def onClick8(sender, args):
 				config.AppSettings.Settings["BackgroundColor"].Value = "#FFFCFCFC"
 				config.AppSettings.Settings["BackgroundImage"].Value = "Assets\\Background-Paper.png"
 				config.AppSettings.Settings["TextColor"].Value = "#FF000000"
-				config.AppSettings.Settings["LinkColor"].Value = "#FFDD1A00"
+				config.AppSettings.Settings["LinkColor"].Value = "#FFFF0099"
 				config.Save(ConfigurationSaveMode.Modified)
 			
 			menuItem8.Click += onClick8
@@ -727,11 +724,11 @@ def onOpened(s, e):
 			childMenuItem.Items.Add(editMenuItem)
 			childMenuItem.Items.Add(Separator())
 			
-			if directoryInfo is not None:
-				fileInfo = FileInfo(Path.Combine(directoryInfo.FullName, path))
+			if directory is not None:
+				fileName = Path.Combine(directory, path)
 			
-				if fileInfo.Exists:
-					path = fileInfo.FullName
+				if File.Exists(fileName):
+					path = fileName
 					
 			def parseOutline(m, n):
 				if not n.HasChildNodes:
@@ -820,8 +817,8 @@ def onOpened(s, e):
 		if config.AppSettings.Settings["Cache"] is not None:
 			path = config.AppSettings.Settings["Cache"].Value
 			
-			if directoryInfo is not None:
-				path = Path.Combine(directoryInfo.FullName, path)
+			if directory is not None:
+				path = Path.Combine(directory, path)
 				
 			childMenuItem = MenuItem()
 			childMenuItem.Tag = path
@@ -833,7 +830,7 @@ def onOpened(s, e):
 				
 			def onClick(sender, args):
 				if Directory.Exists(childMenuItem.Tag):
-					for fileName in Directory.GetFiles(childMenuItem.Tag):
+					for fileName in Directory.EnumerateFiles(childMenuItem.Tag):
 						File.Delete(fileName)
 			
 			childMenuItem.Click += onClick
