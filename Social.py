@@ -22,7 +22,7 @@ from System.Diagnostics import Process, Trace
 from System.Reflection import Assembly
 from System.Security.Cryptography import HMACSHA1
 from System.Text import StringBuilder, Encoding, UTF8Encoding
-from System.Text.RegularExpressions import Regex, RegexOptions, Match
+from System.Text.RegularExpressions import Regex, RegexOptions, Match, MatchEvaluator
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskContinuationOptions, TaskScheduler
 from System.Net import WebRequest, WebResponse, HttpWebRequest, HttpWebResponse, WebClient, HttpRequestHeader, WebRequestMethods, HttpStatusCode
 from System.Net.NetworkInformation import NetworkInterface
@@ -549,8 +549,8 @@ def ask(text):
 
 	wordList = List[String]()
 	documentDictionary = Dictionary[String, List[String]]()
-	reverseDictionary = Dictionary[String, LinkedList[String]]()
-	wordDictionary = Dictionary[Char, List[String]]()
+	wordDictionary = Dictionary[String, List[String]]()
+	attributeHashSet = HashSet[String]()
 	stringBuilder = StringBuilder()
 	updateWebClient = WebClient()
 
@@ -628,12 +628,6 @@ def ask(text):
 				fs1.Close()
 	
 	def onLoaded(task):
-		reverseDictionary.Add("自分", LinkedList[String]())
-	
-		for character in Script.Instance.Characters:
-			wordList.Add(character.Name)
-			reverseDictionary["自分"].AddLast(character.Name)
-
 		tempWordDictionary = Dictionary[Char, List[String]]()
 
 		for word in wordList:
@@ -644,118 +638,153 @@ def ask(text):
 				tempWordDictionary[word[0]].Add(word)
 
 		blockTermList = getTermList(tempWordDictionary, text)
-		hashSet = HashSet[String]()
-	
+		
 		for word in Script.Instance.Words:
 			wordList.Add(word.Name)
 
 			if not blockTermList.Contains(word.Name):
+				if not wordDictionary.ContainsKey(word.Name):
+					wordDictionary.Add(word.Name, List[String]())
+				
 				for attribute in word.Attributes:
-					if not reverseDictionary.ContainsKey(attribute):
-						reverseDictionary.Add(attribute, LinkedList[String]())
+					wordDictionary[word.Name].Add(attribute)
 
-					reverseDictionary[attribute].AddLast(word.Name)
+					if not attributeHashSet.Contains(attribute):
+						attributeHashSet.Add(attribute)
 
-					if not hashSet.Contains(attribute):
-						hashSet.Add(attribute)
-	
-		for word in wordList:
-			if word.Length > 0:
-				if not wordDictionary.ContainsKey(word[0]):
-					wordDictionary.Add(word[0], List[String]())
-
-				wordDictionary[word[0]].Add(word)
-	
 		for list in documentDictionary.Values:
 			for i in range(0, list.Count):
-				list[i] = Regex.Replace(list[i], "\\$\\{\\*}", String.Concat("${", String.Join("|", hashSet), "}"), RegexOptions.CultureInvariant)
+				list[i] = Regex.Replace(list[i], "(?<1>(?<Open>\\{{2})*)\\{\\*}(?<2>(?<Close-Open>}{2})*)(?(Open)(?!))(?!})", MatchEvaluator(lambda x: String.Concat(Regex.Replace(x.Groups[1].Value, "\\{\\{", "{", RegexOptions.CultureInvariant), "{", String.Join("|", attributeHashSet), "}", Regex.Replace(x.Groups[2].Value, "}}", "}", RegexOptions.CultureInvariant))), RegexOptions.CultureInvariant)
 
+		for character in Script.Instance.Characters:
+			wordList.Add(character.Name)
+
+			if not wordDictionary.ContainsKey(character.Name):
+				wordDictionary.Add(character.Name, List[String]())
+
+			wordDictionary[character.Name].Add("自分")
+
+		if not attributeHashSet.Contains("自分"):
+			attributeHashSet.Add("自分")
+		
 	def onTrain(task):
-		termList = getTermList(wordDictionary, text)
-		naiveBayes = NaiveBayes(wordList)
+		tempStringBuilder = StringBuilder(text)
+		termHashSet = HashSet[String]()
+		termDictionary = Dictionary[Char, List[String]]()
+		usageDictionary = Dictionary[String, List[String]]()
 		cacheDictionary = Dictionary[String, String]()
 		isEmpty = True
-
-		for kvp in reverseDictionary:
-			n = kvp.Value.Count
-			array = Array.CreateInstance(String, n)
-			kvp.Value.CopyTo(array, 0)
-			r = Random(Environment.TickCount)
-
-			while n > 1:
-				k = r.Next(n)
-				n -= 1
-				temp = array[n]
-				array[n] = array[k]
-				array[k] = temp
-
-			kvp.Value.Clear()
-
-			for s in array:
-				kvp.Value.AddLast(s)
+		naiveBayes = NaiveBayes(wordList)
 		
+		for word in wordList:
+			if word.Length > 0:
+				if not termDictionary.ContainsKey(word[0]):
+					termDictionary.Add(word[0], List[String]())
+
+				termDictionary[word[0]].Add(word)
+
+		while tempStringBuilder.Length > 0:
+			s = tempStringBuilder.ToString()
+			selectedTerm = None
+
+			if termDictionary.ContainsKey(s[0]):
+				for term in termDictionary[s[0]]:
+					if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
+						selectedTerm = term
+		
+			if String.IsNullOrEmpty(selectedTerm):
+				tempStringBuilder.Remove(0, 1)
+			else:
+				if not termHashSet.Contains(selectedTerm):
+					termHashSet.Add(selectedTerm)
+
+				tempStringBuilder.Remove(0, selectedTerm.Length)
+
+		for value in wordDictionary.Values:
+			for attribute in value:
+				if not attributeHashSet.Contains(attribute):
+					attributeHashSet.Add(attribute)
+		
+		for value in documentDictionary.Values:
+			for i in range(value.Count):
+				for match in Regex.Matches(value[i], "(?<Open>\\{{2})*\\{(?<1>(?:[^{}]|\\{{2}|}{2})+)}(?<Close-Open>}{2})*(?(Open)(?!))(?!})", RegexOptions.CultureInvariant):
+					pattern = Regex.Replace(match.Groups[1].Value, "\\{\\{|}}", MatchEvaluator(lambda x: x.Value.Substring(x.Length / 2)), RegexOptions.CultureInvariant)
+					
+					for attribute in attributeHashSet:
+						if Regex.IsMatch(attribute, pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline):
+							if not usageDictionary.ContainsKey(attribute):
+								usageDictionary.Add(attribute, List[String]())
+
+							usageDictionary[attribute].Add(pattern)
+
 		for value in documentDictionary.Values:
 			for i in range(value.Count):
 				index = 0
 				sb = StringBuilder()
-				
-				for match in Regex.Matches(value[i], "\\$\\{(?<1>.+?)(?:\\|(?<1>.+?))*}", RegexOptions.CultureInvariant | RegexOptions.Singleline):
-					if match.Index - index > 0:
-						sb.Append(value[i].Substring(index, match.Index - index))
 
-					index = match.Index
+				for match in Regex.Matches(value[i], "(?<1>(?<Open>\\{{2})*)\\{(?<2>(?:[^{}]|\\{{2}|}{2})+)}(?<3>(?<Close-Open>}{2})*)(?(Open)(?!))(?!})", RegexOptions.CultureInvariant):
+					if match.Index - index > 0:
+						sb.Append(Regex.Replace(value[i].Substring(index, match.Index - index), "\\{\\{|}}", MatchEvaluator(lambda x: x.Value.Substring(x.Length / 2)), RegexOptions.CultureInvariant))
+
+					sb.Append(Regex.Replace(match.Groups[1].Value, "\\{\\{", "{", RegexOptions.CultureInvariant))
 
 					if cacheDictionary.ContainsKey(match.Value):
+						sb.Append(Regex.Replace(match.Groups[1].Value, "\\{\\{", "{", RegexOptions.CultureInvariant))
 						sb.Append(cacheDictionary[match.Value])
-						index = match.Index + match.Length
-					
+						sb.Append(Regex.Replace(match.Groups[3].Value, "}}", "}", RegexOptions.CultureInvariant))
+
 					else:
-						for capture in match.Groups[1].Captures:
-							if reverseDictionary.ContainsKey(capture.Value):
-								if reverseDictionary[capture.Value].Count > 0:
-									isReplaced = False
+						pattern = Regex.Replace(match.Groups[2].Value, "\\{\\{|}}", MatchEvaluator(lambda x: x.Value.Substring(x.Length / 2)), RegexOptions.CultureInvariant)
+						max1 = 0
+						word1 = None
+						max2 = 0
+						word2 = None
 
-									for term in termList:
-										linkedListNode = reverseDictionary[capture.Value].Find(term)
+						for word in wordList:
+							if wordDictionary.ContainsKey(word):
+								for attribute in wordDictionary[word]:
+									if usageDictionary.ContainsKey(attribute):
+										if usageDictionary[attribute].Contains(pattern):
+											if termHashSet.Contains(word):
+												if usageDictionary[attribute].Count > max1:
+													max1 = usageDictionary[attribute].Count
+													word1 = word
 
-										if linkedListNode is not None:
-											sb.Append(linkedListNode.Value)
-											index = match.Index + match.Length
-											cacheDictionary.Add(match.Value, linkedListNode.Value)
-											reverseDictionary[capture.Value].Remove(linkedListNode)
-											reverseDictionary[capture.Value].AddLast(linkedListNode)
-											isReplaced = True
+											else:
+												if usageDictionary[attribute].Count > max2:
+													max2 = usageDictionary[attribute].Count
+													word2 = word
 
-											break
+						if word1 is None:
+							if word2 is None:
+								sb.Append(match.Value)
 
-									if isReplaced:
-										break
+							else:
+								sb.Append(Regex.Replace(match.Groups[1].Value, "\\{\\{", "{", RegexOptions.CultureInvariant))
+								sb.Append(word2)
+								sb.Append(Regex.Replace(match.Groups[3].Value, "}}", "}", RegexOptions.CultureInvariant))
+								cacheDictionary.Add(match.Value, word2)
 
 						else:
-							for capture in match.Groups[1].Captures:
-								if reverseDictionary.ContainsKey(capture.Value):
-									if reverseDictionary[capture.Value].Count > 0:
-										linkedListNode = reverseDictionary[capture.Value].First
-										sb.Append(linkedListNode.Value)
-										index = match.Index + match.Length
-										cacheDictionary.Add(match.Value, linkedListNode.Value)
-										reverseDictionary[capture.Value].Remove(linkedListNode)
-										reverseDictionary[capture.Value].AddLast(linkedListNode)
+							sb.Append(Regex.Replace(match.Groups[1].Value, "\\{\\{", "{", RegexOptions.CultureInvariant))
+							sb.Append(word1)
+							sb.Append(Regex.Replace(match.Groups[3].Value, "}}", "}", RegexOptions.CultureInvariant))
+							cacheDictionary.Add(match.Value, word1)
 
-										break
+					index = match.Index + match.Length
 
 				if value[i].Length - index > 0:
-					sb.Append(value[i].Substring(index, value[i].Length - index))
+					sb.Append(Regex.Replace(value[i].Substring(index, value[i].Length - index), "\\{\\{|}}", MatchEvaluator(lambda x: x.Value.Substring(x.Length / 2)), RegexOptions.CultureInvariant))
 
 				value[i] = sb.ToString()
 
-			if value.Exists(lambda x: getTermList(wordDictionary, x).Exists(lambda y: termList.Exists(lambda z: y.Equals(z)))):
+			if value.Exists(lambda x: getTermList(termDictionary, x).Exists(lambda y: termHashSet.Contains(y))):
 				isEmpty = False
 
 		if not isEmpty:
 			for kvp in documentDictionary:
 				for s in kvp.Value:
-					if not Regex.IsMatch(s, "\\$\\{.+?}", RegexOptions.CultureInvariant | RegexOptions.Singleline):
+					if not Regex.IsMatch(s, "(?<Open>\\{{2})*\\{([^{}]|\\{{2}|}{2})+}(?<Close-Open>}{2})*(?(Open)(?!))(?!})", RegexOptions.CultureInvariant):
 						naiveBayes.train(s, kvp.Key)
 
 		return naiveBayes
@@ -918,8 +947,8 @@ def ask(text):
 						response.Close()
 
 			except Exception, e:
-					Trace.WriteLine(e.clsException.Message)
-					Trace.WriteLine(e.clsException.StackTrace)
+				Trace.WriteLine(e.clsException.Message)
+				Trace.WriteLine(e.clsException.StackTrace)
 
 	def onReady(task):
 		global username, password
@@ -1325,8 +1354,8 @@ def onTick(timer, e):
 							response.Close()
 
 				except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
+					Trace.WriteLine(e.clsException.Message)
+					Trace.WriteLine(e.clsException.StackTrace)
 
 		def onReady(task):
 			global username, password
@@ -1928,8 +1957,8 @@ def onPing(s, e):
 								response.Close()
 
 					except Exception, e:
-							Trace.WriteLine(e.clsException.Message)
-							Trace.WriteLine(e.clsException.StackTrace)
+						Trace.WriteLine(e.clsException.Message)
+						Trace.WriteLine(e.clsException.StackTrace)
 
 			def onReady(task):
 				global username, password
@@ -2788,8 +2817,8 @@ def onOpened(s, e):
 								response.Close()
 
 					except Exception, e:
-							Trace.WriteLine(e.clsException.Message)
-							Trace.WriteLine(e.clsException.StackTrace)
+						Trace.WriteLine(e.clsException.Message)
+						Trace.WriteLine(e.clsException.StackTrace)
 
 			def onReady(task):
 				global username, password
@@ -3214,8 +3243,8 @@ def onOpened(s, e):
 						window.Show()
 
 				except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
+					Trace.WriteLine(e.clsException.Message)
+					Trace.WriteLine(e.clsException.StackTrace)
 
 			Task.Factory.StartNew(onVerify, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
 
@@ -3297,8 +3326,8 @@ def onOpened(s, e):
 								response.Close()
 
 					except Exception, e:
-							Trace.WriteLine(e.clsException.Message)
-							Trace.WriteLine(e.clsException.StackTrace)
+						Trace.WriteLine(e.clsException.Message)
+						Trace.WriteLine(e.clsException.StackTrace)
 
 			def onReady(task):
 				global username, password
@@ -4883,7 +4912,7 @@ def getTermList(dictionary, text):
 			stringBuilder.Remove(0, selectedTerm.Length)
 
 	return selectedTermList
-
+	
 def onStart(s, e):
 	global username, password, oauthToken, oauthTokenSecret, menuItem, separator, timer
 
@@ -4962,8 +4991,8 @@ def onStart(s, e):
 							response.Close()
 
 				except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
+					Trace.WriteLine(e.clsException.Message)
+					Trace.WriteLine(e.clsException.StackTrace)
 
 		def onReady(task):
 			global username, password
