@@ -700,11 +700,6 @@ def ask(text):
 
 				tempStringBuilder.Remove(0, selectedTerm.Length)
 
-		for value in wordDictionary.Values:
-			for attribute in value:
-				if not attributeHashSet.Contains(attribute):
-					attributeHashSet.Add(attribute)
-		
 		for value in documentDictionary.Values:
 			for i in range(value.Count):
 				for match in Regex.Matches(value[i], "(?<Open>\\{{2})*\\{(?<1>(?:[^{}]|\\{{2}|}{2})+)}(?<Close-Open>}{2})*(?(Open)(?!))(?!})", RegexOptions.CultureInvariant):
@@ -750,10 +745,9 @@ def ask(text):
 													max1 = usageDictionary[attribute].Count
 													word1 = word
 
-											else:
-												if usageDictionary[attribute].Count > max2:
-													max2 = usageDictionary[attribute].Count
-													word2 = word
+											elif usageDictionary[attribute].Count > max2:
+												max2 = usageDictionary[attribute].Count
+												word2 = word
 
 						if word1 is None:
 							if word2 is None:
