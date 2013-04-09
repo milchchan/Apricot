@@ -19,13 +19,6 @@ from System.Threading.Tasks import Task, TaskCreationOptions
 from System.Windows import Application, Window, DependencyPropertyChangedEventArgs
 from Apricot import Balloon, Message, Script
 
-def tryConnect(address, port):
-	try:
-		return TcpClient(address, port)
-	
-	except:
-		return None
-
 def speech(text):
 	def onSpeech():
 		for process in Process.GetProcesses():
@@ -67,6 +60,13 @@ def speech(text):
 
 	Task.Factory.StartNew(onSpeech, TaskCreationOptions.LongRunning)
 	
+def tryConnect(address, port):
+	try:
+		return TcpClient(address, port)
+	
+	except:
+		return None
+
 def onIsVisibleChanged(s, e):
 	if e.NewValue == True and s.Messages.Count > 0:
 		speech(s.Messages[s.Messages.Count - 1].Text)
