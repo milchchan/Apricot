@@ -10,7 +10,7 @@ clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot") 
 
 from System import Object, UInt32, Double, Char, String, Uri, UriKind, Array, Convert, BitConverter, Action
-from System.Collections.Generic import List, Stack, Dictionary, KeyValuePair
+from System.Collections.Generic import List, Stack, Dictionary
 from System.IO import Stream, StreamReader
 from System.Diagnostics import Trace
 from System.Globalization import CultureInfo, NumberStyles
@@ -19,10 +19,9 @@ from System.Text.RegularExpressions import Regex, Match, RegexOptions
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskScheduler
 from System.Net import WebRequest, WebResponse
 from System.Net.NetworkInformation import NetworkInterface
-from System.Windows import Application, Window
-from System.Windows import Clipboard
+from System.Windows import Application, Window, Clipboard, DataObject, DataFormats
 from System.Windows.Controls import MenuItem, Separator
-from Apricot import Agent, Script, Entry, Word, Sequence
+from Apricot import Agent, Script
 
 # http://www.json.org/
 class JsonDecoder(Object):
@@ -380,7 +379,7 @@ def onOpened(s, e):
 
 				def onCompleted(task):
 					if task.Result is not None:
-						Clipboard.SetText(task.Result.ToString())
+						Clipboard.SetDataObject(DataObject(DataFormats.UnicodeText, task.Result.ToString(), True))
 
 				Task.Factory.StartNew[Uri](onUpdate, TaskCreationOptions.LongRunning).ContinueWith(Action[Task[Uri]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 
