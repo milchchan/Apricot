@@ -11,7 +11,7 @@ clr.AddReferenceByPartialName("PresentationCore")
 clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot")
 
-from System import Object, Byte, UInt32, Double, Char, String, Uri, DateTime, TimeSpan, Array, Convert, Environment, StringComparison, Guid, BitConverter
+from System import Object, Byte, UInt32, Double, Char, String, Uri, DateTime, TimeSpan, Array, Environment, StringComparison, Guid, Convert, BitConverter, Action
 from System.Collections.Generic import List, Stack, Dictionary, KeyValuePair
 from System.Configuration import ConfigurationManager, ConfigurationUserLevel, ExeConfigurationFileMap
 from System.Diagnostics import Trace
@@ -21,7 +21,7 @@ from System.Reflection import Assembly
 from System.Text import StringBuilder, Encoding, UTF8Encoding
 from System.Text.RegularExpressions import Regex, Match, RegexOptions
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskContinuationOptions, TaskScheduler
-from System.Net import WebRequest, WebResponse, WebRequestMethods
+from System.Net import WebRequest, WebResponse, WebRequestMethods, HttpWebResponse, HttpStatusCode
 from System.Net.NetworkInformation import NetworkInterface
 from System.Windows import Application, Window, WindowStartupLocation, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Thickness, RoutedEventHandler, SystemColors
 from System.Windows.Controls import MenuItem, Separator, StackPanel, Border, ComboBox, ComboBoxItem, Button, CheckBox, WebBrowser, Orientation
@@ -364,56 +364,60 @@ def update():
 
 				try:
 					response = request.GetResponse()
-					stream = response.GetResponseStream()
-					streamReader = StreamReader(stream)
-					json = JsonDecoder.decode(streamReader.ReadToEnd())
 
-					if json is not None:
-						if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-							if json.ContainsKey("data"):
-								if json["data"] is not None:
-									if clr.GetClrType(Array).IsInstanceOfType(json["data"]):
-										for obj in json["data"]:
-											if obj is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-													entry = Entry()
-													userId = None
+					if response.StatusCode == HttpStatusCode.OK:
+						stream = response.GetResponseStream()
+						streamReader = StreamReader(stream)
+						json = JsonDecoder.decode(streamReader.ReadToEnd())
 
-													if obj.ContainsKey("id"):
-														if obj["id"] is not None:
-															array = obj["id"].Split('_')
+						if json is not None:
+							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
+								if json.ContainsKey("data"):
+									if json["data"] is not None:
+										if clr.GetClrType(Array).IsInstanceOfType(json["data"]):
+											for obj in json["data"]:
+												if obj is not None:
+													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+														entry = Entry()
+														userId = None
 
-															if array.Length == 2:
-																entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
+														if obj.ContainsKey("id"):
+															if obj["id"] is not None:
+																array = obj["id"].Split('_')
+
+																if array.Length == 2:
+																	entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
 													
-													if obj.ContainsKey("from"):
-														if obj["from"] is not None:
-															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
-																entry.Author = obj["from"]["name"]
+														if obj.ContainsKey("from"):
+															if obj["from"] is not None:
+																if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
+																	entry.Author = obj["from"]["name"]
 
-																if obj["from"].ContainsKey("id"):
-																	userId = obj["from"]["id"]
+																	if obj["from"].ContainsKey("id"):
+																		userId = obj["from"]["id"]
 																
-													if obj.ContainsKey("created_time"):
-														if obj["created_time"] is not None:
-															entry.Created = DateTime.Parse(obj["created_time"])
+														if obj.ContainsKey("created_time"):
+															if obj["created_time"] is not None:
+																entry.Created = DateTime.Parse(obj["created_time"])
 
-													if obj.ContainsKey("updated_time"):
-														if obj["updated_time"] is not None:
-															entry.Modified = DateTime.Parse(obj["updated_time"])
+														if obj.ContainsKey("updated_time"):
+															if obj["updated_time"] is not None:
+																entry.Modified = DateTime.Parse(obj["updated_time"])
 
-													if obj.ContainsKey("message"):
-														if obj["message"] is not None:
-															title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+														if obj.ContainsKey("message"):
+															if obj["message"] is not None:
+																title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 
-															if title.Length > 100:
-																title = title.Remove(100, title.Length - 100)
+																if title.Length > 100:
+																	title = title.Remove(100, title.Length - 100)
 
-															entry.Title = title
+																entry.Title = title
 
-													if entry.Resource is not None and userId is not None:
-														entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
-														entryList.Add(entry)
+														if entry.Resource is not None and userId is not None:
+															entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
+															entryList.Add(entry)
+
+					return response.StatusCode.ToString()
 					
 				finally:
 					if streamReader is not None:
@@ -429,8 +433,14 @@ def update():
 				Trace.WriteLine(e.clsException.Message)
 				Trace.WriteLine(e.clsException.StackTrace)
 
+		return None
+
 	def onCompleted(task):
-		global dateTime
+		global accessToken, dateTime
+
+		if task.Result is not None:
+			if task.Result.Equals(HttpStatusCode.Unauthorized.ToString()):
+				accessToken = None
 
 		if entryList.Count > 0:
 			dt = DateTime(0)
@@ -473,7 +483,7 @@ def update():
 						if Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, termList)):
 							break
 
-	Task.Factory.StartNew(onUpdate, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, context)
+	Task.Factory.StartNew[String](onUpdate, TaskCreationOptions.LongRunning).ContinueWith(Action[Task[String]](onCompleted), context)
 
 def onTick(timer, e):
 	global accessToken
@@ -503,7 +513,11 @@ def post(text, filename):
 	context = TaskScheduler.FromCurrentSynchronizationContext()
 	
 	def onCompleted(task):
-		global dateTime
+		global accessToken, dateTime
+
+		if task.Result is not None:
+			if task.Result.Equals(HttpStatusCode.Unauthorized.ToString()):
+				accessToken = None
 
 		if entryList.Count > 0:
 			dt = DateTime(0)
@@ -551,7 +565,7 @@ def post(text, filename):
 
 		d.Clear()
 		d.Add("access_token", accessToken)
-		d.Add("source", String.Concat('@', filename))
+		d.Add("source", String.Concat('@', Path.GetFileName(filename)))
 		d.Add("message", text)
 		sb.Clear()
 
@@ -581,7 +595,7 @@ def post(text, filename):
 			contents.AppendLine(header)
 
 			extension = Path.GetExtension(filename)
-			fileHeader = String.Format("Content-Disposition: file; filename=\"{0}\"", filename)
+			fileHeader = String.Format("Content-Disposition: file; filename=\"{0}\"", Path.GetFileName(filename))
 			fileData = Encoding.GetEncoding(encoding).GetString(byteList.ToArray())
 
 			contents.AppendLine(fileHeader)
@@ -610,6 +624,7 @@ def post(text, filename):
 					uploadResponse = None
 					uploadResponseStream = None
 					uploadStreamReader = None
+					statusCode = None
 					isUploaded = False
 
 					try:
@@ -617,15 +632,18 @@ def post(text, filename):
 						uploadRequestStream.Write(byteList.ToArray(), 0, byteList.Count)
 						uploadResponse = uploadRequest.GetResponse()
 
-						uploadResponseStream = uploadResponse.GetResponseStream()
-						uploadStreamReader = StreamReader(uploadResponseStream)
+						if uploadResponse.StatusCode == HttpStatusCode.OK:
+							uploadResponseStream = uploadResponse.GetResponseStream()
+							uploadStreamReader = StreamReader(uploadResponseStream)
 
-						json = JsonDecoder.decode(uploadStreamReader.ReadToEnd())
+							json = JsonDecoder.decode(uploadStreamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-								if json.ContainsKey("id"):
-									isUploaded = True
+							if json is not None:
+								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
+									if json.ContainsKey("id"):
+										isUploaded = True
+
+						statusCode = uploadResponse.StatusCode.ToString()
 					
 					finally:
 						if uploadStreamReader is not None:
@@ -708,11 +726,15 @@ def post(text, filename):
 							if updateResponse is not None:
 								updateResponse.Close()
 
+					return statusCode
+
 				except Exception, e:
 					Trace.WriteLine(e.clsException.Message)
 					Trace.WriteLine(e.clsException.StackTrace)
 
-		Task.Factory.StartNew(onPrepare, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onExecute, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
+			return None
+
+		Task.Factory.StartNew(onPrepare, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith[String](onExecute, TaskContinuationOptions.LongRunning).ContinueWith(Action[Task[String]](onCompleted), context)
 
 	else:
 		d.Clear()
@@ -735,6 +757,7 @@ def post(text, filename):
 					postResponse = None
 					postResponseStream = None
 					postStreamReader = None
+					statusCode = None
 					isPosted = False
 
 					try:
@@ -750,15 +773,19 @@ def post(text, filename):
 								postRequestStream.Close()
 
 						postResponse = postRequest.GetResponse()
-						postResponseStream = postResponse.GetResponseStream()
-						postStreamReader = StreamReader(postResponseStream)
 
-						json = JsonDecoder.decode(postStreamReader.ReadToEnd())
+						if postResponse.StatusCode == HttpStatusCode.OK:
+							postResponseStream = postResponse.GetResponseStream()
+							postStreamReader = StreamReader(postResponseStream)
 
-						if json is not None:
-							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-								if json.ContainsKey("id"):
-									isPosted = True
+							json = JsonDecoder.decode(postStreamReader.ReadToEnd())
+
+							if json is not None:
+								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
+									if json.ContainsKey("id"):
+										isPosted = True
+
+						statusCode = postResponse.StatusCode.ToString()
 					
 					finally:
 						if postStreamReader is not None:
@@ -827,7 +854,7 @@ def post(text, filename):
 															if entry.Resource is not None and userId is not None:
 																entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
 																entryList.Add(entry)
-					
+
 						finally:
 							if updateStreamReader is not None:
 								updateStreamReader.Close()
@@ -838,11 +865,15 @@ def post(text, filename):
 							if updateResponse is not None:
 								updateResponse.Close()
 
+					return statusCode
+
 				except Exception, e:
 					Trace.WriteLine(e.clsException.Message)
 					Trace.WriteLine(e.clsException.StackTrace)
 
-		Task.Factory.StartNew(onExecute, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, context)
+			return None
+
+		Task.Factory.StartNew[String](onExecute, TaskCreationOptions.LongRunning).ContinueWith(Action[Task[String]](onCompleted), context)
 
 def getTermList(dictionary, text):
 	stringBuilder = StringBuilder(text)
@@ -909,6 +940,7 @@ def onOpened(s, e):
 										response = None
 										stream = None
 										streamReader = None
+										shortLivedAccessToken = None
 
 										try:
 											response = request.GetResponse()
@@ -916,18 +948,55 @@ def onOpened(s, e):
 											streamReader = StreamReader(stream)
 
 											for m in Regex.Matches(streamReader.ReadToEnd(), "(?<1>.+?)=(?<2>.*?)(?:&|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline):
-												if not dictionary.ContainsKey(m.Groups[1].Value):
-													dictionary.Add(m.Groups[1].Value, m.Groups[2].Value)
+												if m.Groups[1].Value.Equals("access_token"):
+													shortLivedAccessToken =  m.Groups[2].Value
 
 										finally:
 											if streamReader is not None:
 												streamReader.Close()
+												streamReader = None
 
 											if stream is not None:
 												stream.Close()
+												stream = None
 				
 											if response is not None:
 												response.Close()
+												response = None
+
+										if shortLivedAccessToken is not None:
+											d.Remove("redirect_uri")
+											d.Remove("code")
+											d.Add("grant_type", "fb_exchange_token")
+											d.Add("fb_exchange_token", shortLivedAccessToken)
+											sb.Clear()
+
+											for kvp in d:
+												if sb.Length > 0:
+													sb.Append('&')
+
+												sb.AppendFormat("{0}={1}", kvp.Key, urlEncode(kvp.Value))
+
+											r = WebRequest.Create(String.Concat("https://graph.facebook.com/oauth/access_token?", sb.ToString()))
+											
+											try:
+												response = r.GetResponse()
+												stream = response.GetResponseStream()
+												streamReader = StreamReader(stream)
+
+												for m in Regex.Matches(streamReader.ReadToEnd(), "(?<1>.+?)=(?<2>.*?)(?:&|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline):
+													if not dictionary.ContainsKey(m.Groups[1].Value):
+														dictionary.Add(m.Groups[1].Value, m.Groups[2].Value)
+
+											finally:
+												if streamReader is not None:
+													streamReader.Close()
+
+												if stream is not None:
+													stream.Close()
+				
+												if response is not None:
+													response.Close()
 
 										if dictionary.ContainsKey("access_token"):
 											config = None
@@ -967,7 +1036,7 @@ def onOpened(s, e):
 
 														if lines is not None:
 															if Regex.IsMatch(lines, "\\#\\s*Facebook.py", RegexOptions.CultureInvariant):
-																lines = Regex.Replace(lines, "accessToken\\s*=\\s*None", String.Format("accessToken = \"{0}\"", dictionary["access_token"]), RegexOptions.CultureInvariant)
+																lines = Regex.Replace(lines, String.Concat("(?<=", Environment.NewLine, ")accessToken\\s*=\\s*\\S+?(?=", Environment.NewLine, ")"), String.Format("accessToken = \"{0}\"", dictionary["access_token"]), RegexOptions.CultureInvariant)
 																fs2 = None
 																sw = None
 
@@ -1024,7 +1093,7 @@ def onOpened(s, e):
 				d = Dictionary[String, String]()
 				d.Add("client_id", appId)
 				d.Add("redirect_uri", "https://www.facebook.com/connect/login_success.html")
-				d.Add("scope", "offline_access, read_stream, publish_stream")
+				d.Add("scope", "read_stream, publish_stream")
 				d.Add("display", "popup")
 
 				for kvp in d:
