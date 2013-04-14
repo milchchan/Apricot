@@ -415,11 +415,12 @@ def onDrawClipboard(s, e):
 				success, uri = Uri.TryCreate(match.Value, UriKind.RelativeOrAbsolute)
 
 				if success:
-					if uri.Host.Equals("nazr.in") == False and uriList.Contains(uri) == False:
-						uriList.Add(uri)
+					if uri.IsAbsoluteUri and uriList.Contains(uri) == False:
+						if not uri.Host.Equals("nazr.in"):
+							uriList.Add(uri)
 
-						if uriList.Count > 10:
-							uriList.RemoveRange(0, uriList.Count - 10)
+							if uriList.Count > 10:
+								uriList.RemoveRange(0, uriList.Count - 10)
 							
 def tryGetClipboardText():
 	try:
