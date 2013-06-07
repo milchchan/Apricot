@@ -21,7 +21,7 @@ from System.Reflection import Assembly
 from System.Text import StringBuilder, Encoding, UTF8Encoding
 from System.Text.RegularExpressions import Regex, Match, RegexOptions
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskContinuationOptions, TaskScheduler
-from System.Net import WebRequest, WebResponse, WebRequestMethods, HttpWebResponse, HttpStatusCode, WebException
+from System.Net import WebRequest, WebResponse, WebRequestMethods, HttpWebResponse, HttpStatusCode
 from System.Net.NetworkInformation import NetworkInterface
 from System.Windows import Application, Window, WindowStartupLocation, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Thickness, RoutedEventHandler, SystemColors
 from System.Windows.Controls import MenuItem, Separator, StackPanel, Border, ComboBox, ComboBoxItem, Button, CheckBox, WebBrowser, Orientation
@@ -429,9 +429,6 @@ def update():
 					if response is not None:
 						response.Close()
 
-			except WebException, e:
-				return e.Response.StatusCode.ToString()
-
 			except Exception, e:
 				Trace.WriteLine(e.clsException.Message)
 				Trace.WriteLine(e.clsException.StackTrace)
@@ -442,7 +439,7 @@ def update():
 		global accessToken, dateTime
 
 		if task.Result is not None:
-			if task.Result.Equals(HttpStatusCode.BadRequest.ToString()):
+			if task.Result.Equals(HttpStatusCode.Unauthorized.ToString()):
 				accessToken = None
 
 		if entryList.Count > 0:
@@ -519,7 +516,7 @@ def post(text, filename):
 		global accessToken, dateTime
 
 		if task.Result is not None:
-			if task.Result.Equals(HttpStatusCode.BadRequest.ToString()):
+			if task.Result.Equals(HttpStatusCode.Unauthorized.ToString()):
 				accessToken = None
 
 		if entryList.Count > 0:
@@ -731,9 +728,6 @@ def post(text, filename):
 
 					return statusCode
 
-				except WebException, e:
-					return e.Response.StatusCode.ToString()
-
 				except Exception, e:
 					Trace.WriteLine(e.clsException.Message)
 					Trace.WriteLine(e.clsException.StackTrace)
@@ -872,9 +866,6 @@ def post(text, filename):
 								updateResponse.Close()
 
 					return statusCode
-
-				except WebException, e:
-					return e.Response.StatusCode.ToString()
 
 				except Exception, e:
 					Trace.WriteLine(e.clsException.Message)
