@@ -24,7 +24,7 @@ from System.Net import WebRequest, WebResponse
 from System.Net.NetworkInformation import NetworkInterface
 from System.Windows import Application, Window, WindowStartupLocation, WindowStyle, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Rect, PropertyPath
 from System.Windows.Controls import ContentControl, Grid
-from System.Windows.Media import Color, Colors, Brushes, SolidColorBrush, TranslateTransform, ScaleTransform, RectangleGeometry, EllipseGeometry, BitmapCache, ImageBrush, TileMode, BrushMappingMode, Stretch
+from System.Windows.Media import Color, Colors, Brushes, SolidColorBrush, TranslateTransform, ScaleTransform, RectangleGeometry, EllipseGeometry, ImageBrush, TileMode, BrushMappingMode, Stretch, AlignmentX, AlignmentY, DrawingGroup, DrawingContext, DrawingImage
 from System.Windows.Media.Animation import Storyboard, Clock, ClockState, DoubleAnimation, SineEase, EasingMode
 from System.Windows.Media.Effects import DropShadowEffect
 from System.Windows.Media.Imaging import BitmapImage, BitmapCacheOption, BitmapCreateOptions
@@ -402,11 +402,11 @@ def onTick(timer, e):
 														s = None
 
 														if digit == 2:
-															path = "Assets\Cloud-Lightning.png"
+															path = "Assets\\Cloud-Lightning.png"
 															s = "Thunderstorm"
 
 														elif  digit == 3:
-															path = "Assets\Cloud-Drizzle.png"
+															path = "Assets\\Cloud-Drizzle.png"
 															s = "Drizzle"
 														
 														elif  digit == 5:
@@ -414,22 +414,22 @@ def onTick(timer, e):
 
 															if d == 0:
 																if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
-																	path = "Assets\Cloud-Rain-Sun.png"
+																	path = "Assets\\Cloud-Rain-Sun.png"
 																
 																else:
-																	path = "Assets\Cloud-Rain-Moon.png"
+																	path = "Assets\\Cloud-Rain-Moon.png"
 
 															else:
-																path = "Assets\Cloud-Rain.png"
+																path = "Assets\\Cloud-Rain.png"
 
 															s = "Rain"
 														
 														elif  digit == 6:
-															path = "Assets\Cloud-Snow.png"
+															path = "Assets\\Cloud-Snow.png"
 															s = "Snow"
 														
 														elif  digit == 7:
-															path = "Assets\Cloud-Fog.png"
+															path = "Assets\\Cloud-Fog.png"
 															
 															if Convert.ToInt32(id) == 701:
 																s = "Mist"
@@ -449,37 +449,37 @@ def onTick(timer, e):
 														elif  digit == 8:
 															if Convert.ToInt32(id) == 800:
 																if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
-																	path = "Assets\Sun.png"
+																	path = "Assets\\Sun.png"
 																	s = "Sunny"
 																
 																else:
-																	path = "Assets\Moon.png"
+																	path = "Assets\\Moon.png"
 																	s = "Clear"
 
 															elif Convert.ToInt32(id) == 801:
 																if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
-																	path = "Assets\Cloud-Sun.png"
+																	path = "Assets\\Cloud-Sun.png"
 																
 																else:
-																	path = "Assets\Cloud-Moon.png"
+																	path = "Assets\\Cloud-Moon.png"
 
 																s = "Cloudy"
 
 															else:
-																path = "Assets\Cloud.png"
+																path = "Assets\\Cloud.png"
 																s = "Overcast"
 															
 														else:
 															if Convert.ToInt32(id) == 900:
-																path = "Assets\Tornado.png"
+																path = "Assets\\Tornado.png"
 																s = "Tornado"
 
 															elif Convert.ToInt32(id) == 905:
-																path = "Assets\Wind.png"
+																path = "Assets\\Wind.png"
 																s = "Windy"
 
 															elif Convert.ToInt32(id) == 906:
-																path = "Assets\Cloud-Hail.png"
+																path = "Assets\\Cloud-Hail.png"
 																s = "Hail"
 
 														if weatherCondition is None:
@@ -538,96 +538,20 @@ def onTick(timer, e):
 		else:
 			Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, task.Result.Key))
 
-		if task.Result.Value.Value.Value.Value.Count > 0 and Enumerable.SequenceEqual[Double](idList, task.Result.Value.Value.Value.Key) == False:
+		if Application.Current.MainWindow.IsVisible and task.Result.Value.Value.Value.Value.Count > 0 and not Enumerable.SequenceEqual[Double](idList, task.Result.Value.Value.Value.Key):
 			width = 125
 			height = 125
 			max = 5
 			window = Window()
-			storyboard = Storyboard()
-			
-			solidColorBrush1 = SolidColorBrush(Colors.Black)
-			solidColorBrush1.Opacity = 0.75
-
-			if solidColorBrush1.CanFreeze:
-				solidColorBrush1.Freeze()
-
 			contentControl = ContentControl()
-			contentControl.UseLayoutRounding = True
-			contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
-			contentControl.VerticalAlignment = VerticalAlignment.Stretch
-			contentControl.Opacity = 0
-			contentControl.RenderTransform = ScaleTransform(1, 1)
-
 			grid = Grid()
-			grid.HorizontalAlignment = HorizontalAlignment.Stretch
-			grid.VerticalAlignment = VerticalAlignment.Stretch
-			grid.Background = solidColorBrush1
-			grid.Width = 150
-			grid.Height = 150
-			grid.Clip = EllipseGeometry(Rect(0, 0, 150, 150))
-
-			dropShadowEffect = DropShadowEffect()
-			dropShadowEffect.BlurRadius = 1
-			dropShadowEffect.Color = Colors.Black
-			dropShadowEffect.Direction = 270
-			dropShadowEffect.Opacity = 0.5
-			dropShadowEffect.ShadowDepth = 1
-
-			if dropShadowEffect.CanFreeze:
-				dropShadowEffect.Freeze()
-
-			grid.Effect = dropShadowEffect
-
-			solidColorBrush2 = SolidColorBrush(colorFromAhsb(Byte.MaxValue, 270, 1.0, 0.4) if task.Result.Value.Key < 0 else colorFromAhsb(Byte.MaxValue, 0, 1.0, 0.4) if task.Result.Value.Key > 37 else colorFromAhsb(Byte.MaxValue, 270 - 270 * task.Result.Value.Key / 37, 1.0, 0.4))
-
-			if solidColorBrush2.CanFreeze:
-				solidColorBrush2.Freeze()
+			storyboard = Storyboard()
 
 			def onCurrentStateInvalidated(sender, args):
 				if sender.CurrentState == ClockState.Filling:
 					window.Close()
 
 			storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-
-			for stream in task.Result.Value.Value.Value.Value:
-				bi = BitmapImage()
-				bi.BeginInit()
-				bi.StreamSource = stream
-				bi.CacheOption = BitmapCacheOption.OnLoad
-				bi.CreateOptions = BitmapCreateOptions.None
-				bi.EndInit()
-
-				imageBrush = ImageBrush(bi)
-				imageBrush.TileMode = TileMode.None
-				imageBrush.ViewportUnits = BrushMappingMode.Absolute
-				imageBrush.Viewport = Rect(0, 0, width, height)
-				imageBrush.Stretch = Stretch.Uniform
-
-				if imageBrush.CanFreeze:
-					imageBrush.Freeze()
-
-				g = Grid()
-				g.HorizontalAlignment = HorizontalAlignment.Center
-				g.VerticalAlignment = VerticalAlignment.Center
-				g.Background = Brushes.Transparent
-
-				for i in range(max):
-					rectangle = Rectangle()
-					rectangle.CacheMode = BitmapCache(1)
-					rectangle.HorizontalAlignment = HorizontalAlignment.Left
-					rectangle.VerticalAlignment = VerticalAlignment.Top
-					rectangle.Width = width
-					rectangle.Height = height
-					rectangle.Fill = solidColorBrush2
-					rectangle.Opacity = 0
-					rectangle.OpacityMask = imageBrush
-					rectangle.Clip = RectangleGeometry(Rect(0, height / max * i, width, height / max))
-					rectangle.RenderTransform = TranslateTransform(0, 0)
-					rectangle.Tag = i
-					
-					g.Children.Add(rectangle)
-
-				grid.Children.Add(g)
 		
 			def onLoaded(sender, args):
 				time = 0
@@ -714,7 +638,21 @@ def onTick(timer, e):
 
 				storyboard.Begin()
 			
-			contentControl.Content = grid
+			fs = None
+			bi = BitmapImage()
+
+			try:
+				fs = FileStream("Assets\\Background-Popup.png", FileMode.Open, FileAccess.Read, FileShare.Read)
+
+				bi.BeginInit()
+				bi.StreamSource = fs
+				bi.CacheOption = BitmapCacheOption.OnLoad
+				bi.CreateOptions = BitmapCreateOptions.None
+				bi.EndInit()
+
+			finally:
+				if fs is not None:
+					fs.Close()
 
 			window.Owner = Application.Current.MainWindow
 			window.Title = Application.Current.MainWindow.Title
@@ -726,8 +664,110 @@ def onTick(timer, e):
 			window.Topmost = True
 			window.SizeToContent = SizeToContent.WidthAndHeight
 			window.Background = Brushes.Transparent
-			window.Content = contentControl
 			window.Loaded += onLoaded
+			
+			contentControl.UseLayoutRounding = True
+			contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
+			contentControl.VerticalAlignment = VerticalAlignment.Stretch
+			contentControl.Opacity = 0
+			contentControl.RenderTransform = ScaleTransform(1, 1)
+
+			window.Content = contentControl
+
+			imageBrush = ImageBrush(bi)
+			imageBrush.TileMode = TileMode.None
+			imageBrush.Stretch = Stretch.Fill
+			imageBrush.ViewboxUnits = BrushMappingMode.Absolute
+			imageBrush.Viewbox = Rect(0, 0, bi.Width, bi.Height)
+			imageBrush.AlignmentX = AlignmentX.Left
+			imageBrush.AlignmentY = AlignmentY.Top
+			imageBrush.Opacity = 0.5
+
+			dg = DrawingGroup()
+			dc = dg.Open()
+			dc.DrawRectangle(SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, 0, 0, 0)), None, Rect(0, 0, bi.Width, bi.Height))
+			dc.DrawRectangle(imageBrush, None, Rect(0, 0, bi.Width, bi.Height))
+			dc.Close()
+
+			backgroundBrush = ImageBrush(DrawingImage(dg))
+			backgroundBrush.TileMode = TileMode.Tile
+			backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
+			backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
+			backgroundBrush.Stretch = Stretch.None
+
+			if backgroundBrush.CanFreeze:
+				backgroundBrush.Freeze()
+
+			grid.HorizontalAlignment = HorizontalAlignment.Stretch
+			grid.VerticalAlignment = VerticalAlignment.Stretch
+			grid.Background = backgroundBrush
+			grid.Width = 150
+			grid.Height = 150
+			grid.Clip = EllipseGeometry(Rect(0, 0, 150, 150))
+
+			dropShadowEffect = DropShadowEffect()
+			dropShadowEffect.BlurRadius = 1
+			dropShadowEffect.Color = Colors.Black
+			dropShadowEffect.Direction = 270
+			dropShadowEffect.Opacity = 0.5
+			dropShadowEffect.ShadowDepth = 1
+
+			if dropShadowEffect.CanFreeze:
+				dropShadowEffect.Freeze()
+
+			grid.Effect = dropShadowEffect
+
+			contentControl.Content = grid
+
+			solidColorBrush = SolidColorBrush(colorFromAhsb(Byte.MaxValue, 60, 1.0, 1.0) if task.Result.Value.Key < 0 else colorFromAhsb(Byte.MaxValue, 0, 1.0, 0.4) if task.Result.Value.Key > 37 else colorFromAhsb(Byte.MaxValue, 60 - 60 * task.Result.Value.Key / 37, 1.0, 0.4 + 0.6 * Math.Pow(Math.E, (37 / 5 - task.Result.Value.Key) - 37 / 5) if task.Result.Value.Key < 37 / 5 else 0.4))
+
+			if solidColorBrush.CanFreeze:
+				solidColorBrush.Freeze()
+
+
+			for stream in task.Result.Value.Value.Value.Value:
+				try:
+					bi = BitmapImage()
+					bi.BeginInit()
+					bi.StreamSource = stream
+					bi.CacheOption = BitmapCacheOption.OnLoad
+					bi.CreateOptions = BitmapCreateOptions.None
+					bi.EndInit()
+
+				finally:
+					stream.Close()
+
+				imageBrush = ImageBrush(bi)
+				imageBrush.TileMode = TileMode.None
+				imageBrush.ViewportUnits = BrushMappingMode.Absolute
+				imageBrush.Viewport = Rect(0, 0, width, height)
+				imageBrush.Stretch = Stretch.Uniform
+
+				if imageBrush.CanFreeze:
+					imageBrush.Freeze()
+
+				g = Grid()
+				g.HorizontalAlignment = HorizontalAlignment.Center
+				g.VerticalAlignment = VerticalAlignment.Center
+				g.Background = Brushes.Transparent
+
+				grid.Children.Add(g)
+
+				for i in range(max):
+					rectangle = Rectangle()
+					rectangle.HorizontalAlignment = HorizontalAlignment.Left
+					rectangle.VerticalAlignment = VerticalAlignment.Top
+					rectangle.Width = width
+					rectangle.Height = height
+					rectangle.Fill = solidColorBrush
+					rectangle.Opacity = 0
+					rectangle.OpacityMask = imageBrush
+					rectangle.Clip = RectangleGeometry(Rect(0, height / max * i, width, height / max))
+					rectangle.RenderTransform = TranslateTransform(0, 0)
+					rectangle.Tag = i
+					
+					g.Children.Add(rectangle)
+
 			window.Show()
 
 			idList.Clear()
