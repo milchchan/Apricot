@@ -13,13 +13,12 @@ clr.AddReferenceByPartialName("PresentationCore")
 clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot")
 
-from System import Object, Byte, Boolean, UInt32, Double, Char, String, Uri, DateTime, TimeSpan, Array, Convert, Random, Environment, StringComparison, Guid, Math, BitConverter, Action
+from System import Object, Byte, Boolean, UInt32, Double, Char, String, Uri, DateTime, TimeSpan, Array, Random, Environment, StringComparison, Guid, Math, Convert, BitConverter, Action
 from System.IO import Stream, FileStream, StreamReader, StreamWriter, Path, Directory, File, FileMode, FileAccess, FileShare
 from System.Collections.Generic import List, Queue, Stack, Dictionary, SortedDictionary, KeyValuePair, HashSet
 from System.Configuration import ConfigurationManager, ConfigurationUserLevel, ExeConfigurationFileMap
 from System.Diagnostics import Process, Trace
 from System.Globalization import CultureInfo, NumberStyles, DateTimeStyles
-from System.Reflection import Assembly
 from System.Security.Cryptography import HMACSHA1
 from System.Text import StringBuilder, Encoding, UTF8Encoding
 from System.Text.RegularExpressions import Regex, Match, Capture, RegexOptions
@@ -561,7 +560,7 @@ def search(query):
 	
 	if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
 		entryList = List[Entry]()
-
+		
 		sortedDictionary = createCommonParameters(consumerKey)
 		sortedDictionary.Add("oauth_token", oauthToken)
 		sortedDictionary.Add("q", urlEncode(query))
@@ -595,7 +594,6 @@ def search(query):
 									if clr.GetClrType(Array).IsInstanceOfType(json["statuses"]):
 										for status in json["statuses"]:
 											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(status):
-												
 												entry = Entry()
 												idStr = String.Empty
 												screenName = String.Empty
@@ -606,12 +604,30 @@ def search(query):
 
 												if status.ContainsKey("text"):
 													if status["text"] is not None:
-														text = Regex.Replace(status["text"], "[\r\n]|\\#apricotan", String.Empty, RegexOptions.CultureInvariant).Trim()
+														index = 0
+														stringBuilder = StringBuilder()
+														match = Regex.Match(status["text"], "\\s?\\#(.+?)(?:(?=\\s)|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline)
 
-														if text.StartsWith("\"", StringComparison.Ordinal) and text.EndsWith("\"", StringComparison.Ordinal):
-															text = text.Trim("\"".ToCharArray())
+														while match.Success:
+															if match.Groups[1].Value.Equals("apricotan"):
+																if match.Index > index:
+																	text = status["text"].Substring(index, match.Index - index).Trim()
 
-														entry.Title = text
+																	if text.StartsWith("\"", StringComparison.Ordinal) and text.EndsWith("\"", StringComparison.Ordinal):
+																		text = text.Trim("\"".ToCharArray())
+
+																	stringBuilder.Append(text)
+
+															else:
+																stringBuilder.Append(match.Value)
+
+															index = match.Index + match.Length
+															match = match.NextMatch()
+
+														if status["text"].Length > index:
+															stringBuilder.Append(status["text"].Substring(index, status["text"].Length - index))
+
+														entry.Title = Regex.Replace(stringBuilder.ToString(), "[\r\n]", String.Empty, RegexOptions.CultureInvariant).Trim()
 
 												if status.ContainsKey("created_at"):
 													if status["created_at"] is not None:
@@ -1258,35 +1274,9 @@ def onOpened(s, e):
 			def onOAuthRequestTokenCompleted(task):
 				if dictionary.ContainsKey("oauth_token") and dictionary.ContainsKey("oauth_token_secret"):
 					window = Window()
+					webBrowser = WebBrowser()
 					pinTextBox = TextBox()
 					
-					stackPanel1 = StackPanel()
-					stackPanel1.UseLayoutRounding = True
-					stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
-					stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
-					stackPanel1.Orientation = Orientation.Vertical
-
-					solidColorBrush1 = SolidColorBrush(Colors.Black)
-					solidColorBrush1.Opacity = 0.25
-
-					if solidColorBrush1.CanFreeze:
-						solidColorBrush1.Freeze()
-
-					border1 = Border()
-					border1.HorizontalAlignment = HorizontalAlignment.Stretch
-					border1.VerticalAlignment = VerticalAlignment.Stretch
-					border1.BorderThickness = Thickness(0, 0, 0, 1)
-					border1.BorderBrush = solidColorBrush1
-
-					webBrowser = WebBrowser()
-					webBrowser.HorizontalAlignment = HorizontalAlignment.Stretch
-					webBrowser.VerticalAlignment = VerticalAlignment.Stretch
-					webBrowser.Width = 640
-					webBrowser.Height = 480
-					
-					border1.Child = webBrowser
-					stackPanel1.Children.Add(border1)
-
 					def onWindowLoaded(sender, args):
 						webBrowser.Navigate(Uri(String.Concat("https://api.twitter.com/oauth/authorize?oauth_token=", dictionary["oauth_token"])))
 
@@ -1323,59 +1313,28 @@ def onOpened(s, e):
 												d.Add(s.Substring(0, index), s.Substring(index + 1))
 
 										if d.ContainsKey("oauth_token") and d.ContainsKey("oauth_token_secret"):
-											config = None
-											directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name)
-			
-											if Directory.Exists(directory):
-												fileName1 = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
-		
-												for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
-													if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
-														exeConfigurationFileMap = ExeConfigurationFileMap()
-														exeConfigurationFileMap.ExeConfigFilename = fileName2
-														config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
-	
-											if config is None:
-												config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-												directory = None
+											fs = None
+											sr = None
+											sw = None
 
-											if config.HasFile:
-												if config.AppSettings.Settings["Scripts"] is not None:
-													for fileName in Directory.EnumerateFiles(config.AppSettings.Settings["Scripts"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["Scripts"].Value), "*.py"):
-														fs1 = None
-														sr = None
-														lines = None
+											try:
+												fs = FileStream(__file__, FileMode.Open, FileAccess.ReadWrite, FileShare.Read)
+												encoding = UTF8Encoding(False)
+												sr = StreamReader(fs, encoding, True)
+												lines = Regex.Replace(Regex.Replace(sr.ReadToEnd(), "oauthToken\\s*=\\s*None", String.Format("oauthToken = \"{0}\"", d["oauth_token"]), RegexOptions.CultureInvariant), "oauthTokenSecret\\s*=\\s*None", String.Format("oauthTokenSecret = \"{0}\"", d["oauth_token_secret"]), RegexOptions.CultureInvariant)
+												fs.SetLength(0)
+												sw = StreamWriter(fs, encoding)
+												sw.Write(lines)
 
-														try:
-															fs1 = FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read)
-															sr = StreamReader(fs1, UTF8Encoding(False), True)
-															lines = sr.ReadToEnd()
+											finally:
+												if sw is not None:
+													sw.Close()
 
-														finally:
-															if sr is not None:
-																sr.Close()
+												if sr is not None:
+													sr.Close()
 
-															if fs1 is not None:
-																fs1.Close()
-
-														if lines is not None:
-															if Regex.IsMatch(lines, "\\#\\s*Twitter.py", RegexOptions.CultureInvariant):
-																lines = Regex.Replace(lines, "oauthToken\\s*=\\s*None", String.Format("oauthToken = \"{0}\"", d["oauth_token"]), RegexOptions.CultureInvariant)
-																lines = Regex.Replace(lines, "oauthTokenSecret\\s*=\\s*None", String.Format("oauthTokenSecret = \"{0}\"", d["oauth_token_secret"]), RegexOptions.CultureInvariant)
-																fs2 = None
-																sw = None
-
-																try:
-																	fs2 = FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read)
-																	sw = StreamWriter(fs2, UTF8Encoding(False))
-																	sw.Write(lines)
-
-																finally:
-																	if sw is not None:
-																		sw.Close()
-
-																	if fs2 is not None:
-																		fs2.Close()
+												if fs is not None:
+													fs.Close()
 
 									finally:
 										if streamReader is not None:
@@ -1407,6 +1366,43 @@ def onOpened(s, e):
 					def onCancelClick(source, args):
 						window.Close()
 
+					window.Owner = Application.Current.MainWindow
+					window.Title = Application.Current.MainWindow.Title
+					window.WindowStartupLocation = WindowStartupLocation.CenterScreen
+					window.ResizeMode = ResizeMode.NoResize
+					window.SizeToContent = SizeToContent.WidthAndHeight
+					window.Background = SystemColors.ControlBrush
+					window.Loaded += onWindowLoaded
+
+					stackPanel1 = StackPanel()
+					stackPanel1.UseLayoutRounding = True
+					stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
+					stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
+					stackPanel1.Orientation = Orientation.Vertical
+
+					window.Content = stackPanel1
+
+					solidColorBrush1 = SolidColorBrush(Colors.Black)
+					solidColorBrush1.Opacity = 0.25
+
+					if solidColorBrush1.CanFreeze:
+						solidColorBrush1.Freeze()
+
+					border1 = Border()
+					border1.HorizontalAlignment = HorizontalAlignment.Stretch
+					border1.VerticalAlignment = VerticalAlignment.Stretch
+					border1.BorderThickness = Thickness(0, 0, 0, 1)
+					border1.BorderBrush = solidColorBrush1
+
+					stackPanel1.Children.Add(border1)
+
+					webBrowser.HorizontalAlignment = HorizontalAlignment.Stretch
+					webBrowser.VerticalAlignment = VerticalAlignment.Stretch
+					webBrowser.Width = 640
+					webBrowser.Height = 480
+					
+					border1.Child = webBrowser
+					
 					solidColorBrush2 = SolidColorBrush(Colors.White)
 					solidColorBrush2.Opacity = 0.5
 
@@ -1418,12 +1414,16 @@ def onOpened(s, e):
 					border2.VerticalAlignment = VerticalAlignment.Stretch
 					border2.BorderThickness = Thickness(0, 1, 0, 0)
 					border2.BorderBrush = solidColorBrush2
+					
+					stackPanel1.Children.Add(border2)
 
 					stackPanel2 = StackPanel()
 					stackPanel2.HorizontalAlignment = HorizontalAlignment.Right
 					stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
 					stackPanel2.Orientation = Orientation.Horizontal
-					
+
+					border2.Child = stackPanel2
+
 					pinLabel = Label()
 					pinLabel.HorizontalAlignment = HorizontalAlignment.Right
 					pinLabel.VerticalAlignment = VerticalAlignment.Center
@@ -1463,17 +1463,7 @@ def onOpened(s, e):
 					stackPanel2.Children.Add(pinTextBox)
 					stackPanel2.Children.Add(verifyButton)
 					stackPanel2.Children.Add(cancelButton)
-					border2.Child = stackPanel2
-					stackPanel1.Children.Add(border2)
-			
-					window.Owner = Application.Current.MainWindow
-					window.Title = Application.Current.MainWindow.Title
-					window.WindowStartupLocation = WindowStartupLocation.CenterScreen
-					window.ResizeMode = ResizeMode.NoResize
-					window.SizeToContent = SizeToContent.WidthAndHeight
-					window.Background = SystemColors.ControlBrush
-					window.Content = stackPanel1
-					window.Loaded += onWindowLoaded
+
 					window.Show()
 
 			Task.Factory.StartNew(onOAuthRequestToken, TaskCreationOptions.LongRunning).ContinueWith(onOAuthRequestTokenCompleted, context)
@@ -1506,12 +1496,16 @@ def onOpened(s, e):
 
 		tweetMenuItem = MenuItem()
 		tweetMenuItem.KeyDown += onKeyDown
+		
+		menuItem.Items.Add(tweetMenuItem)
 
 		stackPanel = StackPanel()
 		stackPanel.HorizontalAlignment = HorizontalAlignment.Left
 		stackPanel.VerticalAlignment = VerticalAlignment.Top
 		stackPanel.Orientation = Orientation.Horizontal
 	
+		tweetMenuItem.Header = stackPanel
+
 		comboBox = ComboBox()
 		comboBox.IsEditable = True
 		comboBox.Width = 240
@@ -1577,8 +1571,6 @@ def onOpened(s, e):
 		stackPanel.Children.Add(comboBox)
 		stackPanel.Children.Add(checkBox)
 		stackPanel.Children.Add(tweetButton)
-		tweetMenuItem.Header = stackPanel
-		menuItem.Items.Add(tweetMenuItem)
 
 	hashSet = HashSet[Uri]()
 	queue = Queue[Entry](recentEntryList)

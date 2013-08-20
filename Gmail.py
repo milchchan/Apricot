@@ -26,7 +26,7 @@ from System.Net import NetworkCredential, WebRequest, WebResponse
 from System.Net.NetworkInformation import NetworkInterface
 from System.Windows import Application, Window, WindowStartupLocation, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Point, Rect, Thickness, SystemColors
 from System.Windows.Controls import MenuItem, Separator, StackPanel, Border, Label, TextBox, PasswordBox, Button, Orientation
-from System.Windows.Media import Color, ColorConverter, Colors, SolidColorBrush, LinearGradientBrush, GradientStop, ImageBrush, TileMode, BrushMappingMode, Stretch, RenderOptions, ClearTypeHint
+from System.Windows.Media import Color, ColorConverter, Colors, SolidColorBrush, LinearGradientBrush, GradientStopCollection, GradientStop, ImageBrush, TileMode, BrushMappingMode, Stretch, RenderOptions, ClearTypeHint
 from System.Windows.Media.Effects import DropShadowEffect
 from System.Windows.Media.Imaging import BitmapImage, BitmapCacheOption, BitmapCreateOptions
 from System.Windows.Threading import DispatcherTimer, DispatcherPriority
@@ -175,12 +175,12 @@ def onOpened(s, e):
 
 	def onSignInClick(source, rea):
 		config = None
-		directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name)
+		directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
 		backgroundBrush = None
 		textColor = SystemColors.ControlTextBrush
 		
 		if Directory.Exists(directory):
-			fileName1 = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
+			fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
 		
 			for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
 				if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
@@ -192,44 +192,43 @@ def onOpened(s, e):
 			config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
 			directory = None
 
-		if config.HasFile:
-			if config.AppSettings.Settings["BackgroundImage"] is not None:
-				fileName = config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value);
-				fs = None
-				bi = BitmapImage()
+		if config.AppSettings.Settings["BackgroundImage"] is not None:
+			fileName = config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value);
+			fs = None
+			bi = BitmapImage()
 
-				try:
-					fs = FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read)
+			try:
+				fs = FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read)
 
-					bi.BeginInit()
-					bi.StreamSource = fs
-					bi.CacheOption = BitmapCacheOption.OnLoad
-					bi.CreateOptions = BitmapCreateOptions.None
-					bi.EndInit()
+				bi.BeginInit()
+				bi.StreamSource = fs
+				bi.CacheOption = BitmapCacheOption.OnLoad
+				bi.CreateOptions = BitmapCreateOptions.None
+				bi.EndInit()
 
-				finally:
-					if fs is not None:
-						fs.Close()
+			finally:
+				if fs is not None:
+					fs.Close()
 
-				backgroundBrush = ImageBrush(bi)
-				backgroundBrush.TileMode = TileMode.Tile
-				backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
-				backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
-				backgroundBrush.Stretch = Stretch.None
+			backgroundBrush = ImageBrush(bi)
+			backgroundBrush.TileMode = TileMode.Tile
+			backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
+			backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
+			backgroundBrush.Stretch = Stretch.None
+
+			if backgroundBrush.CanFreeze:
+				backgroundBrush.Freeze()
+
+		if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
+			if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
+				backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
 
 				if backgroundBrush.CanFreeze:
 					backgroundBrush.Freeze()
 
-			if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
-				if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
-					backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
-
-					if backgroundBrush.CanFreeze:
-						backgroundBrush.Freeze()
-
-			if config.AppSettings.Settings["TextColor"] is not None:
-				if config.AppSettings.Settings["TextColor"].Value.Length > 0:
-					textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
+		if config.AppSettings.Settings["TextColor"] is not None:
+			if config.AppSettings.Settings["TextColor"].Value.Length > 0:
+				textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
 				
 		textBrush = SolidColorBrush(textColor)
 
@@ -238,118 +237,10 @@ def onOpened(s, e):
 
 		window = Window()
 
-		stackPanel1 = StackPanel()
-		stackPanel1.UseLayoutRounding = True
-		stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel1.Orientation = Orientation.Vertical
+
+			
 		
-		stackPanel2 = StackPanel()
-		stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel2.Orientation = Orientation.Vertical
-		stackPanel2.Background = SystemColors.ControlBrush if backgroundBrush is None else backgroundBrush
 
-		linearGradientBrush = LinearGradientBrush()
-		gradientStop1 = GradientStop(Color.FromArgb(0, 0, 0, 0), 0)
-		gradientStop2 = GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1)
-
-		linearGradientBrush.StartPoint = Point(0.5, 0)
-		linearGradientBrush.EndPoint = Point(0.5, 1)
-		linearGradientBrush.Opacity = 0.1
-		linearGradientBrush.GradientStops.Add(gradientStop1)
-		linearGradientBrush.GradientStops.Add(gradientStop2)
-
-		if linearGradientBrush.CanFreeze:
-			linearGradientBrush.Freeze()
-
-		stackPanel3 = StackPanel()
-		stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel3.Orientation = Orientation.Vertical
-		stackPanel3.Background = linearGradientBrush
-
-		solidColorBrush1 = SolidColorBrush(Colors.Black)
-		solidColorBrush1.Opacity = 0.25
-
-		if solidColorBrush1.CanFreeze:
-			solidColorBrush1.Freeze()
-
-		border1 = Border()
-		border1.HorizontalAlignment = HorizontalAlignment.Stretch
-		border1.VerticalAlignment = VerticalAlignment.Stretch
-		border1.BorderThickness = Thickness(0, 0, 0, 1)
-		border1.BorderBrush = solidColorBrush1
-
-		stackPanel4 = StackPanel()
-		stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel4.Orientation = Orientation.Vertical
-		stackPanel4.Margin = Thickness(10, 10, 10, 20)
-
-		stackPanel5 = StackPanel()
-		stackPanel5.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel5.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel5.Orientation = Orientation.Vertical
-
-		usernameLabel = Label()
-		usernameLabel.Foreground = textBrush
-
-		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-			usernameLabel.Content = "ユーザ名"
-		else:
-			usernameLabel.Content = "Username"
-
-		RenderOptions.SetClearTypeHint(usernameLabel, ClearTypeHint.Enabled)
-
-		dropShadowEffect = DropShadowEffect()
-		dropShadowEffect.BlurRadius = 1
-		dropShadowEffect.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White;
-		dropShadowEffect.Direction = 270
-		dropShadowEffect.Opacity = 0.5
-		dropShadowEffect.ShadowDepth = 1
-
-		if dropShadowEffect.CanFreeze:
-			dropShadowEffect.Freeze()
-
-		stackPanel5.Effect = dropShadowEffect
-		stackPanel5.Children.Add(usernameLabel)
-
-		usernameTextBox = TextBox()
-		usernameTextBox.Width = 240
-			
-		stackPanel4.Children.Add(stackPanel5)
-		stackPanel4.Children.Add(usernameTextBox)
-
-		stackPanel6 = StackPanel()
-		stackPanel6.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel6.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel6.Orientation = Orientation.Vertical
-
-		passwordLabel = Label()
-		passwordLabel.Foreground = textBrush
-
-		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-			passwordLabel.Content = "パスワード"
-		else:
-			passwordLabel.Content = "Password"
-
-		RenderOptions.SetClearTypeHint(passwordLabel, ClearTypeHint.Enabled)
-
-		stackPanel6.Effect = dropShadowEffect
-		stackPanel6.Children.Add(passwordLabel)
-
-		passwordBox = PasswordBox()
-		passwordBox.Width = 240
-			
-		stackPanel4.Children.Add(stackPanel6)
-		stackPanel4.Children.Add(passwordBox)
-			
-		border1.Child = stackPanel4
-
-		stackPanel3.Children.Add(border1)
-		stackPanel2.Children.Add(stackPanel3)
-		stackPanel1.Children.Add(stackPanel2)
 
 		def onClick(source, args):
 			global username, password
@@ -357,63 +248,31 @@ def onOpened(s, e):
 			if not String.IsNullOrEmpty(usernameTextBox.Text) and not String.IsNullOrEmpty(passwordBox.Password):
 				username = usernameTextBox.Text
 				password = passwordBox.Password
-				context = TaskScheduler.FromCurrentSynchronizationContext()
 
 				def onSave():
 					try:
-						config = None
-						directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name)
-			
-						if Directory.Exists(directory):
-							fileName1 = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
-		
-							for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
-								if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
-									exeConfigurationFileMap = ExeConfigurationFileMap()
-									exeConfigurationFileMap.ExeConfigFilename = fileName2
-									config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
-	
-						if config is None:
-							config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-							directory = None
+						fs = None
+						sr = None
+						sw = None
 
-						if config.HasFile:
-							if config.AppSettings.Settings["Scripts"] is not None:
-								for fileName in Directory.EnumerateFiles(config.AppSettings.Settings["Scripts"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["Scripts"].Value), "*.py"):
-									fs1 = None
-									sr = None
-									lines = None
+						try:
+							fs = FileStream(__file__, FileMode.Open, FileAccess.ReadWrite, FileShare.Read)
+							encoding = UTF8Encoding(False)
+							sr = StreamReader(fs, encoding, True)
+							lines = Regex.Replace(Regex.Replace(sr.ReadToEnd(), "username\\s*=\\s*\"\"", String.Format("username = \"{0}\"", username), RegexOptions.CultureInvariant), "password\\s*=\\s*\"\"", String.Format("password = \"{0}\"", password), RegexOptions.CultureInvariant)
+							fs.SetLength(0)
+							sw = StreamWriter(fs, encoding)
+							sw.Write(lines)
 
-									try:
-										fs1 = FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read)
-										sr = StreamReader(fs1, UTF8Encoding(False), True)
-										lines = sr.ReadToEnd()
+						finally:
+							if sw is not None:
+								sw.Close()
 
-									finally:
-										if sr is not None:
-											sr.Close()
+							if sr is not None:
+								sr.Close()
 
-										if fs1 is not None:
-											fs1.Close()
-
-									if lines is not None:
-										if Regex.IsMatch(lines, "\\# Gmail.py", RegexOptions.CultureInvariant):
-											lines = Regex.Replace(lines, "username\\s*=\\s*\"\"", String.Format("username = \"{0}\"", username), RegexOptions.CultureInvariant)
-											lines = Regex.Replace(lines, "password\\s*=\\s*\"\"", String.Format("password = \"{0}\"", password), RegexOptions.CultureInvariant)
-											fs2 = None
-											sw = None
-
-											try:
-												fs2 = FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read)
-												sw = StreamWriter(fs2, UTF8Encoding(False))
-												sw.Write(lines)
-
-											finally:
-												if sw is not None:
-													sw.Close()
-
-												if fs2 is not None:
-													fs2.Close()
+							if fs is not None:
+								fs.Close()
 
 					except Exception, e:
 						Trace.WriteLine(e.clsException.Message)
@@ -433,9 +292,143 @@ def onOpened(s, e):
 
 					menuItem = None
 
-				Task.Factory.StartNew(onSave, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, context)
+				Task.Factory.StartNew(onSave, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
 
 			window.Close()
+			
+		window.Owner = Application.Current.MainWindow
+		window.Title = Application.Current.MainWindow.Title
+		window.WindowStartupLocation = WindowStartupLocation.CenterScreen
+		window.ResizeMode = ResizeMode.NoResize
+		window.SizeToContent = SizeToContent.WidthAndHeight
+		window.Background = SystemColors.ControlBrush
+
+		stackPanel1 = StackPanel()
+		stackPanel1.UseLayoutRounding = True
+		stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel1.Orientation = Orientation.Vertical
+
+		window.Content = stackPanel1
+
+		stackPanel2 = StackPanel()
+		stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel2.Orientation = Orientation.Vertical
+		stackPanel2.Background = SystemColors.ControlBrush if backgroundBrush is None else backgroundBrush
+		
+		stackPanel1.Children.Add(stackPanel2)
+		
+		gradientStopCollection = GradientStopCollection()
+		gradientStopCollection.Add(GradientStop(Color.FromArgb(0, 0, 0, 0), 0))
+		gradientStopCollection.Add(GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1))
+
+		linearGradientBrush = LinearGradientBrush(gradientStopCollection, Point(0.5, 0), Point(0.5, 1))
+		linearGradientBrush.Opacity = 0.1
+
+		if linearGradientBrush.CanFreeze:
+			linearGradientBrush.Freeze()
+
+		stackPanel3 = StackPanel()
+		stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel3.Orientation = Orientation.Vertical
+		stackPanel3.Background = linearGradientBrush
+
+		stackPanel2.Children.Add(stackPanel3)
+		
+		solidColorBrush1 = SolidColorBrush(Colors.Black)
+		solidColorBrush1.Opacity = 0.25
+
+		if solidColorBrush1.CanFreeze:
+			solidColorBrush1.Freeze()
+
+		border1 = Border()
+		border1.HorizontalAlignment = HorizontalAlignment.Stretch
+		border1.VerticalAlignment = VerticalAlignment.Stretch
+		border1.BorderThickness = Thickness(0, 0, 0, 1)
+		border1.BorderBrush = solidColorBrush1
+
+		stackPanel3.Children.Add(border1)
+
+		stackPanel4 = StackPanel()
+		stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel4.Orientation = Orientation.Vertical
+		stackPanel4.Margin = Thickness(10, 10, 10, 20)
+
+		border1.Child = stackPanel4
+
+		stackPanel5 = StackPanel()
+		stackPanel5.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel5.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel5.Orientation = Orientation.Vertical
+
+		dropShadowEffect1 = DropShadowEffect()
+		dropShadowEffect1.BlurRadius = 1
+		dropShadowEffect1.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White;
+		dropShadowEffect1.Direction = 270
+		dropShadowEffect1.Opacity = 0.5
+		dropShadowEffect1.ShadowDepth = 1
+
+		if dropShadowEffect1.CanFreeze:
+			dropShadowEffect1.Freeze()
+
+		stackPanel5.Effect = dropShadowEffect1
+
+		stackPanel4.Children.Add(stackPanel5)
+
+		usernameLabel = Label()
+		usernameLabel.Foreground = textBrush
+
+		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+			usernameLabel.Content = "ユーザ名"
+		else:
+			usernameLabel.Content = "Username"
+
+		RenderOptions.SetClearTypeHint(usernameLabel, ClearTypeHint.Enabled)
+
+		stackPanel5.Children.Add(usernameLabel)
+
+		usernameTextBox = TextBox()
+		usernameTextBox.Width = 240
+
+		stackPanel4.Children.Add(usernameTextBox)
+
+		dropShadowEffect2 = DropShadowEffect()
+		dropShadowEffect2.BlurRadius = 1
+		dropShadowEffect2.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White;
+		dropShadowEffect2.Direction = 270
+		dropShadowEffect2.Opacity = 0.5
+		dropShadowEffect2.ShadowDepth = 1
+
+		if dropShadowEffect2.CanFreeze:
+			dropShadowEffect2.Freeze()
+
+		stackPanel6 = StackPanel()
+		stackPanel6.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel6.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel6.Orientation = Orientation.Vertical
+		stackPanel6.Effect = dropShadowEffect2
+		
+		stackPanel4.Children.Add(stackPanel6)
+		
+		passwordLabel = Label()
+		passwordLabel.Foreground = textBrush
+
+		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+			passwordLabel.Content = "パスワード"
+		else:
+			passwordLabel.Content = "Password"
+
+		RenderOptions.SetClearTypeHint(passwordLabel, ClearTypeHint.Enabled)
+
+		stackPanel6.Children.Add(passwordLabel)
+
+		passwordBox = PasswordBox()
+		passwordBox.Width = 240
+			
+		stackPanel4.Children.Add(passwordBox)
 
 		solidColorBrush2 = SolidColorBrush(Colors.White)
 		solidColorBrush2.Opacity = 0.5
@@ -448,6 +441,8 @@ def onOpened(s, e):
 		border2.VerticalAlignment = VerticalAlignment.Stretch
 		border2.BorderThickness = Thickness(0, 1, 0, 0)
 		border2.BorderBrush = solidColorBrush2
+
+		stackPanel1.Children.Add(border2)
 
 		signInButton = Button()
 		signInButton.HorizontalAlignment = HorizontalAlignment.Right
@@ -464,16 +459,8 @@ def onOpened(s, e):
 		signInButton.Click += onClick
 
 		border2.Child = signInButton
-		stackPanel1.Children.Add(border2)
+		
 		usernameTextBox.Focus()
-			
-		window.Owner = Application.Current.MainWindow
-		window.Title = Application.Current.MainWindow.Title
-		window.WindowStartupLocation = WindowStartupLocation.CenterScreen
-		window.ResizeMode = ResizeMode.NoResize
-		window.SizeToContent = SizeToContent.WidthAndHeight
-		window.Background = SystemColors.ControlBrush
-		window.Content = stackPanel1
 		window.Show()
 
 	signInMenuItem = MenuItem()

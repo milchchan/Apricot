@@ -17,9 +17,8 @@ from System.Configuration import ConfigurationManager, ConfigurationUserLevel, E
 from System.Diagnostics import Trace
 from System.Globalization import CultureInfo, NumberStyles
 from System.IO import Stream, FileStream, StreamReader, StreamWriter, Path, Directory, File, FileMode, FileAccess, FileShare
-from System.Reflection import Assembly
 from System.Text import StringBuilder, Encoding, UTF8Encoding
-from System.Text.RegularExpressions import Regex, Match, RegexOptions
+from System.Text.RegularExpressions import Regex, Match, MatchEvaluator, RegexOptions
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskContinuationOptions, TaskScheduler
 from System.Net import WebRequest, WebResponse, WebRequestMethods, HttpWebResponse, HttpStatusCode, WebException
 from System.Net.NetworkInformation import NetworkInterface
@@ -915,13 +914,8 @@ def onOpened(s, e):
 	if accessToken is None:
 		def onLogInClick(source, rea):
 			window = Window()
-
-			stackPanel = StackPanel()
-			stackPanel.UseLayoutRounding = True
-			stackPanel.HorizontalAlignment = HorizontalAlignment.Stretch
-			stackPanel.VerticalAlignment = VerticalAlignment.Stretch
-			stackPanel.Orientation = Orientation.Vertical
-
+			webBrowser = WebBrowser()
+			
 			def onWebBrowserNavigated(sender, nea):
 				if Regex.IsMatch(nea.Uri.AbsoluteUri, "^http(s)?://www\\.facebook\\.com/connect/login_success\\.html", RegexOptions.CultureInvariant):
 					for match in Regex.Matches(nea.Uri.Query, "\\??(?<1>.+?)=(?<2>.*?)(?:&|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline):
@@ -941,7 +935,6 @@ def onOpened(s, e):
 
 							request = WebRequest.Create(String.Concat("https://graph.facebook.com/oauth/access_token?", sb.ToString()))
 							dictionary = Dictionary[String, String]()
-							context = TaskScheduler.FromCurrentSynchronizationContext()
 
 							def onAuth():
 								if NetworkInterface.GetIsNetworkAvailable():
@@ -1008,58 +1001,28 @@ def onOpened(s, e):
 													response.Close()
 
 										if dictionary.ContainsKey("access_token"):
-											config = None
-											directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetExecutingAssembly().GetName().Name)
-											
-											if Directory.Exists(directory):
-												fileName1 = Path.GetFileName(Assembly.GetExecutingAssembly().Location)
-		
-												for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
-													if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
-														exeConfigurationFileMap = ExeConfigurationFileMap()
-														exeConfigurationFileMap.ExeConfigFilename = fileName2
-														config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
-	
-											if config is None:
-												config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-												directory = None
+											fs = None
+											sr = None
+											sw = None
 
-											if config.HasFile:
-												if config.AppSettings.Settings["Scripts"] is not None:
-													for fileName in Directory.EnumerateFiles(config.AppSettings.Settings["Scripts"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["Scripts"].Value), "*.py"):
-														fs1 = None
-														sr = None
-														lines = None
+											try:
+												fs = FileStream(__file__, FileMode.Open, FileAccess.ReadWrite, FileShare.Read)
+												encoding = UTF8Encoding(False)
+												sr = StreamReader(fs, encoding, True)
+												lines = Regex.Replace(sr.ReadToEnd(), String.Concat("(?<=", Environment.NewLine, "accessToken\\s*=\\s*(?(?=\")(?<Open>\")|(?<Open>\")?))\\S*?(?=(?(?<=\")(?<Close-Open>\")|(?<Close-Open>\")?)", Environment.NewLine, "(?(Open)(?!))(?!\"))"), MatchEvaluator(lambda x: dictionary["access_token"] if x.Groups["Close"].Success else String.Format("\"{0}\"", dictionary["access_token"])), RegexOptions.CultureInvariant)
+												fs.SetLength(0)
+												sw = StreamWriter(fs, encoding)
+												sw.Write(lines)
 
-														try:
-															fs1 = FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read)
-															sr = StreamReader(fs1, UTF8Encoding(False), True)
-															lines = sr.ReadToEnd()
+											finally:
+												if sw is not None:
+													sw.Close()
 
-														finally:
-															if sr is not None:
-																sr.Close()
+												if sr is not None:
+													sr.Close()
 
-															if fs1 is not None:
-																fs1.Close()
-
-														if lines is not None:
-															if Regex.IsMatch(lines, "\\#\\s*Facebook.py", RegexOptions.CultureInvariant):
-																lines = Regex.Replace(lines, String.Concat("(?<=", Environment.NewLine, ")accessToken\\s*=\\s*\\S+?(?=", Environment.NewLine, ")"), String.Format("accessToken = \"{0}\"", dictionary["access_token"]), RegexOptions.CultureInvariant)
-																fs2 = None
-																sw = None
-
-																try:
-																	fs2 = FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read)
-																	sw = StreamWriter(fs2, UTF8Encoding(False))
-																	sw.Write(lines)
-
-																finally:
-																	if sw is not None:
-																		sw.Close()
-
-																	if fs2 is not None:
-																		fs2.Close()
+												if fs is not None:
+													fs.Close()
 
 									except Exception, e:
 										Trace.WriteLine(e.clsException.Message)
@@ -1071,31 +1034,9 @@ def onOpened(s, e):
 								if dictionary.ContainsKey("access_token"):
 									accessToken = dictionary["access_token"]
 
-							Task.Factory.StartNew(onAuth, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, context)
+							Task.Factory.StartNew(onAuth, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
 
 							break
-
-			solidColorBrush1 = SolidColorBrush(Colors.Black)
-			solidColorBrush1.Opacity = 0.25
-
-			if solidColorBrush1.CanFreeze:
-				solidColorBrush1.Freeze()
-
-			border1 = Border()
-			border1.HorizontalAlignment = HorizontalAlignment.Stretch
-			border1.VerticalAlignment = VerticalAlignment.Stretch
-			border1.BorderThickness = Thickness(0, 0, 0, 1)
-			border1.BorderBrush = solidColorBrush1
-
-			webBrowser = WebBrowser()
-			webBrowser.HorizontalAlignment = HorizontalAlignment.Stretch
-			webBrowser.VerticalAlignment = VerticalAlignment.Stretch
-			webBrowser.Width = 640
-			webBrowser.Height = 480
-			webBrowser.Navigated += onWebBrowserNavigated
-			
-			border1.Child = webBrowser
-			stackPanel.Children.Add(border1)
 
 			def onWindowLoaded(sender, args):
 				sb = StringBuilder()
@@ -1115,6 +1056,44 @@ def onOpened(s, e):
 
 			def onCloseClick(source, args):
 				window.Close()
+			
+			window.Owner = Application.Current.MainWindow
+			window.Title = Application.Current.MainWindow.Title
+			window.WindowStartupLocation = WindowStartupLocation.CenterScreen
+			window.ResizeMode = ResizeMode.NoResize
+			window.SizeToContent = SizeToContent.WidthAndHeight
+			window.Background = SystemColors.ControlBrush
+			window.Loaded += onWindowLoaded
+
+			stackPanel = StackPanel()
+			stackPanel.UseLayoutRounding = True
+			stackPanel.HorizontalAlignment = HorizontalAlignment.Stretch
+			stackPanel.VerticalAlignment = VerticalAlignment.Stretch
+			stackPanel.Orientation = Orientation.Vertical
+
+			window.Content = stackPanel
+
+			solidColorBrush1 = SolidColorBrush(Colors.Black)
+			solidColorBrush1.Opacity = 0.25
+
+			if solidColorBrush1.CanFreeze:
+				solidColorBrush1.Freeze()
+
+			border1 = Border()
+			border1.HorizontalAlignment = HorizontalAlignment.Stretch
+			border1.VerticalAlignment = VerticalAlignment.Stretch
+			border1.BorderThickness = Thickness(0, 0, 0, 1)
+			border1.BorderBrush = solidColorBrush1
+
+			stackPanel.Children.Add(border1)
+
+			webBrowser.HorizontalAlignment = HorizontalAlignment.Stretch
+			webBrowser.VerticalAlignment = VerticalAlignment.Stretch
+			webBrowser.Width = 640
+			webBrowser.Height = 480
+			webBrowser.Navigated += onWebBrowserNavigated
+			
+			border1.Child = webBrowser
 
 			solidColorBrush2 = SolidColorBrush(Colors.White)
 			solidColorBrush2.Opacity = 0.5
@@ -1127,6 +1106,8 @@ def onOpened(s, e):
 			border2.VerticalAlignment = VerticalAlignment.Stretch
 			border2.BorderThickness = Thickness(0, 1, 0, 0)
 			border2.BorderBrush = solidColorBrush2
+
+			stackPanel.Children.Add(border2)
 
 			closeButton = Button()
 			closeButton.HorizontalAlignment = HorizontalAlignment.Right
@@ -1143,16 +1124,7 @@ def onOpened(s, e):
 			closeButton.Click += onCloseClick
 
 			border2.Child = closeButton
-			stackPanel.Children.Add(border2)
-			
-			window.Owner = Application.Current.MainWindow
-			window.Title = Application.Current.MainWindow.Title
-			window.WindowStartupLocation = WindowStartupLocation.CenterScreen
-			window.ResizeMode = ResizeMode.NoResize
-			window.SizeToContent = SizeToContent.WidthAndHeight
-			window.Background = SystemColors.ControlBrush
-			window.Content = stackPanel
-			window.Loaded += onWindowLoaded
+
 			window.Show()
 
 		logInMenuItem = MenuItem()
@@ -1183,11 +1155,15 @@ def onOpened(s, e):
 
 		postMenuItem = MenuItem()
 		postMenuItem.KeyDown += onKeyDown
+		
+		menuItem.Items.Add(postMenuItem)
 
 		stackPanel = StackPanel()
 		stackPanel.HorizontalAlignment = HorizontalAlignment.Left
 		stackPanel.VerticalAlignment = VerticalAlignment.Top
 		stackPanel.Orientation = Orientation.Horizontal
+
+		postMenuItem.Header = stackPanel
 	
 		comboBox = ComboBox()
 		comboBox.IsEditable = True
@@ -1254,8 +1230,6 @@ def onOpened(s, e):
 		stackPanel.Children.Add(comboBox)
 		stackPanel.Children.Add(checkBox)
 		stackPanel.Children.Add(postButton)
-		postMenuItem.Header = stackPanel
-		menuItem.Items.Add(postMenuItem)
 
 def urlEncode(value):
 	unreserved = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~"
