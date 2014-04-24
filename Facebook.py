@@ -367,54 +367,49 @@ def update():
 					if response.StatusCode == HttpStatusCode.OK:
 						stream = response.GetResponseStream()
 						streamReader = StreamReader(stream)
-						json = JsonDecoder.decode(streamReader.ReadToEnd())
+						jsonDictionary = JsonDecoder.decode(streamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-								if json.ContainsKey("data"):
-									if json["data"] is not None:
-										if clr.GetClrType(Array).IsInstanceOfType(json["data"]):
-											for obj in json["data"]:
-												if obj is not None:
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-														entry = Entry()
-														userId = None
+						if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("data") and jsonDictionary["data"] is not None and clr.GetClrType(Array).IsInstanceOfType(jsonDictionary["data"]):
+							for obj in jsonDictionary["data"]:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+									entry = Entry()
+									userId = None
 
-														if obj.ContainsKey("id"):
-															if obj["id"] is not None:
-																array = obj["id"].Split('_')
+									if obj.ContainsKey("id"):
+										if obj["id"] is not None:
+											array = obj["id"].Split('_')
 
-																if array.Length == 2:
-																	entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
+											if array.Length == 2:
+												entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
 													
-														if obj.ContainsKey("from"):
-															if obj["from"] is not None:
-																if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
-																	entry.Author = obj["from"]["name"]
+									if obj.ContainsKey("from"):
+										if obj["from"] is not None:
+											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
+												entry.Author = obj["from"]["name"]
 
-																	if obj["from"].ContainsKey("id"):
-																		userId = obj["from"]["id"]
+												if obj["from"].ContainsKey("id"):
+													userId = obj["from"]["id"]
 																
-														if obj.ContainsKey("created_time"):
-															if obj["created_time"] is not None:
-																entry.Created = DateTime.Parse(obj["created_time"])
+									if obj.ContainsKey("created_time"):
+										if obj["created_time"] is not None:
+											entry.Created = DateTime.Parse(obj["created_time"])
 
-														if obj.ContainsKey("updated_time"):
-															if obj["updated_time"] is not None:
-																entry.Modified = DateTime.Parse(obj["updated_time"])
+									if obj.ContainsKey("updated_time"):
+										if obj["updated_time"] is not None:
+											entry.Modified = DateTime.Parse(obj["updated_time"])
 
-														if obj.ContainsKey("message"):
-															if obj["message"] is not None:
-																title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+									if obj.ContainsKey("message"):
+										if obj["message"] is not None:
+											title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 
-																if title.Length > 100:
-																	title = title.Remove(100, title.Length - 100)
+											if title.Length > 100:
+												title = title.Remove(100, title.Length - 100)
 
-																entry.Title = title
+											entry.Title = title
 
-														if entry.Resource is not None and userId is not None:
-															entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
-															entryList.Add(entry)
+									if entry.Resource is not None and userId is not None:
+										entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
+										entryList.Add(entry)
 
 					return response.StatusCode.ToString()
 					
@@ -638,12 +633,10 @@ def post(text, filename):
 							uploadResponseStream = uploadResponse.GetResponseStream()
 							uploadStreamReader = StreamReader(uploadResponseStream)
 
-							json = JsonDecoder.decode(uploadStreamReader.ReadToEnd())
+							jsonDictionary = JsonDecoder.decode(uploadStreamReader.ReadToEnd())
 
-							if json is not None:
-								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-									if json.ContainsKey("id"):
-										isUploaded = True
+							if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("id"):
+								isUploaded = True
 
 						statusCode = uploadResponse.StatusCode.ToString()
 					
@@ -669,54 +662,49 @@ def post(text, filename):
 							updateResponse = updateRequest.GetResponse()
 							updateStream = updateResponse.GetResponseStream()
 							updateStreamReader = StreamReader(updateStream)
-							json = JsonDecoder.decode(updateStreamReader.ReadToEnd())
+							jsonDictionary = JsonDecoder.decode(updateStreamReader.ReadToEnd())
 
-							if json is not None:
-								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-									if json.ContainsKey("data"):
-										if json["data"] is not None:
-											if clr.GetClrType(Array).IsInstanceOfType(json["data"]):
-												for obj in json["data"]:
-													if obj is not None:
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-															entry = Entry()
-															userId = None
+							if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("data") and jsonDictionary["data"] is not None and clr.GetClrType(Array).IsInstanceOfType(jsonDictionary["data"]):
+								for obj in jsonDictionary["data"]:
+									if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+										entry = Entry()
+										userId = None
 
-															if obj.ContainsKey("id"):
-																if obj["id"] is not None:
-																	array = obj["id"].Split('_')
+										if obj.ContainsKey("id"):
+											if obj["id"] is not None:
+												array = obj["id"].Split('_')
 
-																	if array.Length == 2:
-																		entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
+												if array.Length == 2:
+													entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
 													
-															if obj.ContainsKey("from"):
-																if obj["from"] is not None:
-																	if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
-																		entry.Author = obj["from"]["name"]
+										if obj.ContainsKey("from"):
+											if obj["from"] is not None:
+												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
+													entry.Author = obj["from"]["name"]
 
-																		if obj["from"].ContainsKey("id"):
-																			userId = obj["from"]["id"]
+													if obj["from"].ContainsKey("id"):
+														userId = obj["from"]["id"]
 																
-															if obj.ContainsKey("created_time"):
-																if obj["created_time"] is not None:
-																	entry.Created = DateTime.Parse(obj["created_time"])
+										if obj.ContainsKey("created_time"):
+											if obj["created_time"] is not None:
+												entry.Created = DateTime.Parse(obj["created_time"])
 
-															if obj.ContainsKey("updated_time"):
-																if obj["updated_time"] is not None:
-																	entry.Modified = DateTime.Parse(obj["updated_time"])
+										if obj.ContainsKey("updated_time"):
+											if obj["updated_time"] is not None:
+												entry.Modified = DateTime.Parse(obj["updated_time"])
 
-															if obj.ContainsKey("message"):
-																if obj["message"] is not None:
-																	title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+										if obj.ContainsKey("message"):
+											if obj["message"] is not None:
+												title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 
-																	if title.Length > 100:
-																		title = title.Remove(100, title.Length - 100)
+												if title.Length > 100:
+													title = title.Remove(100, title.Length - 100)
 
-																	entry.Title = title
+												entry.Title = title
 
-															if entry.Resource is not None and userId is not None:
-																entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
-																entryList.Add(entry)
+										if entry.Resource is not None and userId is not None:
+											entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
+											entryList.Add(entry)
 					
 						finally:
 							if updateStreamReader is not None:
@@ -783,12 +771,10 @@ def post(text, filename):
 							postResponseStream = postResponse.GetResponseStream()
 							postStreamReader = StreamReader(postResponseStream)
 
-							json = JsonDecoder.decode(postStreamReader.ReadToEnd())
+							jsonDictionary = JsonDecoder.decode(postStreamReader.ReadToEnd())
 
-							if json is not None:
-								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-									if json.ContainsKey("id"):
-										isPosted = True
+							if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("id"):
+								isPosted = True
 
 						statusCode = postResponse.StatusCode.ToString()
 					
@@ -811,54 +797,49 @@ def post(text, filename):
 							updateResponse = updateRequest.GetResponse()
 							updateStream = updateResponse.GetResponseStream()
 							updateStreamReader = StreamReader(updateStream)
-							json = JsonDecoder.decode(updateStreamReader.ReadToEnd())
+							jsonDictionary = JsonDecoder.decode(updateStreamReader.ReadToEnd())
 
-							if json is not None:
-								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-									if json.ContainsKey("data"):
-										if json["data"] is not None:
-											if clr.GetClrType(Array).IsInstanceOfType(json["data"]):
-												for obj in json["data"]:
-													if obj is not None:
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-															entry = Entry()
-															userId = None
+							if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("data") and jsonDictionary["data"] is not None and clr.GetClrType(Array).IsInstanceOfType(jsonDictionary["data"]):
+								for obj in jsonDictionary["data"]:
+									if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+										entry = Entry()
+										userId = None
 
-															if obj.ContainsKey("id"):
-																if obj["id"] is not None:
-																	array = obj["id"].Split('_')
+										if obj.ContainsKey("id"):
+											if obj["id"] is not None:
+												array = obj["id"].Split('_')
 
-																	if array.Length == 2:
-																		entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
+												if array.Length == 2:
+													entry.Resource = Uri(String.Format("http://www.facebook.com/{0}/posts/{1}", array[0], array[1]))
 													
-															if obj.ContainsKey("from"):
-																if obj["from"] is not None:
-																	if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
-																		entry.Author = obj["from"]["name"]
+										if obj.ContainsKey("from"):
+											if obj["from"] is not None:
+												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["from"]):
+													entry.Author = obj["from"]["name"]
 
-																		if obj["from"].ContainsKey("id"):
-																			userId = obj["from"]["id"]
+													if obj["from"].ContainsKey("id"):
+														userId = obj["from"]["id"]
 																
-															if obj.ContainsKey("created_time"):
-																if obj["created_time"] is not None:
-																	entry.Created = DateTime.Parse(obj["created_time"])
+										if obj.ContainsKey("created_time"):
+											if obj["created_time"] is not None:
+												entry.Created = DateTime.Parse(obj["created_time"])
 
-															if obj.ContainsKey("updated_time"):
-																if obj["updated_time"] is not None:
-																	entry.Modified = DateTime.Parse(obj["updated_time"])
+										if obj.ContainsKey("updated_time"):
+											if obj["updated_time"] is not None:
+												entry.Modified = DateTime.Parse(obj["updated_time"])
 
-															if obj.ContainsKey("message"):
-																if obj["message"] is not None:
-																	title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+										if obj.ContainsKey("message"):
+											if obj["message"] is not None:
+												title = Regex.Replace(obj["message"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 
-																	if title.Length > 100:
-																		title = title.Remove(100, title.Length - 100)
+												if title.Length > 100:
+													title = title.Remove(100, title.Length - 100)
 
-																	entry.Title = title
+												entry.Title = title
 
-															if entry.Resource is not None and userId is not None:
-																entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
-																entryList.Add(entry)
+										if entry.Resource is not None and userId is not None:
+											entry.Image = Uri(String.Format("https://graph.facebook.com/{0}/picture?access_token={1}", userId, urlEncode(accessToken)))
+											entryList.Add(entry)
 
 						finally:
 							if updateStreamReader is not None:

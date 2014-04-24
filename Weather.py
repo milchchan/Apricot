@@ -347,11 +347,11 @@ def onTick(timer, e):
 		weatherIdList = List[Double]()
 		weatherPathHashSet = HashSet[String]()
 		weatherStreamList = List[MemoryStream]()
-		weatherCondition = None
+		weatherConditionList = List[String]()
 
 		if NetworkInterface.GetIsNetworkAvailable():
 			try:
-				request = WebRequest.Create(Uri(String.Concat("http://api.openweathermap.org/data/2.1/find/name?q=", urlEncode(location), "&units=metric&cnt=1")))
+				request = WebRequest.Create(Uri(String.Concat("http://api.openweathermap.org/data/2.5/find?q=", urlEncode(location), "&units=metric&cnt=1")))
 				response = None
 				stream = None
 				streamReader = None
@@ -361,151 +361,133 @@ def onTick(timer, e):
 					response = request.GetResponse()
 					stream = response.GetResponseStream()
 					streamReader = StreamReader(stream)
-					json = JsonDecoder.decode(streamReader.ReadToEnd())
+					jsonDictionary = JsonDecoder.decode(streamReader.ReadToEnd())
 
-					if json is not None:
-						if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-							if json.ContainsKey("list"):
-								if json["list"] is not None:
-									if clr.GetClrType(Array).IsInstanceOfType(json["list"]):
-										for obj in json["list"]:
-											if obj is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-													if obj.ContainsKey("main"):
-														if obj["main"] is not None:
-															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["main"]):
-																if obj["main"].ContainsKey("temp"):
-																	temp = obj["main"]["temp"]
+					if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("list") and jsonDictionary["list"] is not None and clr.GetClrType(Array).IsInstanceOfType(jsonDictionary["list"]):
+						for obj in jsonDictionary["list"]:
+							if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+								if obj.ContainsKey("main") and obj["main"] is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["main"]) and obj["main"].ContainsKey("temp"):
+									temp = obj["main"]["temp"]
 
-													if obj.ContainsKey("wind"):
-														if obj["wind"] is not None:
-															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["wind"]):
-																if obj["wind"].ContainsKey("speed"):
-																	windSpeed = obj["wind"]["speed"]
+								if obj.ContainsKey("wind") and obj["wind"] is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["wind"]):
+									if obj["wind"].ContainsKey("speed"):
+										windSpeed = obj["wind"]["speed"]
 
-																if obj["wind"].ContainsKey("deg"):
-																	windDeg = obj["wind"]["deg"]
+									if obj["wind"].ContainsKey("deg"):
+										windDeg = obj["wind"]["deg"]
 
-													if obj.ContainsKey("weather"):
-														if obj["weather"] is not None:
-															if clr.GetClrType(Array).IsInstanceOfType(obj["weather"]):
-																for o in obj["weather"]:
-																	if o is not None:
-																		if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o):
-																			if o.ContainsKey("id"):
-																				if o["id"] is not None:
-																					weatherIdList.Add(o["id"])
+								if obj.ContainsKey("weather") and obj["weather"] is not None and clr.GetClrType(Array).IsInstanceOfType(obj["weather"]):
+									for o in obj["weather"]:
+										if o is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o) and o.ContainsKey("id") and o["id"] is not None:
+											weatherIdList.Add(o["id"])
 																
-													for id in weatherIdList:
-														digit = Convert.ToInt32(id / 100)
-														path = None
-														s = None
+								for id in weatherIdList:
+									digit = Convert.ToInt32(id / 100)
+									path = None
+									s = None
 
-														if digit == 2:
-															path = "Assets\\Cloud-Lightning.png"
-															s = "Thunderstorm"
+									if digit == 2:
+										path = "Assets\\Cloud-Lightning.png"
+										weatherConditionList.Add("Thunderstorm")
 
-														elif  digit == 3:
-															path = "Assets\\Cloud-Drizzle.png"
-															s = "Drizzle"
+									elif  digit == 3:
+										path = "Assets\\Cloud-Drizzle.png"
+										weatherConditionList.Add("Drizzle")
 														
-														elif  digit == 5:
-															d = Convert.ToInt32(id / 10)
+									elif  digit == 5:
+										d = Convert.ToInt32(id / 10)
 
-															if d == 0:
-																if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
-																	path = "Assets\\Cloud-Rain-Sun.png"
+										if d == 0:
+											if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
+												path = "Assets\\Cloud-Rain-Sun.png"
 																
-																else:
-																	path = "Assets\\Cloud-Rain-Moon.png"
+											else:
+												path = "Assets\\Cloud-Rain-Moon.png"
 
-															else:
-																path = "Assets\\Cloud-Rain.png"
+										else:
+											path = "Assets\\Cloud-Rain.png"
 
-															s = "Rain"
+										weatherConditionList.Add("Rain")
 														
-														elif  digit == 6:
-															path = "Assets\\Cloud-Snow.png"
-															s = "Snow"
+									elif  digit == 6:
+										path = "Assets\\Cloud-Snow.png"
+										weatherConditionList.Add("Snow")
 														
-														elif  digit == 7:
-															path = "Assets\\Cloud-Fog.png"
+									elif  digit == 7:
+										path = "Assets\\Cloud-Fog.png"
 															
-															if Convert.ToInt32(id) == 701:
-																s = "Mist"
+										if Convert.ToInt32(id) == 701:
+											weatherConditionList.Add("Mist")
 
-															elif Convert.ToInt32(id) == 711:
-																s = "Smoke"
+										elif Convert.ToInt32(id) == 711:
+											weatherConditionList.Add("Smoke")
 
-															elif Convert.ToInt32(id) == 721:
-																s = "Haze"
+										elif Convert.ToInt32(id) == 721:
+											weatherConditionList.Add("Haze")
 
-															elif Convert.ToInt32(id) == 731:
-																s = "Dust"
+										elif Convert.ToInt32(id) == 731:
+											weatherConditionList.Add("Dust")
 
-															elif Convert.ToInt32(id) == 741:
-																s = "Fog"
+										elif Convert.ToInt32(id) == 741:
+											weatherConditionList.Add("Fog")
 														
-														elif  digit == 8:
-															if Convert.ToInt32(id) == 800:
-																if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
-																	path = "Assets\\Sun.png"
-																	s = "Sunny"
+									elif  digit == 8:
+										if Convert.ToInt32(id) == 800:
+											if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
+												path = "Assets\\Sun.png"
+												weatherConditionList.Add("Sunny")
 																
-																else:
-																	path = "Assets\\Moon.png"
-																	s = "Clear"
+											else:
+												path = "Assets\\Moon.png"
+												weatherConditionList.Add("Clear")
 
-															elif Convert.ToInt32(id) == 801:
-																if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
-																	path = "Assets\\Cloud-Sun.png"
+										elif Convert.ToInt32(id) >= 801 and Convert.ToInt32(id) <= 803:
+											if nowDateTime.Hour > 6 and nowDateTime.Hour <= 18:
+												path = "Assets\\Cloud-Sun.png"
 																
-																else:
-																	path = "Assets\\Cloud-Moon.png"
+											else:
+												path = "Assets\\Cloud-Moon.png"
 
-																s = "Cloudy"
+											weatherConditionList.Add("Cloudy")
 
-															else:
-																path = "Assets\\Cloud.png"
-																s = "Overcast"
+										elif Convert.ToInt32(id) == 804:
+											path = "Assets\\Cloud.png"
+											weatherConditionList.Add("Overcast")
 															
-														else:
-															if Convert.ToInt32(id) == 900:
-																path = "Assets\\Tornado.png"
-																s = "Tornado"
+									else:
+										if Convert.ToInt32(id) == 900:
+											path = "Assets\\Tornado.png"
+											weatherConditionList.Add("Tornado")
 
-															elif Convert.ToInt32(id) == 905:
-																path = "Assets\\Wind.png"
-																s = "Windy"
+										elif Convert.ToInt32(id) == 905:
+											path = "Assets\\Wind.png"
+											weatherConditionList.Add("Windy")
 
-															elif Convert.ToInt32(id) == 906:
-																path = "Assets\\Cloud-Hail.png"
-																s = "Hail"
+										elif Convert.ToInt32(id) == 906:
+											path = "Assets\\Cloud-Hail.png"
+											weatherConditionList.Add("Hail")
 
-														if weatherCondition is None:
-															weatherCondition = s
+									if path is not None and weatherPathHashSet.Contains(path) == False:
+										fs = None
 
-														if path is not None and weatherPathHashSet.Contains(path) == False:
-															fs = None
+										try:
+											fs = FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
+											ms = MemoryStream()
+											buffer = Array.CreateInstance(Byte, fs.Length)
+											bytesRead = fs.Read(buffer, 0, buffer.Length)
 
-															try:
-																fs = FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
-																ms = MemoryStream()
-																buffer = Array.CreateInstance(Byte, fs.Length)
-																bytesRead = fs.Read(buffer, 0, buffer.Length)
+											while bytesRead > 0:
+												ms.Write(buffer, 0, bytesRead)
+												bytesRead = fs.Read(buffer, 0, buffer.Length)
 
-																while bytesRead > 0:
-																	ms.Write(buffer, 0, bytesRead)
-																	bytesRead = fs.Read(buffer, 0, buffer.Length)
+											ms.Seek(0, SeekOrigin.Begin)
+											weatherStreamList.Add(ms)
 
-																ms.Seek(0, SeekOrigin.Begin)
-																weatherStreamList.Add(ms)
+										finally:
+											if fs is not None:
+												fs.Close()
 
-															finally:
-																if fs is not None:
-																	fs.Close()
-
-															weatherPathHashSet.Add(path)
+										weatherPathHashSet.Add(path)
 
 				finally:
 					if streamReader is not None:
@@ -521,27 +503,25 @@ def onTick(timer, e):
 				Trace.WriteLine(e.clsException.Message)
 				Trace.WriteLine(e.clsException.StackTrace)
 
-		return KeyValuePair[String, KeyValuePair[Double, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]]]](weatherCondition, KeyValuePair[Double, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]]](temp, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]](KeyValuePair[Double, Double](windSpeed, windDeg), KeyValuePair[List[Double], List[MemoryStream]](weatherIdList, weatherStreamList))))
+		return KeyValuePair[List[String], KeyValuePair[Double, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]]]](weatherConditionList, KeyValuePair[Double, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]]](temp, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]](KeyValuePair[Double, Double](windSpeed, windDeg), KeyValuePair[List[Double], List[MemoryStream]](weatherIdList, weatherStreamList))))
 
 	def onCompleted(task):
 		global idList
 
-		sequenceList = List[Sequence]()
+		if task.Result.Key.Count > 0:
+			sequenceList = List[Sequence]()
 
-		for sequence in Script.Instance.Sequences:
-			if sequence.Name.Equals("Weather"):
-				sequenceList.Add(sequence)
+			for sequence in Script.Instance.Sequences:
+				if sequence.Name.Equals("Weather"):
+					sequenceList.Add(sequence)
 
-		if task.Result.Key is None:
-			Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, String.Empty))
-
-		else:
-			Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, task.Result.Key))
+			for s in task.Result.Key:
+				Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, s))
 
 		if Application.Current.MainWindow.IsVisible and task.Result.Value.Value.Value.Value.Count > 0 and not Enumerable.SequenceEqual[Double](idList, task.Result.Value.Value.Value.Key):
-			width = 125
-			height = 125
-			max = 5
+			width = 128
+			height = 128
+			max = 4
 			window = Window()
 			contentControl = ContentControl()
 			grid = Grid()
@@ -750,6 +730,8 @@ def onTick(timer, e):
 				g.HorizontalAlignment = HorizontalAlignment.Center
 				g.VerticalAlignment = VerticalAlignment.Center
 				g.Background = Brushes.Transparent
+				g.Width = width
+				g.Height = height
 
 				grid.Children.Add(g)
 
@@ -773,7 +755,7 @@ def onTick(timer, e):
 			idList.Clear()
 			idList.AddRange(task.Result.Value.Value.Value.Key)
 	
-	Task.Factory.StartNew[KeyValuePair[String, KeyValuePair[Double, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]]]]](onUpdate, TaskCreationOptions.LongRunning).ContinueWith(Action[Task[KeyValuePair[String, KeyValuePair[Double, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]]]]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
+	Task.Factory.StartNew[KeyValuePair[List[String], KeyValuePair[Double, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]]]]](onUpdate, TaskCreationOptions.LongRunning).ContinueWith(Action[Task[KeyValuePair[List[String], KeyValuePair[Double, KeyValuePair[KeyValuePair[Double, Double], KeyValuePair[List[Double], List[MemoryStream]]]]]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 
 	timer.Stop()
 	timer.Interval = TimeSpan.FromMinutes(5)

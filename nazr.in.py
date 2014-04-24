@@ -354,12 +354,10 @@ def onOpened(s, e):
 								response = request.GetResponse()
 								stream = response.GetResponseStream()
 								streamReader = StreamReader(stream)
-								json = JsonDecoder.decode(streamReader.ReadToEnd())
+								jsonDictionary = JsonDecoder.decode(streamReader.ReadToEnd())
 
-								if json is not None:
-									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-										if json.ContainsKey("url"):
-											shortenedUri = Uri(json["url"])
+								if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("url"):
+									shortenedUri = Uri(jsonDictionary["url"])
 
 							finally:
 								if streamReader is not None:

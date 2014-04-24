@@ -370,10 +370,7 @@ def update():
 				bodyStringBuilder.Append('=')
 				bodyStringBuilder.Append(kvp.Value)
 
-		hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&")))
-		signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/access_token"), sortedDictionary))))
-
-		sortedDictionary.Add("oauth_signature", signature)
+		sortedDictionary.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&"))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/access_token"), sortedDictionary)))))
 		
 		webClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
 		webClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
@@ -407,11 +404,7 @@ def update():
 		if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
 			sortedDictionary = createCommonParameters(consumerKey)
 			sortedDictionary.Add("oauth_token", oauthToken)
-
-			hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-			signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary))))
-			
-			sortedDictionary.Add("oauth_signature", signature)
+			sortedDictionary.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary)))))
 
 			request.Method = WebRequestMethods.Http.Get
 			request.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
@@ -432,68 +425,54 @@ def update():
 					response = request.GetResponse()
 					stream = response.GetResponseStream()
 					streamReader = StreamReader(stream)
-					json = JsonDecoder.decode(streamReader.ReadToEnd())
+					jsonArray = JsonDecoder.decode(streamReader.ReadToEnd())
 
-					if json is not None:
-						if clr.GetClrType(Array).IsInstanceOfType(json):
-							for obj in json:
-								if obj is not None:
-									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-										entry = Entry()
-										idStr = String.Empty
-										imageUriList = List[Uri]()
-										screenName = String.Empty
+					if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+						for obj in jsonArray:
+							if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+								entry = Entry()
+								idStr = String.Empty
+								imageUriList = List[Uri]()
+								screenName = String.Empty
 
-										if obj.ContainsKey("id_str"):
-											if obj["id_str"] is not None:
-												idStr = obj["id_str"]
+								if obj.ContainsKey("id_str") and obj["id_str"] is not None:
+									idStr = obj["id_str"]
 
-										if obj.ContainsKey("text"):
-											if obj["text"] is not None:
-												entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+								if obj.ContainsKey("text") and obj["text"] is not None:
+									entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 											
-										if obj.ContainsKey("entities"):
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]):
-												if obj["entities"].ContainsKey("media"):
-													if clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
-														for o in obj["entities"]["media"]:
-															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o):
-																if o.ContainsKey("media_url_https") and o.ContainsKey("type"):
-																	if o["type"].Equals("photo"):
-																		imageUriList.Add(Uri(o["media_url_https"]))
+								if obj.ContainsKey("entities") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]) and obj["entities"].ContainsKey("media") and clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
+									for o in obj["entities"]["media"]:
+										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o) and o.ContainsKey("media_url_https") and o.ContainsKey("type") and o["type"].Equals("photo"):
+											imageUriList.Add(Uri(o["media_url_https"]))
 
-										if obj.ContainsKey("created_at"):
-											if obj["created_at"] is not None:
-												entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
+								if obj.ContainsKey("created_at") and obj["created_at"] is not None:
+									entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
 
-										if obj.ContainsKey("user"):
-											if obj["user"] is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
-													user = obj["user"]
+								if obj.ContainsKey("user") and obj["user"] is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
+									user = obj["user"]
 
-													if user is not None:
-														if user.ContainsKey("screen_name"):
-															if user["screen_name"] is not None:
-																screenName = user["screen_name"]
+									if user is not None:
+										if user.ContainsKey("screen_name") and user["screen_name"] is not None:
+											screenName = user["screen_name"]
 
-														if user.ContainsKey("profile_image_url_https"):
-															if user["profile_image_url_https"] is not None:
-																imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
+										if user.ContainsKey("profile_image_url_https") and user["profile_image_url_https"] is not None:
+											imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
 																
-										if imageUriList.Count == 1:
-											entry.Image = imageUriList[0]
+								if imageUriList.Count == 1:
+									entry.Image = imageUriList[0]
 
-										elif imageUriList.Count > 1:
-											sb = StringBuilder()
+								elif imageUriList.Count > 1:
+									sb = StringBuilder()
 
-											for uri in imageUriList:
-												sb.AppendFormat("<img src=\"{0}\" />", uri.ToString())
+									for uri in imageUriList:
+										sb.AppendFormat("<img src=\"{0}\" />", uri.ToString())
 
-											entry.Description = sb.ToString()
+									entry.Description = sb.ToString()
 
-										entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
-										entry.Author = screenName
-										entryList.Add(entry)
+								entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
+								entry.Author = screenName
+								entryList.Add(entry)
 
 				finally:
 					if streamReader is not None:
@@ -564,11 +543,7 @@ def search(query):
 		sortedDictionary = createCommonParameters(consumerKey)
 		sortedDictionary.Add("oauth_token", oauthToken)
 		sortedDictionary.Add("q", urlEncode(query))
-
-		hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-		signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri(String.Concat("https://api.twitter.com/1.1/search/tweets.json?q=", urlEncode(query))), sortedDictionary))))
-		
-		sortedDictionary.Add("oauth_signature", signature)
+		sortedDictionary.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri(String.Concat("https://api.twitter.com/1.1/search/tweets.json?q=", urlEncode(query))), sortedDictionary)))))
 
 		request = WebRequest.Create(String.Concat("https://api.twitter.com/1.1/search/tweets.json?q=", urlEncode(query)))
 		request.Method = WebRequestMethods.Http.Get
@@ -586,73 +561,63 @@ def search(query):
 						response = request.GetResponse()
 						stream = response.GetResponseStream()
 						streamReader = StreamReader(stream)
-						json = JsonDecoder.decode(streamReader.ReadToEnd())
+						jsonDictionary = JsonDecoder.decode(streamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-								if json.ContainsKey("statuses"):
-									if clr.GetClrType(Array).IsInstanceOfType(json["statuses"]):
-										for status in json["statuses"]:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(status):
-												entry = Entry()
-												idStr = String.Empty
-												screenName = String.Empty
+						if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("statuses") and clr.GetClrType(Array).IsInstanceOfType(jsonDictionary["statuses"]):
+							for status in jsonDictionary["statuses"]:
+								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(status):
+									entry = Entry()
+									idStr = String.Empty
+									screenName = String.Empty
 
-												if status.ContainsKey("id_str"):
-													if status["id_str"] is not None:
-														idStr = status["id_str"]
+									if status.ContainsKey("id_str") and status["id_str"] is not None:
+											idStr = status["id_str"]
 
-												if status.ContainsKey("text"):
-													if status["text"] is not None:
-														index = 0
-														stringBuilder = StringBuilder()
-														match = Regex.Match(status["text"], "\\s?\\#(.+?)(?:(?=\\s)|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline)
+									if status.ContainsKey("text") and status["text"] is not None:
+										index = 0
+										stringBuilder = StringBuilder()
+										match = Regex.Match(status["text"], "\\s?\\#(.+?)(?:(?=\\s)|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline)
 
-														while match.Success:
-															if match.Groups[1].Value.Equals("apricotan"):
-																if match.Index > index:
-																	text = status["text"].Substring(index, match.Index - index).Trim()
+										while match.Success:
+											if match.Groups[1].Value.Equals("apricotan"):
+												if match.Index > index:
+													text = status["text"].Substring(index, match.Index - index).Trim()
 
-																	if text.StartsWith("\"", StringComparison.Ordinal) and text.EndsWith("\"", StringComparison.Ordinal):
-																		text = text.Trim("\"".ToCharArray())
+													if text.StartsWith("\"", StringComparison.Ordinal) and text.EndsWith("\"", StringComparison.Ordinal):
+														text = text.Trim("\"".ToCharArray())
 
-																	stringBuilder.Append(text)
+													stringBuilder.Append(text)
 
-															else:
-																stringBuilder.Append(match.Value)
+											else:
+												stringBuilder.Append(match.Value)
 
-															index = match.Index + match.Length
-															match = match.NextMatch()
+											index = match.Index + match.Length
+											match = match.NextMatch()
 
-														if status["text"].Length > index:
-															stringBuilder.Append(status["text"].Substring(index, status["text"].Length - index))
+										if status["text"].Length > index:
+											stringBuilder.Append(status["text"].Substring(index, status["text"].Length - index))
 
-														entry.Title = Regex.Replace(stringBuilder.ToString(), "[\r\n]", String.Empty, RegexOptions.CultureInvariant).Trim()
+										entry.Title = Regex.Replace(stringBuilder.ToString(), "[\r\n]", String.Empty, RegexOptions.CultureInvariant).Trim()
 
-												if status.ContainsKey("created_at"):
-													if status["created_at"] is not None:
-														entry.Created = entry.Modified = DateTime.ParseExact(status["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
+									if status.ContainsKey("created_at") and status["created_at"] is not None:
+										entry.Created = entry.Modified = DateTime.ParseExact(status["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
 
-												if status.ContainsKey("user"):
-													if status["user"] is not None:
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(status["user"]):
-															user = status["user"]
+									if status.ContainsKey("user") and status["user"] is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(status["user"]):
+										user = status["user"]
 
-															if user is not None:
-																if user.ContainsKey("screen_name"):
-																	if user["screen_name"] is not None:
-																		screenName = user["screen_name"]
+										if user is not None:
+											if user.ContainsKey("screen_name") and user["screen_name"] is not None:
+												screenName = user["screen_name"]
 
-																if user.ContainsKey("profile_image_url_https"):
-																	if user["profile_image_url_https"] is not None:
-																		entry.Image = Uri(user["profile_image_url_https"])
+											if user.ContainsKey("profile_image_url_https") and user["profile_image_url_https"] is not None:
+												entry.Image = Uri(user["profile_image_url_https"])
 
-												if screenName.StartsWith("apricotan", StringComparison.Ordinal):
-													continue
+									if screenName.StartsWith("apricotan", StringComparison.Ordinal):
+										continue
 												
-												entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
-												entry.Author = screenName
-												entryList.Add(entry)
+									entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
+									entry.Author = screenName
+									entryList.Add(entry)
 
 					finally:
 						if streamReader is not None:
@@ -716,10 +681,7 @@ def post(text, filename):
 				bodyStringBuilder.Append('=')
 				bodyStringBuilder.Append(kvp.Value)
 
-		hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&")))
-		signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/access_token"), sortedDictionary))))
-
-		sortedDictionary.Add("oauth_signature", signature)
+		sortedDictionary.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&"))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/access_token"), sortedDictionary)))))
 
 		authWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
 		authWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
@@ -806,8 +768,7 @@ def post(text, filename):
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
 
-				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
+				signature = Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
 
 				sortedDictionary.Add("realm", "http://api.twitter.com/")
 				sortedDictionary.Add("oauth_signature", signature)
@@ -913,14 +874,12 @@ def post(text, filename):
 				sb.Append(text)
 
 			if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
+				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
+				
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
 				sortedDictionary.Add("status", urlEncode(sb.ToString()))
-
-				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(sb.ToString()))), sortedDictionary))))
-			
-				sortedDictionary.Add("oauth_signature", signature)
+				sortedDictionary.Add("oauth_signature", Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(sb.ToString()))), sortedDictionary)))))
 				sortedDictionary.Remove("status")
 
 				updateWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
@@ -928,11 +887,7 @@ def post(text, filename):
 				
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
-
-				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary))))
-			
-				sortedDictionary.Add("oauth_signature", signature)
+				sortedDictionary.Add("oauth_signature", Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary)))))
 		
 				timelineRequest.Method = WebRequestMethods.Http.Get
 				timelineRequest.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
@@ -955,68 +910,54 @@ def post(text, filename):
 						response = timelineRequest.GetResponse()
 						stream = response.GetResponseStream()
 						streamReader = StreamReader(stream)
-						json = JsonDecoder.decode(streamReader.ReadToEnd())
+						jsonArray = JsonDecoder.decode(streamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Array).IsInstanceOfType(json):
-								for obj in json:
-									if obj is not None:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											entry = Entry()
-											idStr = String.Empty
-											imageUriList = List[Uri]()
-											screenName = String.Empty
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+									entry = Entry()
+									idStr = String.Empty
+									imageUriList = List[Uri]()
+									screenName = String.Empty
 
-											if obj.ContainsKey("id_str"):
-												if obj["id_str"] is not None:
-													idStr = obj["id_str"]
+									if obj.ContainsKey("id_str") and obj["id_str"] is not None:
+										idStr = obj["id_str"]
 
-											if obj.ContainsKey("text"):
-												if obj["text"] is not None:
-													entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+									if obj.ContainsKey("text") and obj["text"] is not None:
+										entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 											
-											if obj.ContainsKey("entities"):
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]):
-													if obj["entities"].ContainsKey("media"):
-														if clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
-															for o in obj["entities"]["media"]:
-																if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o):
-																	if o.ContainsKey("media_url_https") and o.ContainsKey("type"):
-																		if o["type"].Equals("photo"):
-																			imageUriList.Add(Uri(o["media_url_https"]))
+									if obj.ContainsKey("entities") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]) and obj["entities"].ContainsKey("media") and clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
+										for o in obj["entities"]["media"]:
+											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o) and o.ContainsKey("media_url_https") and o.ContainsKey("type") and o["type"].Equals("photo"):
+												imageUriList.Add(Uri(o["media_url_https"]))
 
-											if obj.ContainsKey("created_at"):
-												if obj["created_at"] is not None:
-													entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
+									if obj.ContainsKey("created_at") and obj["created_at"] is not None:
+										entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
 
-											if obj.ContainsKey("user"):
-												if obj["user"] is not None:
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
-														user = obj["user"]
+									if obj.ContainsKey("user") and obj["user"] is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
+										user = obj["user"]
 
-														if user is not None:
-															if user.ContainsKey("screen_name"):
-																if user["screen_name"] is not None:
-																	screenName = user["screen_name"]
+										if user is not None:
+											if user.ContainsKey("screen_name") and user["screen_name"] is not None:
+													screenName = user["screen_name"]
 
-															if user.ContainsKey("profile_image_url_https"):
-																if user["profile_image_url_https"] is not None:
-																	imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
+											if user.ContainsKey("profile_image_url_https") and user["profile_image_url_https"] is not None:
+													imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
 										
-											if imageUriList.Count == 1:
-												entry.Image = imageUriList[0]
+									if imageUriList.Count == 1:
+										entry.Image = imageUriList[0]
 
-											elif imageUriList.Count > 1:
-												descriptionStringBuilder = StringBuilder()
+									elif imageUriList.Count > 1:
+										descriptionStringBuilder = StringBuilder()
 
-												for uri in imageUriList:
-													descriptionStringBuilder.AppendFormat("<img src=\"{0}\" />", uri.ToString())
+										for uri in imageUriList:
+											descriptionStringBuilder.AppendFormat("<img src=\"{0}\" />", uri.ToString())
 
-												entry.Description = descriptionStringBuilder.ToString()
+										entry.Description = descriptionStringBuilder.ToString()
 
-											entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
-											entry.Author = screenName
-											entryList.Add(entry)
+									entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
+									entry.Author = screenName
+									entryList.Add(entry)
 
 					finally:
 						if streamReader is not None:
@@ -1046,6 +987,8 @@ def post(text, filename):
 					oauthTokenSecret = kvp.Value
 
 			if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
+				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
+				
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
 				
@@ -1081,10 +1024,7 @@ def post(text, filename):
 					updateRequest.ContentType = "application/x-www-form-urlencoded"
 					sortedDictionary.Add("status", urlEncode(text))
 
-				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/1.1/statuses/update_with_media.json" if isLoadable else String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(text))), sortedDictionary))))
-			
-				sortedDictionary.Add("oauth_signature", signature)
+				sortedDictionary.Add("oauth_signature", Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/1.1/statuses/update_with_media.json" if isLoadable else String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(text))), sortedDictionary)))))
 
 				if sortedDictionary.ContainsKey("status"):
 					sortedDictionary.Remove("status")
@@ -1096,11 +1036,7 @@ def post(text, filename):
 
 				sortedDictionary = createCommonParameters(consumerKey)
 				sortedDictionary.Add("oauth_token", oauthToken)
-
-				hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-				signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary))))
-			
-				sortedDictionary.Add("oauth_signature", signature)
+				sortedDictionary.Add("oauth_signature", Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/statuses/home_timeline.json"), sortedDictionary)))))
 
 				timelineRequest.Method = WebRequestMethods.Http.Get
 				timelineRequest.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
@@ -1140,68 +1076,54 @@ def post(text, filename):
 						response = timelineRequest.GetResponse()
 						stream = response.GetResponseStream()
 						streamReader = StreamReader(stream)
-						json = JsonDecoder.decode(streamReader.ReadToEnd())
+						jsonArray = JsonDecoder.decode(streamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Array).IsInstanceOfType(json):
-								for obj in json:
-									if obj is not None:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											entry = Entry()
-											idStr = String.Empty
-											imageUriList = List[Uri]()
-											screenName = String.Empty
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
+									entry = Entry()
+									idStr = String.Empty
+									imageUriList = List[Uri]()
+									screenName = String.Empty
 
-											if obj.ContainsKey("id_str"):
-												if obj["id_str"] is not None:
-													idStr = obj["id_str"]
+									if obj.ContainsKey("id_str") and obj["id_str"] is not None:
+										idStr = obj["id_str"]
 
-											if obj.ContainsKey("text"):
-												if obj["text"] is not None:
-													entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
+									if obj.ContainsKey("text") and obj["text"] is not None:
+										entry.Title = Regex.Replace(obj["text"], "[\r\n]", String.Empty, RegexOptions.CultureInvariant)
 											
-											if obj.ContainsKey("entities"):
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]):
-													if obj["entities"].ContainsKey("media"):
-														if clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
-															for o in obj["entities"]["media"]:
-																if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o):
-																	if o.ContainsKey("media_url_https") and o.ContainsKey("type"):
-																		if o["type"].Equals("photo"):
-																			imageUriList.Add(Uri(o["media_url_https"]))
+									if obj.ContainsKey("entities") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entities"]) and obj["entities"].ContainsKey("media") and clr.GetClrType(Array).IsInstanceOfType(obj["entities"]["media"]):
+										for o in obj["entities"]["media"]:
+											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(o) and o.ContainsKey("media_url_https") and o.ContainsKey("type") and o["type"].Equals("photo"):
+												imageUriList.Add(Uri(o["media_url_https"]))
 
-											if obj.ContainsKey("created_at"):
-												if obj["created_at"] is not None:
-													entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
+									if obj.ContainsKey("created_at") and obj["created_at"] is not None:
+										entry.Created = entry.Modified = DateTime.ParseExact(obj["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
 
-											if obj.ContainsKey("user"):
-												if obj["user"] is not None:
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
-														user = obj["user"]
+									if obj.ContainsKey("user") and obj["user"] is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["user"]):
+										user = obj["user"]
 
-														if user is not None:
-															if user.ContainsKey("screen_name"):
-																if user["screen_name"] is not None:
-																	screenName = user["screen_name"]
+										if user is not None:
+											if user.ContainsKey("screen_name") and user["screen_name"] is not None:
+												screenName = user["screen_name"]
 
-															if user.ContainsKey("profile_image_url_https"):
-																if user["profile_image_url_https"] is not None:
-																	imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
+											if user.ContainsKey("profile_image_url_https") and user["profile_image_url_https"] is not None:
+												imageUriList.Insert(0, Uri(user["profile_image_url_https"]))
 
-											if imageUriList.Count == 1:
-												entry.Image = imageUriList[0]
+									if imageUriList.Count == 1:
+										entry.Image = imageUriList[0]
 
-											elif imageUriList.Count > 1:
-												descriptionStringBuilder = StringBuilder()
+									elif imageUriList.Count > 1:
+										descriptionStringBuilder = StringBuilder()
 
-												for uri in imageUriList:
-													descriptionStringBuilder.AppendFormat("<img src=\"{0}\" />", uri.ToString())
+										for uri in imageUriList:
+											descriptionStringBuilder.AppendFormat("<img src=\"{0}\" />", uri.ToString())
 
-												entry.Description = descriptionStringBuilder.ToString()
+										entry.Description = descriptionStringBuilder.ToString()
 
-											entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
-											entry.Author = screenName
-											entryList.Add(entry)
+									entry.Resource = Uri(String.Concat("https://twitter.com/", screenName, "/statuses/", idStr))
+									entry.Author = screenName
+									entryList.Add(entry)
 
 					finally:
 						if streamReader is not None:

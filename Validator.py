@@ -18,7 +18,7 @@ from System.Globalization import CultureInfo
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskContinuationOptions, TaskScheduler
 from System.Windows import Application, Window, WindowStartupLocation, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Point, Thickness, SystemColors
 from System.Windows.Controls import MenuItem, Separator, StackPanel, Border, Label, Button, Orientation
-from System.Windows.Media import Color, Colors, Brushes, SolidColorBrush, LinearGradientBrush, GradientStop, RenderOptions, ClearTypeHint
+from System.Windows.Media import Color, Colors, Brushes, SolidColorBrush, LinearGradientBrush, GradientStopCollection, GradientStop, RenderOptions, ClearTypeHint
 from System.Windows.Media.Effects import DropShadowEffect
 from System.Xml import XmlDocument
 from Apricot import Script
@@ -53,22 +53,21 @@ def parseSequence(xmlNode, directory, warningList, errorList):
 				else:
 					errorList.Add(String.Format("Could not find the specified file. \"{0}\"", childNode1.InnerText))
 
-def createStackPanel(brush, text):
+def attachStackPanel(stackPanel, brush, text):
 	stackPanel1 = StackPanel()
 	stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
 	stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
 	stackPanel1.Orientation = Orientation.Vertical
 	stackPanel1.Background = brush
 
-	linearGradientBrush = LinearGradientBrush()
-	gradientStop1 = GradientStop(Color.FromArgb(0, 0, 0, 0), 0)
-	gradientStop2 = GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1)
+	stackPanel.Children.Add(stackPanel1)
 
-	linearGradientBrush.StartPoint = Point(0.5, 0)
-	linearGradientBrush.EndPoint = Point(0.5, 1)
+	gradientStopCollection = GradientStopCollection()
+	gradientStopCollection.Add(GradientStop(Color.FromArgb(0, 0, 0, 0), 0))
+	gradientStopCollection.Add(GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1))
+
+	linearGradientBrush = LinearGradientBrush(gradientStopCollection, Point(0.5, 0), Point(0.5, 1))
 	linearGradientBrush.Opacity = 0.1
-	linearGradientBrush.GradientStops.Add(gradientStop1)
-	linearGradientBrush.GradientStops.Add(gradientStop2)
 
 	if linearGradientBrush.CanFreeze:
 		linearGradientBrush.Freeze()
@@ -78,6 +77,8 @@ def createStackPanel(brush, text):
 	stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
 	stackPanel2.Orientation = Orientation.Vertical
 	stackPanel2.Background = linearGradientBrush
+
+	stackPanel1.Children.Add(stackPanel2)
 	
 	solidColorBrush1 = SolidColorBrush(Colors.White)
 	solidColorBrush1.Opacity = 0.5
@@ -98,12 +99,16 @@ def createStackPanel(brush, text):
 	if solidColorBrush2.CanFreeze:
 		solidColorBrush2.Freeze()
 
+	stackPanel2.Children.Add(border1)
+
 	border2 = Border()
 	border2.HorizontalAlignment = HorizontalAlignment.Stretch
 	border2.VerticalAlignment = VerticalAlignment.Stretch
 	border2.Padding = Thickness(10, 5, 10, 5)
 	border2.BorderThickness = Thickness(0, 0, 0, 1)
 	border2.BorderBrush = solidColorBrush2
+
+	border1.Child = border2
 
 	dropShadowEffect = DropShadowEffect()
 	dropShadowEffect.BlurRadius = 1
@@ -121,6 +126,8 @@ def createStackPanel(brush, text):
 	border3.Padding = Thickness(0)
 	border3.Effect = dropShadowEffect
 
+	border2.Child = border3
+
 	label = Label()
 	label.Foreground = SystemColors.ControlTextBrush
 	label.Content = text
@@ -128,14 +135,7 @@ def createStackPanel(brush, text):
 	RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
 	
 	border3.Child = label
-	border2.Child = border3
-	border1.Child = border2
-
-	stackPanel2.Children.Add(border1)
-	stackPanel1.Children.Add(stackPanel2)
-
-	return stackPanel1
-
+	
 def onClick(s, e):
 	currentDirectory = Directory.GetCurrentDirectory()
 
@@ -202,17 +202,37 @@ def onClick(s, e):
 			def onLoaded(sender, args):
 				stackPanel3.Width = Math.Ceiling(stackPanel3.ActualWidth)
 
+			def onCloseClick(sender, args):
+				window.Close()
+			
+			window.Owner = Application.Current.MainWindow
+
+			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+				window.Title = "バリデータ"
+			else:
+				window.Title = "Validator"
+	
+			window.WindowStartupLocation = WindowStartupLocation.CenterOwner
+			window.ResizeMode = ResizeMode.NoResize
+			window.SizeToContent = SizeToContent.WidthAndHeight
+			window.Background = SystemColors.ControlBrush
+			window.Loaded += onLoaded
+
 			stackPanel1 = StackPanel()
 			stackPanel1.UseLayoutRounding = True
 			stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
 			stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
 			stackPanel1.Orientation = Orientation.Vertical
 
+			window.Content = stackPanel1
+
 			stackPanel2 = StackPanel()
 			stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
 			stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
 			stackPanel2.Orientation = Orientation.Vertical
 			stackPanel2.Background = SystemColors.WindowBrush
+			
+			stackPanel1.Children.Add(stackPanel2)
 
 			stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
 			stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
@@ -220,22 +240,18 @@ def onClick(s, e):
 
 			if errorList.Count == 0:
 				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-					stackPanel3.Children.Add(createStackPanel(Brushes.Lime, "有効なスクリプトです。"))
+					attachStackPanel(stackPanel3, Brushes.Lime, "有効なスクリプトです。")
 				else:
-					stackPanel3.Children.Add(createStackPanel(Brushes.Lime, "Valid."))
+					attachStackPanel(stackPanel3, Brushes.Lime, "Valid.")
 
 			for warning in warningList:
-				stackPanel3.Children.Add(createStackPanel(Brushes.Yellow, warning))
+				attachStackPanel(stackPanel3, Brushes.Yellow, warning)
 
 			for error in errorList:
-				stackPanel3.Children.Add(createStackPanel(Brushes.Red, error))
+				attachStackPanel(stackPanel3, Brushes.Red, error)
 
 			stackPanel2.Children.Add(stackPanel3)
-			stackPanel1.Children.Add(stackPanel2)
-
-			def onCloseClick(sender, args):
-				window.Close()
-
+			
 			solidColorBrush = SolidColorBrush(Colors.White)
 			solidColorBrush.Opacity = 0.5
 
@@ -247,6 +263,8 @@ def onClick(s, e):
 			border.VerticalAlignment = VerticalAlignment.Stretch
 			border.BorderThickness = Thickness(0, 1, 0, 0)
 			border.BorderBrush = solidColorBrush
+
+			stackPanel1.Children.Add(border)
 
 			closeButton = Button()
 			closeButton.HorizontalAlignment = HorizontalAlignment.Right
@@ -263,21 +281,7 @@ def onClick(s, e):
 			closeButton.Click += onCloseClick
 
 			border.Child = closeButton
-			stackPanel1.Children.Add(border)
-			
-			window.Owner = Application.Current.MainWindow
 
-			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-				window.Title = "バリデータ"
-			else:
-				window.Title = "Validator"
-	
-			window.WindowStartupLocation = WindowStartupLocation.CenterOwner
-			window.ResizeMode = ResizeMode.NoResize
-			window.SizeToContent = SizeToContent.WidthAndHeight
-			window.Background = SystemColors.ControlBrush
-			window.Content = stackPanel1
-			window.Loaded += onLoaded
 			window.Show()
 
 	Task.Factory.StartNew(onValidate).ContinueWith(onCompleted, context)
@@ -300,7 +304,7 @@ menuItem = MenuItem()
 separator = None
 
 if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-	menuItem.Header = "スクリプトをチェック"
+	menuItem.Header = "CHARMLをチェック"
 else:
 	menuItem.Header = "Validate"
 

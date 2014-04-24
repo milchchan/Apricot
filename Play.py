@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Social.py
+# Play.py
 # Copyright © Masaaki Kawata All rights reserved.
 
 import clr
@@ -14,7 +14,7 @@ clr.AddReferenceByPartialName("PresentationCore")
 clr.AddReferenceByPartialName("PresentationFramework")
 clr.AddReferenceByPartialName("Apricot")
 
-from System import Object, ValueType, Nullable, Boolean, Byte, Char, UInt32, Int32, Double, String, StringComparison, Uri, DateTime, TimeSpan, Array, Convert, BitConverter, Type, Environment, Math, Random, Action
+from System import Object, ValueType, Nullable, Boolean, Byte, Char, UInt32, Int32, Int64, Double, String, StringComparison, Uri, DateTime, TimeSpan, Array, Convert, BitConverter, Type, Environment, Math, Random, Action, Func
 from System.IO import Stream, FileStream, BufferedStream, MemoryStream, SeekOrigin, StreamReader, StreamWriter, Directory, File, FileMode, FileAccess, FileShare, SearchOption
 from System.IO.Compression import ZipArchive
 from System.Collections.Generic import List, LinkedList, Dictionary, SortedDictionary, KeyValuePair, Queue, HashSet
@@ -560,79 +560,55 @@ def ask(text):
 	attributeHashSet = HashSet[String]()
 	stringBuilder = StringBuilder()
 	updateWebClient = WebClient()
-
-	sortedDictionary = createCommonParameters(consumerKey)
-	sortedDictionary.Add("oauth_token", oauthToken)
-
-	hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-	signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
-
-	sortedDictionary.Add("realm", "http://api.twitter.com/")
-	sortedDictionary.Add("oauth_signature", signature)
-
-	verifyRequest = WebRequest.Create("http://api.apricotan.net/verify")
-	verifyRequest.PreAuthenticate = True
-	verifyRequest.Method = WebRequestMethods.Http.Get
-	verifyRequest.Headers.Add("X-Verify-Credentials-Authorization", createHttpAuthorizationHeader(sortedDictionary))
-	verifyRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1.1/account/verify_credentials.json")
-
-	likesRequestList = List[WebRequest]()
-	verifyDictionary = Dictionary[String, String]()
-	userDictionary = Dictionary[String, Double]()
-	currentLikesDictionary = Dictionary[String, Int32]()
 	context = TaskScheduler.FromCurrentSynchronizationContext()
 	
 	def onLoad():
-		fs1 = None
-		sr1 = None
-		fs2 = None
-		sr2 = None
+		fileStream1 = None
+		streamReader1 = None
+		fileStream2 = None
+		streamReader2 = None
 
 		try:
-			fs1 = FileStream("Words.json", FileMode.Open, FileAccess.Read, FileShare.Read)
-			sr1 = StreamReader(fs1, UTF8Encoding(False), True)
-			json = Json.decode(sr1.ReadToEnd())
+			fileStream1 = FileStream("Words.json", FileMode.Open, FileAccess.Read, FileShare.Read)
+			streamReader1 = StreamReader(fileStream1, UTF8Encoding(False), True)
+			jsonArray = Json.decode(streamReader1.ReadToEnd())
 			
-			if json is not None:
-				if clr.GetClrType(Array).IsInstanceOfType(json):
-					for obj in json:
-						if obj is not None:
-							if clr.GetClrType(String).IsInstanceOfType(obj):
-								wordList.Add(obj)
+			if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+				for obj in jsonArray:
+					if obj is not None and clr.GetClrType(String).IsInstanceOfType(obj):
+						wordList.Add(obj)
 
-			fs2 = FileStream("Training.json", FileMode.Open, FileAccess.Read, FileShare.Read)
-			sr2 = StreamReader(fs2, UTF8Encoding(False), True)
-			json = Json.decode(sr2.ReadToEnd())
+			fileStream2 = FileStream("Training.json", FileMode.Open, FileAccess.Read, FileShare.Read)
+			streamReader2 = StreamReader(fileStream2, UTF8Encoding(False), True)
+			jsonDictionary = Json.decode(streamReader2.ReadToEnd())
 			
-			if json is not None:
-				if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-					for kvp in json:
-						if kvp.Value is not None:
-							if clr.GetClrType(Array).IsInstanceOfType(kvp.Value):
-								list = List[String]()
+			if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary):
+				for kvp in jsonDictionary:
+					if kvp.Value is not None and clr.GetClrType(Array).IsInstanceOfType(kvp.Value):
+						list = List[String]()
 
-								for s in kvp.Value:
-									if clr.GetClrType(String).IsInstanceOfType(s):
-										list.Add(s)
+						for s in kvp.Value:
+							if clr.GetClrType(String).IsInstanceOfType(s):
+								list.Add(s)
 						
-								documentDictionary.Add(kvp.Key, list)
+						documentDictionary.Add(kvp.Key, list)
 
 		except Exception, e:
 			Trace.WriteLine(e.clsException.Message)
 			Trace.WriteLine(e.clsException.StackTrace)
 
 		finally:
-			if sr2 is not None:
-				sr2.Close()
+			if streamReader2 is not None:
+				streamReader2.Close()
 
-			if fs2 is not None:
-				fs2.Close()
+			if fileStream2 is not None:
+				fileStream2.Close()
 
-			if sr1 is not None:
-				sr1.Close()
+			if streamReader1 is not None:
+				streamReader1.Close()
 
-			if fs1 is not None:
-				fs1.Close()
+			if fileStream1 is not None:
+				fileStream1.Close()
 	
 	def onLoaded(task):
 		tempWordDictionary = Dictionary[Char, List[String]]()
@@ -936,216 +912,48 @@ def ask(text):
 				stringBuilder.Insert(0, text)
 				stringBuilder.Append(" #apricotan")
 
-	def onVerify(task):
-		if NetworkInterface.GetIsNetworkAvailable():
-			try:
-				response = None
-				stream = None
-				streamReader = None
+				if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
+					sortedDictionary = createCommonParameters(consumerKey)
+					sortedDictionary.Add("oauth_token", oauthToken)
+					sortedDictionary.Add("status", urlEncode(stringBuilder.ToString()))
+					sortedDictionary.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(stringBuilder.ToString()))), sortedDictionary)))))
+					sortedDictionary.Remove("status")
 
-				try:
-					response = verifyRequest.GetResponse()
-						
-					if response.StatusCode == HttpStatusCode.OK:
-						stream = response.GetResponseStream()
-						streamReader = StreamReader(stream)
-						json = Json.decode(streamReader.ReadToEnd())
+					updateWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
+					updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
 
-						if json is not None:
-							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-								if json.ContainsKey("user"):
-									user = json["user"]
-										
-									if user is not None:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-											if user.ContainsKey("name"):
-												if clr.GetClrType(String).IsInstanceOfType(user["name"]):
-													verifyDictionary.Add("name", user["name"])
-
-											if user.ContainsKey("password"):
-												if clr.GetClrType(String).IsInstanceOfType(user["password"]):
-													verifyDictionary.Add("password", user["password"])
-
-				finally:
-					if streamReader is not None:
-						streamReader.Close()
-
-					if stream is not None:
-						stream.Close()
-			
-					if response is not None:
-						response.Close()
-
-			except Exception, e:
-				Trace.WriteLine(e.clsException.Message)
-				Trace.WriteLine(e.clsException.StackTrace)
-
-	def onReady(task):
-		global username, password
-
-		for kvp in verifyDictionary:
-			if kvp.Key.Equals("name"):
-				username = kvp.Value
-			elif kvp.Key.Equals("password"):
-				password = kvp.Value
-
-		if username is not None and password is not None and not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
-			sortedDictionary = createCommonParameters(consumerKey)
-			sortedDictionary.Add("oauth_token", oauthToken)
-			sortedDictionary.Add("status", urlEncode(stringBuilder.ToString()))
-
-			hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-			signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri(String.Concat("https://api.twitter.com/1.1/statuses/update.json?status=", urlEncode(stringBuilder.ToString()))), sortedDictionary))))
-			
-			sortedDictionary.Add("oauth_signature", signature)
-			sortedDictionary.Remove("status")
-
-			updateWebClient.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-			updateWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
-
-			for character in Script.Instance.Characters:
-				likesRequest = WebRequest.Create(String.Format("http://api.apricotan.net/likes?character_name={0}&user_name={1}&limit=50", urlEncode(character.Name), urlEncode(username)))
-				likesRequest.Method = WebRequestMethods.Http.Get
-
-				likesRequestList.Add(likesRequest)
-
-			return True
+					return True
 
 		return False
 
 	def onUpdate(task):
-		if NetworkInterface.GetIsNetworkAvailable() and stringBuilder.Length > 0 and task.Result:
+		if NetworkInterface.GetIsNetworkAvailable() and task.Result:
 			try:
-				json = Json.decode(Encoding.UTF8.GetString(updateWebClient.UploadData(Uri("https://api.twitter.com/1.1/statuses/update.json"), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Concat("status=", urlEncode(stringBuilder.ToString()))))))
-
-				if json is not None and verifyDictionary.ContainsKey("name") and verifyDictionary.ContainsKey("password"):
-					if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-						if json.ContainsKey("created_at") and json.ContainsKey("id_str") and json.ContainsKey("user"):
-							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json["user"]):
-								if json["user"].ContainsKey("screen_name"):
-									sb = StringBuilder(String.Format("http://api.apricotan.net/ping?resource={0}&title={1}&created={2}&modified={3}", urlEncode(String.Format("https://twitter.com/{0}/status/{1}", json["user"]["screen_name"], json["id_str"])), urlEncode(stringBuilder.ToString()), urlEncode(DateTime.ParseExact(json["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")), urlEncode(DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))))
-
-									if json["user"].ContainsKey("profile_image_url"):
-										imageUrl = json["user"]["profile_image_url"]
-
-										if imageUrl is not None:
-											sb.AppendFormat("&image={0}", urlEncode(imageUrl))
-
-									pingWebClient = WebClient()
-									pingWebClient.Headers.Add(HttpRequestHeader.Authorization, String.Concat("Basic ", Convert.ToBase64String(Encoding.ASCII.GetBytes(String.Concat(verifyDictionary["name"], ":", verifyDictionary["password"])))))
-									pingWebClient.Headers.Add(HttpRequestHeader.ContentType, "application/x-www-form-urlencoded")
-									pingWebClient.UploadData(Uri(sb.ToString()), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Empty))
-
-									request = WebRequest.Create(String.Concat("http://api.apricotan.net/user?name=", verifyDictionary["name"]))
-									request.Method = WebRequestMethods.Http.Get
-									response = None
-									stream = None
-									streamReader = None
-
-									try:
-										response = request.GetResponse()
-										stream = response.GetResponseStream()
-										streamReader = StreamReader(stream)
-										json = Json.decode(streamReader.ReadToEnd())
-
-										if json is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-												if json.ContainsKey("user"):
-													user = json["user"]
-										
-													if user is not None:
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-															for kvp in user:
-																if clr.GetClrType(Double).IsInstanceOfType(kvp.Value):
-																	userDictionary.Add(kvp.Key, kvp.Value)
-
-									finally:
-										if streamReader is not None:
-											streamReader.Close()
-
-										if stream is not None:
-											stream.Close()
-								
-										if response is not None:
-											response.Close()
-
-									dt = DateTime.Now - TimeSpan(7 * 2, 0, 0, 0)
-
-									for likesRequest in likesRequestList:
-										response = None
-										stream = None
-										streamReader = None
-
-										try:
-											response = likesRequest.GetResponse()
-											stream = response.GetResponseStream()
-											streamReader = StreamReader(stream)
-											json = Json.decode(streamReader.ReadToEnd())
-
-											if json is not None:
-												if clr.GetClrType(Array).IsInstanceOfType(json):
-													for obj in json:
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-															if obj.ContainsKey("like"):
-																like = obj["like"]
-													
-																if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(like):
-																	if like.ContainsKey("character") and like.ContainsKey("created"):
-																		character = like["character"]
-
-																		if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(character) and clr.GetClrType(String).IsInstanceOfType(like["created"]):
-																			created = DateTime.Parse(like["created"])
-																
-																			if character.ContainsKey("name") and created > dt:
-																				if clr.GetClrType(String).IsInstanceOfType(character["name"]):
-																					if currentLikesDictionary.ContainsKey(character["name"]):
-																						currentLikesDictionary[character["name"]] += 1
-																					else:
-																						currentLikesDictionary.Add(character["name"], 1)
-
-										finally:
-											if streamReader is not None:
-												streamReader.Close()
-
-											if stream is not None:
-												stream.Close()
-			
-											if response is not None:
-												response.Close()
+				updateWebClient.UploadData(Uri("https://api.twitter.com/1.1/statuses/update.json"), WebRequestMethods.Http.Post, Encoding.ASCII.GetBytes(String.Concat("status=", urlEncode(stringBuilder.ToString()))))
 
 			except Exception, e:
 				Trace.WriteLine(e.clsException.Message)
 				Trace.WriteLine(e.clsException.StackTrace)
-
+			
 	def onCompleted(task):
-		global remainingCount, likesDictionary
+		global remainingCount
 
-		if userDictionary.ContainsKey("points"):
-			remainingCount = Nullable[Int32](Convert.ToInt32(userDictionary["points"]))
+		if remainingCount < 5:
+			remainingCount += 1
 
-		if currentLikesDictionary.Count > 0:
-			likesDictionary.Clear()
-
-			for kvp in currentLikesDictionary:
-				likesDictionary.Add(kvp.Key, kvp.Value)
-
-			for kvp in likesDictionary:
-				sequenceList = List[Sequence]()
-								
-				for sequence in Script.Instance.Sequences:
-					if sequence.Name.Equals("Like") and kvp.Key.Equals(sequence.Owner):
-						sequenceList.Add(sequence)
-
-				Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, kvp.Value.ToString(CultureInfo.InvariantCulture)))
-
-	Task.Factory.StartNew(onLoad, TaskCreationOptions.LongRunning).ContinueWith(onLoaded, context).ContinueWith[NaiveBayes](onTrain, TaskContinuationOptions.LongRunning).ContinueWith(Action[Task[NaiveBayes]](onTrained), context).ContinueWith(onVerify, TaskContinuationOptions.LongRunning).ContinueWith[Boolean](onReady, context).ContinueWith(Action[Task[Boolean]](onUpdate), TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
+	Task.Factory.StartNew(onLoad, TaskCreationOptions.LongRunning).ContinueWith(onLoaded, context).ContinueWith[NaiveBayes](onTrain, TaskContinuationOptions.LongRunning).ContinueWith[Boolean](Func[Task[NaiveBayes], Boolean](onTrained), context).ContinueWith(Action[Task[Boolean]](onUpdate), TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
 
 def onTick(timer, e):
-	global username, password, consumerKey, consumerSecret, oauthToken, oauthTokenSecret
 	entryList = List[Entry]()
 	wordList = List[Word]()
 
-	if (username is not None and password is not None) or String.IsNullOrEmpty(oauthToken) or String.IsNullOrEmpty(oauthTokenSecret):
+	if File.Exists("Likes.json"):
+		nameList = List[String]()
+		currentLikesDictionary = Dictionary[String, List[DateTime]]()
+
+		for character in Script.Instance.Characters:
+			nameList.Add(character.Name)
+
 		def onUpdate():
 			if NetworkInterface.GetIsNetworkAvailable():
 				try:
@@ -1158,44 +966,34 @@ def onTick(timer, e):
 						response = request.GetResponse()
 						stream = response.GetResponseStream()
 						streamReader = StreamReader(stream)
-						json = Json.decode(streamReader.ReadToEnd())
+						jsonArray = Json.decode(streamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Array).IsInstanceOfType(json):
-								for obj in json:
-									if obj is not None:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											if obj.ContainsKey("entry"):
-												entry = Entry()
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj) and obj.ContainsKey("entry") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entry"]):
+									entry = Entry()
+										
+									if obj["entry"].ContainsKey("resource") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["resource"]):
+										entry.Resource = Uri(obj["entry"]["resource"])
 
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entry"]):
-													if obj["entry"].ContainsKey("resource"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["resource"]):
-															entry.Resource = Uri(obj["entry"]["resource"])
+									if obj["entry"].ContainsKey("title") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["title"]):
+										entry.Title = obj["entry"]["title"]
 
-													if obj["entry"].ContainsKey("title"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["title"]):
-															entry.Title = obj["entry"]["title"]
+									if obj["entry"].ContainsKey("created") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["created"]):
+										entry.Created = DateTime.Parse(obj["entry"]["created"])
 
-													if obj["entry"].ContainsKey("created"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["created"]):
-															entry.Created = DateTime.Parse(obj["entry"]["created"])
+									if obj["entry"].ContainsKey("modified") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["modified"]):
+										entry.Modified = DateTime.Parse(obj["entry"]["modified"])
 
-													if obj["entry"].ContainsKey("modified"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["modified"]):
-															entry.Modified = DateTime.Parse(obj["entry"]["modified"])
+									if obj["entry"].ContainsKey("image") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["image"]):
+										entry.Image = Uri(obj["entry"]["image"])
 
-													if obj["entry"].ContainsKey("image"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["image"]):
-															entry.Image = Uri(obj["entry"]["image"])
+									if obj["entry"].ContainsKey("tags") and clr.GetClrType(Array).IsInstanceOfType(obj["entry"]["tags"]):
+										for o in obj["entry"]["tags"]:
+											if clr.GetClrType(String).IsInstanceOfType(o):
+												entry.Tags.Add(o)
 
-													if obj["entry"].ContainsKey("tags"):
-														if clr.GetClrType(Array).IsInstanceOfType(obj["entry"]["tags"]):
-															for o in obj["entry"]["tags"]:
-																if clr.GetClrType(String).IsInstanceOfType(o):
-																	entry.Tags.Add(o)
-
-												entryList.Add(entry)
+									entryList.Add(entry)
 
 					finally:
 						if streamReader is not None:
@@ -1216,28 +1014,280 @@ def onTick(timer, e):
 						response = request.GetResponse()
 						stream = response.GetResponseStream()
 						streamReader = StreamReader(stream)
-						json = Json.decode(streamReader.ReadToEnd())
+						jsonArray = Json.decode(streamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Array).IsInstanceOfType(json):
-								for obj in json:
-									if obj is not None:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											if obj.ContainsKey("word"):
-												word = Word()
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj) and obj.ContainsKey("word") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["word"]):
+									word = Word()
+											
+									if obj["word"].ContainsKey("name") and clr.GetClrType(String).IsInstanceOfType(obj["word"]["name"]):
+										word.Name = obj["word"]["name"]
 
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["word"]):
-													if obj["word"].ContainsKey("name"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["word"]["name"]):
-															word.Name = obj["word"]["name"]
+									if obj["word"].ContainsKey("attributes") and clr.GetClrType(Array).IsInstanceOfType(obj["word"]["attributes"]):
+										for o in obj["word"]["attributes"]:
+											if clr.GetClrType(String).IsInstanceOfType(o):
+												word.Attributes.Add(o)
 
-													if obj["word"].ContainsKey("attributes"):
-														if clr.GetClrType(Array).IsInstanceOfType(obj["word"]["attributes"]):
-															for o in obj["word"]["attributes"]:
-																if clr.GetClrType(String).IsInstanceOfType(o):
-																	word.Attributes.Add(o)
+									wordList.Add(word)
+		
+					finally:
+						if streamReader is not None:
+							streamReader.Close()
 
-												wordList.Add(word)
+						if stream is not None:
+							stream.Close()
+			
+						if response is not None:
+							response.Close()
+									
+				except Exception, e:
+					Trace.WriteLine(e.clsException.Message)
+					Trace.WriteLine(e.clsException.StackTrace)
+
+			try:
+				fileStream = None
+				streamReader = None
+				
+				try:
+					dt1 = DateTime.Now - TimeSpan(7 * 2, 0, 0, 0)
+					fileStream = FileStream("Likes.json", FileMode.Open, FileAccess.ReadWrite, FileShare.Read)
+					encoding = UTF8Encoding(False)
+					streamReader = StreamReader(fileStream, encoding, True)
+					jsonDictionary = Json.decode(streamReader.ReadToEnd())
+
+					if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary):
+						keyHashSet = HashSet[String](jsonDictionary.Keys)
+
+						for key in nameList.ConvertAll[String](lambda x: Convert.ToBase64String(Encoding.UTF8.GetBytes(x))):
+							if not keyHashSet.Contains(key):
+								keyHashSet.Add(key)
+						
+						for key in keyHashSet:
+							name = Encoding.UTF8.GetString(Convert.FromBase64String(key))
+							
+							currentLikesDictionary.Add(name, List[DateTime]())
+
+							if jsonDictionary.ContainsKey(key):
+								list = List[String]()
+
+								if jsonDictionary[key] is not None:
+									if clr.GetClrType(Array).IsInstanceOfType(jsonDictionary[key]):
+										for value in jsonDictionary[key]:
+											if clr.GetClrType(String).IsInstanceOfType(value):
+												dt2 = DateTime(Int64.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(value))))
+
+												if dt2 > dt1:
+													currentLikesDictionary[name].Add(dt2)
+													list.Add(value)
+
+									else:
+										currentLikesDictionary.Clear()
+
+										return
+
+								if list.Count > 0 or nameList.Contains(name):
+									jsonDictionary[key] = list.ToArray()
+								else:
+									jsonDictionary.Remove(key)
+
+						if jsonDictionary.Count > 0:
+							json = Json.encode(jsonDictionary)
+
+							if json is not None:
+								fileStream.SetLength(0)
+								streamWriter = None
+						
+								try:
+									streamWriter = StreamWriter(fileStream, encoding)
+									streamWriter.Write(json)
+
+								finally:
+									if streamWriter is not None:
+										streamWriter.Close()
+
+						else:
+							streamReader.Close()
+							streamReader = None
+							fileStream.Close()
+							fileStream = None
+							File.Delete("Likes.json")
+						
+				finally:
+					if streamReader is not None:
+						streamReader.Close()
+							
+					if fileStream is not None:
+						fileStream.Close()
+
+			except Exception, e:
+				Trace.WriteLine(e.clsException.Message)
+				Trace.WriteLine(e.clsException.StackTrace)
+
+		def onCompleted(task):
+			global likesDictionary, autoUpdate, dateTime, recentEntryList, recentWordList
+		
+			if currentLikesDictionary.Count > 0:
+				likesDictionary.Clear()
+
+				for kvp in currentLikesDictionary:
+					likesDictionary.Add(kvp.Key, kvp.Value)
+
+					for name in nameList:
+						if name.Equals(kvp.Key):
+							sequenceList = List[Sequence]()
+				
+							for sequence in Script.Instance.Sequences:
+								if sequence.Name.Equals("Like") and kvp.Key.Equals(sequence.Owner):
+									sequenceList.Add(sequence)
+
+							Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, kvp.Value.Count.ToString(CultureInfo.InvariantCulture)))
+
+							break
+					
+			if entryList.Count > 0:
+				newEntryList = List[Entry]()
+				nowDateTime = DateTime.Now
+				dt = DateTime(0)
+
+				for entry in entryList:
+					if entry.Resource is not None and not String.IsNullOrEmpty(entry.Title) and entry.Modified > dateTime and entry.Modified <= nowDateTime:
+						if not newEntryList.Exists(lambda x: x.Resource.Equals(entry.Resource)):
+							newEntryList.Add(entry)
+				
+					if entry.Modified > dt:
+						dt = entry.Modified
+
+				if dt > dateTime:
+					dateTime = dt
+				else:
+					dateTime = nowDateTime
+
+				if newEntryList.Count > 0:
+					if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+						Script.Instance.Suggest("クラウド", newEntryList)
+					else:
+						Script.Instance.Suggest("Clouds", newEntryList)
+				
+					for entry in entryList:
+						if entry.HasTags:
+							sequenceList = List[Sequence]()
+
+							for sequence in Script.Instance.Sequences:
+								if sequence.Name.Equals("Activate"):
+									sequenceList.Add(sequence)
+						
+							if Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, entry.Tags)):
+								break
+
+				recentEntryList.Clear()
+
+				hashSet = HashSet[Uri]()
+
+				for entry in entryList:
+					if not hashSet.Contains(entry.Resource) and hashSet.Count < 10:
+						hashSet.Add(entry.Resource)
+
+					if hashSet.Contains(entry.Resource):
+						recentEntryList.Add(entry)
+
+			if wordList.Count > 0:
+				def match(word):
+					for w in Script.Instance.Words:
+						if w.Name.Equals(word.Name):
+							return False
+
+					return True
+
+				recentWordList.Clear()
+				recentWordList.AddRange(wordList.FindAll(match))
+
+				if recentWordList.Count > 10:
+					recentWordList.RemoveRange(10, recentWordList.Count - 10)
+
+				if autoUpdate:
+					for recentWord in recentWordList:
+						Script.Instance.Words.Add(recentWord)
+
+		Task.Factory.StartNew(onUpdate, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
+
+	else:
+		def onUpdate():
+			if NetworkInterface.GetIsNetworkAvailable():
+				try:
+					request = WebRequest.Create("http://api.apricotan.net/entries?format=json&limit=25")
+					response = None
+					stream = None
+					streamReader = None
+
+					try:
+						response = request.GetResponse()
+						stream = response.GetResponseStream()
+						streamReader = StreamReader(stream)
+						jsonArray = Json.decode(streamReader.ReadToEnd())
+
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj) and obj.ContainsKey("entry") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entry"]):
+									entry = Entry()
+
+									if obj["entry"].ContainsKey("resource") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["resource"]):
+										entry.Resource = Uri(obj["entry"]["resource"])
+
+									if obj["entry"].ContainsKey("title") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["title"]):
+										entry.Title = obj["entry"]["title"]
+
+									if obj["entry"].ContainsKey("created") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["created"]):
+										entry.Created = DateTime.Parse(obj["entry"]["created"])
+
+									if obj["entry"].ContainsKey("modified") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["modified"]):
+										entry.Modified = DateTime.Parse(obj["entry"]["modified"])
+
+									if obj["entry"].ContainsKey("image") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["image"]):
+										entry.Image = Uri(obj["entry"]["image"])
+
+									if obj["entry"].ContainsKey("tags") and clr.GetClrType(Array).IsInstanceOfType(obj["entry"]["tags"]):
+										for o in obj["entry"]["tags"]:
+											if clr.GetClrType(String).IsInstanceOfType(o):
+												entry.Tags.Add(o)
+
+									entryList.Add(entry)
+
+					finally:
+						if streamReader is not None:
+							streamReader.Close()
+
+						if stream is not None:
+							stream.Close()
+			
+						if response is not None:
+							response.Close()
+
+					request = WebRequest.Create("http://api.apricotan.net/words?format=json&limit=50")
+					response = None
+					stream = None
+					streamReader = None
+				
+					try:
+						response = request.GetResponse()
+						stream = response.GetResponseStream()
+						streamReader = StreamReader(stream)
+						jsonArray = Json.decode(streamReader.ReadToEnd())
+
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj) and obj.ContainsKey("word") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["word"]):
+									word = Word()
+											
+									if obj["word"].ContainsKey("name") and clr.GetClrType(String).IsInstanceOfType(obj["word"]["name"]):
+										word.Name = obj["word"]["name"]
+
+									if obj["word"].ContainsKey("attributes") and clr.GetClrType(Array).IsInstanceOfType(obj["word"]["attributes"]):
+										for o in obj["word"]["attributes"]:
+											if clr.GetClrType(String).IsInstanceOfType(o):
+												word.Attributes.Add(o)
+
+									wordList.Add(word)
 		
 					finally:
 						if streamReader is not None:
@@ -1322,167 +1372,76 @@ def onTick(timer, e):
 			
 		Task.Factory.StartNew(onUpdate, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
 
-	else:
-		sortedDictionary = createCommonParameters(consumerKey)
-		sortedDictionary.Add("oauth_token", oauthToken)
+	timer.Stop()
+	timer.Interval = TimeSpan.FromMinutes(10)
+	timer.Start()
 
-		hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-		signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
+def onPing(s, e):
+	entry = s.Tag
+		
+	if entry.Resource is not None and not String.IsNullOrEmpty(entry.Title):
+		stringBuilder = StringBuilder()
+		newWordList = List[Dictionary[String, Object]]()
+		entryList = List[Entry]()
+		wordList = List[Word]()
 
-		sortedDictionary.Add("realm", "http://api.twitter.com/")
-		sortedDictionary.Add("oauth_signature", signature)
+		if entry.Author is None:
+			stringBuilder.AppendFormat("http://api.apricotan.net/ping?resource={0}&title={1}&created={2}&modified={3}", urlEncode(entry.Resource.ToString()), urlEncode(entry.Title), urlEncode(entry.Created.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")), urlEncode(DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")))
+		else:
+			stringBuilder.AppendFormat("http://api.apricotan.net/ping?resource={0}&title={1}&author={2}&created={3}&modified={4}", urlEncode(entry.Resource.ToString()), urlEncode(entry.Title), urlEncode(entry.Author), urlEncode(entry.Created.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")), urlEncode(DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")))
+			
+		if entry.Image is not None:
+			stringBuilder.AppendFormat("&image={0}", urlEncode(entry.Image.ToString()))
 
-		verifyRequest = WebRequest.Create("http://api.apricotan.net/verify")
-		verifyRequest.PreAuthenticate = True
-		verifyRequest.Method = WebRequestMethods.Http.Get
-		verifyRequest.Headers.Add("X-Verify-Credentials-Authorization", createHttpAuthorizationHeader(sortedDictionary))
-		verifyRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1.1/account/verify_credentials.json")
-		likesRequestList = List[WebRequest]()
-		verifyDictionary = Dictionary[String, String]()
-		userDictionary = Dictionary[String, Double]()
-		currentLikesDictionary = Dictionary[String, Int32]()
-		context = TaskScheduler.FromCurrentSynchronizationContext()
+		if entry.HasTags:
+			sb = StringBuilder()
 
-		def onVerify():
+			for tag in entry.Tags:
+				if sb.Length > 0:
+					if Regex.IsMatch(tag, "\\s", RegexOptions.CultureInvariant):
+						sb.AppendFormat(" \"{0}\"", tag.Replace("\"", "\\\""))
+					else:
+						sb.AppendFormat(" {0}", tag.Replace("\"", "\\\""))
+				else:
+					if Regex.IsMatch(tag, "\\s", RegexOptions.CultureInvariant):
+						sb.AppendFormat("\"{0}\"", tag.Replace("\"", "\\\""))
+					else:
+						sb.Append(tag.Replace("\"", "\\\""))
+
+			stringBuilder.AppendFormat("&tags={0}", urlEncode(sb.ToString()))
+
+			for word in Script.Instance.Words:
+				for tag in entry.Tags:
+					if word.Name.Equals(tag) and word.HasAttributes:
+						dictionary1 = Dictionary[String, Object]()
+						dictionary2 = Dictionary[String, Object]()
+						dictionary2.Add("name", word.Name)
+						attributeList = List[String](word.Attributes)
+						attributeList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.InvariantCulture))
+						dictionary2.Add("attributes", attributeList.ToArray())
+						dictionary1.Add("word", dictionary2)
+						newWordList.Add(dictionary1)
+
+						break
+		
+		def onUpdate():
 			if NetworkInterface.GetIsNetworkAvailable():
 				try:
-					response = None
-					stream = None
-					streamReader = None
+					bytes = None
 
-					try:
-						response = verifyRequest.GetResponse()
-						
-						if response.StatusCode == HttpStatusCode.OK:
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
+					if newWordList.Count > 0:
+						json = Json.encode(newWordList.ToArray())
 
-							if json is not None:
-								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-									if json.ContainsKey("user"):
-										user = json["user"]
-										
-										if user is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-												if user.ContainsKey("name"):
-													if clr.GetClrType(String).IsInstanceOfType(user["name"]):
-														verifyDictionary.Add("name", user["name"])
+						if json is not None:
+							bytes = Encoding.UTF8.GetBytes(json)
 
-												if user.ContainsKey("password"):
-													if clr.GetClrType(String).IsInstanceOfType(user["password"]):
-														verifyDictionary.Add("password", user["password"])
-
-					finally:
-						if streamReader is not None:
-							streamReader.Close()
-
-						if stream is not None:
-							stream.Close()
-			
-						if response is not None:
-							response.Close()
-
-				except Exception, e:
-					Trace.WriteLine(e.clsException.Message)
-					Trace.WriteLine(e.clsException.StackTrace)
-
-		def onReady(task):
-			global username, password
-
-			for kvp in verifyDictionary:
-				if kvp.Key.Equals("name"):
-					username = kvp.Value
-				elif kvp.Key.Equals("password"):
-					password = kvp.Value
-
-			if username is not None:
-				for character in Script.Instance.Characters:
-					likesRequest = WebRequest.Create(String.Format("http://api.apricotan.net/likes?character_name={0}&user_name={1}&limit=50", urlEncode(character.Name), urlEncode(username)))
-					likesRequest.Method = WebRequestMethods.Http.Get
-
-					likesRequestList.Add(likesRequest)
-
-		def onUpdate(task):
-			if NetworkInterface.GetIsNetworkAvailable():
-				try:
-					if verifyDictionary.ContainsKey("name"):
-						request = WebRequest.Create(String.Concat("http://api.apricotan.net/user?name=", verifyDictionary["name"]))
-						request.Method = WebRequestMethods.Http.Get
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = request.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-									if json.ContainsKey("user"):
-										user = json["user"]
-										
-										if user is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-												for kvp in user:
-													if clr.GetClrType(Double).IsInstanceOfType(kvp.Value):
-														userDictionary.Add(kvp.Key, kvp.Value)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-								
-							if response is not None:
-								response.Close()
-
-					dt = DateTime.Now - TimeSpan(7 * 2, 0, 0, 0)
-
-					for likesRequest in likesRequestList:
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = likesRequest.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Array).IsInstanceOfType(json):
-									for obj in json:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											if obj.ContainsKey("like"):
-												like = obj["like"]
-													
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(like):
-													if like.ContainsKey("character") and like.ContainsKey("created"):
-														character = like["character"]
-
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(character) and clr.GetClrType(String).IsInstanceOfType(like["created"]):
-															created = DateTime.Parse(like["created"])
-																
-															if character.ContainsKey("name") and created > dt:
-																if clr.GetClrType(String).IsInstanceOfType(character["name"]):
-																	if currentLikesDictionary.ContainsKey(character["name"]):
-																		currentLikesDictionary[character["name"]] += 1
-																	else:
-																		currentLikesDictionary.Add(character["name"], 1)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
+					client = WebClient()
+					client.Headers.Add(HttpRequestHeader.ContentType, "application/json")
+					
+					if bytes is None:
+						client.UploadData(Uri(stringBuilder.ToString()), WebRequestMethods.Http.Post, Encoding.UTF8.GetBytes(String.Empty))
+					else:
+						client.UploadData(Uri(stringBuilder.ToString()), WebRequestMethods.Http.Post, bytes)
 
 					request = WebRequest.Create("http://api.apricotan.net/entries?format=json&limit=25")
 					response = None
@@ -1493,44 +1452,34 @@ def onTick(timer, e):
 						response = request.GetResponse()
 						stream = response.GetResponseStream()
 						streamReader = StreamReader(stream)
-						json = Json.decode(streamReader.ReadToEnd())
+						jsonArray = Json.decode(streamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Array).IsInstanceOfType(json):
-								for obj in json:
-									if obj is not None:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											if obj.ContainsKey("entry"):
-												entry = Entry()
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj) and obj.ContainsKey("entry") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entry"]):
+									entry = Entry()
 
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entry"]):
-													if obj["entry"].ContainsKey("resource"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["resource"]):
-															entry.Resource = Uri(obj["entry"]["resource"])
+									if obj["entry"].ContainsKey("resource") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["resource"]):
+										entry.Resource = Uri(obj["entry"]["resource"])
 
-													if obj["entry"].ContainsKey("title"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["title"]):
-															entry.Title = obj["entry"]["title"]
+									if obj["entry"].ContainsKey("title") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["title"]):
+										entry.Title = obj["entry"]["title"]
 
-													if obj["entry"].ContainsKey("created"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["created"]):
-															entry.Created = DateTime.Parse(obj["entry"]["created"])
+									if obj["entry"].ContainsKey("created") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["created"]):
+										entry.Created = DateTime.Parse(obj["entry"]["created"])
 
-													if obj["entry"].ContainsKey("modified"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["modified"]):
-															entry.Modified = DateTime.Parse(obj["entry"]["modified"])
+									if obj["entry"].ContainsKey("modified") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["modified"]):
+										entry.Modified = DateTime.Parse(obj["entry"]["modified"])
 
-													if obj["entry"].ContainsKey("image"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["image"]):
-															entry.Image = Uri(obj["entry"]["image"])
+									if obj["entry"].ContainsKey("image") and clr.GetClrType(String).IsInstanceOfType(obj["entry"]["image"]):
+										entry.Image = Uri(obj["entry"]["image"])
 
-													if obj["entry"].ContainsKey("tags"):
-														if clr.GetClrType(Array).IsInstanceOfType(obj["entry"]["tags"]):
-															for o in obj["entry"]["tags"]:
-																if clr.GetClrType(String).IsInstanceOfType(o):
-																	entry.Tags.Add(o)
+									if obj["entry"].ContainsKey("tags") and clr.GetClrType(Array).IsInstanceOfType(obj["entry"]["tags"]):
+										for o in obj["entry"]["tags"]:
+											if clr.GetClrType(String).IsInstanceOfType(o):
+												entry.Tags.Add(o)
 
-												entryList.Add(entry)
+									entryList.Add(entry)
 
 					finally:
 						if streamReader is not None:
@@ -1551,29 +1500,23 @@ def onTick(timer, e):
 						response = request.GetResponse()
 						stream = response.GetResponseStream()
 						streamReader = StreamReader(stream)
-						json = Json.decode(streamReader.ReadToEnd())
+						jsonArray = Json.decode(streamReader.ReadToEnd())
 
-						if json is not None:
-							if clr.GetClrType(Array).IsInstanceOfType(json):
-								for obj in json:
-									if obj is not None:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											if obj.ContainsKey("word"):
-												word = Word()
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj) and obj.ContainsKey("word") and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["word"]):
+									word = Word()
 
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["word"]):
-													if obj["word"].ContainsKey("name"):
-														if clr.GetClrType(String).IsInstanceOfType(obj["word"]["name"]):
-															word.Name = obj["word"]["name"]
+									if obj["word"].ContainsKey("name") and clr.GetClrType(String).IsInstanceOfType(obj["word"]["name"]):
+										word.Name = obj["word"]["name"]
 
-													if obj["word"].ContainsKey("attributes"):
-														if clr.GetClrType(Array).IsInstanceOfType(obj["word"]["attributes"]):
-															for o in obj["word"]["attributes"]:
-																if clr.GetClrType(String).IsInstanceOfType(o):
-																	word.Attributes.Add(o)
+									if obj["word"].ContainsKey("attributes") and clr.GetClrType(Array).IsInstanceOfType(obj["word"]["attributes"]):
+										for o in obj["word"]["attributes"]:
+											if clr.GetClrType(String).IsInstanceOfType(o):
+												word.Attributes.Add(o)
 
-												wordList.Add(word)
-		
+									wordList.Add(word)
+
 					finally:
 						if streamReader is not None:
 							streamReader.Close()
@@ -1589,26 +1532,11 @@ def onTick(timer, e):
 					Trace.WriteLine(e.clsException.StackTrace)
 
 		def onCompleted(task):
-			global remainingCount, likesDictionary, autoUpdate, dateTime, recentEntryList, recentWordList
+			global remainingCount, autoUpdate, dateTime, recentEntryList, recentWordList
 
-			if userDictionary.ContainsKey("points"):
-				remainingCount = Nullable[Int32](Convert.ToInt32(userDictionary["points"]))
+			if remainingCount < 5:
+				remainingCount += 1
 
-			if currentLikesDictionary.Count > 0:
-				likesDictionary.Clear()
-
-				for kvp in currentLikesDictionary:
-					likesDictionary.Add(kvp.Key, kvp.Value)
-
-				for kvp in likesDictionary:
-					sequenceList = List[Sequence]()
-								
-					for sequence in Script.Instance.Sequences:
-						if sequence.Name.Equals("Like") and kvp.Key.Equals(sequence.Owner):
-							sequenceList.Add(sequence)
-
-					Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, kvp.Value.ToString(CultureInfo.InvariantCulture)))
-				
 			if entryList.Count > 0:
 				newEntryList = List[Entry]()
 				nowDateTime = DateTime.Now
@@ -1672,582 +1600,14 @@ def onTick(timer, e):
 				if autoUpdate:
 					for recentWord in recentWordList:
 						Script.Instance.Words.Add(recentWord)
-			
-		Task.Factory.StartNew(onVerify, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
 
-	timer.Stop()
-	timer.Interval = TimeSpan.FromMinutes(10)
-	timer.Start()
+		Task.Factory.StartNew(onUpdate, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
 
-def onPing(s, e):
-	global username, password, consumerKey, consumerSecret, oauthToken, oauthTokenSecret
-
-	entry = s.Tag
-		
-	if entry.Resource is not None and not String.IsNullOrEmpty(entry.Title):
-		stringBuilder = StringBuilder()
-		newWordList = List[Dictionary[String, Object]]()
-		entryList = List[Entry]()
-		wordList = List[Word]()
-
-		if entry.Author is None:
-			stringBuilder.AppendFormat("http://api.apricotan.net/ping?resource={0}&title={1}&created={2}&modified={3}", urlEncode(entry.Resource.ToString()), urlEncode(entry.Title), urlEncode(entry.Created.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")), urlEncode(DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")))
-		else:
-			stringBuilder.AppendFormat("http://api.apricotan.net/ping?resource={0}&title={1}&author={2}&created={3}&modified={4}", urlEncode(entry.Resource.ToString()), urlEncode(entry.Title), urlEncode(entry.Author), urlEncode(entry.Created.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")), urlEncode(DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")))
-			
-		if entry.Image is not None:
-			stringBuilder.AppendFormat("&image={0}", urlEncode(entry.Image.ToString()))
-
-		if entry.HasTags:
-			sb = StringBuilder()
-
-			for tag in entry.Tags:
-				if sb.Length > 0:
-					if Regex.IsMatch(tag, "\\s", RegexOptions.CultureInvariant):
-						sb.AppendFormat(" \"{0}\"", tag.Replace("\"", "\\\""))
-					else:
-						sb.AppendFormat(" {0}", tag.Replace("\"", "\\\""))
-				else:
-					if Regex.IsMatch(tag, "\\s", RegexOptions.CultureInvariant):
-						sb.AppendFormat("\"{0}\"", tag.Replace("\"", "\\\""))
-					else:
-						sb.Append(tag.Replace("\"", "\\\""))
-
-			stringBuilder.AppendFormat("&tags={0}", urlEncode(sb.ToString()))
-
-			for word in Script.Instance.Words:
-				for tag in entry.Tags:
-					if word.Name.Equals(tag) and word.HasAttributes:
-						dictionary1 = Dictionary[String, Object]()
-						dictionary2 = Dictionary[String, Object]()
-						dictionary2.Add("name", word.Name)
-						attributeList = List[String](word.Attributes)
-						attributeList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.InvariantCulture))
-						dictionary2.Add("attributes", attributeList.ToArray())
-						dictionary1.Add("word", dictionary2)
-						newWordList.Add(dictionary1)
-
-						break
-
-		if String.IsNullOrEmpty(oauthToken) or String.IsNullOrEmpty(oauthTokenSecret):
-			def onUpdate():
-				if NetworkInterface.GetIsNetworkAvailable():
-					try:
-						bytes = None
-
-						if newWordList.Count > 0:
-							json = Json.encode(newWordList.ToArray())
-
-							if json is not None:
-								bytes = Encoding.UTF8.GetBytes(json)
-
-						client = WebClient()
-						client.Headers.Add(HttpRequestHeader.ContentType, "application/json")
-					
-						if bytes is None:
-							client.UploadData(Uri(stringBuilder.ToString()), WebRequestMethods.Http.Post, Encoding.UTF8.GetBytes(String.Empty))
-						else:
-							client.UploadData(Uri(stringBuilder.ToString()), WebRequestMethods.Http.Post, bytes)
-
-						request = WebRequest.Create("http://api.apricotan.net/entries?format=json&limit=25")
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = request.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Array).IsInstanceOfType(json):
-									for obj in json:
-										if obj is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-												if obj.ContainsKey("entry"):
-													entry = Entry()
-
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entry"]):
-														if obj["entry"].ContainsKey("resource"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["resource"]):
-																entry.Resource = Uri(obj["entry"]["resource"])
-
-														if obj["entry"].ContainsKey("title"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["title"]):
-																entry.Title = obj["entry"]["title"]
-
-														if obj["entry"].ContainsKey("created"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["created"]):
-																entry.Created = DateTime.Parse(obj["entry"]["created"])
-
-														if obj["entry"].ContainsKey("modified"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["modified"]):
-																entry.Modified = DateTime.Parse(obj["entry"]["modified"])
-
-														if obj["entry"].ContainsKey("image"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["image"]):
-																entry.Image = Uri(obj["entry"]["image"])
-
-														if obj["entry"].ContainsKey("tags"):
-															if clr.GetClrType(Array).IsInstanceOfType(obj["entry"]["tags"]):
-																for o in obj["entry"]["tags"]:
-																	if clr.GetClrType(String).IsInstanceOfType(o):
-																		entry.Tags.Add(o)
-
-													entryList.Add(entry)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
-
-						request = WebRequest.Create("http://api.apricotan.net/words?format=json&limit=50")
-						response = None
-						stream = None
-						streamReader = None
-				
-						try:
-							response = request.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Array).IsInstanceOfType(json):
-									for obj in json:
-										if obj is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-												if obj.ContainsKey("word"):
-													word = Word()
-
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["word"]):
-														if obj["word"].ContainsKey("name"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["word"]["name"]):
-																word.Name = obj["word"]["name"]
-
-														if obj["word"].ContainsKey("attributes"):
-															if clr.GetClrType(Array).IsInstanceOfType(obj["word"]["attributes"]):
-																for o in obj["word"]["attributes"]:
-																	if clr.GetClrType(String).IsInstanceOfType(o):
-																		word.Attributes.Add(o)
-
-													wordList.Add(word)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
-
-					except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
-
-			def onCompleted(task):
-				global autoUpdate, dateTime, recentEntryList, recentWordList
-
-				if entryList.Count > 0:
-					newEntryList = List[Entry]()
-					nowDateTime = DateTime.Now
-					dt = DateTime(0)
-
-					for entry in entryList:
-						if entry.Resource is not None and not String.IsNullOrEmpty(entry.Title) and entry.Modified > dateTime and entry.Modified <= nowDateTime:
-							if not newEntryList.Exists(lambda x: x.Resource.Equals(entry.Resource)):
-								newEntryList.Add(entry)
-				
-						if entry.Modified > dt:
-							dt = entry.Modified
-
-					if dt > dateTime:
-						dateTime = dt
-					else:
-						dateTime = nowDateTime
-
-					if newEntryList.Count > 0:
-						if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-							Script.Instance.Suggest("クラウド", newEntryList)
-						else:
-							Script.Instance.Suggest("Clouds", newEntryList)
-				
-						for entry in entryList:
-							if entry.HasTags:
-								sequenceList = List[Sequence]()
-
-								for sequence in Script.Instance.Sequences:
-									if sequence.Name.Equals("Activate"):
-										sequenceList.Add(sequence)
-						
-								if Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, entry.Tags)):
-									break
-
-					recentEntryList.Clear()
-
-					hashSet = HashSet[Uri]()
-
-					for entry in entryList:
-						if not hashSet.Contains(entry.Resource) and hashSet.Count < 10:
-							hashSet.Add(entry.Resource)
-
-						if hashSet.Contains(entry.Resource):
-							recentEntryList.Add(entry)
-
-				if wordList.Count > 0:
-					def match(word):
-						for w in Script.Instance.Words:
-							if w.Name.Equals(word.Name):
-								return False
-
-						return True
-
-					recentWordList.Clear()
-					recentWordList.AddRange(wordList.FindAll(match))
-
-					if recentWordList.Count > 10:
-						recentWordList.RemoveRange(10, recentWordList.Count - 10)
-
-					if autoUpdate:
-						for recentWord in recentWordList:
-							Script.Instance.Words.Add(recentWord)
-
-			Task.Factory.StartNew(onUpdate, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
-
-		else:
-			sortedDictionary = createCommonParameters(consumerKey)
-			sortedDictionary.Add("oauth_token", oauthToken)
-
-			hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-			signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
-
-			sortedDictionary.Add("realm", "http://api.twitter.com/")
-			sortedDictionary.Add("oauth_signature", signature)
-
-			verifyRequest = WebRequest.Create("http://api.apricotan.net/verify")
-			verifyRequest.PreAuthenticate = True
-			verifyRequest.Method = WebRequestMethods.Http.Get
-			verifyRequest.Headers.Add("X-Verify-Credentials-Authorization", createHttpAuthorizationHeader(sortedDictionary))
-			verifyRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1.1/account/verify_credentials.json")
-			pingRequest = WebRequest.Create(stringBuilder.ToString())
-			pingRequest.PreAuthenticate = True
-			pingRequest.Method = WebRequestMethods.Http.Post
-			pingRequest.ContentType = "application/json"
-
-			verifyDictionary = Dictionary[String, String]()
-			userDictionary = Dictionary[String, Double]()
-			context = TaskScheduler.FromCurrentSynchronizationContext()
-
-			def onVerify():
-				if NetworkInterface.GetIsNetworkAvailable():
-					try:
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = verifyRequest.GetResponse()
-						
-							if response.StatusCode == HttpStatusCode.OK:
-								stream = response.GetResponseStream()
-								streamReader = StreamReader(stream)
-								json = Json.decode(streamReader.ReadToEnd())
-
-								if json is not None:
-									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-										if json.ContainsKey("user"):
-											user = json["user"]
-										
-											if user is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-													if user.ContainsKey("name"):
-														if clr.GetClrType(String).IsInstanceOfType(user["name"]):
-															verifyDictionary.Add("name", user["name"])
-
-													if user.ContainsKey("password"):
-														if clr.GetClrType(String).IsInstanceOfType(user["password"]):
-															verifyDictionary.Add("password", user["password"])
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
-
-					except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
-
-			def onReady(task):
-				global username, password
-
-				for kvp in verifyDictionary:
-					if kvp.Key.Equals("name"):
-						username = kvp.Value
-					elif kvp.Key.Equals("password"):
-						password = kvp.Value
-
-				if username is not None and password is not None:
-					pingRequest.Headers.Add(HttpRequestHeader.Authorization, String.Concat("Basic ", Convert.ToBase64String(Encoding.ASCII.GetBytes(String.Concat(username, ":", password)))))
-
-			def onUpdate(task):
-				if NetworkInterface.GetIsNetworkAvailable():
-					try:
-						response = None
-						stream = None
-						bytes = None
-
-						if newWordList.Count > 0:
-							json = Json.encode(newWordList.ToArray())
-
-							if json is not None:
-								bytes = Encoding.UTF8.GetBytes(json)
-
-						try:
-							if bytes is None:
-								pingRequest.ContentLength = 0
-
-							else:
-								stream = pingRequest.GetRequestStream()
-								stream.Write(bytes, 0, bytes.Length)
-						
-							response = pingRequest.GetResponse()
-
-						finally:
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
-
-						if verifyDictionary.ContainsKey("name"):
-							request = WebRequest.Create(String.Concat("http://api.apricotan.net/user?name=", verifyDictionary["name"]))
-							request.Method = WebRequestMethods.Http.Get
-							response = None
-							stream = None
-							streamReader = None
-
-							try:
-								response = request.GetResponse()
-								stream = response.GetResponseStream()
-								streamReader = StreamReader(stream)
-								json = Json.decode(streamReader.ReadToEnd())
-
-								if json is not None:
-									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-										if json.ContainsKey("user"):
-											user = json["user"]
-										
-											if user is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-													for kvp in user:
-														if clr.GetClrType(Double).IsInstanceOfType(kvp.Value):
-															userDictionary.Add(kvp.Key, kvp.Value)
-
-							finally:
-								if streamReader is not None:
-									streamReader.Close()
-
-								if stream is not None:
-									stream.Close()
-								
-								if response is not None:
-									response.Close()
-
-						request = WebRequest.Create("http://api.apricotan.net/entries?format=json&limit=25")
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = request.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Array).IsInstanceOfType(json):
-									for obj in json:
-										if obj is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-												if obj.ContainsKey("entry"):
-													entry = Entry()
-
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["entry"]):
-														if obj["entry"].ContainsKey("resource"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["resource"]):
-																entry.Resource = Uri(obj["entry"]["resource"])
-
-														if obj["entry"].ContainsKey("title"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["title"]):
-																entry.Title = obj["entry"]["title"]
-
-														if obj["entry"].ContainsKey("created"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["created"]):
-																entry.Created = DateTime.Parse(obj["entry"]["created"])
-
-														if obj["entry"].ContainsKey("modified"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["modified"]):
-																entry.Modified = DateTime.Parse(obj["entry"]["modified"])
-
-														if obj["entry"].ContainsKey("image"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["entry"]["image"]):
-																entry.Image = Uri(obj["entry"]["image"])
-
-														if obj["entry"].ContainsKey("tags"):
-															if clr.GetClrType(Array).IsInstanceOfType(obj["entry"]["tags"]):
-																for o in obj["entry"]["tags"]:
-																	if clr.GetClrType(String).IsInstanceOfType(o):
-																		entry.Tags.Add(o)
-
-													entryList.Add(entry)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
-
-						request = WebRequest.Create("http://api.apricotan.net/words?format=json&limit=50")
-						response = None
-						stream = None
-						streamReader = None
-				
-						try:
-							response = request.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Array).IsInstanceOfType(json):
-									for obj in json:
-										if obj is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-												if obj.ContainsKey("word"):
-													word = Word()
-
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj["word"]):
-														if obj["word"].ContainsKey("name"):
-															if clr.GetClrType(String).IsInstanceOfType(obj["word"]["name"]):
-																word.Name = obj["word"]["name"]
-
-														if obj["word"].ContainsKey("attributes"):
-															if clr.GetClrType(Array).IsInstanceOfType(obj["word"]["attributes"]):
-																for o in obj["word"]["attributes"]:
-																	if clr.GetClrType(String).IsInstanceOfType(o):
-																		word.Attributes.Add(o)
-
-													wordList.Add(word)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
-
-					except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
-
-			def onCompleted(task):
-				global remainingCount, autoUpdate, dateTime, recentEntryList, recentWordList
-
-				if userDictionary.ContainsKey("points"):
-					remainingCount = Nullable[Int32](Convert.ToInt32(userDictionary["points"]))
-			
-				if entryList.Count > 0:
-					newEntryList = List[Entry]()
-					nowDateTime = DateTime.Now
-					dt = DateTime(0)
-
-					for entry in entryList:
-						if entry.Resource is not None and not String.IsNullOrEmpty(entry.Title) and entry.Modified > dateTime and entry.Modified <= nowDateTime:
-							if not newEntryList.Exists(lambda x: x.Resource.Equals(entry.Resource)):
-								newEntryList.Add(entry)
-				
-						if entry.Modified > dt:
-							dt = entry.Modified
-
-					if dt > dateTime:
-						dateTime = dt
-					else:
-						dateTime = nowDateTime
-
-					if newEntryList.Count > 0:
-						if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-							Script.Instance.Suggest("クラウド", newEntryList)
-						else:
-							Script.Instance.Suggest("Clouds", newEntryList)
-				
-						for entry in entryList:
-							if entry.HasTags:
-								sequenceList = List[Sequence]()
-
-								for sequence in Script.Instance.Sequences:
-									if sequence.Name.Equals("Activate"):
-										sequenceList.Add(sequence)
-						
-								if Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, entry.Tags)):
-									break
-
-					recentEntryList.Clear()
-
-					hashSet = HashSet[Uri]()
-
-					for entry in entryList:
-						if not hashSet.Contains(entry.Resource) and hashSet.Count < 10:
-							hashSet.Add(entry.Resource)
-
-						if hashSet.Contains(entry.Resource):
-							recentEntryList.Add(entry)
-
-				if wordList.Count > 0:
-					def match(word):
-						for w in Script.Instance.Words:
-							if w.Name.Equals(word.Name):
-								return False
-
-						return True
-
-					recentWordList.Clear()
-					recentWordList.AddRange(wordList.FindAll(match))
-
-					if recentWordList.Count > 10:
-						recentWordList.RemoveRange(10, recentWordList.Count - 10)
-
-					if autoUpdate:
-						for recentWord in recentWordList:
-							Script.Instance.Words.Add(recentWord)
-
-			Task.Factory.StartNew(onVerify, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
-			
 def onOpened(s, e):
 	global autoUpdate, remainingCount, menuItem, recentEntryList, recentWordList
 
 	menuItem.Items.Clear()
 
-	likeMenuItem = MenuItem()
 	dashboardMenuItem = MenuItem()
 	
 	if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
@@ -2255,744 +1615,368 @@ def onOpened(s, e):
 	else:
 		dashboardMenuItem.Header = "Dashboard..."
 
-	askMenuItem = None
-	
-	for sequence in Script.Instance.Sequences:
-		if sequence.Name.Equals("Greet") or sequence.Name.Equals("Hate") or sequence.Name.Equals("Interest") or sequence.Name.Equals("Thank") or sequence.Name.Equals("Ignore"):
-			askMenuItem = MenuItem()
-
-			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-				askMenuItem.Header = "話しかける..."
-			else:
-				askMenuItem.Header = "Ask..."
-
-			break
-
-	learnMenuItem = MenuItem()
-	
-	if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-		learnMenuItem.Header = "言葉を教える..."
-
-	else:
-		learnMenuItem.Header = "Learn..."
-
-	def onLearnClick1(sender1, args1):
+	def onDashboardClick(sender1, args1):
 		from System.IO import Path
-
-		config = None
-		directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
-		backgroundBrush = None
-		textColor = SystemColors.ControlTextBrush
-			
-		if Directory.Exists(directory):
-			fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
+		global consumerKey, consumerSecret, oauthToken, oauthTokenSecret, remainingCount, likesDictionary
 		
-			for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
-				if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
-					exeConfigurationFileMap = ExeConfigurationFileMap()
-					exeConfigurationFileMap.ExeConfigFilename = fileName2
-					config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
+		if String.IsNullOrEmpty(oauthToken) or String.IsNullOrEmpty(oauthTokenSecret):
+			limitDateTime = DateTime.Today - TimeSpan(7 * 2 - 3, 0, 0, 0)
+			limitDictionary = Dictionary[String, Int32]()
+			available = 0
+			max = 0
+			lockedAchievementDictionary = Dictionary[String, Int32]()
+			achievementList = List[String]()
+
+			for kvp in likesDictionary:
+				for dt in kvp.Value:
+					if dt <= limitDateTime:
+						if limitDictionary.ContainsKey(kvp.Key):
+							limitDictionary[kvp.Key] += 1
+						else:
+							limitDictionary.Add(kvp.Key, 1)
+
+			if limitDictionary.Count == 0:
+				for key in likesDictionary.Keys:
+					limitDictionary.Add(key, 0)
+					
+			for sequence in Script.Instance.Sequences:
+				if sequence.Name.Equals("Like"):
+					isLocked = True
+					requiredLikes = 0
+					list = List[Object]()
+
+					if sequence.State is None:
+						available += 1
+						isLocked = False
+
+					else:
+						likes = likesDictionary[sequence.Owner].Count if likesDictionary.ContainsKey(sequence.Owner) else 0
+
+						for i in range(likes + 11):
+							if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
+								if i <= likes:
+									available += 1
+									isLocked = False
+
+								else:
+									requiredLikes = i - likes
+
+								break
+
+					for obj in sequence:
+						list.Add(obj)
+
+					for i in range(0, list.Count):
+						if clr.GetClrType(Sequence).IsInstanceOfType(list[i]):
+							if list[i].State is None and list[i].Any():
+								for j in range(i + 1, list.Count):
+									if clr.GetClrType(Sequence).IsInstanceOfType(list[j]):
+										isAvailable = False
+
+										if list[j].Any():
+											queue = Queue[Sequence]()
+
+											for obj in list[j]:
+												if clr.GetClrType(Sequence).IsInstanceOfType(obj):
+													queue.Enqueue(obj)
+
+											while queue.Count > 0:
+												tempSequence = queue.Dequeue()
+
+												if tempSequence.Any():
+													for obj in tempSequence:
+														if clr.GetClrType(Sequence).IsInstanceOfType(obj):
+															queue.Enqueue(obj)
+
+												elif list[i].Name.Equals(tempSequence.Name) and tempSequence.State is None:
+													isAvailable = True
+
+													break
+
+										elif list[i].Name.Equals(list[j].Name) and list[j].State is None:
+											isAvailable = True
+
+										if isAvailable:
+											if isLocked:
+												if lockedAchievementDictionary.ContainsKey(list[i].Name):
+													if requiredLikes > lockedAchievementDictionary[list[i].Name]:
+														lockedAchievementDictionary[list[i].Name] = requiredLikes
+												else:
+													lockedAchievementDictionary.Add(list[i].Name, requiredLikes)
+
+											if not achievementList.Contains(list[i].Name):
+												achievementList.Add(list[i].Name)
+
+											break
+
+					max += 1
+
+			achievementList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.CurrentCulture))
+
+			config = None
+			directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
+			backgroundBrush = None
+			textColor = SystemColors.ControlTextBrush
+		
+			if Directory.Exists(directory):
+				fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
+		
+				for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+					if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
+						exeConfigurationFileMap = ExeConfigurationFileMap()
+						exeConfigurationFileMap.ExeConfigFilename = fileName2
+						config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-		if config is None:
-			config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-			directory = None
+			if config is None:
+				config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
+				directory = None
 
-		if config.AppSettings.Settings["BackgroundImage"] is not None:
-			fs = None
-			bi = BitmapImage()
+			if config.AppSettings.Settings["BackgroundImage"] is not None:
+				fs = None
+				bi = BitmapImage()
 
-			try:
-				fs = FileStream(config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read)
+				try:
+					fs = FileStream(config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read)
 
-				bi.BeginInit()
-				bi.StreamSource = fs
-				bi.CacheOption = BitmapCacheOption.OnLoad
-				bi.CreateOptions = BitmapCreateOptions.None
-				bi.EndInit()
+					bi.BeginInit()
+					bi.StreamSource = fs
+					bi.CacheOption = BitmapCacheOption.OnLoad
+					bi.CreateOptions = BitmapCreateOptions.None
+					bi.EndInit()
 
-			finally:
-				if fs is not None:
-					fs.Close()
+				finally:
+					if fs is not None:
+						fs.Close()
 
-			backgroundBrush = ImageBrush(bi)
-			backgroundBrush.TileMode = TileMode.Tile
-			backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
-			backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
-			backgroundBrush.Stretch = Stretch.None
-
-			if backgroundBrush.CanFreeze:
-				backgroundBrush.Freeze()
-
-		if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
-			if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
-				backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
+				backgroundBrush = ImageBrush(bi)
+				backgroundBrush.TileMode = TileMode.Tile
+				backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
+				backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
+				backgroundBrush.Stretch = Stretch.None
 
 				if backgroundBrush.CanFreeze:
 					backgroundBrush.Freeze()
 
-		if config.AppSettings.Settings["TextColor"] is not None:
-			if config.AppSettings.Settings["TextColor"].Value.Length > 0:
-				textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
+			if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
+				if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
+					backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
 
-		textBrush = SolidColorBrush(textColor)
+					if backgroundBrush.CanFreeze:
+						backgroundBrush.Freeze()
 
-		if textBrush.CanFreeze:
-			textBrush.Freeze()
-
-		window = Window()
-
-		stackPanel1 = StackPanel()
-		stackPanel1.UseLayoutRounding = True
-		stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel1.Orientation = Orientation.Vertical
-
-		stackPanel2 = StackPanel()
-		stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel2.Orientation = Orientation.Vertical
-		stackPanel2.Background = SystemColors.ControlBrush if backgroundBrush is None else backgroundBrush
-
-		gradientStopCollection = GradientStopCollection()
-		gradientStopCollection.Add(GradientStop(Color.FromArgb(0, 0, 0, 0), 0))
-		gradientStopCollection.Add(GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1))
-
-		linearGradientBrush = LinearGradientBrush(gradientStopCollection, Point(0.5, 0), Point(0.5, 1))
-		linearGradientBrush.Opacity = 0.1
-
-		if linearGradientBrush.CanFreeze:
-			linearGradientBrush.Freeze()
-
-		stackPanel3 = StackPanel()
-		stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel3.Orientation = Orientation.Vertical
-		stackPanel3.Background = linearGradientBrush
-
-		solidColorBrush1 = SolidColorBrush(Colors.Black)
-		solidColorBrush1.Opacity = 0.25
-
-		if solidColorBrush1.CanFreeze:
-			solidColorBrush1.Freeze()
-
-		border1 = Border()
-		border1.HorizontalAlignment = HorizontalAlignment.Stretch
-		border1.VerticalAlignment = VerticalAlignment.Stretch
-		border1.BorderThickness = Thickness(0, 0, 0, 1)
-		border1.BorderBrush = solidColorBrush1
-
-		stackPanel4 = StackPanel()
-		stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel4.Orientation = Orientation.Vertical
-		stackPanel4.Margin = Thickness(10, 10, 10, 20)
-
-		stackPanel5 = StackPanel()
-		stackPanel5.HorizontalAlignment = HorizontalAlignment.Stretch
-		stackPanel5.VerticalAlignment = VerticalAlignment.Stretch
-		stackPanel5.Orientation = Orientation.Vertical
-
-		label = Label()
-		label.Foreground = textBrush
-
-		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-			label.Content = "教える言葉"
-		else:
-			label.Content = "Word"
-
-		RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
-			
-		textColor = SystemColors.ControlText if textBrush is None else textBrush.Color
-
-		dropShadowEffect = DropShadowEffect()
-		dropShadowEffect.BlurRadius = 1
-		dropShadowEffect.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White;
-		dropShadowEffect.Direction = 270
-		dropShadowEffect.Opacity = 0.5
-		dropShadowEffect.ShadowDepth = 1
-
-		if dropShadowEffect.CanFreeze:
-			dropShadowEffect.Freeze()
-
-		stackPanel5.Effect = dropShadowEffect
-		stackPanel5.Children.Add(label)
-
-		textBox = TextBox()
-		textBox.Width = 240
-			
-		stackPanel4.Children.Add(stackPanel5)
-		stackPanel4.Children.Add(textBox)
-			
-		border1.Child = stackPanel4
-
-		stackPanel3.Children.Add(border1)
-		stackPanel2.Children.Add(stackPanel3)
-		stackPanel1.Children.Add(stackPanel2)
-
-		def onLearnClick2(sender2, args2):
-			if not String.IsNullOrEmpty(textBox.Text):
-				Script.Instance.Learn(textBox.Text)
-
-			window.Close()
-
-		solidColorBrush2 = SolidColorBrush(Colors.White)
-		solidColorBrush2.Opacity = 0.5
-
-		if solidColorBrush2.CanFreeze:
-			solidColorBrush2.Freeze()
-
-		border2 = Border()
-		border2.HorizontalAlignment = HorizontalAlignment.Stretch
-		border2.VerticalAlignment = VerticalAlignment.Stretch
-		border2.BorderThickness = Thickness(0, 1, 0, 0)
-		border2.BorderBrush = solidColorBrush2
-
-		learnButton = Button()
-		learnButton.HorizontalAlignment = HorizontalAlignment.Right
-		learnButton.VerticalAlignment = VerticalAlignment.Center
-		learnButton.Margin = Thickness(10, 10, 10, 10)
-		learnButton.Padding = Thickness(10, 2, 10, 2)
-		learnButton.IsDefault = True
-
-		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-			learnButton.Content = "教える"
-		else:
-			learnButton.Content = "Learn"
-
-		learnButton.Click += onLearnClick2
-
-		border2.Child = learnButton
-		stackPanel1.Children.Add(border2)
-		textBox.Focus()
-			
-		window.Owner = Application.Current.MainWindow
-		window.Title = Application.Current.MainWindow.Title
-		window.WindowStartupLocation = WindowStartupLocation.CenterOwner
-		window.ResizeMode = ResizeMode.NoResize
-		window.SizeToContent = SizeToContent.WidthAndHeight
-		window.Background = SystemColors.ControlBrush
-		window.Content = stackPanel1
-		window.Show()
-	
-	learnMenuItem.Click += onLearnClick1
-
-	if String.IsNullOrEmpty(oauthToken) or String.IsNullOrEmpty(oauthTokenSecret):
-		def onSignInWithTwitterClick(sender1, args1):
-			dictionary = Dictionary[String, String]()
-			context = TaskScheduler.FromCurrentSynchronizationContext()
-			sortedDictionary = createCommonParameters(consumerKey)
-			sortedDictionary.Add("oauth_callback", "oob")
-			sortedDictionary.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&"))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/request_token"), sortedDictionary)))))
-			
-			request = WebRequest.Create("https://api.twitter.com/oauth/request_token")
-			request.Method = WebRequestMethods.Http.Post
-			request.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
-			request.ContentType = "application/x-www-form-urlencoded"
-			
-			def onOAuthRequestToken():
-				try:
-					if NetworkInterface.GetIsNetworkAvailable():
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = request.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream, Encoding.ASCII)
-
-							for s in streamReader.ReadToEnd().Split('&'):
-								index = s.IndexOf('=')
-
-								if index == -1:
-									dictionary.Add(s, String.Empty)
-								else:
-									dictionary.Add(s.Substring(0, index), s.Substring(index + 1))
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-										
-							if stream is not None:
-								stream.Close()
+			if config.AppSettings.Settings["TextColor"] is not None:
+				if config.AppSettings.Settings["TextColor"].Value.Length > 0:
+					textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
 				
-							if response is not None:
-								response.Close()
+			textBrush = SolidColorBrush(textColor)
 
-				except Exception, e:
-					Trace.WriteLine(e.clsException.Message)
-					Trace.WriteLine(e.clsException.StackTrace)
+			if textBrush.CanFreeze:
+				textBrush.Freeze()
 
-			def onOAuthRequestTokenCompleted(task):
-				if dictionary.ContainsKey("oauth_token") and dictionary.ContainsKey("oauth_token_secret"):
-					window = Window()
-					pinTextBox = TextBox()
-					webBrowser = WebBrowser()
-
-					def onWindowLoaded(sender2, args2):
-						webBrowser.Navigate(Uri(String.Concat("https://api.twitter.com/oauth/authorize?oauth_token=", dictionary["oauth_token"])))
-
-					def onVerifyClick(sender2, args2):
-						d = Dictionary[String, String]()
-						sd = createCommonParameters(consumerKey)
-						sd.Add("oauth_verifier", pinTextBox.Text)
-						sd.Add("oauth_token", dictionary["oauth_token"])
-						sd.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", dictionary["oauth_token_secret"]))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/access_token"), sortedDictionary)))))
-		
-						r = WebRequest.Create(String.Concat("https://api.twitter.com/oauth/access_token?oauth_verifier=", pinTextBox.Text))
-						r.Method = WebRequestMethods.Http.Post
-						r.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sd))
-						r.ContentType = "application/x-www-form-urlencoded"
-
-						verifyRequest = WebRequest.Create("http://api.apricotan.net/verify")
-						verifyRequest.PreAuthenticate = True
-						verifyRequest.Method = WebRequestMethods.Http.Get
-						verifyRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1.1/account/verify_credentials.json")
-						verifyDictionary = Dictionary[String, String]()
-						likesRequestList = List[WebRequest]()
-						userDictionary = Dictionary[String, Double]()
-						currentLikesDictionary = Dictionary[String, Int32]()
-
-						def onOAuthAccessToken():
-							from System.IO import Path
-
-							try:
-								if NetworkInterface.GetIsNetworkAvailable():
-									response = None
-									stream = None
-									streamReader = None
-
-									try:
-										response = r.GetResponse()
-										stream = response.GetResponseStream()
-										streamReader = StreamReader(stream, Encoding.ASCII)
-
-										for s in streamReader.ReadToEnd().Split('&'):
-											index = s.IndexOf('=')
-
-											if index == -1:
-												d.Add(s, String.Empty)
-											else:
-												d.Add(s.Substring(0, index), s.Substring(index + 1))
-
-										if d.ContainsKey("oauth_token") and d.ContainsKey("oauth_token_secret"):
-											fs = None
-											sr = None
-											sw = None
-
-											try:
-												fs = FileStream(__file__, FileMode.Open, FileAccess.ReadWrite, FileShare.Read)
-												encoding = UTF8Encoding(False)
-												sr = StreamReader(fs, encoding, True)
-												lines = Regex.Replace(Regex.Replace(sr.ReadToEnd(), "oauthToken\\s*=\\s*None", String.Format("oauthToken = \"{0}\"", d["oauth_token"]), RegexOptions.CultureInvariant), "oauthTokenSecret\\s*=\\s*None", String.Format("oauthTokenSecret = \"{0}\"", d["oauth_token_secret"]), RegexOptions.CultureInvariant)
-												fs.SetLength(0)
-												sw = StreamWriter(fs, encoding)
-												sw.Write(lines)
-
-											finally:
-												if sw is not None:
-													sw.Close()
-
-												if sr is not None:
-													sr.Close()
-
-												if fs is not None:
-													fs.Close()
-
-									finally:
-										if streamReader is not None:
-											streamReader.Close()
-										
-										if stream is not None:
-											stream.Close()
+			window = Window()
+			contentStackPanel = StackPanel()
 				
-										if response is not None:
-											response.Close()
+			def onLoaded(sender2, args2):
+				contentStackPanel.Width = Math.Ceiling(contentStackPanel.ActualWidth)
 
-							except Exception, e:
-								Trace.WriteLine(e.clsException.Message)
-								Trace.WriteLine(e.clsException.StackTrace)
+			def onCloseClick(sender2, args2):
+				window.Close()
 
-						def onOAuthAccessTokenCompleted(task):
-							global oauthToken, oauthTokenSecret
-	
-							for kvp in d:
-								if kvp.Key.Equals("oauth_token"):
-									oauthToken = kvp.Value
-								elif kvp.Key.Equals("oauth_token_secret"):
-									oauthTokenSecret = kvp.Value
+			window.Owner = Application.Current.MainWindow
+			window.Title = Application.Current.MainWindow.Title
+			window.WindowStartupLocation = WindowStartupLocation.CenterScreen
+			window.ResizeMode = ResizeMode.NoResize
+			window.SizeToContent = SizeToContent.WidthAndHeight
+			window.Background = SystemColors.WindowBrush 
+			window.Loaded += onLoaded
 
-							if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
-								sortedDictionary = createCommonParameters(consumerKey)
-								sortedDictionary.Add("oauth_token", oauthToken)
+			contentControl = ContentControl()
+			contentControl.UseLayoutRounding = True
+			contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
+			contentControl.VerticalAlignment = VerticalAlignment.Stretch
 
-								hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-								signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
+			window.Content = contentControl
 
-								sortedDictionary.Add("realm", "http://api.twitter.com/")
-								sortedDictionary.Add("oauth_signature", signature)
+			stackPanel1 = StackPanel()
+			stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
+			stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
+			stackPanel1.Orientation = Orientation.Vertical
+				
+			contentControl.Content = stackPanel1
 
-								verifyRequest.Headers.Add("X-Verify-Credentials-Authorization", createHttpAuthorizationHeader(sortedDictionary))
+			stackPanel2 = StackPanel()
+			stackPanel2.HorizontalAlignment = HorizontalAlignment.Center
+			stackPanel2.VerticalAlignment = VerticalAlignment.Center
+			stackPanel2.Orientation = Orientation.Vertical
+			stackPanel2.Background = SystemColors.WindowBrush if backgroundBrush is None else backgroundBrush
 
-						def onVerify(task):
-							if NetworkInterface.GetIsNetworkAvailable():
-								try:
-									response = None
-									stream = None
-									streamReader = None
+			stackPanel1.Children.Add(stackPanel2)
 
-									try:
-										response = verifyRequest.GetResponse()
+			solidColorBrush1 = SolidColorBrush(Colors.Black)
+			solidColorBrush1.Opacity = 0.25
+
+			if solidColorBrush1.CanFreeze:
+				solidColorBrush1.Freeze()
+
+			border1 = Border()
+			border1.HorizontalAlignment = HorizontalAlignment.Stretch
+			border1.VerticalAlignment = VerticalAlignment.Stretch
+			border1.Margin = Thickness(0, 0, 0, 0)
+			border1.BorderThickness = Thickness(0, 0, 0, 1)
+			border1.BorderBrush = solidColorBrush1
+
+			stackPanel2.Children.Add(border1)
+
+			contentStackPanel.HorizontalAlignment = HorizontalAlignment.Center
+			contentStackPanel.VerticalAlignment = VerticalAlignment.Center
+			contentStackPanel.Margin = Thickness(10, 10, 10, 10)
+			contentStackPanel.Orientation = Orientation.Vertical
+
+			border1.Child = contentStackPanel
+
+			solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 244, 0, 9))
+
+			if solidColorBrush2.CanFreeze:
+				solidColorBrush2.Freeze()
+
+			solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 102, 102, 102))
+
+			if solidColorBrush3.CanFreeze:
+				solidColorBrush3.Freeze()
+
+			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+				attachSectionStackPanel(contentStackPanel, textColor, "ステータス")
+
+				if max > 0:
+					rate = 100.0 * available / max
 						
-										if response.StatusCode == HttpStatusCode.OK:
-											stream = response.GetResponseStream()
-											streamReader = StreamReader(stream)
-											json = Json.decode(streamReader.ReadToEnd())
+					attachStackPanelWithProgressBar(contentStackPanel, Thickness(1, 1, 1, 1), textColor, "実績の解除率", String.Format("{0}%", rate.ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2, rate)
 
-											if json is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-													if json.ContainsKey("user"):
-														user = json["user"]
-										
-														if user is not None:
-															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-																if user.ContainsKey("name"):
-																	if clr.GetClrType(String).IsInstanceOfType(user["name"]):
-																		verifyDictionary.Add("name", user["name"])
-
-																if user.ContainsKey("password"):
-																	if clr.GetClrType(String).IsInstanceOfType(user["password"]):
-																		verifyDictionary.Add("password", user["password"])
-
-									finally:
-										if streamReader is not None:
-											streamReader.Close()
-
-										if stream is not None:
-											stream.Close()
-			
-										if response is not None:
-											response.Close()
-
-								except Exception, e:
-									Trace.WriteLine(e.clsException.Message)
-									Trace.WriteLine(e.clsException.StackTrace)
-
-						def onReady(task):
-							global username, password
-
-							for kvp in verifyDictionary:
-								if kvp.Key.Equals("name"):
-									username = kvp.Value
-								elif kvp.Key.Equals("password"):
-									password = kvp.Value
-
-							if username is not None:
-								for character in Script.Instance.Characters:
-									likesRequest = WebRequest.Create(String.Format("http://api.apricotan.net/likes?character_name={0}&user_name={1}&limit=50", urlEncode(character.Name), urlEncode(username)))
-									likesRequest.Method = WebRequestMethods.Http.Get
-
-									likesRequestList.Add(likesRequest)
-
-						def onUpdate(task):
-							if NetworkInterface.GetIsNetworkAvailable():
-								try:
-									if verifyDictionary.ContainsKey("name"):
-										request = WebRequest.Create(String.Concat("http://api.apricotan.net/user?name=", verifyDictionary["name"]))
-										request.Method = WebRequestMethods.Http.Get
-										response = None
-										stream = None
-										streamReader = None
-
-										try:
-											response = request.GetResponse()
-											stream = response.GetResponseStream()
-											streamReader = StreamReader(stream)
-											json = Json.decode(streamReader.ReadToEnd())
-
-											if json is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-													if json.ContainsKey("user"):
-														user = json["user"]
-										
-														if user is not None:
-															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-																for kvp in user:
-																	if clr.GetClrType(Double).IsInstanceOfType(kvp.Value):
-																		userDictionary.Add(kvp.Key, kvp.Value)
-
-										finally:
-											if streamReader is not None:
-												streamReader.Close()
-
-											if stream is not None:
-												stream.Close()
-								
-											if response is not None:
-												response.Close()
-
-									dt = DateTime.Now - TimeSpan(7 * 2, 0, 0, 0)
-
-									for likesRequest in likesRequestList:
-										response = None
-										stream = None
-										streamReader = None
-
-										try:
-											response = likesRequest.GetResponse()
-											stream = response.GetResponseStream()
-											streamReader = StreamReader(stream)
-											json = Json.decode(streamReader.ReadToEnd())
-
-											if json is not None:
-												if clr.GetClrType(Array).IsInstanceOfType(json):
-													for obj in json:
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-															if obj.ContainsKey("like"):
-																like = obj["like"]
-													
-																if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(like):
-																	if like.ContainsKey("character") and like.ContainsKey("created"):
-																		character = like["character"]
-
-																		if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(character) and clr.GetClrType(String).IsInstanceOfType(like["created"]):
-																			created = DateTime.Parse(like["created"])
-																
-																			if character.ContainsKey("name") and created > dt:
-																				if clr.GetClrType(String).IsInstanceOfType(character["name"]):
-																					if currentLikesDictionary.ContainsKey(character["name"]):
-																						currentLikesDictionary[character["name"]] += 1
-																					else:
-																						currentLikesDictionary.Add(character["name"], 1)
-
-										finally:
-											if streamReader is not None:
-												streamReader.Close()
-
-											if stream is not None:
-												stream.Close()
-			
-											if response is not None:
-												response.Close()
-
-								except Exception, e:
-									Trace.WriteLine(e.clsException.Message)
-									Trace.WriteLine(e.clsException.StackTrace)
-
-						def onCompleted(task):
-							global remainingCount, likesDictionary
-
-							if userDictionary.ContainsKey("points"):
-								remainingCount = Nullable[Int32](Convert.ToInt32(userDictionary["points"]))
-
-							if currentLikesDictionary.Count > 0:
-								likesDictionary.Clear()
-
-								for kvp in currentLikesDictionary:
-									likesDictionary.Add(kvp.Key, kvp.Value)
-
-								for kvp in likesDictionary:
-									sequenceList = List[Sequence]()
-								
-									for sequence in Script.Instance.Sequences:
-										if sequence.Name.Equals("Like") and kvp.Key.Equals(sequence.Owner):
-											sequenceList.Add(sequence)
-
-									Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, kvp.Value.ToString(CultureInfo.InvariantCulture)))
+				else:
+					attachStackPanel(contentStackPanel, Thickness(1, 1, 1, 1), textColor, "実績の解除率", "N/A")
+					
+				for achievement in achievementList:
+					if lockedAchievementDictionary.ContainsKey(achievement):
+						if lockedAchievementDictionary[achievement] > 0:
+							attachStackPanelWithHint(contentStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "未解除", String.Format("解除に必要な好感度は残り{0}", lockedAchievementDictionary[achievement].ToString()))
+							
+						else:
+							attachStackPanelWithHint(contentStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "未解除", String.Format("解除には10以上の好感度が必要", lockedAchievementDictionary[achievement].ToString()))
 						
-						Task.Factory.StartNew(onOAuthAccessToken, TaskCreationOptions.LongRunning).ContinueWith(onOAuthAccessTokenCompleted, context).ContinueWith(onVerify, TaskContinuationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
-
-						window.Close()
-
-					def onCancelClick(source, args):
-						window.Close()
-			
-					window.Owner = Application.Current.MainWindow
-					window.Title = Application.Current.MainWindow.Title
-					window.WindowStartupLocation = WindowStartupLocation.CenterScreen
-					window.ResizeMode = ResizeMode.NoResize
-					window.SizeToContent = SizeToContent.WidthAndHeight
-					window.Background = SystemColors.ControlBrush
-					window.Loaded += onWindowLoaded
-
-					stackPanel1 = StackPanel()
-					stackPanel1.UseLayoutRounding = True
-					stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
-					stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
-					stackPanel1.Orientation = Orientation.Vertical
-
-					solidColorBrush1 = SolidColorBrush(Colors.Black)
-					solidColorBrush1.Opacity = 0.25
-
-					if solidColorBrush1.CanFreeze:
-						solidColorBrush1.Freeze()
-
-					window.Content = stackPanel1
-					
-					border1 = Border()
-					border1.HorizontalAlignment = HorizontalAlignment.Stretch
-					border1.VerticalAlignment = VerticalAlignment.Stretch
-					border1.BorderThickness = Thickness(0, 0, 0, 1)
-					border1.BorderBrush = solidColorBrush1
-
-					stackPanel1.Children.Add(border1)
-
-					webBrowser.HorizontalAlignment = HorizontalAlignment.Stretch
-					webBrowser.VerticalAlignment = VerticalAlignment.Stretch
-					webBrowser.Width = 640
-					webBrowser.Height = 480
-
-					border1.Child = webBrowser
-
-					solidColorBrush2 = SolidColorBrush(Colors.White)
-					solidColorBrush2.Opacity = 0.5
-
-					if solidColorBrush2.CanFreeze:
-						solidColorBrush2.Freeze()
-
-					border2 = Border()
-					border2.HorizontalAlignment = HorizontalAlignment.Stretch
-					border2.VerticalAlignment = VerticalAlignment.Stretch
-					border2.BorderThickness = Thickness(0, 1, 0, 0)
-					border2.BorderBrush = solidColorBrush2
-
-					stackPanel1.Children.Add(border2)
-
-					stackPanel2 = StackPanel()
-					stackPanel2.HorizontalAlignment = HorizontalAlignment.Right
-					stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
-					stackPanel2.Orientation = Orientation.Horizontal
-
-					border2.Child = stackPanel2
-
-					pinLabel = Label()
-					pinLabel.HorizontalAlignment = HorizontalAlignment.Right
-					pinLabel.VerticalAlignment = VerticalAlignment.Center
-					pinLabel.Foreground = SystemColors.ControlTextBrush
-					pinLabel.Margin = Thickness(0, 10, 0, 10)
-					pinLabel.Content = "PIN"
-					
-					pinTextBox.HorizontalAlignment = HorizontalAlignment.Right
-					pinTextBox.VerticalAlignment = VerticalAlignment.Center
-					pinTextBox.Margin = Thickness(0, 10, 0, 10)
-					pinTextBox.Width = 100
-					
-					verifyButton = Button()
-					verifyButton.HorizontalAlignment = HorizontalAlignment.Right
-					verifyButton.VerticalAlignment = VerticalAlignment.Center
-					verifyButton.Margin = Thickness(10, 10, 5, 10)
-					verifyButton.Padding = Thickness(10, 2, 10, 2)
-					verifyButton.IsDefault = True
-
-					cancelButton = Button()
-					cancelButton.HorizontalAlignment = HorizontalAlignment.Right
-					cancelButton.VerticalAlignment = VerticalAlignment.Center
-					cancelButton.Margin = Thickness(5, 10, 10, 10)
-					cancelButton.Padding = Thickness(10, 2, 10, 2)
-
-					if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-						verifyButton.Content = "認証"
-						cancelButton.Content = "キャンセル"
 					else:
-						verifyButton.Content = "Verify"
-						cancelButton.Content = "Cancel"
+						attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "解除済み")
 
-					verifyButton.Click += onVerifyClick
-					cancelButton.Click += onCancelClick
+				for character in Script.Instance.Characters:
+					attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
 
-					stackPanel2.Children.Add(pinLabel)
-					stackPanel2.Children.Add(pinTextBox)
-					stackPanel2.Children.Add(verifyButton)
-					stackPanel2.Children.Add(cancelButton)
+				if limitDictionary.Count > 0:
+					for kvp in limitDictionary:
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
+					
+				else:
+					for character in Script.Instance.Characters:
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush3)
 
-					window.Show()
+				attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, "好感度を上げるための残りポイント", remainingCount.ToString())
+				attachAnnotationStackPanel(contentStackPanel, textColor, "サインインしていません")
+					
+			else:
+				attachSectionStackPanel(contentStackPanel, textColor, "Me")
 
-			Task.Factory.StartNew(onOAuthRequestToken, TaskCreationOptions.LongRunning).ContinueWith(onOAuthRequestTokenCompleted, context)
+				if max > 0:
+					rate = 100.0 * available / max
+						
+					attachStackPanelWithProgressBar(contentStackPanel, Thickness(1, 1, 1, 1), textColor, "Unlock rate of achievements", String.Format("{0}%", rate.ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2, rate)
 
-		signInWithTwitterMenuItem = MenuItem()
-	
-		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-			signInWithTwitterMenuItem.Header = "Twitterアカウントでサインイン..."
+				else:
+					attachStackPanel(contentStackPanel, Thickness(1, 1, 1, 1), textColor, "Unlock rate of achievements", "N/A")
+
+				for achievement in achievementList:
+					if lockedAchievementDictionary.ContainsKey(achievement):
+						attachStackPanelWithHint(contentStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "Locked", String.Format("{0} {1} needed to unlock", lockedAchievementDictionary[achievement].ToString() if lockedAchievementDictionary[achievement] > 0 else "10+", "Likes" if lockedAchievementDictionary[achievement] > 1 else "Like"))
+						
+					else:
+						attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "Unlocked")
+
+				for character in Script.Instance.Characters:
+					attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
+
+				if limitDictionary.Count > 0:
+					for kvp in limitDictionary:
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
+					
+				else:
+					for character in Script.Instance.Characters:
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush3)
+
+				attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, "Remaining points for Like action", remainingCount.ToString())
+				attachAnnotationStackPanel(contentStackPanel, textColor, "You are not Signed in")
+
+			solidColorBrush4 = SolidColorBrush(Colors.White)
+			solidColorBrush4.Opacity = 0.5
+
+			if solidColorBrush4.CanFreeze:
+				solidColorBrush4.Freeze()
+
+			border2 = Border()
+			border2.HorizontalAlignment = HorizontalAlignment.Stretch
+			border2.VerticalAlignment = VerticalAlignment.Stretch
+			border2.Margin = Thickness(0, 0, 0, 0)
+			border2.BorderThickness = Thickness(0, 1, 0, 0)
+			border2.BorderBrush = solidColorBrush4
+
+			stackPanel1.Children.Add(border2)
+
+			closeButton = Button()
+			closeButton.HorizontalAlignment = HorizontalAlignment.Right
+			closeButton.VerticalAlignment = VerticalAlignment.Center
+			closeButton.Margin = Thickness(10, 10, 10, 10)
+			closeButton.Padding = Thickness(10, 5, 10, 5)
+			closeButton.IsDefault = True
+
+			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+				closeButton.Content = "閉じる"
+			else:
+				closeButton.Content = "Close"
+
+			closeButton.Click += onCloseClick
+
+			border2.Child = closeButton
+
+			window.Show()
+
 		else:
-			signInWithTwitterMenuItem.Header = "Sign in with Twitter..."
-
-		signInWithTwitterMenuItem.Click += onSignInWithTwitterClick
-
-		menuItem.Items.Add(signInWithTwitterMenuItem)
-		menuItem.Items.Add(Separator())
-
-		likeMenuItem.IsEnabled = False
-
-		menuItem.Items.Add(likeMenuItem)
-		
-		stackPanel = StackPanel()
-		stackPanel.HorizontalAlignment = HorizontalAlignment.Left
-		stackPanel.VerticalAlignment = VerticalAlignment.Top
-		stackPanel.Orientation = Orientation.Horizontal
-
-		likeMenuItem.Header = stackPanel
-
-		textBlock1 = TextBlock()
-		textBlock1.HorizontalAlignment = HorizontalAlignment.Left
-
-		textBlock2 = TextBlock()
-		textBlock2.HorizontalAlignment = HorizontalAlignment.Right
-		textBlock2.Margin = Thickness(10, 0, 0, 0)
-	
-		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-			textBlock1.Text = "好感度を上げる"
-			textBlock2.Text = "N/A" if remainingCount is None else String.Concat("残り ", remainingCount.ToString())
-
-		else:
-			textBlock1.Text = "Like"
-			textBlock2.Text = "N/A" if remainingCount is None else String.Concat(remainingCount.ToString(), " remaining")
-
-		stackPanel.Children.Add(textBlock1)
-		stackPanel.Children.Add(textBlock2)
-
-		menuItem.Items.Add(Separator())
-
-		dashboardMenuItem.IsEnabled = False
-
-		menuItem.Items.Add(dashboardMenuItem)
-		menuItem.Items.Add(Separator())
-
-		if askMenuItem is None:
-			menuItem.Items.Add(learnMenuItem)
-
-		else:
-			askMenuItem.IsEnabled = False
-
-			menuItem.Items.Add(askMenuItem)
-			menuItem.Items.Add(learnMenuItem)
-			menuItem.Items.Add(Separator())
-
-	else:
-		def onLikeClick(sender1, args1):
-			global consumerKey, consumerSecret, oauthToken, oauthTokenSecret
-		
+			hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
+			
 			sortedDictionary = createCommonParameters(consumerKey)
 			sortedDictionary.Add("oauth_token", oauthToken)
 
-			hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
 			signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
 
 			sortedDictionary.Add("realm", "http://api.twitter.com/")
 			sortedDictionary.Add("oauth_signature", signature)
 
-			verifyRequest = WebRequest.Create("http://api.apricotan.net/verify")
+			verifyRequest = WebRequest.Create("https://api.twitter.com/1.1/account/verify_credentials.json")
 			verifyRequest.PreAuthenticate = True
 			verifyRequest.Method = WebRequestMethods.Http.Get
-			verifyRequest.Headers.Add("X-Verify-Credentials-Authorization", createHttpAuthorizationHeader(sortedDictionary))
-			verifyRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1.1/account/verify_credentials.json")
-			likeRequestList = List[WebRequest]()
-			likesRequestList = List[WebRequest]()
-			verifyDictionary = Dictionary[String, String]()
-			userDictionary = Dictionary[String, Double]()
-			currentLikesDictionary = Dictionary[String, Int32]()
-			context = TaskScheduler.FromCurrentSynchronizationContext()
+			verifyRequest.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
 
-			def onVerify():
+			sortedDictionary = createCommonParameters(consumerKey)
+			sortedDictionary.Add("oauth_token", oauthToken)
+			sortedDictionary.Add("q", urlEncode("#apricotan"))
+			sortedDictionary.Add("result_type", "mixed")
+			sortedDictionary.Add("oauth_signature", Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri(String.Concat("https://api.twitter.com/1.1/search/tweets.json?q=", urlEncode("#apricotan"), "&result_type=mixed")), sortedDictionary)))))
+
+			searchRequest = WebRequest.Create(String.Concat("https://api.twitter.com/1.1/search/tweets.json?q=", urlEncode("#apricotan"), "&result_type=mixed"))
+			searchRequest.Method = WebRequestMethods.Http.Get
+			searchRequest.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
+			searchRequest.ContentType = "application/json"
+
+			recentLikesDictionary = Dictionary[String, Int32]()
+
+			def onUpdate():
+				screenName = None
+
 				if NetworkInterface.GetIsNetworkAvailable():
 					try:
 						response = None
@@ -3001,26 +1985,52 @@ def onOpened(s, e):
 
 						try:
 							response = verifyRequest.GetResponse()
-						
+                                                
 							if response.StatusCode == HttpStatusCode.OK:
 								stream = response.GetResponseStream()
 								streamReader = StreamReader(stream)
-								json = Json.decode(streamReader.ReadToEnd())
+								jsonDictionary = Json.decode(streamReader.ReadToEnd())
 
-								if json is not None:
-									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-										if json.ContainsKey("user"):
-											user = json["user"]
-										
-											if user is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-													if user.ContainsKey("name"):
-														if clr.GetClrType(String).IsInstanceOfType(user["name"]):
-															verifyDictionary.Add("name", user["name"])
+								if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("screen_name") and jsonDictionary["screen_name"] is not None and clr.GetClrType(String).IsInstanceOfType(jsonDictionary["screen_name"]):
+									screenName = jsonDictionary["screen_name"]
 
-													if user.ContainsKey("password"):
-														if clr.GetClrType(String).IsInstanceOfType(user["password"]):
-															verifyDictionary.Add("password", user["password"])
+						finally:
+							if streamReader is not None:
+								streamReader.Close()
+						
+							if stream is not None:
+								stream.Close()
+						
+							if response is not None:
+								response.Close()
+
+						response = None
+						stream = None
+						streamReader = None
+
+						try:
+							response = searchRequest.GetResponse()
+							stream = response.GetResponseStream()
+							streamReader = StreamReader(stream)
+							jsonDictionary = Json.decode(streamReader.ReadToEnd())
+
+							if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary) and jsonDictionary.ContainsKey("statuses") and clr.GetClrType(Array).IsInstanceOfType(jsonDictionary["statuses"]):
+								for status in jsonDictionary["statuses"]:
+									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(status) and status.ContainsKey("text") and status["text"] is not None:
+										hs = HashSet[String]()
+										match = Regex.Match(status["text"], "\"(.+?):.+?\"", RegexOptions.CultureInvariant | RegexOptions.Singleline)
+
+										while match.Success:
+											if not hs.Contains(match.Groups[1].Value):
+												hs.Add(match.Groups[1].Value)
+
+											match = match.NextMatch()
+
+										for name in hs:
+											if recentLikesDictionary.ContainsKey(name):
+												recentLikesDictionary[name] += 1
+											else:
+												recentLikesDictionary.Add(name, 1)
 
 						finally:
 							if streamReader is not None:
@@ -3028,7 +2038,7 @@ def onOpened(s, e):
 
 							if stream is not None:
 								stream.Close()
-			
+				
 							if response is not None:
 								response.Close()
 
@@ -3036,126 +2046,511 @@ def onOpened(s, e):
 						Trace.WriteLine(e.clsException.Message)
 						Trace.WriteLine(e.clsException.StackTrace)
 
-			def onReady(task):
-				global username, password
+				return screenName
 
-				for kvp in verifyDictionary:
-					if kvp.Key.Equals("name"):
-						username = kvp.Value
-					elif kvp.Key.Equals("password"):
-						password = kvp.Value
+			def onCompleted(task):
+				global remainingCount, likesDictionary
 
-				if username is not None and password is not None:
-					for character in Script.Instance.Characters:
-						likeRequest = WebRequest.Create(String.Format("http://api.apricotan.net/like?character_name={0}", urlEncode(character.Name)))
-						likeRequest.PreAuthenticate = True
-						likeRequest.Method = WebRequestMethods.Http.Post
-						likeRequest.Headers.Add(HttpRequestHeader.Authorization, String.Concat("Basic ", Convert.ToBase64String(Encoding.ASCII.GetBytes(String.Concat(username, ":", password)))))
-						likeRequest.ContentLength = 0
+				limitDateTime = DateTime.Today - TimeSpan(7 * 2 - 3, 0, 0, 0)
+				limitDictionary = Dictionary[String, Int32]()
+				available = 0
+				max = 0
+				lockedAchievementDictionary = Dictionary[String, Int32]()
+				achievementList = List[String]()
 
-						likeRequestList.Add(likeRequest)
+				for kvp in likesDictionary:
+					for dt in kvp.Value:
+						if dt <= limitDateTime:
+							if limitDictionary.ContainsKey(kvp.Key):
+								limitDictionary[kvp.Key] += 1
+							else:
+								limitDictionary.Add(kvp.Key, 1)
 
-						likesRequest = WebRequest.Create(String.Format("http://api.apricotan.net/likes?character_name={0}&user_name={1}&limit=50", urlEncode(character.Name), urlEncode(username)))
-						likesRequest.Method = WebRequestMethods.Http.Get
-
-						likesRequestList.Add(likesRequest)
-
-			def onUpdate(task):
-				if NetworkInterface.GetIsNetworkAvailable():
-					try:
-						response = None
-						stream = None
-						streamReader = None
-
-						for likeRequest in likeRequestList:
-							try:
-								response = likeRequest.GetResponse()
-								stream = response.GetResponseStream()
-								streamReader = StreamReader(stream)
-								json = Json.decode(streamReader.ReadToEnd())
-
-								if json is not None:
-									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-										if json.ContainsKey("like"):
-											like = json["like"]
-										
-											if like is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(like):
-													if like.ContainsKey("user"):
-														user = like["user"]
-
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-															for kvp in user:
-																if clr.GetClrType(Double).IsInstanceOfType(kvp.Value):
-																	userDictionary.Add(kvp.Key, kvp.Value)
-
-							finally:
-								if streamReader is not None:
-									streamReader.Close()
-									streamReader = None
-
-								if stream is not None:
-									stream.Close()
-									stream = None
-								
-								if response is not None:
-									response.Close()
-									response = None
-
-						dt = DateTime.Now - TimeSpan(7 * 2, 0, 0, 0)
-
-						for likesRequest in likesRequestList:
-							try:
-								response = likesRequest.GetResponse()
-								stream = response.GetResponseStream()
-								streamReader = StreamReader(stream)
-								json = Json.decode(streamReader.ReadToEnd())
-
-								if json is not None:
-									if clr.GetClrType(Array).IsInstanceOfType(json):
-										for obj in json:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-												if obj.ContainsKey("like"):
-													like = obj["like"]
-													
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(like):
-														if like.ContainsKey("character") and like.ContainsKey("created"):
-															character = like["character"]
-
-															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(character) and clr.GetClrType(String).IsInstanceOfType(like["created"]):
-																created = DateTime.Parse(like["created"])
-																
-																if character.ContainsKey("name") and created > dt:
-																	if clr.GetClrType(String).IsInstanceOfType(character["name"]):
-																		if currentLikesDictionary.ContainsKey(character["name"]):
-																			currentLikesDictionary[character["name"]] += 1
-																		else:
-																			currentLikesDictionary.Add(character["name"], 1)
-
-							finally:
-								if streamReader is not None:
-									streamReader.Close()
-									streamReader = None
-
-								if stream is not None:
-									stream.Close()
-									stream = None
-			
-								if response is not None:
-									response.Close()
-									response = None
+				if limitDictionary.Count == 0:
+					for key in likesDictionary.Keys:
+						limitDictionary.Add(key, 0)
 					
-					except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
+				for sequence in Script.Instance.Sequences:
+					if sequence.Name.Equals("Like"):
+						isLocked = True
+						requiredLikes = 0
+						list = List[Object]()
+
+						if sequence.State is None:
+							available += 1
+							isLocked = False
+
+						else:
+							likes = likesDictionary[sequence.Owner].Count if likesDictionary.ContainsKey(sequence.Owner) else 0
+
+							for i in range(likes + 11):
+								if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
+									if i <= likes:
+										available += 1
+										isLocked = False
+
+									else:
+										requiredLikes = i - likes
+
+									break
+
+						for obj in sequence:
+							list.Add(obj)
+
+						for i in range(0, list.Count):
+							if clr.GetClrType(Sequence).IsInstanceOfType(list[i]):
+								if list[i].State is None and list[i].Any():
+									for j in range(i + 1, list.Count):
+										if clr.GetClrType(Sequence).IsInstanceOfType(list[j]):
+											isAvailable = False
+
+											if list[j].Any():
+												queue = Queue[Sequence]()
+
+												for obj in list[j]:
+													if clr.GetClrType(Sequence).IsInstanceOfType(obj):
+														queue.Enqueue(obj)
+
+												while queue.Count > 0:
+													tempSequence = queue.Dequeue()
+
+													if tempSequence.Any():
+														for obj in tempSequence:
+															if clr.GetClrType(Sequence).IsInstanceOfType(obj):
+																queue.Enqueue(obj)
+
+													elif list[i].Name.Equals(tempSequence.Name) and tempSequence.State is None:
+														isAvailable = True
+
+														break
+
+											elif list[i].Name.Equals(list[j].Name) and list[j].State is None:
+												isAvailable = True
+
+											if isAvailable:
+												if isLocked:
+													if lockedAchievementDictionary.ContainsKey(list[i].Name):
+														if requiredLikes > lockedAchievementDictionary[list[i].Name]:
+															lockedAchievementDictionary[list[i].Name] = requiredLikes
+													else:
+														lockedAchievementDictionary.Add(list[i].Name, requiredLikes)
+
+												if not achievementList.Contains(list[i].Name):
+													achievementList.Add(list[i].Name)
+
+												break
+
+						max += 1
+
+				achievementList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.CurrentCulture))
+
+				config = None
+				directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
+				backgroundBrush = None
+				textColor = SystemColors.ControlTextBrush
+		
+				if Directory.Exists(directory):
+					fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
+		
+					for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+						if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
+							exeConfigurationFileMap = ExeConfigurationFileMap()
+							exeConfigurationFileMap.ExeConfigFilename = fileName2
+							config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
+	
+				if config is None:
+					config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
+					directory = None
+
+				if config.AppSettings.Settings["BackgroundImage"] is not None:
+					fs = None
+					bi = BitmapImage()
+
+					try:
+						fs = FileStream(config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read)
+
+						bi.BeginInit()
+						bi.StreamSource = fs
+						bi.CacheOption = BitmapCacheOption.OnLoad
+						bi.CreateOptions = BitmapCreateOptions.None
+						bi.EndInit()
+
+					finally:
+						if fs is not None:
+							fs.Close()
+
+					backgroundBrush = ImageBrush(bi)
+					backgroundBrush.TileMode = TileMode.Tile
+					backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
+					backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
+					backgroundBrush.Stretch = Stretch.None
+
+					if backgroundBrush.CanFreeze:
+						backgroundBrush.Freeze()
+
+				if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
+					if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
+						backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
+
+						if backgroundBrush.CanFreeze:
+							backgroundBrush.Freeze()
+
+				if config.AppSettings.Settings["TextColor"] is not None:
+					if config.AppSettings.Settings["TextColor"].Value.Length > 0:
+						textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
+				
+				textBrush = SolidColorBrush(textColor)
+
+				if textBrush.CanFreeze:
+					textBrush.Freeze()
+
+				window = Window()
+				leftStackPanel = StackPanel()
+				rightStackPanel = StackPanel()
+				
+				def onLoaded(sender2, args2):
+					if rightStackPanel.Children.Count > 0:
+						leftStackPanel.Width = rightStackPanel.Width = Math.Ceiling(Math.Max(leftStackPanel.ActualWidth, rightStackPanel.ActualWidth))
+					else:
+						rightStackPanel.Margin = Thickness(5, 0, 0, 0)
+						leftStackPanel.Width = Math.Ceiling(leftStackPanel.ActualWidth)
+
+				def onCloseClick(sender2, args2):
+					window.Close()
+
+				window.Owner = Application.Current.MainWindow
+				window.Title = Application.Current.MainWindow.Title
+				window.WindowStartupLocation = WindowStartupLocation.CenterScreen
+				window.ResizeMode = ResizeMode.NoResize
+				window.SizeToContent = SizeToContent.WidthAndHeight
+				window.Background = SystemColors.WindowBrush
+				window.Loaded += onLoaded
+
+				contentControl = ContentControl()
+				contentControl.UseLayoutRounding = True
+				contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
+				contentControl.VerticalAlignment = VerticalAlignment.Stretch
+
+				window.Content = contentControl
+
+				stackPanel1 = StackPanel()
+				stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
+				stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
+				stackPanel1.Orientation = Orientation.Vertical
+				
+				contentControl.Content = stackPanel1
+
+				stackPanel2 = StackPanel()
+				stackPanel2.HorizontalAlignment = HorizontalAlignment.Center
+				stackPanel2.VerticalAlignment = VerticalAlignment.Center
+				stackPanel2.Orientation = Orientation.Vertical
+				stackPanel2.Background = SystemColors.WindowBrush if backgroundBrush is None else backgroundBrush
+
+				stackPanel1.Children.Add(stackPanel2)
+
+				solidColorBrush1 = SolidColorBrush(Colors.Black)
+				solidColorBrush1.Opacity = 0.25
+
+				if solidColorBrush1.CanFreeze:
+					solidColorBrush1.Freeze()
+
+				border1 = Border()
+				border1.HorizontalAlignment = HorizontalAlignment.Stretch
+				border1.VerticalAlignment = VerticalAlignment.Stretch
+				border1.Margin = Thickness(0, 0, 0, 0)
+				border1.BorderThickness = Thickness(0, 0, 0, 1)
+				border1.BorderBrush = solidColorBrush1
+
+				stackPanel2.Children.Add(border1)
+
+				stackPanel3 = StackPanel()
+				stackPanel3.HorizontalAlignment = HorizontalAlignment.Center
+				stackPanel3.VerticalAlignment = VerticalAlignment.Center
+				stackPanel3.Orientation = Orientation.Horizontal
+
+				border1.Child = stackPanel3
+
+				leftStackPanel.HorizontalAlignment = HorizontalAlignment.Stretch
+				leftStackPanel.VerticalAlignment = VerticalAlignment.Stretch
+				leftStackPanel.Margin = Thickness(10, 10, 5, 10)
+				leftStackPanel.Orientation = Orientation.Vertical
+
+				rightStackPanel.HorizontalAlignment = HorizontalAlignment.Stretch
+				rightStackPanel.VerticalAlignment = VerticalAlignment.Stretch
+				rightStackPanel.Margin = Thickness(5, 10, 10, 10)
+				rightStackPanel.Orientation = Orientation.Vertical
+
+				stackPanel3.Children.Add(leftStackPanel)
+				stackPanel3.Children.Add(rightStackPanel)
+
+				solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 244, 0, 9))
+
+				if solidColorBrush2.CanFreeze:
+					solidColorBrush2.Freeze()
+
+				solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 102, 102, 102))
+
+				if solidColorBrush3.CanFreeze:
+					solidColorBrush3.Freeze()
+
+				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+					attachSectionStackPanel(leftStackPanel, textColor, "ステータス")
+
+					if max > 0:
+						rate = 100.0 * available / max
+						
+						attachStackPanelWithProgressBar(leftStackPanel, Thickness(1, 1, 1, 1), textColor, "実績の解除率", String.Format("{0}%", rate.ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2, rate)
+
+					else:
+						attachStackPanel(leftStackPanel, Thickness(1, 1, 1, 1), textColor, "実績の解除率", "N/A")
+					
+					for achievement in achievementList:
+						if lockedAchievementDictionary.ContainsKey(achievement):
+							if lockedAchievementDictionary[achievement] > 0:
+								attachStackPanelWithHint(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "未解除", String.Format("解除に必要な好感度は残り{0}", lockedAchievementDictionary[achievement].ToString()))
+							
+							else:
+								attachStackPanelWithHint(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "未解除", String.Format("解除には10以上の好感度が必要", lockedAchievementDictionary[achievement].ToString()))
+						
+						else:
+							attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "解除済み")
+
+					for character in Script.Instance.Characters:
+						attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
+
+					if limitDictionary.Count > 0:
+						for kvp in limitDictionary:
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
+					
+					else:
+						for character in Script.Instance.Characters:
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush3)
+
+					attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, "好感度を上げるための残りポイント", remainingCount.ToString())
+					attachAnnotationStackPanel(leftStackPanel, textColor, "サインインしていません" if task.Result is None else String.Format("{0}でサインイン中", task.Result))
+
+					if recentLikesDictionary.Count > 0:
+						sum = 0
+						list = List[KeyValuePair[String, Double]]()
+
+						for kvp in recentLikesDictionary:
+							sum += kvp.Value
+							list.Add(KeyValuePair[String, Double](kvp.Key, kvp.Value))
+
+						def comparison(kvp1, kvp2):
+							if kvp1.Value > kvp2.Value:
+								return 1
+
+							elif kvp1.Value < kvp2.Value:
+								return -1
+
+							return 0
+
+						list.Sort(comparison)
+						list.Reverse()
+
+						attachSectionStackPanel(rightStackPanel, textColor, "ランキング")
+
+						for kvp in list:
+							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2)
+
+						attachAnnotationStackPanel(rightStackPanel, textColor, String.Format("{0}キャラクター", list.Count.ToString()))
+
+				else:
+					attachSectionStackPanel(leftStackPanel, textColor, "Me")
+
+					if max > 0:
+						rate = 100.0 * available / max
+						
+						attachStackPanelWithProgressBar(leftStackPanel, Thickness(1, 1, 1, 1), textColor, "Unlock rate of achievements", String.Format("{0}%", rate.ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2, rate)
+
+					else:
+						attachStackPanel(leftStackPanel, Thickness(1, 1, 1, 1), textColor, "Unlock rate of achievements", "N/A")
+
+					for achievement in achievementList:
+						if lockedAchievementDictionary.ContainsKey(achievement):
+							attachStackPanelWithHint(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "Locked", String.Format("{0} {1} needed to unlock", lockedAchievementDictionary[achievement].ToString() if lockedAchievementDictionary[achievement] > 0 else "10+", "Likes" if lockedAchievementDictionary[achievement] > 1 else "Like"))
+						
+						else:
+							attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "Unlocked")
+
+					for character in Script.Instance.Characters:
+						attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
+
+					if limitDictionary.Count > 0:
+						for kvp in limitDictionary:
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
+					
+					else:
+						for character in Script.Instance.Characters:
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush3)
+
+					attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, "Remaining points for Like action", remainingCount.ToString())
+					attachAnnotationStackPanel(leftStackPanel, textColor, "You are not Signed in" if task.Result is None else String.Format("Signed in as {0}", task.Result))
+
+					if recentLikesDictionary.Count > 0:
+						sum = 0
+						list = List[KeyValuePair[String, Double]]()
+
+						for kvp in recentLikesDictionary:
+							sum += kvp.Value
+							list.Add(KeyValuePair[String, Double](kvp.Key, kvp.Value))
+
+						def comparison(kvp1, kvp2):
+							if kvp1.Value > kvp2.Value:
+								return 1
+
+							elif kvp1.Value < kvp2.Value:
+								return -1
+
+							return 0
+
+						list.Sort(comparison)
+						list.Reverse()
+
+						attachSectionStackPanel(rightStackPanel, textColor, "Trends")
+
+						for kvp in list:
+							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2)
+
+						attachAnnotationStackPanel(rightStackPanel, textColor, String.Format("{0} characters", list.Count.ToString()) if list.Count > 1 else String.Format("{0} character", list.Count.ToString()))
+
+				solidColorBrush4 = SolidColorBrush(Colors.White)
+				solidColorBrush4.Opacity = 0.5
+
+				if solidColorBrush4.CanFreeze:
+					solidColorBrush4.Freeze()
+
+				border2 = Border()
+				border2.HorizontalAlignment = HorizontalAlignment.Stretch
+				border2.VerticalAlignment = VerticalAlignment.Stretch
+				border2.Margin = Thickness(0, 0, 0, 0)
+				border2.BorderThickness = Thickness(0, 1, 0, 0)
+				border2.BorderBrush = solidColorBrush4
+
+				stackPanel1.Children.Add(border2)
+
+				closeButton = Button()
+				closeButton.HorizontalAlignment = HorizontalAlignment.Right
+				closeButton.VerticalAlignment = VerticalAlignment.Center
+				closeButton.Margin = Thickness(10, 10, 10, 10)
+				closeButton.Padding = Thickness(10, 5, 10, 5)
+				closeButton.IsDefault = True
+
+				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+					closeButton.Content = "閉じる"
+				else:
+					closeButton.Content = "Close"
+
+				closeButton.Click += onCloseClick
+
+				border2.Child = closeButton
+
+				window.Show()
+
+			Task.Factory.StartNew[String](onUpdate, TaskCreationOptions.LongRunning).ContinueWith(Action[Task[String]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
+
+	dashboardMenuItem.Click += onDashboardClick
+
+	menuItem.Items.Add(dashboardMenuItem)
+	menuItem.Items.Add(Separator())
+	
+	likeMenuItem = MenuItem()
+	
+	if remainingCount > 0:
+		def onLikeClick(sender1, args1):
+			global remainingCount
+
+			nameList = List[String]()
+			currentLikesDictionary = Dictionary[String, List[DateTime]]()
+			remainingCount -= 1
+
+			for character in Script.Instance.Characters:
+				nameList.Add(character.Name)
+
+			def onUpdate():
+				try:
+					fileStream = None
+					streamReader = None
+				
+					try:
+						nowDateTime = DateTime.Now
+						dt1 = nowDateTime - TimeSpan(7 * 2, 0, 0, 0)
+						fileStream = FileStream("Likes.json", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read)
+						encoding = UTF8Encoding(False)
+						streamReader = StreamReader(fileStream, encoding, True)
+						jsonDictionary = Json.decode(streamReader.ReadToEnd())
+
+						if jsonDictionary is None:
+							jsonDictionary = Dictionary[String, Object]()
+						elif not clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary):
+							return
+
+						for key in nameList.ConvertAll[String](lambda x: Convert.ToBase64String(Encoding.UTF8.GetBytes(x))):
+							if not jsonDictionary.ContainsKey(key):
+								jsonDictionary.Add(key, None)
+
+						for key in List[String](jsonDictionary.Keys):
+							name = Encoding.UTF8.GetString(Convert.FromBase64String(key))
+							list = List[String]()
+
+							currentLikesDictionary.Add(name, List[DateTime]())
+							
+							if jsonDictionary[key] is not None:
+								if clr.GetClrType(Array).IsInstanceOfType(jsonDictionary[key]):
+									for value in jsonDictionary[key]:
+										if clr.GetClrType(String).IsInstanceOfType(value):
+											dt2 = DateTime(Int64.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(value))))
+
+											if dt2 > dt1:
+												currentLikesDictionary[name].Add(dt2)
+												list.Add(value)
+
+								else:
+									currentLikesDictionary.Clear()
+
+									return
+
+							if nameList.Contains(name):
+								currentLikesDictionary[name].Insert(0, nowDateTime)
+								list.Insert(0, Convert.ToBase64String(Encoding.UTF8.GetBytes(nowDateTime.Ticks.ToString(CultureInfo.InvariantCulture))))
+
+							if list.Count > 0:
+								jsonDictionary[key] = list.ToArray()
+							else:
+								jsonDictionary.Remove(key)
+
+						json = Json.encode(jsonDictionary)
+
+						if json is not None:
+							if fileStream.Length > 0:
+								fileStream.SetLength(0)
+
+							streamWriter = None
+							
+							try:
+								streamWriter = StreamWriter(fileStream, encoding)
+								streamWriter.Write(json)
+
+							finally:
+								if streamWriter is not None:
+									streamWriter.Close()
+
+					finally:
+						if streamReader is not None:
+							streamReader.Close()
+							
+						if fileStream is not None:
+							fileStream.Close()
+
+				except Exception, e:
+					Trace.WriteLine(e.clsException.Message)
+					Trace.WriteLine(e.clsException.StackTrace)
 
 			def onCompleted(task):
 				from System.Windows.Shapes import Path
 				global remainingCount, likesDictionary
 
-				if userDictionary.ContainsKey("points"):
-					remainingCount = Nullable[Int32](Convert.ToInt32(userDictionary["points"]))
-					
 				if currentLikesDictionary.Count > 0:
 					unlockedAchievementList = List[String]()
 					likeSequenceList = List[Sequence]()
@@ -3166,14 +2561,14 @@ def onOpened(s, e):
 								isLocked = True
 
 								if likesDictionary.ContainsKey(sequence.Owner):
-									for i in range(1, likesDictionary[sequence.Owner] + 1):
+									for i in range(1, likesDictionary[sequence.Owner].Count + 1):
 										if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
 											isLocked = False
 
 											break
 
 								if isLocked and currentLikesDictionary.ContainsKey(sequence.Owner):
-									for i in range(1, currentLikesDictionary[sequence.Owner] + 1):
+									for i in range(1, currentLikesDictionary[sequence.Owner].Count + 1):
 										if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
 											list = List[Object]()
 												
@@ -3221,21 +2616,24 @@ def onOpened(s, e):
 							likeSequenceList.Add(sequence)
 
 					unlockedAchievementList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.CurrentCulture))
-
-					for kvp in currentLikesDictionary:
-						sequenceList = List[Sequence]()
-								
-						for sequence in likeSequenceList:
-							if sequence.Name.Equals("Like") and kvp.Key.Equals(sequence.Owner):
-								sequenceList.Add(sequence)
-
-						Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, kvp.Value.ToString(CultureInfo.InvariantCulture)))
-
+					
 					likesDictionary.Clear()
 
 					for kvp in currentLikesDictionary:
 						likesDictionary.Add(kvp.Key, kvp.Value)
 
+						for name in nameList:
+							if name.Equals(kvp.Key):
+								sequenceList = List[Sequence]()
+
+								for sequence in likeSequenceList:
+									if kvp.Key.Equals(sequence.Owner):
+										sequenceList.Add(sequence)
+
+								Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, likesDictionary[kvp.Key].Count.ToString(CultureInfo.InvariantCulture)))
+
+								break
+						
 					window = Window()
 					closeTimer = DispatcherTimer(DispatcherPriority.Background)
 					contentControl = ContentControl()
@@ -3411,7 +2809,7 @@ def onOpened(s, e):
 
 					stackPanel1.Children.Add(stackPanel2)
 
-					solidColorBrush1 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 204, 0, 0))
+					solidColorBrush1 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 244, 0, 9))
 
 					if solidColorBrush1.CanFreeze:
 						solidColorBrush1.Freeze()
@@ -3490,7 +2888,7 @@ def onOpened(s, e):
 						label1.FontSize = fontSizeConverter.ConvertFromString("24pt")
 						label1.Foreground = Brushes.White
 						label1.FontWeight = FontWeights.Bold
-						label1.Content = kvp.Value.ToString()
+						label1.Content = kvp.Value.Count.ToString()
 
 						RenderOptions.SetClearTypeHint(label1, ClearTypeHint.Enabled)
 
@@ -3620,15 +3018,20 @@ def onOpened(s, e):
 					
 					window.Show()
 
-			Task.Factory.StartNew(onVerify, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
+				else:
+					remainingCount += 1
 
+			Task.Factory.StartNew(onUpdate, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
+		
 		stackPanel = StackPanel()
 		stackPanel.HorizontalAlignment = HorizontalAlignment.Left
 		stackPanel.VerticalAlignment = VerticalAlignment.Top
 		stackPanel.Orientation = Orientation.Horizontal
 
-		likeMenuItem.Click += onLikeClick
 		likeMenuItem.Header = stackPanel
+		likeMenuItem.Click += onLikeClick
+		
+		menuItem.Items.Add(likeMenuItem)
 
 		textBlock1 = TextBlock()
 		textBlock1.HorizontalAlignment = HorizontalAlignment.Left
@@ -3636,865 +3039,726 @@ def onOpened(s, e):
 		textBlock2 = TextBlock()
 		textBlock2.HorizontalAlignment = HorizontalAlignment.Right
 		textBlock2.Margin = Thickness(10, 0, 0, 0)
-	
+		textBlock2.Foreground = SystemColors.GrayTextBrush
+
 		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 			textBlock1.Text = "好感度を上げる"
 			textBlock2.Text = "N/A" if remainingCount is None else String.Concat("残り ", remainingCount.ToString())
-
+		
 		else:
 			textBlock1.Text = "Like"
 			textBlock2.Text = "N/A" if remainingCount is None else String.Concat(remainingCount.ToString(), " remaining")
-		
-		if remainingCount is None:
-			likeMenuItem.IsEnabled = False
-
-		else:
-			if remainingCount > 0:
-				textBlock2.Foreground = SystemColors.GrayTextBrush
-
-			else:
-				likeMenuItem.IsEnabled = False
 
 		stackPanel.Children.Add(textBlock1)
 		stackPanel.Children.Add(textBlock2)
 
+	else:
+		likeMenuItem.IsEnabled = False
+
+		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+			likeMenuItem.Header = "好感度を上げる"
+		else:
+			likeMenuItem.Header = "Like"
+
 		menuItem.Items.Add(likeMenuItem)
-		menuItem.Items.Add(Separator())
 
-		def onDashboardClick(sender1, args1):
-			global consumerKey, consumerSecret, oauthToken, oauthTokenSecret
-		
-			sortedDictionary = createCommonParameters(consumerKey)
-			sortedDictionary.Add("oauth_token", oauthToken)
+	menuItem.Items.Add(Separator())
 
-			hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-			signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
-
-			sortedDictionary.Add("realm", "http://api.twitter.com/")
-			sortedDictionary.Add("oauth_signature", signature)
-
-			verifyRequest = WebRequest.Create("http://api.apricotan.net/verify")
-			verifyRequest.PreAuthenticate = True
-			verifyRequest.Method = WebRequestMethods.Http.Get
-			verifyRequest.Headers.Add("X-Verify-Credentials-Authorization", createHttpAuthorizationHeader(sortedDictionary))
-			verifyRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1.1/account/verify_credentials.json")
-			likesRequestList = List[WebRequest]()
-			verifyDictionary = Dictionary[String, String]()
-			currentLikesDictionary = Dictionary[String, List[DateTime]]()
-			userDictionary = Dictionary[String, Double]()
-			recentLikesDictionary = Dictionary[String, Int32]()
-			context = TaskScheduler.FromCurrentSynchronizationContext()
-
-			def onVerify():
-				if NetworkInterface.GetIsNetworkAvailable():
-					try:
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = verifyRequest.GetResponse()
-						
-							if response.StatusCode == HttpStatusCode.OK:
-								stream = response.GetResponseStream()
-								streamReader = StreamReader(stream)
-								json = Json.decode(streamReader.ReadToEnd())
-
-								if json is not None:
-									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-										if json.ContainsKey("user"):
-											user = json["user"]
-										
-											if user is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-													if user.ContainsKey("name"):
-														if clr.GetClrType(String).IsInstanceOfType(user["name"]):
-															verifyDictionary.Add("name", user["name"])
-
-													if user.ContainsKey("password"):
-														if clr.GetClrType(String).IsInstanceOfType(user["password"]):
-															verifyDictionary.Add("password", user["password"])
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
-
-					except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
-
-			def onReady(task):
-				global username, password
-
-				for kvp in verifyDictionary:
-					if kvp.Key.Equals("name"):
-						username = kvp.Value
-					elif kvp.Key.Equals("password"):
-						password = kvp.Value
-
-				if username is not None:
-					for character in Script.Instance.Characters:
-						likesRequest = WebRequest.Create(String.Format("http://api.apricotan.net/likes?character_name={0}&user_name={1}&limit=50", urlEncode(character.Name), urlEncode(username)))
-						likesRequest.Method = WebRequestMethods.Http.Get
-
-						likesRequestList.Add(likesRequest)
-
-			def onUpdate(task):
-				if NetworkInterface.GetIsNetworkAvailable():
-					try:
-						dt = DateTime.Now - TimeSpan(7 * 2, 0, 0, 0)
-
-						for likesRequest in likesRequestList:
-							response = None
-							stream = None
-							streamReader = None
-					
-							try:
-								response = likesRequest.GetResponse()
-								stream = response.GetResponseStream()
-								streamReader = StreamReader(stream)
-								json = Json.decode(streamReader.ReadToEnd())
-
-								if json is not None:
-									if clr.GetClrType(Array).IsInstanceOfType(json):
-										for obj in json:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-												if obj.ContainsKey("like"):
-													like = obj["like"]
-
-													if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(like):
-														if like.ContainsKey("character") and like.ContainsKey("created"):
-															character = like["character"]
-
-															if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(character) and clr.GetClrType(String).IsInstanceOfType(like["created"]):
-																created = DateTime.Parse(like["created"])
-																
-																if character.ContainsKey("name") and created > dt:
-																	if clr.GetClrType(String).IsInstanceOfType(character["name"]):
-																		if not currentLikesDictionary.ContainsKey(character["name"]):
-																			currentLikesDictionary.Add(character["name"], List[DateTime]())
-
-																		currentLikesDictionary[character["name"]].Add(created)
-
-							finally:
-								if streamReader is not None:
-									streamReader.Close()
-
-								if stream is not None:
-									stream.Close()
-								
-								if response is not None:
-									response.Close()
-
-						if verifyDictionary.ContainsKey("name"):
-							userRequest = WebRequest.Create(String.Concat("http://api.apricotan.net/user?name=", verifyDictionary["name"]))
-							userRequest.Method = WebRequestMethods.Http.Get
-							response = None
-							stream = None
-							streamReader = None
-
-							try:
-								response = userRequest.GetResponse()
-								stream = response.GetResponseStream()
-								streamReader = StreamReader(stream)
-								json = Json.decode(streamReader.ReadToEnd())
-
-								if json is not None:
-									if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-										if json.ContainsKey("user"):
-											user = json["user"]
-										
-											if user is not None:
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-													for kvp in user:
-														if clr.GetClrType(Double).IsInstanceOfType(kvp.Value):
-															userDictionary.Add(kvp.Key, kvp.Value)
-
-							finally:
-								if streamReader is not None:
-									streamReader.Close()
-
-								if stream is not None:
-									stream.Close()
-								
-								if response is not None:
-									response.Close()
-
-						topLikesRequest = WebRequest.Create("http://api.apricotan.net/likes?limit=100")
-						response = None
-						stream = None
-						streamReader = None
-					
-						try:
-							response = topLikesRequest.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Array).IsInstanceOfType(json):
-									for obj in json:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											if obj.ContainsKey("like"):
-												like = obj["like"]
-
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(like):
-													if like.ContainsKey("character") and like.ContainsKey("created"):
-														character = like["character"]
-
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(character):
-															if character.ContainsKey("name"):
-																if clr.GetClrType(String).IsInstanceOfType(character["name"]):
-																	if recentLikesDictionary.ContainsKey(character["name"]):
-																		recentLikesDictionary[character["name"]] += 1
-																	else:
-																		recentLikesDictionary.Add(character["name"], 1)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-								
-							if response is not None:
-								response.Close()
-		
-					except Exception, e:
-						Trace.WriteLine(e.clsException.Message)
-						Trace.WriteLine(e.clsException.StackTrace)
-
-			def onCompleted(task):
-				from System.IO import Path
-				global remainingCount, likesDictionary, username
-
-				dateTime = DateTime.Today - TimeSpan(7 * 2 - 3, 0, 0, 0)
-				limitDictionary = Dictionary[String, Int32]()
-				available = 0
-				max = 0
-				lockedAchievementDictionary = Dictionary[String, Int32]()
-				achievementList = List[String]()
-
-				if userDictionary.ContainsKey("points"):
-					remainingCount = Nullable[Int32](Convert.ToInt32(userDictionary["points"]))
-				
-				if currentLikesDictionary.Count > 0:
-					likesDictionary.Clear()
-
-					for kvp in currentLikesDictionary:
-						likesDictionary.Add(kvp.Key, kvp.Value.Count)
-
-						for dt in kvp.Value:
-							if dt <= dateTime:
-								if limitDictionary.ContainsKey(kvp.Key):
-									limitDictionary[kvp.Key] += 1
-								else:
-									limitDictionary.Add(kvp.Key, 1)
-
-					if limitDictionary.Count == 0:
-						for key in currentLikesDictionary.Keys:
-							limitDictionary.Add(key, 0)
-					
-				for sequence in Script.Instance.Sequences:
-					if sequence.Name.Equals("Like"):
-						isLocked = True
-						requiredLikes = 0
-						list = List[Object]()
-
-						if sequence.State is None:
-							available += 1
-							isLocked = False
-						else:
-							likes = likesDictionary[sequence.Owner] if likesDictionary.ContainsKey(sequence.Owner) else 0
-
-							for i in range(likes + 11):
-								if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
-									if i <= likes:
-										available += 1
-										isLocked = False
-									else:
-										requiredLikes = i - likes
-
-									break
-
-						for obj in sequence:
-							list.Add(obj)
-
-						for i in range(0, list.Count):
-							if clr.GetClrType(Sequence).IsInstanceOfType(list[i]):
-								if list[i].State is None and list[i].Any():
-									for j in range(i + 1, list.Count):
-										if clr.GetClrType(Sequence).IsInstanceOfType(list[j]):
-											isAvailable = False
-
-											if list[j].Any():
-												queue = Queue[Sequence]()
-
-												for obj in list[j]:
-													if clr.GetClrType(Sequence).IsInstanceOfType(obj):
-														queue.Enqueue(obj)
-
-												while queue.Count > 0:
-													tempSequence = queue.Dequeue()
-
-													if tempSequence.Any():
-														for obj in tempSequence:
-															if clr.GetClrType(Sequence).IsInstanceOfType(obj):
-																queue.Enqueue(obj)
-
-													elif list[i].Name.Equals(tempSequence.Name) and tempSequence.State is None:
-														isAvailable = True
-
-														break
-
-											elif list[i].Name.Equals(list[j].Name) and list[j].State is None:
-												isAvailable = True
-
-											if isAvailable:
-												if isLocked:
-													if lockedAchievementDictionary.ContainsKey(list[i].Name):
-														if requiredLikes > lockedAchievementDictionary[list[i].Name]:
-															lockedAchievementDictionary[list[i].Name] = requiredLikes
-													else:
-														lockedAchievementDictionary.Add(list[i].Name, requiredLikes)
-
-												if not achievementList.Contains(list[i].Name):
-													achievementList.Add(list[i].Name)
-
-												break
-
-						max += 1
-
-				achievementList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.CurrentCulture))
-
-				config = None
-				directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
-				backgroundBrush = None
-				textColor = SystemColors.ControlTextBrush
-		
-				if Directory.Exists(directory):
-					fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
-		
-					for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
-						if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
-							exeConfigurationFileMap = ExeConfigurationFileMap()
-							exeConfigurationFileMap.ExeConfigFilename = fileName2
-							config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
+	askMenuItem = None
 	
-				if config is None:
-					config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-					directory = None
+	for sequence in Script.Instance.Sequences:
+		if sequence.Name.Equals("Greet") or sequence.Name.Equals("Hate") or sequence.Name.Equals("Interest") or sequence.Name.Equals("Thank") or sequence.Name.Equals("Ignore"):
+			askMenuItem = MenuItem()
 
-				if config.AppSettings.Settings["BackgroundImage"] is not None:
-					fs = None
-					bi = BitmapImage()
+			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+				askMenuItem.Header = "話しかける..."
+			else:
+				askMenuItem.Header = "Ask..."
 
-					try:
-						fs = FileStream(config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read)
+			break
 
-						bi.BeginInit()
-						bi.StreamSource = fs
-						bi.CacheOption = BitmapCacheOption.OnLoad
-						bi.CreateOptions = BitmapCreateOptions.None
-						bi.EndInit()
+	if String.IsNullOrEmpty(oauthToken) or String.IsNullOrEmpty(oauthTokenSecret):
+		def onSignInWithTwitterClick(sender1, args1):
+			dictionary = Dictionary[String, String]()
+			context = TaskScheduler.FromCurrentSynchronizationContext()
+			sortedDictionary = createCommonParameters(consumerKey)
+			sortedDictionary.Add("oauth_callback", "oob")
+			sortedDictionary.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&"))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/request_token"), sortedDictionary)))))
+			
+			request = WebRequest.Create("https://api.twitter.com/oauth/request_token")
+			request.Method = WebRequestMethods.Http.Post
+			request.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sortedDictionary))
+			request.ContentType = "application/x-www-form-urlencoded"
+			
+			def onOAuthRequestToken():
+				try:
+					if NetworkInterface.GetIsNetworkAvailable():
+						response = None
+						stream = None
+						streamReader = None
 
-					finally:
-						if fs is not None:
-							fs.Close()
+						try:
+							response = request.GetResponse()
+							stream = response.GetResponseStream()
+							streamReader = StreamReader(stream, Encoding.ASCII)
 
-					backgroundBrush = ImageBrush(bi)
-					backgroundBrush.TileMode = TileMode.Tile
-					backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
-					backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
-					backgroundBrush.Stretch = Stretch.None
+							for s in streamReader.ReadToEnd().Split('&'):
+								index = s.IndexOf('=')
 
-					if backgroundBrush.CanFreeze:
-						backgroundBrush.Freeze()
+								if index == -1:
+									dictionary.Add(s, String.Empty)
+								else:
+									dictionary.Add(s.Substring(0, index), s.Substring(index + 1))
 
-				if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
-					if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
-						backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
-
-						if backgroundBrush.CanFreeze:
-							backgroundBrush.Freeze()
-
-				if config.AppSettings.Settings["TextColor"] is not None:
-					if config.AppSettings.Settings["TextColor"].Value.Length > 0:
-						textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
+						finally:
+							if streamReader is not None:
+								streamReader.Close()
+										
+							if stream is not None:
+								stream.Close()
 				
-				textBrush = SolidColorBrush(textColor)
+							if response is not None:
+								response.Close()
 
-				if textBrush.CanFreeze:
-					textBrush.Freeze()
+				except Exception, e:
+					Trace.WriteLine(e.clsException.Message)
+					Trace.WriteLine(e.clsException.StackTrace)
 
-				window = Window()
-				leftStackPanel = StackPanel()
-				rightStackPanel = StackPanel()
+			def onOAuthRequestTokenCompleted(task):
+				if dictionary.ContainsKey("oauth_token") and dictionary.ContainsKey("oauth_token_secret"):
+					window = Window()
+					pinTextBox = TextBox()
+					webBrowser = WebBrowser()
+						
+					def onWindowLoaded(sender2, args2):
+						webBrowser.Navigate(Uri(String.Concat("https://api.twitter.com/oauth/authorize?oauth_token=", dictionary["oauth_token"])))
+
+					def onVerifyClick(sender2, args2):
+						d = Dictionary[String, String]()
+						sd = createCommonParameters(consumerKey)
+						sd.Add("oauth_verifier", pinTextBox.Text)
+						sd.Add("oauth_token", dictionary["oauth_token"])
+						sd.Add("oauth_signature", Convert.ToBase64String(HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", dictionary["oauth_token_secret"]))).ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Post, Uri("https://api.twitter.com/oauth/access_token"), sortedDictionary)))))
+		
+						r = WebRequest.Create(String.Concat("https://api.twitter.com/oauth/access_token?oauth_verifier=", pinTextBox.Text))
+						r.Method = WebRequestMethods.Http.Post
+						r.Headers.Add(HttpRequestHeader.Authorization, createHttpAuthorizationHeader(sd))
+						r.ContentType = "application/x-www-form-urlencoded"
+
+						def onOAuthAccessToken():
+							from System.IO import Path
+
+							try:
+								if NetworkInterface.GetIsNetworkAvailable():
+									response = None
+									stream = None
+									streamReader = None
+
+									try:
+										response = r.GetResponse()
+										stream = response.GetResponseStream()
+										streamReader = StreamReader(stream, Encoding.ASCII)
+
+										for s in streamReader.ReadToEnd().Split('&'):
+											index = s.IndexOf('=')
+
+											if index == -1:
+												d.Add(s, String.Empty)
+											else:
+												d.Add(s.Substring(0, index), s.Substring(index + 1))
+
+										if d.ContainsKey("oauth_token") and d.ContainsKey("oauth_token_secret"):
+											fs = None
+											sr = None
+											sw = None
+
+											try:
+												fs = FileStream(__file__, FileMode.Open, FileAccess.ReadWrite, FileShare.Read)
+												encoding = UTF8Encoding(False)
+												sr = StreamReader(fs, encoding, True)
+												lines = Regex.Replace(Regex.Replace(sr.ReadToEnd(), "oauthToken\\s*=\\s*None", String.Format("oauthToken = \"{0}\"", d["oauth_token"]), RegexOptions.CultureInvariant), "oauthTokenSecret\\s*=\\s*None", String.Format("oauthTokenSecret = \"{0}\"", d["oauth_token_secret"]), RegexOptions.CultureInvariant)
+												fs.SetLength(0)
+												sw = StreamWriter(fs, encoding)
+												sw.Write(lines)
+
+											finally:
+												if sw is not None:
+													sw.Close()
+
+												if sr is not None:
+													sr.Close()
+
+												if fs is not None:
+													fs.Close()
+
+									finally:
+										if streamReader is not None:
+											streamReader.Close()
+										
+										if stream is not None:
+											stream.Close()
 				
-				def onLoaded(sender2, args2):
-					if rightStackPanel.Children.Count > 0:
-						leftStackPanel.Width = rightStackPanel.Width = Math.Ceiling(Math.Max(leftStackPanel.ActualWidth, rightStackPanel.ActualWidth))
-					else:
-						rightStackPanel.Margin = Thickness(5, 0, 0, 0)
-						leftStackPanel.Width = Math.Ceiling(leftStackPanel.ActualWidth)
+										if response is not None:
+											response.Close()
 
-				def onCloseClick(sender2, args2):
-					window.Close()
+							except Exception, e:
+								Trace.WriteLine(e.clsException.Message)
+								Trace.WriteLine(e.clsException.StackTrace)
 
-				window.Owner = Application.Current.MainWindow
-				window.Title = Application.Current.MainWindow.Title
-				window.WindowStartupLocation = WindowStartupLocation.CenterScreen
-				window.ResizeMode = ResizeMode.NoResize
-				window.SizeToContent = SizeToContent.WidthAndHeight
-				window.Background = SystemColors.ControlBrush
-				window.Loaded += onLoaded
-
-				contentControl = ContentControl()
-				contentControl.UseLayoutRounding = True
-				contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
-				contentControl.VerticalAlignment = VerticalAlignment.Stretch
-
-				window.Content = contentControl
-
-				stackPanel1 = StackPanel()
-				stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel1.Orientation = Orientation.Vertical
-				
-				contentControl.Content = stackPanel1
-
-				stackPanel2 = StackPanel()
-				stackPanel2.HorizontalAlignment = HorizontalAlignment.Center
-				stackPanel2.VerticalAlignment = VerticalAlignment.Center
-				stackPanel2.Orientation = Orientation.Vertical
-				stackPanel2.Background = SystemColors.ControlBrush if backgroundBrush is None else backgroundBrush
-
-				stackPanel1.Children.Add(stackPanel2)
-
-				solidColorBrush1 = SolidColorBrush(Colors.Black)
-				solidColorBrush1.Opacity = 0.25
-
-				if solidColorBrush1.CanFreeze:
-					solidColorBrush1.Freeze()
-
-				border1 = Border()
-				border1.HorizontalAlignment = HorizontalAlignment.Stretch
-				border1.VerticalAlignment = VerticalAlignment.Stretch
-				border1.Margin = Thickness(0, 0, 0, 0)
-				border1.BorderThickness = Thickness(0, 0, 0, 1)
-				border1.BorderBrush = solidColorBrush1
-
-				stackPanel2.Children.Add(border1)
-
-				stackPanel3 = StackPanel()
-				stackPanel3.HorizontalAlignment = HorizontalAlignment.Center
-				stackPanel3.VerticalAlignment = VerticalAlignment.Center
-				stackPanel3.Orientation = Orientation.Horizontal
-
-				border1.Child = stackPanel3
-
-				leftStackPanel.HorizontalAlignment = HorizontalAlignment.Stretch
-				leftStackPanel.VerticalAlignment = VerticalAlignment.Stretch
-				leftStackPanel.Margin = Thickness(10, 10, 5, 10)
-				leftStackPanel.Orientation = Orientation.Vertical
-
-				rightStackPanel.HorizontalAlignment = HorizontalAlignment.Stretch
-				rightStackPanel.VerticalAlignment = VerticalAlignment.Stretch
-				rightStackPanel.Margin = Thickness(5, 10, 10, 10)
-				rightStackPanel.Orientation = Orientation.Vertical
-
-				stackPanel3.Children.Add(leftStackPanel)
-				stackPanel3.Children.Add(rightStackPanel)
-
-				solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 204, 0, 0))
-
-				if solidColorBrush2.CanFreeze:
-					solidColorBrush2.Freeze()
-
-				solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 102, 102, 102))
-
-				if solidColorBrush3.CanFreeze:
-					solidColorBrush3.Freeze()
-
-				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-					attachSectionStackPanel(leftStackPanel, textColor, "ステータス")
-
-					if max > 0:
-						rate = 100.0 * available / max
+						def onOAuthAccessTokenCompleted(task):
+							global oauthToken, oauthTokenSecret
+	
+							for kvp in d:
+								if kvp.Key.Equals("oauth_token"):
+									oauthToken = kvp.Value
+								elif kvp.Key.Equals("oauth_token_secret"):
+									oauthTokenSecret = kvp.Value
 						
-						attachStackPanelWithProgressBar(leftStackPanel, Thickness(1, 1, 1, 1), textColor, "実績の解除率", String.Format("{0}%", rate.ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2, rate)
+						Task.Factory.StartNew(onOAuthAccessToken, TaskCreationOptions.LongRunning).ContinueWith(onOAuthAccessTokenCompleted, context)
 
-					else:
-						attachStackPanel(leftStackPanel, Thickness(1, 1, 1, 1), textColor, "実績の解除率", "N/A")
+						window.Close()
+
+					def onCancelClick(source, args):
+						window.Close()
+			
+					window.Owner = Application.Current.MainWindow
+					window.Title = Application.Current.MainWindow.Title
+					window.WindowStartupLocation = WindowStartupLocation.CenterScreen
+					window.ResizeMode = ResizeMode.NoResize
+					window.SizeToContent = SizeToContent.WidthAndHeight
+					window.Background = SystemColors.WindowBrush
+					window.Loaded += onWindowLoaded
+
+					stackPanel1 = StackPanel()
+					stackPanel1.UseLayoutRounding = True
+					stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
+					stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
+					stackPanel1.Orientation = Orientation.Vertical
+
+					solidColorBrush1 = SolidColorBrush(Colors.Black)
+					solidColorBrush1.Opacity = 0.25
+
+					if solidColorBrush1.CanFreeze:
+						solidColorBrush1.Freeze()
+
+					window.Content = stackPanel1
 					
-					for achievement in achievementList:
-						if lockedAchievementDictionary.ContainsKey(achievement):
-							if lockedAchievementDictionary[achievement] > 0:
-								attachStackPanelWithHint(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "未解除", String.Format("解除に必要な好感度は残り{0}", lockedAchievementDictionary[achievement].ToString()))
-							
-							else:
-								attachStackPanelWithHint(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "未解除", String.Format("解除には10以上の好感度が必要", lockedAchievementDictionary[achievement].ToString()))
-						
-						else:
-							attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "解除済み")
+					border1 = Border()
+					border1.HorizontalAlignment = HorizontalAlignment.Stretch
+					border1.VerticalAlignment = VerticalAlignment.Stretch
+					border1.BorderThickness = Thickness(0, 0, 0, 1)
+					border1.BorderBrush = solidColorBrush1
 
-					for character in Script.Instance.Characters:
-						attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
+					stackPanel1.Children.Add(border1)
 
-					if limitDictionary.Count > 0:
-						for kvp in limitDictionary:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
+					webBrowser.HorizontalAlignment = HorizontalAlignment.Stretch
+					webBrowser.VerticalAlignment = VerticalAlignment.Stretch
+					webBrowser.Width = 640
+					webBrowser.Height = 480
+
+					border1.Child = webBrowser
+
+					solidColorBrush2 = SolidColorBrush(Colors.White)
+					solidColorBrush2.Opacity = 0.5
+
+					if solidColorBrush2.CanFreeze:
+						solidColorBrush2.Freeze()
+
+					border2 = Border()
+					border2.HorizontalAlignment = HorizontalAlignment.Stretch
+					border2.VerticalAlignment = VerticalAlignment.Stretch
+					border2.BorderThickness = Thickness(0, 1, 0, 0)
+					border2.BorderBrush = solidColorBrush2
+
+					stackPanel1.Children.Add(border2)
+
+					stackPanel2 = StackPanel()
+					stackPanel2.HorizontalAlignment = HorizontalAlignment.Right
+					stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
+					stackPanel2.Orientation = Orientation.Horizontal
+
+					border2.Child = stackPanel2
+
+					pinLabel = Label()
+					pinLabel.HorizontalAlignment = HorizontalAlignment.Right
+					pinLabel.VerticalAlignment = VerticalAlignment.Center
+					pinLabel.Foreground = SystemColors.ControlTextBrush
+					pinLabel.Margin = Thickness(0, 10, 0, 10)
+					pinLabel.Content = "PIN"
 					
-					else:
-						for character in Script.Instance.Characters:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush3)
-
-					attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, "好感度を上げるための残りポイント", "N/A" if remainingCount is None else remainingCount.ToString())
-					attachAnnotationStackPanel(leftStackPanel, textColor, "サインインしていません" if username is None else String.Format("{0}でサインイン中", username))
-
-					if recentLikesDictionary.Count > 0:
-						sum = 0
-						list = List[KeyValuePair[String, Double]]()
-
-						for kvp in recentLikesDictionary:
-							sum += kvp.Value
-							list.Add(KeyValuePair[String, Double](kvp.Key, kvp.Value))
-
-						def comparison(kvp1, kvp2):
-							if kvp1.Value > kvp2.Value:
-								return 1
-
-							elif kvp1.Value < kvp2.Value:
-								return -1
-
-							return 0
-
-						list.Sort(comparison)
-						list.Reverse()
-
-						attachSectionStackPanel(rightStackPanel, textColor, "ランキング")
-
-						for kvp in list:
-							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2)
-
-						attachAnnotationStackPanel(rightStackPanel, textColor, String.Format("{0}キャラクター", list.Count.ToString()))
-
-				else:
-					attachSectionStackPanel(leftStackPanel, textColor, "Me")
-
-					if max > 0:
-						rate = 100.0 * available / max
-						
-						attachStackPanelWithProgressBar(leftStackPanel, Thickness(1, 1, 1, 1), textColor, "Unlock rate of achievements", String.Format("{0}%", rate.ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2, rate)
-
-					else:
-						attachStackPanel(leftStackPanel, Thickness(1, 1, 1, 1), textColor, "Unlock rate of achievements", "N/A")
-
-					for achievement in achievementList:
-						if lockedAchievementDictionary.ContainsKey(achievement):
-							attachStackPanelWithHint(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "Locked", String.Format("{0} {1} needed to unlock", lockedAchievementDictionary[achievement].ToString() if lockedAchievementDictionary[achievement] > 0 else "10+", "Likes" if lockedAchievementDictionary[achievement] > 1 else "Like"))
-						
-						else:
-							attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "Unlocked")
-
-					for character in Script.Instance.Characters:
-						attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
-
-					if limitDictionary.Count > 0:
-						for kvp in limitDictionary:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
+					pinTextBox.HorizontalAlignment = HorizontalAlignment.Right
+					pinTextBox.VerticalAlignment = VerticalAlignment.Center
+					pinTextBox.Margin = Thickness(0, 10, 0, 10)
+					pinTextBox.Width = 100
 					
+					verifyButton = Button()
+					verifyButton.HorizontalAlignment = HorizontalAlignment.Right
+					verifyButton.VerticalAlignment = VerticalAlignment.Center
+					verifyButton.Margin = Thickness(10, 10, 5, 10)
+					verifyButton.Padding = Thickness(10, 5, 10, 5)
+					verifyButton.IsDefault = True
+
+					cancelButton = Button()
+					cancelButton.HorizontalAlignment = HorizontalAlignment.Right
+					cancelButton.VerticalAlignment = VerticalAlignment.Center
+					cancelButton.Margin = Thickness(5, 10, 10, 10)
+					cancelButton.Padding = Thickness(10, 5, 10, 5)
+
+					if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+						verifyButton.Content = "認証"
+						cancelButton.Content = "キャンセル"
 					else:
-						for character in Script.Instance.Characters:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush3)
+						verifyButton.Content = "Verify"
+						cancelButton.Content = "Cancel"
 
-					attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, "Remaining points for Like action", "N/A" if remainingCount is None else remainingCount.ToString())
-					attachAnnotationStackPanel(leftStackPanel, textColor, "You are not Signed in" if username is None else String.Format("Signed in as {0}", username))
+					verifyButton.Click += onVerifyClick
+					cancelButton.Click += onCancelClick
 
-					if recentLikesDictionary.Count > 0:
-						sum = 0
-						list = List[KeyValuePair[String, Double]]()
+					stackPanel2.Children.Add(pinLabel)
+					stackPanel2.Children.Add(pinTextBox)
+					stackPanel2.Children.Add(verifyButton)
+					stackPanel2.Children.Add(cancelButton)
 
-						for kvp in recentLikesDictionary:
-							sum += kvp.Value
-							list.Add(KeyValuePair[String, Double](kvp.Key, kvp.Value))
+					window.Show()
 
-						def comparison(kvp1, kvp2):
-							if kvp1.Value > kvp2.Value:
-								return 1
+			Task.Factory.StartNew(onOAuthRequestToken, TaskCreationOptions.LongRunning).ContinueWith(onOAuthRequestTokenCompleted, context)
 
-							elif kvp1.Value < kvp2.Value:
-								return -1
+		signInWithTwitterMenuItem = MenuItem()
+	
+		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+			signInWithTwitterMenuItem.Header = "Twitterアカウントでサインイン..."
+		else:
+			signInWithTwitterMenuItem.Header = "Sign in with Twitter..."
 
-							return 0
+		signInWithTwitterMenuItem.Click += onSignInWithTwitterClick
 
-						list.Sort(comparison)
-						list.Reverse()
-
-						attachSectionStackPanel(rightStackPanel, textColor, "Trends")
-
-						for kvp in list:
-							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2)
-
-						attachAnnotationStackPanel(rightStackPanel, textColor, String.Format("{0} characters", list.Count.ToString()) if list.Count > 1 else String.Format("{0} character", list.Count.ToString()))
-
-				solidColorBrush4 = SolidColorBrush(Colors.White)
-				solidColorBrush4.Opacity = 0.5
-
-				if solidColorBrush4.CanFreeze:
-					solidColorBrush4.Freeze()
-
-				border2 = Border()
-				border2.HorizontalAlignment = HorizontalAlignment.Stretch
-				border2.VerticalAlignment = VerticalAlignment.Stretch
-				border2.Margin = Thickness(0, 0, 0, 0)
-				border2.BorderThickness = Thickness(0, 1, 0, 0)
-				border2.BorderBrush = solidColorBrush4
-
-				stackPanel1.Children.Add(border2)
-
-				closeButton = Button()
-				closeButton.HorizontalAlignment = HorizontalAlignment.Right
-				closeButton.VerticalAlignment = VerticalAlignment.Center
-				closeButton.Margin = Thickness(10, 10, 10, 10)
-				closeButton.Padding = Thickness(10, 2, 10, 2)
-				closeButton.IsDefault = True
-
-				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-					closeButton.Content = "閉じる"
-				else:
-					closeButton.Content = "Close"
-
-				closeButton.Click += onCloseClick
-
-				border2.Child = closeButton
-
-				window.Show()
-
-			Task.Factory.StartNew(onVerify, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
-
-		dashboardMenuItem.Click += onDashboardClick
-
-		menuItem.Items.Add(dashboardMenuItem)
-		menuItem.Items.Add(Separator())
+		menuItem.Items.Insert(0, signInWithTwitterMenuItem)
+		menuItem.Items.Insert(1, Separator())
 
 		if askMenuItem is not None:
-			def onClick(sender, args):
-				from System.IO import Path
+			askMenuItem.IsEnabled = False
 
-				config = None
-				directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
-				backgroundBrush = None
-				textColor = SystemColors.ControlTextBrush
-			
-				if Directory.Exists(directory):
-					fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
+			menuItem.Items.Add(askMenuItem)
 		
-					for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
-						if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
-							exeConfigurationFileMap = ExeConfigurationFileMap()
-							exeConfigurationFileMap.ExeConfigFilename = fileName2
-							config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
+	elif askMenuItem is not None:
+		def onClick(sender, args):
+			from System.IO import Path
+
+			config = None
+			directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
+			backgroundBrush = None
+			textColor = SystemColors.ControlTextBrush
+			
+			if Directory.Exists(directory):
+				fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
+		
+				for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+					if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
+						exeConfigurationFileMap = ExeConfigurationFileMap()
+						exeConfigurationFileMap.ExeConfigFilename = fileName2
+						config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-				if config is None:
-					config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-					directory = None
+			if config is None:
+				config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
+				directory = None
 
-				if config.AppSettings.Settings["BackgroundImage"] is not None:
-					fs = None
-					bi = BitmapImage()
+			if config.AppSettings.Settings["BackgroundImage"] is not None:
+				fs = None
+				bi = BitmapImage()
 
-					try:
-						fs = FileStream(config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read)
+				try:
+					fs = FileStream(config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read)
 
-						bi.BeginInit()
-						bi.StreamSource = fs
-						bi.CacheOption = BitmapCacheOption.OnLoad
-						bi.CreateOptions = BitmapCreateOptions.None
-						bi.EndInit()
+					bi.BeginInit()
+					bi.StreamSource = fs
+					bi.CacheOption = BitmapCacheOption.OnLoad
+					bi.CreateOptions = BitmapCreateOptions.None
+					bi.EndInit()
 
-					finally:
-						if fs is not None:
-							fs.Close()
+				finally:
+					if fs is not None:
+						fs.Close()
 
-					backgroundBrush = ImageBrush(bi)
-					backgroundBrush.TileMode = TileMode.Tile
-					backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
-					backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
-					backgroundBrush.Stretch = Stretch.None
+				backgroundBrush = ImageBrush(bi)
+				backgroundBrush.TileMode = TileMode.Tile
+				backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
+				backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
+				backgroundBrush.Stretch = Stretch.None
+
+				if backgroundBrush.CanFreeze:
+					backgroundBrush.Freeze()
+
+			if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
+				if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
+					backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
 
 					if backgroundBrush.CanFreeze:
 						backgroundBrush.Freeze()
 
-				if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
-					if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
-						backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
+			if config.AppSettings.Settings["TextColor"] is not None:
+				if config.AppSettings.Settings["TextColor"].Value.Length > 0:
+					textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
 
-						if backgroundBrush.CanFreeze:
-							backgroundBrush.Freeze()
+			textBrush = SolidColorBrush(textColor)
 
-				if config.AppSettings.Settings["TextColor"] is not None:
-					if config.AppSettings.Settings["TextColor"].Value.Length > 0:
-						textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
+			if textBrush.CanFreeze:
+				textBrush.Freeze()
 
-				textBrush = SolidColorBrush(textColor)
-
-				if textBrush.CanFreeze:
-					textBrush.Freeze()
-
-				window = Window()
-				window.Owner = Application.Current.MainWindow
-				window.Title = Application.Current.MainWindow.Title
-				window.WindowStartupLocation = WindowStartupLocation.CenterOwner
-				window.ResizeMode = ResizeMode.NoResize
-				window.SizeToContent = SizeToContent.WidthAndHeight
-				window.Background = SystemColors.ControlBrush
+			window = Window()
+			window.Owner = Application.Current.MainWindow
+			window.Title = Application.Current.MainWindow.Title
+			window.WindowStartupLocation = WindowStartupLocation.CenterOwner
+			window.ResizeMode = ResizeMode.NoResize
+			window.SizeToContent = SizeToContent.WidthAndHeight
+			window.Background = SystemColors.WindowBrush
 				
-				stackPanel1 = StackPanel()
-				stackPanel1.UseLayoutRounding = True
-				stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel1.Orientation = Orientation.Vertical
+			stackPanel1 = StackPanel()
+			stackPanel1.UseLayoutRounding = True
+			stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
+			stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
+			stackPanel1.Orientation = Orientation.Vertical
 
-				window.Content = stackPanel1
+			window.Content = stackPanel1
 
-				stackPanel2 = StackPanel()
-				stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel2.Orientation = Orientation.Vertical
-				stackPanel2.Background = SystemColors.ControlBrush if backgroundBrush is None else backgroundBrush
+			stackPanel2 = StackPanel()
+			stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
+			stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
+			stackPanel2.Orientation = Orientation.Vertical
+			stackPanel2.Background = SystemColors.WindowBrush if backgroundBrush is None else backgroundBrush
 
-				stackPanel1.Children.Add(stackPanel2)
+			stackPanel1.Children.Add(stackPanel2)
 
-				gradientStopCollection = GradientStopCollection()
-				gradientStopCollection.Add(GradientStop(Color.FromArgb(0, 0, 0, 0), 0))
-				gradientStopCollection.Add(GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1))
+			gradientStopCollection = GradientStopCollection()
+			gradientStopCollection.Add(GradientStop(Color.FromArgb(0, 0, 0, 0), 0))
+			gradientStopCollection.Add(GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1))
 
-				linearGradientBrush = LinearGradientBrush(gradientStopCollection, Point(0.5, 0), Point(0.5, 1))
-				linearGradientBrush.Opacity = 0.1
+			linearGradientBrush = LinearGradientBrush(gradientStopCollection, Point(0.5, 0), Point(0.5, 1))
+			linearGradientBrush.Opacity = 0.1
 
-				if linearGradientBrush.CanFreeze:
-					linearGradientBrush.Freeze()
+			if linearGradientBrush.CanFreeze:
+				linearGradientBrush.Freeze()
 
-				stackPanel3 = StackPanel()
-				stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel3.Orientation = Orientation.Vertical
-				stackPanel3.Background = linearGradientBrush
+			stackPanel3 = StackPanel()
+			stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
+			stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
+			stackPanel3.Orientation = Orientation.Vertical
+			stackPanel3.Background = linearGradientBrush
 
-				stackPanel2.Children.Add(stackPanel3)
+			stackPanel2.Children.Add(stackPanel3)
 
-				solidColorBrush1 = SolidColorBrush(Colors.Black)
-				solidColorBrush1.Opacity = 0.25
+			solidColorBrush1 = SolidColorBrush(Colors.Black)
+			solidColorBrush1.Opacity = 0.25
 
-				if solidColorBrush1.CanFreeze:
-					solidColorBrush1.Freeze()
+			if solidColorBrush1.CanFreeze:
+				solidColorBrush1.Freeze()
 
-				border1 = Border()
-				border1.HorizontalAlignment = HorizontalAlignment.Stretch
-				border1.VerticalAlignment = VerticalAlignment.Stretch
-				border1.BorderThickness = Thickness(0, 0, 0, 1)
-				border1.BorderBrush = solidColorBrush1
+			border1 = Border()
+			border1.HorizontalAlignment = HorizontalAlignment.Stretch
+			border1.VerticalAlignment = VerticalAlignment.Stretch
+			border1.BorderThickness = Thickness(0, 0, 0, 1)
+			border1.BorderBrush = solidColorBrush1
 
-				stackPanel3.Children.Add(border1)
+			stackPanel3.Children.Add(border1)
 
-				stackPanel4 = StackPanel()
-				stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel4.Orientation = Orientation.Vertical
-				stackPanel4.Margin = Thickness(10, 10, 10, 20)
+			stackPanel4 = StackPanel()
+			stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
+			stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
+			stackPanel4.Orientation = Orientation.Vertical
+			stackPanel4.Margin = Thickness(10, 10, 10, 20)
 
-				border1.Child = stackPanel4
+			border1.Child = stackPanel4
 
-				stackPanel5 = StackPanel()
-				stackPanel5.HorizontalAlignment = HorizontalAlignment.Stretch
-				stackPanel5.VerticalAlignment = VerticalAlignment.Stretch
-				stackPanel5.Orientation = Orientation.Vertical
+			stackPanel5 = StackPanel()
+			stackPanel5.HorizontalAlignment = HorizontalAlignment.Stretch
+			stackPanel5.VerticalAlignment = VerticalAlignment.Stretch
+			stackPanel5.Orientation = Orientation.Vertical
 
-				dropShadowEffect = DropShadowEffect()
-				dropShadowEffect.BlurRadius = 1
-				dropShadowEffect.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White
-				dropShadowEffect.Direction = 270
-				dropShadowEffect.Opacity = 0.5
-				dropShadowEffect.ShadowDepth = 1
+			dropShadowEffect = DropShadowEffect()
+			dropShadowEffect.BlurRadius = 1
+			dropShadowEffect.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White
+			dropShadowEffect.Direction = 270
+			dropShadowEffect.Opacity = 0.5
+			dropShadowEffect.ShadowDepth = 1
 
-				if dropShadowEffect.CanFreeze:
-					dropShadowEffect.Freeze()
+			if dropShadowEffect.CanFreeze:
+				dropShadowEffect.Freeze()
 
-				stackPanel5.Effect = dropShadowEffect
+			stackPanel5.Effect = dropShadowEffect
 
-				stackPanel4.Children.Add(stackPanel5)
+			stackPanel4.Children.Add(stackPanel5)
 
-				label = Label()
-				label.Foreground = textBrush
+			label = Label()
+			label.Foreground = textBrush
 
-				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-					label.Content = "話しかける一言"
-				else:
-					label.Content = "Message"
+			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+				label.Content = "話しかける一言"
+			else:
+				label.Content = "Message"
 
-				RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
+			RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
 			
-				textColor = SystemColors.ControlText if textBrush is None else textBrush.Color
+			textColor = SystemColors.ControlText if textBrush is None else textBrush.Color
 
-				stackPanel5.Children.Add(label)
+			stackPanel5.Children.Add(label)
 
-				textBox = TextBox()
-				textBox.Width = 240
+			textBox = TextBox()
+			textBox.Width = 240
 			
-				stackPanel4.Children.Add(textBox)
+			stackPanel4.Children.Add(textBox)
 
-				solidColorBrush2 = SolidColorBrush(Colors.White)
-				solidColorBrush2.Opacity = 0.5
+			solidColorBrush2 = SolidColorBrush(Colors.White)
+			solidColorBrush2.Opacity = 0.5
 
-				if solidColorBrush2.CanFreeze:
-					solidColorBrush2.Freeze()
+			if solidColorBrush2.CanFreeze:
+				solidColorBrush2.Freeze()
 
-				border2 = Border()
-				border2.HorizontalAlignment = HorizontalAlignment.Stretch
-				border2.VerticalAlignment = VerticalAlignment.Stretch
-				border2.BorderThickness = Thickness(0, 1, 0, 0)
-				border2.BorderBrush = solidColorBrush2
+			border2 = Border()
+			border2.HorizontalAlignment = HorizontalAlignment.Stretch
+			border2.VerticalAlignment = VerticalAlignment.Stretch
+			border2.BorderThickness = Thickness(0, 1, 0, 0)
+			border2.BorderBrush = solidColorBrush2
 
-				stackPanel1.Children.Add(border2)
+			stackPanel1.Children.Add(border2)
 				
-				def onAskClick(source, rea):
-					if not String.IsNullOrEmpty(textBox.Text):
-						ask(textBox.Text)
+			def onAskClick(source, rea):
+				if not String.IsNullOrEmpty(textBox.Text):
+					ask(textBox.Text)
 
-					window.Close()
+				window.Close()
 
-				askButton = Button()
-				askButton.HorizontalAlignment = HorizontalAlignment.Right
-				askButton.VerticalAlignment = VerticalAlignment.Center
-				askButton.Margin = Thickness(10, 10, 10, 10)
-				askButton.Padding = Thickness(10, 2, 10, 2)
-				askButton.IsDefault = True
+			askButton = Button()
+			askButton.HorizontalAlignment = HorizontalAlignment.Right
+			askButton.VerticalAlignment = VerticalAlignment.Center
+			askButton.Margin = Thickness(10, 10, 10, 10)
+			askButton.Padding = Thickness(10, 5, 10, 5)
+			askButton.IsDefault = True
 
-				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-					askButton.Content = "話しかける"
-				else:
-					askButton.Content = "Ask"
+			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+				askButton.Content = "話しかける"
+			else:
+				askButton.Content = "Ask"
 
-				askButton.Click += onAskClick
+			askButton.Click += onAskClick
 
-				border2.Child = askButton
+			border2.Child = askButton
 
-				textBox.Focus()
-				window.Show()
+			textBox.Focus()
+			window.Show()
 
-			askMenuItem.Click += onClick
+		askMenuItem.Click += onClick
 
-			menuItem.Items.Add(askMenuItem)
-			menuItem.Items.Add(learnMenuItem)
-			menuItem.Items.Add(Separator())
+		menuItem.Items.Add(askMenuItem)
 	
+	learnMenuItem = MenuItem()
+	
+	if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+		learnMenuItem.Header = "言葉を教える..."
+	else:
+		learnMenuItem.Header = "Learn..."
+
+	def onLearnClick1(sender1, args1):
+		from System.IO import Path
+
+		config = None
+		directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
+		backgroundBrush = None
+		textColor = SystemColors.ControlTextBrush
+			
+		if Directory.Exists(directory):
+			fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
+		
+			for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+				if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
+					exeConfigurationFileMap = ExeConfigurationFileMap()
+					exeConfigurationFileMap.ExeConfigFilename = fileName2
+					config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
+	
+		if config is None:
+			config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
+			directory = None
+
+		if config.AppSettings.Settings["BackgroundImage"] is not None:
+			fs = None
+			bi = BitmapImage()
+
+			try:
+				fs = FileStream(config.AppSettings.Settings["BackgroundImage"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read)
+
+				bi.BeginInit()
+				bi.StreamSource = fs
+				bi.CacheOption = BitmapCacheOption.OnLoad
+				bi.CreateOptions = BitmapCreateOptions.None
+				bi.EndInit()
+
+			finally:
+				if fs is not None:
+					fs.Close()
+
+			backgroundBrush = ImageBrush(bi)
+			backgroundBrush.TileMode = TileMode.Tile
+			backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
+			backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
+			backgroundBrush.Stretch = Stretch.None
+
+			if backgroundBrush.CanFreeze:
+				backgroundBrush.Freeze()
+
+		if backgroundBrush is None and config.AppSettings.Settings["BackgroundColor"] is not None:
+			if config.AppSettings.Settings["BackgroundColor"].Value.Length > 0:
+				backgroundBrush = SolidColorBrush(ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value))
+
+				if backgroundBrush.CanFreeze:
+					backgroundBrush.Freeze()
+
+		if config.AppSettings.Settings["TextColor"] is not None:
+			if config.AppSettings.Settings["TextColor"].Value.Length > 0:
+				textColor = ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value)
+
+		textBrush = SolidColorBrush(textColor)
+
+		if textBrush.CanFreeze:
+			textBrush.Freeze()
+
+		window = Window()
+
+		stackPanel1 = StackPanel()
+		stackPanel1.UseLayoutRounding = True
+		stackPanel1.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel1.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel1.Orientation = Orientation.Vertical
+
+		stackPanel2 = StackPanel()
+		stackPanel2.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel2.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel2.Orientation = Orientation.Vertical
+		stackPanel2.Background = SystemColors.WindowBrush if backgroundBrush is None else backgroundBrush
+
+		gradientStopCollection = GradientStopCollection()
+		gradientStopCollection.Add(GradientStop(Color.FromArgb(0, 0, 0, 0), 0))
+		gradientStopCollection.Add(GradientStop(Color.FromArgb(Byte.MaxValue, 0, 0, 0), 1))
+
+		linearGradientBrush = LinearGradientBrush(gradientStopCollection, Point(0.5, 0), Point(0.5, 1))
+		linearGradientBrush.Opacity = 0.1
+
+		if linearGradientBrush.CanFreeze:
+			linearGradientBrush.Freeze()
+
+		stackPanel3 = StackPanel()
+		stackPanel3.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel3.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel3.Orientation = Orientation.Vertical
+		stackPanel3.Background = linearGradientBrush
+
+		solidColorBrush1 = SolidColorBrush(Colors.Black)
+		solidColorBrush1.Opacity = 0.25
+
+		if solidColorBrush1.CanFreeze:
+			solidColorBrush1.Freeze()
+
+		border1 = Border()
+		border1.HorizontalAlignment = HorizontalAlignment.Stretch
+		border1.VerticalAlignment = VerticalAlignment.Stretch
+		border1.BorderThickness = Thickness(0, 0, 0, 1)
+		border1.BorderBrush = solidColorBrush1
+
+		stackPanel4 = StackPanel()
+		stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel4.Orientation = Orientation.Vertical
+		stackPanel4.Margin = Thickness(10, 10, 10, 20)
+
+		stackPanel5 = StackPanel()
+		stackPanel5.HorizontalAlignment = HorizontalAlignment.Stretch
+		stackPanel5.VerticalAlignment = VerticalAlignment.Stretch
+		stackPanel5.Orientation = Orientation.Vertical
+
+		label = Label()
+		label.Foreground = textBrush
+
+		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+			label.Content = "教える言葉"
+		else:
+			label.Content = "Word"
+
+		RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled)
+			
+		textColor = SystemColors.ControlText if textBrush is None else textBrush.Color
+
+		dropShadowEffect = DropShadowEffect()
+		dropShadowEffect.BlurRadius = 1
+		dropShadowEffect.Color = Colors.Black if Math.Max(Math.Max(textColor.R, textColor.G), textColor.B) > Byte.MaxValue / 2 else Colors.White;
+		dropShadowEffect.Direction = 270
+		dropShadowEffect.Opacity = 0.5
+		dropShadowEffect.ShadowDepth = 1
+
+		if dropShadowEffect.CanFreeze:
+			dropShadowEffect.Freeze()
+
+		stackPanel5.Effect = dropShadowEffect
+		stackPanel5.Children.Add(label)
+
+		textBox = TextBox()
+		textBox.Width = 240
+			
+		stackPanel4.Children.Add(stackPanel5)
+		stackPanel4.Children.Add(textBox)
+			
+		border1.Child = stackPanel4
+
+		stackPanel3.Children.Add(border1)
+		stackPanel2.Children.Add(stackPanel3)
+		stackPanel1.Children.Add(stackPanel2)
+
+		def onLearnClick2(sender2, args2):
+			if not String.IsNullOrEmpty(textBox.Text):
+				Script.Instance.Learn(textBox.Text)
+
+			window.Close()
+
+		solidColorBrush2 = SolidColorBrush(Colors.White)
+		solidColorBrush2.Opacity = 0.5
+
+		if solidColorBrush2.CanFreeze:
+			solidColorBrush2.Freeze()
+
+		border2 = Border()
+		border2.HorizontalAlignment = HorizontalAlignment.Stretch
+		border2.VerticalAlignment = VerticalAlignment.Stretch
+		border2.BorderThickness = Thickness(0, 1, 0, 0)
+		border2.BorderBrush = solidColorBrush2
+
+		learnButton = Button()
+		learnButton.HorizontalAlignment = HorizontalAlignment.Right
+		learnButton.VerticalAlignment = VerticalAlignment.Center
+		learnButton.Margin = Thickness(10, 10, 10, 10)
+		learnButton.Padding = Thickness(10, 5, 10, 5)
+		learnButton.IsDefault = True
+
+		if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
+			learnButton.Content = "教える"
+		else:
+			learnButton.Content = "Learn"
+
+		learnButton.Click += onLearnClick2
+
+		border2.Child = learnButton
+		stackPanel1.Children.Add(border2)
+		textBox.Focus()
+			
+		window.Owner = Application.Current.MainWindow
+		window.Title = Application.Current.MainWindow.Title
+		window.WindowStartupLocation = WindowStartupLocation.CenterOwner
+		window.ResizeMode = ResizeMode.NoResize
+		window.SizeToContent = SizeToContent.WidthAndHeight
+		window.Background = SystemColors.WindowBrush
+		window.Content = stackPanel1
+		window.Show()
+	
+	learnMenuItem.Click += onLearnClick1
+
+	menuItem.Items.Add(learnMenuItem)
+	menuItem.Items.Add(Separator())
+
 	pingMenuItem = MenuItem()
 	
 	if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
@@ -4586,10 +3850,10 @@ def onOpened(s, e):
 				stackPanel.Children.Add(textBlock2)
 
 			def onClick(sender, args):
-				def onStart(state):
+				def onLaunch(state):
 					Process.Start(state)
 
-				Task.Factory.StartNew(onStart, sender.Tag.ToString())
+				Task.Factory.StartNew(onLaunch, sender.Tag.ToString())
 
 			mi = MenuItem()
 			mi.Header = stackPanel
@@ -4724,7 +3988,7 @@ def onIsVisibleChanged(s, e):
 				sequenceList = List[Sequence]()
 								
 				for sequence in Script.Instance.Sequences:
-					if sequence.Name.Equals("Charge") and kvp.Key.Equals(sequence.Owner):
+					if sequence.Name.Equals("Charge"):
 						sequenceList.Add(sequence)
 
 				Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, tempTermList2.Count.ToString(CultureInfo.InvariantCulture)))
@@ -4840,7 +4104,7 @@ def onIsVisibleChanged(s, e):
 							sequenceList = List[Sequence]()
 								
 							for sequence in Script.Instance.Sequences:
-								if sequence.Name.Equals("Charge") and kvp.Key.Equals(sequence.Owner):
+								if sequence.Name.Equals("Charge"):
 									sequenceList.Add(sequence)
 
 							Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
@@ -4861,7 +4125,7 @@ def onIsVisibleChanged(s, e):
 										success, likes = likesDictionary.TryGetValue(character.Name)
 
 										if success:
-											for i in range(likes):
+											for i in range(likes.Count):
 												characterList.Add(character)
 
 										characterList.Add(character)
@@ -4886,6 +4150,21 @@ def onIsVisibleChanged(s, e):
 										sequenceList.Add(sequence)
 
 								Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+
+							if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
+								def onPlay():
+									soundPlayer = None
+
+									try:
+										soundPlayer = SoundPlayer("Assets\\Transform.wav")
+										soundPlayer.Load()
+										soundPlayer.PlaySync()
+
+									finally:
+										if soundPlayer is not None:
+											soundPlayer.Dispose()
+									
+								Task.Factory.StartNew(onPlay)
 
 					Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 
@@ -4925,6 +4204,8 @@ def onIsVisibleChanged(s, e):
 
 						def onCurrentStateInvalidated2(sender3, args3):
 							if sender3.CurrentState == ClockState.Filling:
+								isCharged = False
+
 								if isLocked:
 									for key in termHashSet:
 										if not chargesDictionary.ContainsKey(key):
@@ -4966,11 +4247,30 @@ def onIsVisibleChanged(s, e):
 											
 										for element1 in stackPanel1.Children:
 											for element2 in element1.Children:
+												
+												if not isCharged:
+													for element3 in element2.Child.Children:
+														if clr.GetClrType(Grid).IsInstanceOfType(element3):
+															for element4 in element3.Children:
+																if clr.GetClrType(Grid).IsInstanceOfType(element4) and dictionary.ContainsKey(element2.Child.Tag):
+																	sum = 0.0
+
+																	for score in element4.Tag:
+																		sum += score
+
+																	if sum >= max:
+																		isCharged = True
+
+																		break
+
+															if isCharged:
+																break
+
 												index = list.IndexOf(element2.Child.Tag)
 
 												if index >= 0:
-													element2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 153))
-													ca = ColorAnimation(element2.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153), TimeSpan.FromMilliseconds(500))
+													element2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
+													ca = ColorAnimation(element2.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
 													se = SineEase()
 
 													se.EasingMode = EasingMode.EaseOut
@@ -5010,7 +4310,7 @@ def onIsVisibleChanged(s, e):
 																			sender4.Tag.Stop(sender4)
 
 																		sender4.Tag = sb2 = Storyboard()
-																		ca = ColorAnimation(sender4.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153), TimeSpan.FromMilliseconds(500))
+																		ca = ColorAnimation(sender4.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
 																		se1 = SineEase()
 
 																		se1.EasingMode = EasingMode.EaseOut
@@ -5018,7 +4318,7 @@ def onIsVisibleChanged(s, e):
 
 																		def onCurrentStateInvalidated3(sender5, args5):
 																			if sender5.CurrentState == ClockState.Filling:
-																				sender4.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153))
+																				sender4.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
 																				sender4.Tag = None
 																				sb2.Remove(sender4)
 
@@ -5066,7 +4366,7 @@ def onIsVisibleChanged(s, e):
 																			sender4.Tag.Stop(sender4)
 
 																		sender4.Tag = sb2 = Storyboard()
-																		ca = ColorAnimation(sender4.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 153), TimeSpan.FromMilliseconds(500))
+																		ca = ColorAnimation(sender4.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
 																		se = SineEase()
 
 																		se.EasingMode = EasingMode.EaseIn
@@ -5074,7 +4374,7 @@ def onIsVisibleChanged(s, e):
 
 																		def onCurrentStateInvalidated3(sender5, args5):
 																			if sender5.CurrentState == ClockState.Filling:
-																				sender4.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 153))
+																				sender4.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 																				sender4.Tag = None
 																				sb2.Remove(sender4)
 
@@ -5129,7 +4429,7 @@ def onIsVisibleChanged(s, e):
 																		if sender4.Tag is not None:
 																			sender4.Tag.Stop(sender4)
 
-																		if termHashSet.Contains(sender4.Child.Tag) and sender4.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+																		if termHashSet.Contains(sender4.Child.Tag) and sender4.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
 																			sb3 = Storyboard()
 																			da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
 																			da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
@@ -5215,7 +4515,7 @@ def onIsVisibleChanged(s, e):
 																					sequenceList = List[Sequence]()
 								
 																					for sequence in Script.Instance.Sequences:
-																						if sequence.Name.Equals("Charge") and kvp.Key.Equals(sequence.Owner):
+																						if sequence.Name.Equals("Charge"):
 																							sequenceList.Add(sequence)
 
 																					Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
@@ -5236,7 +4536,7 @@ def onIsVisibleChanged(s, e):
 																								success, likes = likesDictionary.TryGetValue(character.Name)
 
 																								if success:
-																									for i in range(likes):
+																									for i in range(likes.Count):
 																										characterList.Add(character)
 
 																								characterList.Add(character)
@@ -5262,11 +4562,26 @@ def onIsVisibleChanged(s, e):
 
 																						Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
+																					if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
+																						def onPlay():
+																							soundPlayer = None
+
+																							try:
+																								soundPlayer = SoundPlayer("Assets\\Transform.wav")
+																								soundPlayer.Load()
+																								soundPlayer.PlaySync()
+
+																							finally:
+																								if soundPlayer is not None:
+																									soundPlayer.Dispose()
+									
+																						Task.Factory.StartNew(onPlay)
+
 																			Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 
 																		else:
 																			sender4.Tag = sb2 = Storyboard()
-																			color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153) if termHashSet.Contains(sender4.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 153)
+																			color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102) if termHashSet.Contains(sender4.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 102)
 																			isPressed = True if (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control else False
 																			ca = ColorAnimation(sender4.Background.Color, color, TimeSpan.FromMilliseconds(500))
 																			se1 = SineEase()
@@ -5366,7 +4681,7 @@ def onIsVisibleChanged(s, e):
 																								sequenceList = List[Sequence]()
 								
 																								for sequence in Script.Instance.Sequences:
-																									if sequence.Name.Equals("Charge") and kvp.Key.Equals(sequence.Owner):
+																									if sequence.Name.Equals("Charge"):
 																										sequenceList.Add(sequence)
 
 																								Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
@@ -5387,7 +4702,7 @@ def onIsVisibleChanged(s, e):
 																											success, likes = likesDictionary.TryGetValue(character.Name)
 
 																											if success:
-																												for i in range(likes):
+																												for i in range(likes.Count):
 																													characterList.Add(character)
 
 																											characterList.Add(character)
@@ -5413,6 +4728,21 @@ def onIsVisibleChanged(s, e):
 
 																									Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
+																								if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
+																									def onPlay():
+																										soundPlayer = None
+
+																										try:
+																											soundPlayer = SoundPlayer("Assets\\Transform.wav")
+																											soundPlayer.Load()
+																											soundPlayer.PlaySync()
+
+																										finally:
+																											if soundPlayer is not None:
+																												soundPlayer.Dispose()
+									
+																									Task.Factory.StartNew(onPlay)
+
 																						Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 																						
 																			sb2.CurrentStateInvalidated += onCurrentStateInvalidated3
@@ -5422,10 +4752,26 @@ def onIsVisibleChanged(s, e):
 
 																			sender4.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
 
-																element2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 153))
+																element2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 																element2.MouseEnter += onMouseEnter
 																element2.MouseLeave += onMouseLeave
 																element2.MouseLeftButtonUp += onMouseLeftButtonUp
+																isCharged = True
+
+								if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked and isCharged:
+									def onPlay():
+										soundPlayer = None
+
+										try:
+											soundPlayer = SoundPlayer("Assets\\Charge.wav")
+											soundPlayer.Load()
+											soundPlayer.PlaySync()
+
+										finally:
+											if soundPlayer is not None:
+												soundPlayer.Dispose()
+									
+									Task.Factory.StartNew(onPlay)
 
 						sb1.CurrentStateInvalidated += onCurrentStateInvalidated2
 
@@ -5711,7 +5057,7 @@ def onIsVisibleChanged(s, e):
 									sender1.Tag.Stop(sender1)
 
 								sender1.Tag = sb1 = Storyboard()
-								ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153), TimeSpan.FromMilliseconds(500))
+								ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
 								se1 = SineEase()
 
 								se1.EasingMode = EasingMode.EaseOut
@@ -5719,7 +5065,7 @@ def onIsVisibleChanged(s, e):
 
 								def onCurrentStateInvalidated1(sender2, args2):
 									if sender2.CurrentState == ClockState.Filling:
-										sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153))
+										sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
 										sender1.Tag = None
 										sb1.Remove(sender1)
 
@@ -5767,7 +5113,7 @@ def onIsVisibleChanged(s, e):
 									sender1.Tag.Stop(sender1)
 
 								sender1.Tag = sb1 = Storyboard()
-								ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 153), TimeSpan.FromMilliseconds(500))
+								ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
 								se1 = SineEase()
 
 								se1.EasingMode = EasingMode.EaseIn
@@ -5775,7 +5121,7 @@ def onIsVisibleChanged(s, e):
 
 								def onCurrentStateInvalidated1(sender2, args2):
 									if sender2.CurrentState == ClockState.Filling:
-										sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 153))
+										sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 										sender1.Tag = None
 										sb1.Remove(sender1)
 
@@ -5830,7 +5176,7 @@ def onIsVisibleChanged(s, e):
 								if sender1.Tag is not None:
 									sender1.Tag.Stop(sender1)
 
-								if termHashSet.Contains(sender1.Child.Tag) and sender1.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+								if termHashSet.Contains(sender1.Child.Tag) and sender1.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
 									sb2 = Storyboard()
 									da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
 									da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
@@ -5916,7 +5262,7 @@ def onIsVisibleChanged(s, e):
 											sequenceList = List[Sequence]()
 								
 											for sequence in Script.Instance.Sequences:
-												if sequence.Name.Equals("Charge") and kvp.Key.Equals(sequence.Owner):
+												if sequence.Name.Equals("Charge"):
 													sequenceList.Add(sequence)
 
 											Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
@@ -5937,7 +5283,7 @@ def onIsVisibleChanged(s, e):
 														success, likes = likesDictionary.TryGetValue(character.Name)
 
 														if success:
-															for i in range(likes):
+															for i in range(likes.Count):
 																characterList.Add(character)
 
 														characterList.Add(character)
@@ -5963,11 +5309,26 @@ def onIsVisibleChanged(s, e):
 
 												Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 									
+											if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
+												def onPlay():
+													soundPlayer = None
+
+													try:
+														soundPlayer = SoundPlayer("Assets\\Transform.wav")
+														soundPlayer.Load()
+														soundPlayer.PlaySync()
+
+													finally:
+														if soundPlayer is not None:
+															soundPlayer.Dispose()
+									
+												Task.Factory.StartNew(onPlay)
+
 									Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 									
 								else:
 									sender1.Tag = sb1 = Storyboard()
-									color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153) if termHashSet.Contains(sender1.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 153)
+									color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102) if termHashSet.Contains(sender1.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 102)
 									isPressed = True if (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control else False
 									ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
 									se1 = SineEase()
@@ -6067,7 +5428,7 @@ def onIsVisibleChanged(s, e):
 														sequenceList = List[Sequence]()
 								
 														for sequence in Script.Instance.Sequences:
-															if sequence.Name.Equals("Charge") and kvp.Key.Equals(sequence.Owner):
+															if sequence.Name.Equals("Charge"):
 																sequenceList.Add(sequence)
 
 														Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
@@ -6088,7 +5449,7 @@ def onIsVisibleChanged(s, e):
 																	success, likes = likesDictionary.TryGetValue(character.Name)
 
 																	if success:
-																		for i in range(likes):
+																		for i in range(likes.Count):
 																			characterList.Add(character)
 
 																	characterList.Add(character)
@@ -6114,6 +5475,21 @@ def onIsVisibleChanged(s, e):
 
 															Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
+														if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
+															def onPlay():
+																soundPlayer = None
+
+																try:
+																	soundPlayer = SoundPlayer("Assets\\Transform.wav")
+																	soundPlayer.Load()
+																	soundPlayer.PlaySync()
+
+																finally:
+																	if soundPlayer is not None:
+																		soundPlayer.Dispose()
+									
+															Task.Factory.StartNew(onPlay)
+
 												Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 												
 									sb1.CurrentStateInvalidated += onCurrentStateInvalidated1
@@ -6123,7 +5499,7 @@ def onIsVisibleChanged(s, e):
 
 									sender1.BeginStoryboard(sb1, HandoffBehavior.SnapshotAndReplace, True)
 
-						border2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 153))
+						border2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 						border2.MouseEnter += onMouseEnter
 						border2.MouseLeave += onMouseLeave
 						border2.MouseLeftButtonUp += onMouseLeftButtonUp
@@ -6174,7 +5550,7 @@ def onIsVisibleChanged(s, e):
 
 				grid2.Children.Add(image)
 
-				solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 153))
+				solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 102))
 
 				if solidColorBrush2.CanFreeze:
 					solidColorBrush2.Freeze()
@@ -6339,22 +5715,13 @@ def visit(character, terms):
 
 				Script.Instance.TryEnqueue(preparedSequenceList)
 
-				if likesDictionary.Count > 0:
-					for kvp in likesDictionary:
-						likeSequenceList = List[Sequence]()
-								
-						for sequence in Script.Instance.Sequences:
-							if sequence.Name.Equals("Like") and kvp.Key.Equals(sequence.Owner):
-								likeSequenceList.Add(sequence)
+				likeSequenceList = List[Sequence]()
+						
+				for sequence in Script.Instance.Sequences:
+					if sequence.Name.Equals("Like") and character.Name.Equals(sequence.Owner):
+						likeSequenceList.Add(sequence)
 
-						if likeSequenceList.Count > 0 and not Script.Instance.TryEnqueue(Script.Instance.Prepare(likeSequenceList, kvp.Value.ToString(CultureInfo.InvariantCulture))):
-							s = Sequence()
-							s.Owner = kvp.Key
-							s.Add(Collection[Motion]())
-
-							Script.Instance.TryEnqueue([s])
-				
-				else:
+				if not Script.Instance.TryEnqueue(Script.Instance.Prepare(likeSequenceList, (likesDictionary[character.Name].Count if likesDictionary.ContainsKey(character.Name) else 0).ToString(CultureInfo.InvariantCulture))):
 					s = Sequence()
 					s.Owner = character.Name
 					s.Add(Collection[Motion]())
@@ -6391,56 +5758,52 @@ def visit(character, terms):
 				context = TaskScheduler.FromCurrentSynchronizationContext()
 	
 				def onLoad():
-					fs1 = None
-					sr1 = None
-					fs2 = None
-					sr2 = None
+					fileStream1 = None
+					streamReader1 = None
+					fileStream2 = None
+					streamReader2 = None
 
 					try:
-						fs1 = FileStream("Words.json", FileMode.Open, FileAccess.Read, FileShare.Read)
-						sr1 = StreamReader(fs1, UTF8Encoding(False), True)
-						json = Json.decode(sr1.ReadToEnd())
+						fileStream1 = FileStream("Words.json", FileMode.Open, FileAccess.Read, FileShare.Read)
+						streamReader1 = StreamReader(fileStream1, UTF8Encoding(False), True)
+						jsonArray = Json.decode(streamReader1.ReadToEnd())
 			
-						if json is not None:
-							if clr.GetClrType(Array).IsInstanceOfType(json):
-								for obj in json:
-									if obj is not None:
-										if clr.GetClrType(String).IsInstanceOfType(obj):
-											wordList.Add(obj)
+						if jsonArray is not None and clr.GetClrType(Array).IsInstanceOfType(jsonArray):
+							for obj in jsonArray:
+								if obj is not None and clr.GetClrType(String).IsInstanceOfType(obj):
+									wordList.Add(obj)
 
-						fs2 = FileStream("Training.json", FileMode.Open, FileAccess.Read, FileShare.Read)
-						sr2 = StreamReader(fs2, UTF8Encoding(False), True)
-						json = Json.decode(sr2.ReadToEnd())
+						fileStream2 = FileStream("Training.json", FileMode.Open, FileAccess.Read, FileShare.Read)
+						streamReader2 = StreamReader(fileStream2, UTF8Encoding(False), True)
+						jsonDictionary = Json.decode(streamReader2.ReadToEnd())
 			
-						if json is not None:
-							if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-								for kvp in json:
-									if kvp.Value is not None:
-										if clr.GetClrType(Array).IsInstanceOfType(kvp.Value):
-											list = List[String]()
+						if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary):
+							for kvp in jsonDictionary:
+								if kvp.Value is not None and clr.GetClrType(Array).IsInstanceOfType(kvp.Value):
+									list = List[String]()
 
-											for s in kvp.Value:
-												if clr.GetClrType(String).IsInstanceOfType(s):
-													list.Add(s)
+									for s in kvp.Value:
+										if clr.GetClrType(String).IsInstanceOfType(s):
+											list.Add(s)
 						
-											documentDictionary.Add(kvp.Key, list)
+									documentDictionary.Add(kvp.Key, list)
 
 					except Exception, e:
 						Trace.WriteLine(e.clsException.Message)
 						Trace.WriteLine(e.clsException.StackTrace)
 
 					finally:
-						if sr2 is not None:
-							sr2.Close()
+						if streamReader2 is not None:
+							streamReader2.Close()
 
-						if fs2 is not None:
-							fs2.Close()
+						if fileStream2 is not None:
+							fileStream2.Close()
 
-						if sr1 is not None:
-							sr1.Close()
+						if streamReader1 is not None:
+							streamReader1.Close()
 
-						if fs1 is not None:
-							fs1.Close()
+						if fileStream1 is not None:
+							fileStream1.Close()
 	
 				def onReady(task):
 					tempWordDictionary = Dictionary[Char, List[String]]()
@@ -7137,7 +6500,7 @@ def attachAnnotationStackPanel(stackPanel, color, text):
 	sp = StackPanel()
 	sp.HorizontalAlignment = HorizontalAlignment.Right
 	sp.VerticalAlignment = VerticalAlignment.Stretch
-	sp.Margin = Thickness(10, 5, 10, 0)
+	sp.Margin = Thickness(10, 5, 0, 0)
 	sp.Orientation = Orientation.Vertical
 
 	stackPanel.Children.Add(sp)
@@ -7722,10 +7085,7 @@ def getTermList(dictionary, text):
 	return selectedTermList
 	
 def onStart(s, e):
-	global username, password, oauthToken, oauthTokenSecret, balloonList, menuItem, separator, timer, chargesDictionary, imageDictionary
-
-	username = None
-	password = None
+	global balloonList, menuItem, separator, timer, chargesDictionary, imageDictionary
 
 	tempList = List[Balloon]()
 
@@ -8108,7 +7468,7 @@ def onStart(s, e):
 												sender1.Tag.Stop(sender1)
 
 											sender1.Tag = sb1 = Storyboard()
-											ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153), TimeSpan.FromMilliseconds(500))
+											ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
 											se1 = SineEase()
 
 											se1.EasingMode = EasingMode.EaseOut
@@ -8116,7 +7476,7 @@ def onStart(s, e):
 
 											def onCurrentStateInvalidated1(sender2, args2):
 												if sender2.CurrentState == ClockState.Filling:
-													sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153))
+													sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
 													sender1.Tag = None
 													sb1.Remove(sender1)
 
@@ -8164,7 +7524,7 @@ def onStart(s, e):
 												sender1.Tag.Stop(sender1)
 
 											sender1.Tag = sb1 = Storyboard()
-											ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 153), TimeSpan.FromMilliseconds(500))
+											ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
 											se1 = SineEase()
 
 											se1.EasingMode = EasingMode.EaseIn
@@ -8172,7 +7532,7 @@ def onStart(s, e):
 
 											def onCurrentStateInvalidated(sender2, args2):
 												if sender2.CurrentState == ClockState.Filling:
-													sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 153))
+													sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 													sender1.Tag = None
 													sb1.Remove(sender1)
 
@@ -8227,7 +7587,7 @@ def onStart(s, e):
 											if sender1.Tag is not None:
 												sender1.Tag.Stop(sender1)
 
-											if termHashSet.Contains(sender1.Child.Tag) and sender1.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+											if termHashSet.Contains(sender1.Child.Tag) and sender1.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
 												sb2 = Storyboard()
 												da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
 												da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
@@ -8313,7 +7673,7 @@ def onStart(s, e):
 														sequenceList = List[Sequence]()
 								
 														for sequence in Script.Instance.Sequences:
-															if sequence.Name.Equals("Charge") and kvp.Key.Equals(sequence.Owner):
+															if sequence.Name.Equals("Charge"):
 																sequenceList.Add(sequence)
 
 														Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
@@ -8334,7 +7694,7 @@ def onStart(s, e):
 																	success, likes = likesDictionary.TryGetValue(character.Name)
 
 																	if success:
-																		for i in range(likes):
+																		for i in range(likes.Count):
 																			characterList.Add(character)
 
 																	characterList.Add(character)
@@ -8360,11 +7720,26 @@ def onStart(s, e):
 
 															Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
+														if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
+															def onPlay():
+																soundPlayer = None
+
+																try:
+																	soundPlayer = SoundPlayer("Assets\\Transform.wav")
+																	soundPlayer.Load()
+																	soundPlayer.PlaySync()
+
+																finally:
+																	if soundPlayer is not None:
+																		soundPlayer.Dispose()
+									
+															Task.Factory.StartNew(onPlay)
+
 												Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 												
 											else:
 												sender1.Tag = sb1 = Storyboard()
-												color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 153) if termHashSet.Contains(sender1.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 153)
+												color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102) if termHashSet.Contains(sender1.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 102)
 												isPressed = True if (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control else False
 												ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
 												se1 = SineEase()
@@ -8464,7 +7839,7 @@ def onStart(s, e):
 																	sequenceList = List[Sequence]()
 								
 																	for sequence in Script.Instance.Sequences:
-																		if sequence.Name.Equals("Charge") and kvp.Key.Equals(sequence.Owner):
+																		if sequence.Name.Equals("Charge"):
 																			sequenceList.Add(sequence)
 
 																	Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
@@ -8485,7 +7860,7 @@ def onStart(s, e):
 																				success, likes = likesDictionary.TryGetValue(character.Name)
 
 																				if success:
-																					for i in range(likes):
+																					for i in range(likes.Count):
 																						characterList.Add(character)
 
 																				characterList.Add(character)
@@ -8511,6 +7886,21 @@ def onStart(s, e):
 
 																		Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
+																	if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
+																		def onPlay():
+																			soundPlayer = None
+
+																			try:
+																				soundPlayer = SoundPlayer("Assets\\Transform.wav")
+																				soundPlayer.Load()
+																				soundPlayer.PlaySync()
+
+																			finally:
+																				if soundPlayer is not None:
+																					soundPlayer.Dispose()
+									
+																		Task.Factory.StartNew(onPlay)
+
 															Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 															
 												sb1.CurrentStateInvalidated += onCurrentStateInvalidated1
@@ -8520,7 +7910,7 @@ def onStart(s, e):
 
 												sender1.BeginStoryboard(sb1, HandoffBehavior.SnapshotAndReplace, True)
 
-									border2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 153))
+									border2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 									border2.MouseEnter += onMouseEnter
 									border2.MouseLeave += onMouseLeave
 									border2.MouseLeftButtonUp += onMouseLeftButtonUp
@@ -8577,7 +7967,7 @@ def onStart(s, e):
 
 								grid2.Children.Add(image)
 
-								solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 153))
+								solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 102))
 
 								if solidColorBrush2.CanFreeze:
 									solidColorBrush2.Freeze()
@@ -8689,194 +8079,114 @@ def onStart(s, e):
 	balloonList.Clear()
 	balloonList.AddRange(tempList)
 	
-	if not String.IsNullOrEmpty(oauthToken) and not String.IsNullOrEmpty(oauthTokenSecret):
-		sortedDictionary = createCommonParameters(consumerKey)
-		sortedDictionary.Add("oauth_token", oauthToken)
+	if File.Exists("Likes.json"):
+		nameList = List[String]()
+		currentLikesDictionary = Dictionary[String, List[DateTime]]()
 
-		hmacsha1 = HMACSHA1(Encoding.ASCII.GetBytes(String.Concat(consumerSecret, "&", oauthTokenSecret)))
-		signature = Convert.ToBase64String(hmacsha1.ComputeHash(Encoding.ASCII.GetBytes(createSignatureBase(WebRequestMethods.Http.Get, Uri("https://api.twitter.com/1.1/account/verify_credentials.json"), sortedDictionary))))
+		for character in Script.Instance.Characters:
+			nameList.Add(character.Name)
 
-		sortedDictionary.Add("realm", "http://api.twitter.com/")
-		sortedDictionary.Add("oauth_signature", signature)
-
-		verifyRequest = WebRequest.Create("http://api.apricotan.net/verify")
-		verifyRequest.PreAuthenticate = True
-		verifyRequest.Method = WebRequestMethods.Http.Get
-		verifyRequest.Headers.Add("X-Verify-Credentials-Authorization", createHttpAuthorizationHeader(sortedDictionary))
-		verifyRequest.Headers.Add("X-Auth-Service-Provider", "https://api.twitter.com/1.1/account/verify_credentials.json")
-		likesRequestList = List[WebRequest]()
-		verifyDictionary = Dictionary[String, String]()
-		userDictionary = Dictionary[String, Double]()
-		currentLikesDictionary = Dictionary[String, Int32]()
-		context = TaskScheduler.FromCurrentSynchronizationContext()
-
-		def onVerify():
-			if NetworkInterface.GetIsNetworkAvailable():
+		def onUpdate():
+			try:
+				fileStream = None
+				streamReader = None
+				
 				try:
-					response = None
-					stream = None
-					streamReader = None
+					dt1 = DateTime.Now - TimeSpan(7 * 2, 0, 0, 0)
+					fileStream = FileStream("Likes.json", FileMode.Open, FileAccess.ReadWrite, FileShare.Read)
+					encoding = UTF8Encoding(False)
+					streamReader = StreamReader(fileStream, encoding, True)
+					jsonDictionary = Json.decode(streamReader.ReadToEnd())
 
-					try:
-						response = verifyRequest.GetResponse()
+					if jsonDictionary is not None and clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(jsonDictionary):
+						keyHashSet = HashSet[String](jsonDictionary.Keys)
+
+						for key in nameList.ConvertAll[String](lambda x: Convert.ToBase64String(Encoding.UTF8.GetBytes(x))):
+							if not keyHashSet.Contains(key):
+								keyHashSet.Add(key)
+
+						for key in keyHashSet:
+							name = Encoding.UTF8.GetString(Convert.FromBase64String(key))
+							
+							currentLikesDictionary.Add(name, List[DateTime]())
+
+							if jsonDictionary.ContainsKey(key):
+								list = List[String]()
+
+								if jsonDictionary[key] is not None:
+									if clr.GetClrType(Array).IsInstanceOfType(jsonDictionary[key]):
+										for value in jsonDictionary[key]:
+											if clr.GetClrType(String).IsInstanceOfType(value):
+												dt2 = DateTime(Int64.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(value))))
+
+												if dt2 > dt1:
+													currentLikesDictionary[name].Add(dt2)
+													list.Add(value)
+
+									else:
+										currentLikesDictionary.Clear()
+
+										return
+
+								if list.Count > 0 or nameList.Contains(name):
+									jsonDictionary[key] = list.ToArray()
+								else:
+									jsonDictionary.Remove(key)
+
+						if jsonDictionary.Count > 0:
+							json = Json.encode(jsonDictionary)
+
+							if json is not None:
+								fileStream.SetLength(0)
+								streamWriter = None
 						
-						if response.StatusCode == HttpStatusCode.OK:
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
+								try:
+									streamWriter = StreamWriter(fileStream, encoding)
+									streamWriter.Write(json)
 
-							if json is not None:
-								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-									if json.ContainsKey("user"):
-										user = json["user"]
-										
-										if user is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-												if user.ContainsKey("name"):
-													if clr.GetClrType(String).IsInstanceOfType(user["name"]):
-														verifyDictionary.Add("name", user["name"])
-
-												if user.ContainsKey("password"):
-													if clr.GetClrType(String).IsInstanceOfType(user["password"]):
-														verifyDictionary.Add("password", user["password"])
-
-					finally:
-						if streamReader is not None:
+								finally:
+									if streamWriter is not None:
+										streamWriter.Close()
+						
+						else:
 							streamReader.Close()
+							streamReader = None
+							fileStream.Close()
+							fileStream = None
+							File.Delete("Likes.json")
 
-						if stream is not None:
-							stream.Close()
-			
-						if response is not None:
-							response.Close()
+				finally:
+					if streamReader is not None:
+						streamReader.Close()
 
-				except Exception, e:
-					Trace.WriteLine(e.clsException.Message)
-					Trace.WriteLine(e.clsException.StackTrace)
+					if fileStream is not None:
+						fileStream.Close()
 
-		def onReady(task):
-			global username, password
-
-			for kvp in verifyDictionary:
-				if kvp.Key.Equals("name"):
-					username = kvp.Value
-				elif kvp.Key.Equals("password"):
-					password = kvp.Value
-
-			if username is not None:
-				for character in Script.Instance.Characters:
-					likesRequest = WebRequest.Create(String.Format("http://api.apricotan.net/likes?character_name={0}&user_name={1}&limit=50", urlEncode(character.Name), urlEncode(username)))
-					likesRequest.Method = WebRequestMethods.Http.Get
-
-					likesRequestList.Add(likesRequest)
-
-		def onUpdate(task):
-			if NetworkInterface.GetIsNetworkAvailable():
-				try:
-					if verifyDictionary.ContainsKey("name"):
-						request = WebRequest.Create(String.Concat("http://api.apricotan.net/user?name=", verifyDictionary["name"]))
-						request.Method = WebRequestMethods.Http.Get
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = request.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(json):
-									if json.ContainsKey("user"):
-										user = json["user"]
-										
-										if user is not None:
-											if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(user):
-												for kvp in user:
-													if clr.GetClrType(Double).IsInstanceOfType(kvp.Value):
-														userDictionary.Add(kvp.Key, kvp.Value)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-								
-							if response is not None:
-								response.Close()
-
-					dt = DateTime.Now - TimeSpan(7 * 2, 0, 0, 0)
-
-					for likesRequest in likesRequestList:
-						response = None
-						stream = None
-						streamReader = None
-
-						try:
-							response = likesRequest.GetResponse()
-							stream = response.GetResponseStream()
-							streamReader = StreamReader(stream)
-							json = Json.decode(streamReader.ReadToEnd())
-
-							if json is not None:
-								if clr.GetClrType(Array).IsInstanceOfType(json):
-									for obj in json:
-										if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(obj):
-											if obj.ContainsKey("like"):
-												like = obj["like"]
-													
-												if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(like):
-													if like.ContainsKey("character") and like.ContainsKey("created"):
-														character = like["character"]
-
-														if clr.GetClrType(Dictionary[String, Object]).IsInstanceOfType(character) and clr.GetClrType(String).IsInstanceOfType(like["created"]):
-															created = DateTime.Parse(like["created"])
-																
-															if character.ContainsKey("name") and created > dt:
-																if clr.GetClrType(String).IsInstanceOfType(character["name"]):
-																	if currentLikesDictionary.ContainsKey(character["name"]):
-																		currentLikesDictionary[character["name"]] += 1
-																	else:
-																		currentLikesDictionary.Add(character["name"], 1)
-
-						finally:
-							if streamReader is not None:
-								streamReader.Close()
-
-							if stream is not None:
-								stream.Close()
-			
-							if response is not None:
-								response.Close()
-
-				except Exception, e:
-					Trace.WriteLine(e.clsException.Message)
-					Trace.WriteLine(e.clsException.StackTrace)
+			except Exception, e:
+				Trace.WriteLine(e.clsException.Message)
+				Trace.WriteLine(e.clsException.StackTrace)
 
 		def onCompleted(task):
-			global remainingCount, likesDictionary
+			global likesDictionary
 
-			if userDictionary.ContainsKey("points"):
-				remainingCount = Nullable[Int32](Convert.ToInt32(userDictionary["points"]))
+			likesDictionary.Clear()
 
-			if currentLikesDictionary.Count > 0:
-				likesDictionary.Clear()
+			for kvp in currentLikesDictionary:
+				likesDictionary.Add(kvp.Key, kvp.Value)
+						
+				for name in nameList:
+					if name.Equals(kvp.Key):
+						sequenceList = List[Sequence]()
+				
+						for sequence in Script.Instance.Sequences:
+							if sequence.Name.Equals("Like") and kvp.Key.Equals(sequence.Owner):
+								sequenceList.Add(sequence)
 
-				for kvp in currentLikesDictionary:
-					likesDictionary.Add(kvp.Key, kvp.Value)
-
-				for kvp in likesDictionary:
-					sequenceList = List[Sequence]()
-								
-					for sequence in Script.Instance.Sequences:
-						if sequence.Name.Equals("Like") and kvp.Key.Equals(sequence.Owner):
-							sequenceList.Add(sequence)
-
-					Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, kvp.Value.ToString(CultureInfo.InvariantCulture)))
-					
-		Task.Factory.StartNew(onVerify, TaskCreationOptions.LongRunning).ContinueWith(onReady, context).ContinueWith(onUpdate, TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
+						Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, likesDictionary[kvp.Key].Count.ToString(CultureInfo.InvariantCulture)))
+						
+						break
+				
+		Task.Factory.StartNew(onUpdate, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
 
 	timer.Start()
 	chargesDictionary.Clear()
@@ -8887,10 +8197,8 @@ def onStop(s, e):
 
 	timer.Stop()
 
-username = None
-password = None
-likesDictionary = Dictionary[String, Int32]()
-remainingCount = None
+likesDictionary = Dictionary[String, List[DateTime]]()
+remainingCount = 0
 chargesDictionary = Dictionary[String, List[Double]]()
 imageDictionary = Dictionary[String, Uri]()
 dateTime = DateTime.Now - TimeSpan(12, 0, 0)
