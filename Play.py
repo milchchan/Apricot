@@ -28,10 +28,11 @@ from System.Reflection import Assembly
 from System.Security.Cryptography import HMACSHA1, SHA1CryptoServiceProvider
 from System.Text import StringBuilder, Encoding, UTF8Encoding
 from System.Text.RegularExpressions import Regex, Match, MatchEvaluator, RegexOptions, Capture
+from System.Threading import CountdownEvent
 from System.Threading.Tasks import Task, TaskCreationOptions, TaskContinuationOptions, TaskScheduler
 from System.Net import WebRequest, WebResponse, HttpWebRequest, HttpWebResponse, WebClient, HttpRequestHeader, WebRequestMethods, HttpStatusCode
 from System.Net.NetworkInformation import NetworkInterface
-from System.Windows import Application, Window, WindowStartupLocation, WindowStyle, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Point, Size, Rect, Thickness, SystemColors, PropertyPath, CornerRadius, FontSizeConverter, FontWeights, DependencyPropertyChangedEventArgs, TextAlignment, TextWrapping
+from System.Windows import Application, Window, WindowStartupLocation, WindowStyle, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Point, Size, Rect, Thickness, SystemColors, SystemParameters, PropertyPath, CornerRadius, FontSizeConverter, FontWeights, DependencyPropertyChangedEventArgs, TextAlignment, TextWrapping
 from System.Windows.Controls import ContentControl, MenuItem, Separator, Border, Label, Button, StackPanel, Orientation, Grid, DockPanel, Dock, Canvas, Image, TextBlock, TextBox, WebBrowser
 from System.Windows.Input import Keyboard, ModifierKeys, MouseButtonEventArgs, MouseButton
 from System.Windows.Media import Color, Colors, ColorConverter, Brushes, SolidColorBrush, LinearGradientBrush, GradientStopCollection, GradientStop, RenderOptions, ClearTypeHint, ScaleTransform, RectangleGeometry, EllipseGeometry, StreamGeometry, FillRule, StreamGeometryContext, BitmapCache, ImageBrush, TileMode, BrushMappingMode, Stretch, AlignmentX, AlignmentY, DrawingGroup, DrawingContext, DrawingImage
@@ -444,7 +445,7 @@ class Json(Object):
 			else:
 				codepoint = Convert.ToInt32(c)
 
-				if ((codepoint >= 32) and (codepoint <= 126)):
+				if codepoint >= 32 and codepoint <= 126:
 					builder.Append(c)
 				else:
 					builder.Append("\\u" + Convert.ToString(codepoint, 16).PadLeft(4, '0'))
@@ -943,7 +944,7 @@ def ask(text):
 
 	Task.Factory.StartNew(onLoad, TaskCreationOptions.LongRunning).ContinueWith(onLoaded, context).ContinueWith[NaiveBayes](onTrain, TaskContinuationOptions.LongRunning).ContinueWith[Boolean](Func[Task[NaiveBayes], Boolean](onTrained), context).ContinueWith(Action[Task[Boolean]](onUpdate), TaskContinuationOptions.LongRunning).ContinueWith(onCompleted, context)
 
-def onTick(timer, e):
+def onTick(timer, args):
 	entryList = List[Entry]()
 	wordList = List[Word]()
 
@@ -1376,8 +1377,8 @@ def onTick(timer, e):
 	timer.Interval = TimeSpan.FromMinutes(10)
 	timer.Start()
 
-def onPing(s, e):
-	entry = s.Tag
+def onPing(sender, args):
+	entry = sender.Tag
 		
 	if entry.Resource is not None and not String.IsNullOrEmpty(entry.Title):
 		stringBuilder = StringBuilder()
@@ -1603,7 +1604,7 @@ def onPing(s, e):
 
 		Task.Factory.StartNew(onUpdate, TaskCreationOptions.LongRunning).ContinueWith(onCompleted, TaskScheduler.FromCurrentSynchronizationContext())
 
-def onOpened(s, e):
+def onOpened(sender, args):
 	global autoUpdate, remainingCount, menuItem, recentEntryList, recentWordList
 
 	menuItem.Items.Clear()
@@ -1615,7 +1616,7 @@ def onOpened(s, e):
 	else:
 		dashboardMenuItem.Header = "Dashboard..."
 
-	def onDashboardClick(sender1, args1):
+	def onDashboardClick(sender, args):
 		from System.IO import Path
 		global consumerKey, consumerSecret, oauthToken, oauthTokenSecret, remainingCount, likesDictionary
 		
@@ -1776,10 +1777,10 @@ def onOpened(s, e):
 			window = Window()
 			contentStackPanel = StackPanel()
 				
-			def onLoaded(sender2, args2):
+			def onLoaded(sender, args):
 				contentStackPanel.Width = Math.Ceiling(contentStackPanel.ActualWidth)
 
-			def onCloseClick(sender2, args2):
+			def onCloseClick(sender, args):
 				window.Close()
 
 			window.Owner = Application.Current.MainWindow
@@ -2208,14 +2209,14 @@ def onOpened(s, e):
 				leftStackPanel = StackPanel()
 				rightStackPanel = StackPanel()
 				
-				def onLoaded(sender2, args2):
+				def onLoaded(sender, args):
 					if rightStackPanel.Children.Count > 0:
 						leftStackPanel.Width = rightStackPanel.Width = Math.Ceiling(Math.Max(leftStackPanel.ActualWidth, rightStackPanel.ActualWidth))
 					else:
 						rightStackPanel.Margin = Thickness(5, 0, 0, 0)
 						leftStackPanel.Width = Math.Ceiling(leftStackPanel.ActualWidth)
 
-				def onCloseClick(sender2, args2):
+				def onCloseClick(sender, args):
 					window.Close()
 
 				window.Owner = Application.Current.MainWindow
@@ -2458,7 +2459,7 @@ def onOpened(s, e):
 	likeMenuItem = MenuItem()
 	
 	if remainingCount > 0:
-		def onLikeClick(sender1, args1):
+		def onLikeClick(sender, args):
 			global remainingCount
 
 			nameList = List[String]()
@@ -2635,42 +2636,11 @@ def onOpened(s, e):
 								break
 						
 					window = Window()
-					closeTimer = DispatcherTimer(DispatcherPriority.Background)
 					contentControl = ContentControl()
 					border1 = Border()
-		
-					def onClose(sender2, args2):
-						closeTimer.Stop()
-
-						storyboard = Storyboard()
-						da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-						da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-						da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-						sineEase = SineEase()
-
-						sineEase.EasingMode = EasingMode.EaseIn
-						da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
-
-						def onCurrentStateInvalidated(sender3, args3):
-							if sender3.CurrentState == ClockState.Filling:
-								contentControl.Opacity = 0
-								contentControl.RenderTransform.ScaleX = 1.5
-								contentControl.RenderTransform.ScaleY = 1.5
-								storyboard.Remove(contentControl)
-								window.Close()
-
-						storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-						storyboard.Children.Add(da1)
-						storyboard.Children.Add(da2)
-						storyboard.Children.Add(da3)
-
-						Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-						Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-						Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-			
-						contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
-
-					def onLoaded(sender3, args3):
+					closeTimer = DispatcherTimer(DispatcherPriority.Background)
+					
+					def onLoaded(sender, args):
 						border1.Width = contentControl.ActualWidth if contentControl.ActualWidth > contentControl.ActualHeight else contentControl.ActualHeight
 						border1.Height = contentControl.ActualWidth if contentControl.ActualWidth > contentControl.ActualHeight else contentControl.ActualHeight
 						contentControl.Width = contentControl.ActualWidth * 1.5 if contentControl.ActualWidth > contentControl.ActualHeight else contentControl.ActualHeight * 1.5 
@@ -2687,8 +2657,8 @@ def onOpened(s, e):
 						sineEase.EasingMode = EasingMode.EaseOut
 						da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
 
-						def onCurrentStateInvalidated(sender4, args4):
-							if sender4.CurrentState == ClockState.Filling:
+						def onCurrentStateInvalidated(sender, args):
+							if sender.CurrentState == ClockState.Filling:
 								contentControl.Opacity = 1
 								contentControl.RenderTransform.ScaleX = 1
 								contentControl.RenderTransform.ScaleY = 1
@@ -2719,6 +2689,37 @@ def onOpened(s, e):
 						Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
 						Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 
+						contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+					def onClose(sender, args):
+						closeTimer.Stop()
+
+						storyboard = Storyboard()
+						da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
+						da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+						da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+						sineEase = SineEase()
+
+						sineEase.EasingMode = EasingMode.EaseIn
+						da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
+
+						def onCurrentStateInvalidated(sender, args):
+							if sender.CurrentState == ClockState.Filling:
+								contentControl.Opacity = 0
+								contentControl.RenderTransform.ScaleX = 1.5
+								contentControl.RenderTransform.ScaleY = 1.5
+								storyboard.Remove(contentControl)
+								window.Close()
+
+						storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+						storyboard.Children.Add(da1)
+						storyboard.Children.Add(da2)
+						storyboard.Children.Add(da3)
+
+						Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+						Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+						Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+			
 						contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 
 					closeTimer.Tick += onClose
@@ -3078,7 +3079,7 @@ def onOpened(s, e):
 			break
 
 	if String.IsNullOrEmpty(oauthToken) or String.IsNullOrEmpty(oauthTokenSecret):
-		def onSignInWithTwitterClick(sender1, args1):
+		def onSignInWithTwitterClick(sender, args):
 			dictionary = Dictionary[String, String]()
 			context = TaskScheduler.FromCurrentSynchronizationContext()
 			sortedDictionary = createCommonParameters(consumerKey)
@@ -3130,10 +3131,10 @@ def onOpened(s, e):
 					pinTextBox = TextBox()
 					webBrowser = WebBrowser()
 						
-					def onWindowLoaded(sender2, args2):
+					def onWindowLoaded(sender, args):
 						webBrowser.Navigate(Uri(String.Concat("https://api.twitter.com/oauth/authorize?oauth_token=", dictionary["oauth_token"])))
 
-					def onVerifyClick(sender2, args2):
+					def onVerifyClick(sender, args):
 						d = Dictionary[String, String]()
 						sd = createCommonParameters(consumerKey)
 						sd.Add("oauth_verifier", pinTextBox.Text)
@@ -3218,7 +3219,7 @@ def onOpened(s, e):
 
 						window.Close()
 
-					def onCancelClick(source, args):
+					def onCancelClick(sender, args):
 						window.Close()
 			
 					window.Owner = Application.Current.MainWindow
@@ -3520,7 +3521,7 @@ def onOpened(s, e):
 
 			stackPanel1.Children.Add(border2)
 				
-			def onAskClick(source, rea):
+			def onAskClick(sender, rea):
 				if not String.IsNullOrEmpty(textBox.Text):
 					ask(textBox.Text)
 
@@ -3556,7 +3557,7 @@ def onOpened(s, e):
 	else:
 		learnMenuItem.Header = "Learn..."
 
-	def onLearnClick1(sender1, args1):
+	def onLearnClick1(sender, args):
 		from System.IO import Path
 
 		config = None
@@ -3709,7 +3710,7 @@ def onOpened(s, e):
 		stackPanel2.Children.Add(stackPanel3)
 		stackPanel1.Children.Add(stackPanel2)
 
-		def onLearnClick2(sender2, args2):
+		def onLearnClick2(sender, args):
 			if not String.IsNullOrEmpty(textBox.Text):
 				Script.Instance.Learn(textBox.Text)
 
@@ -3812,7 +3813,7 @@ def onOpened(s, e):
 			naMenuItem.IsEnabled = False
 			pongMenuItem.Items.Add(naMenuItem)
 	
-	maxLength = 20
+	maxLength = 15
 	recentMenuItemList = List[MenuItem]()
 	hashSet = HashSet[Uri]()
 	queue = Queue[Entry](recentEntryList)
@@ -3907,15 +3908,15 @@ def onOpened(s, e):
 			
 			pingMenuItem.Items.Add(mi)
 
-def onIsVisibleChanged(s, e):
+def onIsVisibleChanged(sender, args):
 	from System.Windows.Shapes import Path
 	global chargesDictionary, imageDictionary, likesDictionary
 
-	if e.NewValue == True and s.Messages.Count > 0:
+	if args.NewValue == True and sender.Messages.Count > 0:
 		max = 1.5
 		dictionary = Dictionary[String, Double]()
 		
-		for o in s.Messages[s.Messages.Count - 1]:
+		for o in sender.Messages[sender.Messages.Count - 1]:
 			if clr.GetClrType(Entry).IsInstanceOfType(o):
 				for word in Script.Instance.Words:
 					if word.Name.Equals(o.Title):
@@ -4008,167 +4009,12 @@ def onIsVisibleChanged(s, e):
 				isLocked = True
 
 			window = Window()
-			closeTimer = DispatcherTimer(DispatcherPriority.Background)
 			contentControl = ContentControl()
 			border1 = Border()
 			stackPanel1 = StackPanel()
+			closeTimer = DispatcherTimer(DispatcherPriority.Background)
 			
-			def onClose(sender1, args1):
-				from System.IO import Path as _Path
-	
-				closeTimer.Stop()
-						
-				storyboard = Storyboard()
-				da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-				da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-				da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-				sineEase = SineEase()
-
-				sineEase.EasingMode = EasingMode.EaseIn
-				da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
-
-				def onCurrentStateInvalidated(sender2, args2):
-					if sender2.CurrentState == ClockState.Filling:
-						contentControl.Opacity = 0
-						contentControl.RenderTransform.ScaleX = 1.5
-						contentControl.RenderTransform.ScaleY = 1.5
-						storyboard.Remove(contentControl)
-						imageHashSet.Clear()
-						window.Close()
-
-				storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-				storyboard.Children.Add(da1)
-				storyboard.Children.Add(da2)
-				storyboard.Children.Add(da3)
-
-				Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-				Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-				Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-			
-				contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
-				closeTimer.Tag = False
-
-				if isLocked:
-					def onEnumerate(state):
-						return enumerateCharacters(state)
-
-					def onCompleted(task):
-						for key in termHashSet:
-							if not chargesDictionary.ContainsKey(key):
-								break
-
-						else:
-							def comparison(s1, s2):
-								sum1 = 0.0
-								sum2 = 0.0
-
-								for score in chargesDictionary[s1]:
-									sum1 += score
-
-								for score in chargesDictionary[s2]:
-									sum2 += score
-
-								if sum1 / chargesDictionary[s1].Count > sum2 / chargesDictionary[s2].Count:
-									return 1
-
-								elif sum1 / chargesDictionary[s1].Count < sum2 / chargesDictionary[s2].Count:
-									return -1
-																			
-								return 0
-
-							list = List[String](termHashSet)
-							list.Sort(comparison)
-							list.Reverse()
-
-							for key in termHashSet:
-								chargesDictionary.Remove(key)
-
-								if imageDictionary.ContainsKey(key):
-									imageDictionary.Remove(key)
-
-							d = Dictionary[String, List[Double]](chargesDictionary)
-							chargesDictionary.Clear()
-							charges = 0
-
-							for kvp in d:
-								chargesDictionary.Add(kvp.Key, kvp.Value)
-
-								sum = 0.0
-
-								for score in kvp.Value:
-									sum += score
-
-								if sum >= max:
-									charges += 1
-
-							sequenceList = List[Sequence]()
-								
-							for sequence in Script.Instance.Sequences:
-								if sequence.Name.Equals("Charge"):
-									sequenceList.Add(sequence)
-
-							Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
-
-							if task.Result.Count > 1:
-								characterList = List[Character]()
-
-								for character in task.Result:
-									isNew = True
-
-									for c in Script.Instance.Characters:
-										if character.Name.Equals(c.Name):
-											isNew = False
-
-											break
-
-									if isNew:
-										success, likes = likesDictionary.TryGetValue(character.Name)
-
-										if success:
-											for i in range(likes.Count):
-												characterList.Add(character)
-
-										characterList.Add(character)
-
-								if characterList.Count > 0:
-									visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
-
-								else:
-									sequenceList = List[Sequence]()
-
-									for sequence in Script.Instance.Sequences:
-										if sequence.Name.Equals("Activate"):
-											sequenceList.Add(sequence)
-
-									Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
-
-							else:
-								sequenceList = List[Sequence]()
-
-								for sequence in Script.Instance.Sequences:
-									if sequence.Name.Equals("Activate"):
-										sequenceList.Add(sequence)
-
-								Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
-
-							if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
-								def onPlay():
-									soundPlayer = None
-
-									try:
-										soundPlayer = SoundPlayer("Assets\\Transform.wav")
-										soundPlayer.Load()
-										soundPlayer.PlaySync()
-
-									finally:
-										if soundPlayer is not None:
-											soundPlayer.Dispose()
-									
-								Task.Factory.StartNew(onPlay)
-
-					Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
-
-			def onLoaded(sender1, args1):
+			def onLoaded1(sender, args):
 				border1.Width = contentControl.ActualWidth
 				border1.Height = contentControl.ActualHeight
 				contentControl.Width = contentControl.ActualWidth * 1.5
@@ -4184,7 +4030,7 @@ def onIsVisibleChanged(s, e):
 									element3.RenderTransform.CenterX = element3.ActualWidth / 2
 									element3.RenderTransform.CenterY = element3.ActualHeight / 2
 
-				storyboard = Storyboard()
+				storyboard1 = Storyboard()
 				da1 = DoubleAnimation(contentControl.Opacity, 1, TimeSpan.FromMilliseconds(500))
 				da2 = DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500))
 				da3 = DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500))
@@ -4193,17 +4039,17 @@ def onIsVisibleChanged(s, e):
 				sineEase.EasingMode = EasingMode.EaseOut
 				da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
 
-				def onCurrentStateInvalidated1(sender2, args2):
-					if sender2.CurrentState == ClockState.Filling:
+				def onCurrentStateInvalidated1(sender, args):
+					if sender.CurrentState == ClockState.Filling:
 						contentControl.Opacity = 1
 						contentControl.RenderTransform.ScaleX = 1
 						contentControl.RenderTransform.ScaleY = 1
-						storyboard.Remove(contentControl)
+						storyboard1.Remove(contentControl)
 
-						sb1 = Storyboard()
+						storyboard2 = Storyboard()
 
-						def onCurrentStateInvalidated2(sender3, args3):
-							if sender3.CurrentState == ClockState.Filling:
+						def onCurrentStateInvalidated2(sender, args):
+							if sender.CurrentState == ClockState.Filling:
 								isCharged = False
 
 								if isLocked:
@@ -4237,17 +4083,16 @@ def onIsVisibleChanged(s, e):
 										list.Sort(comparison)
 										list.Reverse()
 
-										sb2 = Storyboard()
+										storyboard = Storyboard()
 
-										def onCurrentStateInvalidated3(sender4, args4):
-											if sender4.CurrentState == ClockState.Filling and not border1.Tag:
+										def onCurrentStateInvalidated3(sender, args):
+											if sender.CurrentState == ClockState.Filling and not border1.Tag:
 												closeTimer.Start()
 
-										sb2.CurrentStateInvalidated += onCurrentStateInvalidated3
+										storyboard.CurrentStateInvalidated += onCurrentStateInvalidated3
 											
 										for element1 in stackPanel1.Children:
 											for element2 in element1.Children:
-												
 												if not isCharged:
 													for element3 in element2.Child.Children:
 														if clr.GetClrType(Grid).IsInstanceOfType(element3):
@@ -4271,18 +4116,18 @@ def onIsVisibleChanged(s, e):
 												if index >= 0:
 													element2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 													ca = ColorAnimation(element2.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
-													se = SineEase()
+													sineEase = SineEase()
 
-													se.EasingMode = EasingMode.EaseOut
-													ca.EasingFunction = se
+													sineEase.EasingMode = EasingMode.EaseOut
+													ca.EasingFunction = sineEase
 													ca.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(250 * index))
 
-													sb2.Children.Add(ca)
+													storyboard.Children.Add(ca)
 						
 													Storyboard.SetTarget(ca, element2)
 													Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-										sb2.Begin()
+										storyboard.Begin()
 
 								else:
 									if not border1.Tag:
@@ -4304,166 +4149,205 @@ def onIsVisibleChanged(s, e):
 																element3.RenderTransform.CenterX = element3.ActualWidth / 2
 																element3.RenderTransform.CenterY = element3.ActualHeight / 2
 
-																def onMouseEnter(sender4, args4):
-																	if not termHashSet.Contains(sender4.Child.Tag):
-																		if sender4.Tag is not None:
-																			sender4.Tag.Stop(sender4)
+																def onMouseEnter(sender1, args1):
+																	if not termHashSet.Contains(sender1.Child.Tag):
+																		if sender1.Tag is not None:
+																			sender1.Tag.Stop(sender1)
 
-																		sender4.Tag = sb2 = Storyboard()
-																		ca = ColorAnimation(sender4.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
-																		se1 = SineEase()
+																		sender1.Tag = storyboard1 = Storyboard()
+																		ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
+																		sineEase = SineEase()
 
-																		se1.EasingMode = EasingMode.EaseOut
-																		ca.EasingFunction = se1
+																		sineEase.EasingMode = EasingMode.EaseOut
+																		ca.EasingFunction = sineEase
 
-																		def onCurrentStateInvalidated3(sender5, args5):
-																			if sender5.CurrentState == ClockState.Filling:
-																				sender4.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
-																				sender4.Tag = None
-																				sb2.Remove(sender4)
+																		def onCurrentStateInvalidated3(sender2, args2):
+																			if sender2.CurrentState == ClockState.Filling:
+																				sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
+																				sender1.Tag = None
+																				storyboard1.Remove(sender1)
 
-																		sb2.CurrentStateInvalidated += onCurrentStateInvalidated3
-																		sb2.Children.Add(ca)
+																		storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated3
+																		storyboard1.Children.Add(ca)
 
 																		Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-																		sender4.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
+																		sender1.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 						
-																		for e1 in sender4.Child.Children:
+																		for e1 in sender1.Child.Children:
 																			if clr.GetClrType(Grid).IsInstanceOfType(e1):
 																				if e1.Tag is not None:
 																					e1.Tag.Stop(e1)
 
-																				e1.Tag = sb3 = Storyboard()
+																				e1.Tag = storyboard2 = Storyboard()
 																				da1 = DoubleAnimation(e1.RenderTransform.ScaleX, 1.1, TimeSpan.FromMilliseconds(500))
 																				da2 = DoubleAnimation(e1.RenderTransform.ScaleY, 1.1, TimeSpan.FromMilliseconds(500))
-																				se2 = SineEase()
+																				sineEase = SineEase()
 
-																				se2.EasingMode = EasingMode.EaseOut
-																				da1.EasingFunction = da2.EasingFunction = se2
+																				sineEase.EasingMode = EasingMode.EaseOut
+																				da1.EasingFunction = da2.EasingFunction = sineEase
 
-																				def onCurrentStateInvalidated4(sender6, args6):
-																					if sender6.CurrentState == ClockState.Filling:
-																						for e2 in sender4.Child.Children:
-																							if e2.Tag == sb3:
+																				def onCurrentStateInvalidated4(sender2, args2):
+																					if sender2.CurrentState == ClockState.Filling:
+																						for e2 in sender1.Child.Children:
+																							if e2.Tag == storyboard2:
 																								e2.RenderTransform.ScaleX = 1.1
 																								e2.RenderTransform.ScaleY = 1.1
 																								e2.Tag = None
-																								sb3.Remove(e2)
+																								storyboard2.Remove(e2)
 
-																				sb3.CurrentStateInvalidated += onCurrentStateInvalidated4
-																				sb3.Children.Add(da1)
-																				sb3.Children.Add(da2)
+																				storyboard2.CurrentStateInvalidated += onCurrentStateInvalidated4
+																				storyboard2.Children.Add(da1)
+																				storyboard2.Children.Add(da2)
 
 																				Storyboard.SetTargetProperty(da1, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleXProperty))
 																				Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-																				e1.BeginStoryboard(sb3, HandoffBehavior.SnapshotAndReplace, True)
+																				e1.BeginStoryboard(storyboard2, HandoffBehavior.SnapshotAndReplace, True)
 
-																def onMouseLeave(sender4, args4):
-																	if not termHashSet.Contains(sender4.Child.Tag):
-																		if sender4.Tag is not None:
-																			sender4.Tag.Stop(sender4)
+																def onMouseLeave(sender1, args1):
+																	if not termHashSet.Contains(sender1.Child.Tag):
+																		if sender1.Tag is not None:
+																			sender1.Tag.Stop(sender1)
 
-																		sender4.Tag = sb2 = Storyboard()
-																		ca = ColorAnimation(sender4.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
-																		se = SineEase()
+																		sender1.Tag = storyboard1 = Storyboard()
+																		ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
+																		sineEase = SineEase()
 
-																		se.EasingMode = EasingMode.EaseIn
-																		ca.EasingFunction = se
+																		sineEase.EasingMode = EasingMode.EaseIn
+																		ca.EasingFunction = sineEase
 
-																		def onCurrentStateInvalidated3(sender5, args5):
-																			if sender5.CurrentState == ClockState.Filling:
-																				sender4.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
-																				sender4.Tag = None
-																				sb2.Remove(sender4)
+																		def onCurrentStateInvalidated3(sender2, args2):
+																			if sender2.CurrentState == ClockState.Filling:
+																				sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
+																				sender1.Tag = None
+																				storyboard1.Remove(sender1)
 
-																		sb2.CurrentStateInvalidated += onCurrentStateInvalidated3
-																		sb2.Children.Add(ca)
+																		storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated3
+																		storyboard1.Children.Add(ca)
 
 																		Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-																		sender4.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
+																		sender1.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 
-																		for e1 in sender4.Child.Children:
+																		for e1 in sender1.Child.Children:
 																			if clr.GetClrType(Grid).IsInstanceOfType(e1):
 																				if e1.Tag is not None:
 																					e1.Tag.Stop(e1)
 
-																				e1.Tag = sb3 = Storyboard()
+																				e1.Tag = storyboard2 = Storyboard()
 																				da1 = DoubleAnimation(e1.RenderTransform.ScaleX, 1, TimeSpan.FromMilliseconds(500))
 																				da2 = DoubleAnimation(e1.RenderTransform.ScaleY, 1, TimeSpan.FromMilliseconds(500))
-																				se2 = SineEase()
+																				sineEase = SineEase()
 
-																				se2.EasingMode = EasingMode.EaseIn
-																				da1.EasingFunction = da2.EasingFunction = se2
+																				sineEase.EasingMode = EasingMode.EaseIn
+																				da1.EasingFunction = da2.EasingFunction = sineEase
 
-																				def onCurrentStateInvalidated4(sender6, args6):
-																					if sender6.CurrentState == ClockState.Filling:
-																						for e2 in sender4.Child.Children:
-																							if e2.Tag == sb3:
+																				def onCurrentStateInvalidated4(sender2, args2):
+																					if sender2.CurrentState == ClockState.Filling:
+																						for e2 in sender1.Child.Children:
+																							if e2.Tag == storyboard2:
 																								e2.RenderTransform.ScaleX = 1
 																								e2.RenderTransform.ScaleY = 1
 																								e2.Tag = None
-																								sb3.Remove(e2)
+																								storyboard2.Remove(e2)
 
-																				sb3.CurrentStateInvalidated += onCurrentStateInvalidated4
-																				sb3.Children.Add(da1)
-																				sb3.Children.Add(da2)
+																				storyboard2.CurrentStateInvalidated += onCurrentStateInvalidated4
+																				storyboard2.Children.Add(da1)
+																				storyboard2.Children.Add(da2)
 
 																				Storyboard.SetTargetProperty(da1, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleXProperty))
 																				Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-																				e1.BeginStoryboard(sb3, HandoffBehavior.SnapshotAndReplace, True)
+																				e1.BeginStoryboard(storyboard2, HandoffBehavior.SnapshotAndReplace, True)
 
-																def onMouseLeftButtonUp(sender4, args4):
+																def onMouseLeftButtonUp(sender1, args1):
 																	from System.IO import Path as _Path
+																	global remainingCount
 
 																	if termHashSet.Count < 3:
-																		if termHashSet.Contains(sender4.Child.Tag):
-																			termHashSet.Remove(sender4.Child.Tag)
+																		if sender1.Tag is not None:
+																			sender1.Tag.Stop(sender1)
+																		
+																		if termHashSet.Contains(sender1.Child.Tag):
+																			termHashSet.Remove(sender1.Child.Tag)
+																			
+																			sender1.Tag = storyboard = Storyboard()
+																			color = Color.FromArgb(0, Byte.MaxValue, 0, 102)
+																			ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
+																			sineEase = SineEase()
+
+																			sineEase.EasingMode = EasingMode.EaseIn
+																			ca.EasingFunction = sineEase
+
+																			def onCurrentStateInvalidated3(sender2, args2):
+																				if sender2.CurrentState == ClockState.Filling:
+																					sender1.Background = SolidColorBrush(color)
+																					sender1.Tag = None
+																					storyboard.Remove(sender1)
+
+																			storyboard.CurrentStateInvalidated += onCurrentStateInvalidated3
+																			storyboard.Children.Add(ca)
+
+																			Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+																			sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 
 																		else:
-																			termHashSet.Add(sender4.Child.Tag)
-														
-																		if sender4.Tag is not None:
-																			sender4.Tag.Stop(sender4)
+																			termHashSet.Add(sender1.Child.Tag)
+																		
+																			sender1.Tag = storyboard = Storyboard()
+																			color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)
+																			ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
+																			sineEase = SineEase()
 
-																		if termHashSet.Contains(sender4.Child.Tag) and sender4.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
-																			sb3 = Storyboard()
-																			da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-																			da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-																			da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-																			se2 = SineEase()
+																			sineEase.EasingMode = EasingMode.EaseOut
+																			ca.EasingFunction = sineEase
 
-																			se2.EasingMode = EasingMode.EaseIn
-																			da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = se2
+																			def onCurrentStateInvalidated3(sender2, args2):
+																				if sender2.CurrentState == ClockState.Filling:
+																					sender1.Background = SolidColorBrush(color)
+																					sender1.Tag = None
+																					storyboard.Remove(sender1)
 
-																			def onCurrentStateInvalidated3(sender5, args5):
-																				if sender5.CurrentState == ClockState.Filling:
-																					contentControl.Opacity = 0
-																					contentControl.RenderTransform.ScaleX = 1.5
-																					contentControl.RenderTransform.ScaleY = 1.5
-																					sb3.Remove(contentControl)
-																					imageHashSet.Clear()
-																					window.Close()
+																			storyboard.CurrentStateInvalidated += onCurrentStateInvalidated3
+																			storyboard.Children.Add(ca)
 
-																			sb3.CurrentStateInvalidated += onCurrentStateInvalidated3
-																			sb3.Children.Add(da1)
-																			sb3.Children.Add(da2)
-																			sb3.Children.Add(da3)
+																			Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-																			Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-																			Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-																			Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+																			sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+																			if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+																				storyboard = Storyboard()
+																				da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
+																				da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+																				da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+																				sineEase = SineEase()
+
+																				sineEase.EasingMode = EasingMode.EaseIn
+																				da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
+
+																				def onCurrentStateInvalidated4(sender, args):
+																					if sender.CurrentState == ClockState.Filling:
+																						contentControl.Opacity = 0
+																						contentControl.RenderTransform.ScaleX = 1.5
+																						contentControl.RenderTransform.ScaleY = 1.5
+																						storyboard.Remove(contentControl)
+																						imageHashSet.Clear()
+																						window.Close()
+
+																				storyboard.CurrentStateInvalidated += onCurrentStateInvalidated4
+																				storyboard.Children.Add(da1)
+																				storyboard.Children.Add(da2)
+																				storyboard.Children.Add(da3)
+
+																				Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+																				Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+																				Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-																			contentControl.BeginStoryboard(sb3, HandoffBehavior.SnapshotAndReplace, True)
-																			closeTimer.Tag = False
+																				contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+																				closeTimer.Tag = False
 
-																			def onEnumerate(state):
-																				return enumerateCharacters(state)
-
-																			def onCompleted(task):
 																				for key in termHashSet:
 																					if not chargesDictionary.ContainsKey(key):
 																						break
@@ -4512,6 +4396,11 @@ def onIsVisibleChanged(s, e):
 																						if sum >= max:
 																							charges += 1
 
+																					if remainingCount + termHashSet.Count < 5:
+																						remainingCount += termHashSet.Count
+																					else:
+																						remainingCount = 5
+																	
 																					sequenceList = List[Sequence]()
 								
 																					for sequence in Script.Instance.Sequences:
@@ -4520,47 +4409,135 @@ def onIsVisibleChanged(s, e):
 
 																					Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
 
-																					if task.Result.Count > 1:
-																						characterList = List[Character]()
+																					maxWidth = Double.MinValue
+																					maxHeight = Double.MinValue
+																					bitmapImageList = List[BitmapImage]()
+																					r = Random(Environment.TickCount)
+																					index = 0
 
-																						for character in task.Result:
-																							isNew = True
+																					for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
+																						fs = None
+																					
+																						try:
+																							fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
+																						
+																							bi = BitmapImage()
+																							bi.BeginInit()
+																							bi.StreamSource = fs
+																							bi.CacheOption = BitmapCacheOption.OnLoad
+																							bi.CreateOptions = BitmapCreateOptions.None
+																							bi.EndInit()
 
-																							for c in Script.Instance.Characters:
-																								if character.Name.Equals(c.Name):
-																									isNew = False
+																							if bi.Width > maxWidth:
+																								maxWidth = bi.Width
 
-																									break
+																							if bi.Height > maxHeight:
+																								maxHeight = bi.Height
 
-																							if isNew:
-																								success, likes = likesDictionary.TryGetValue(character.Name)
+																							bitmapImageList.Add(bi)
 
-																								if success:
-																									for i in range(likes.Count):
-																										characterList.Add(character)
+																						except:
+																							continue
 
-																								characterList.Add(character)
+																						finally:
+																							if fs is not None:
+																								fs.Close()
 
-																						if characterList.Count > 0:
-																							visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
+																					count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
+																					countdownEvent = CountdownEvent(Convert.ToInt32(count))
 
-																						else:
-																							sequenceList = List[Sequence]()
+																					while index < count:
+																						def onLoaded2(sender1, args1):
+																							storyboard = Storyboard()
+																							da1 = DoubleAnimation(sender1.Content.Opacity, 1, TimeSpan.FromMilliseconds(500))
+																							da2 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+																							da3 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+																							da4 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+																							da5 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+																							da6 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+																							sineEase1 = SineEase()
+																							sineEase2 = SineEase()
 
-																							for sequence in Script.Instance.Sequences:
-																								if sequence.Name.Equals("Activate"):
-																									sequenceList.Add(sequence)
+																							storyboard.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(1000)))
+																							sineEase1.EasingMode = EasingMode.EaseOut
+																							sineEase2.EasingMode = EasingMode.EaseIn
+																							da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase1
+																							da4.BeginTime = da5.BeginTime = da6.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(500))
+																							da4.EasingFunction = da5.EasingFunction = da6.EasingFunction = sineEase2
 
-																							Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+																							def onCurrentStateInvalidated5(sender2, args2):
+																								if sender2.CurrentState == ClockState.Filling:
+																									sender1.Close()
 
-																					else:
-																						sequenceList = List[Sequence]()
+																							storyboard.CurrentStateInvalidated += onCurrentStateInvalidated5
+																							storyboard.Children.Add(da1)
+																							storyboard.Children.Add(da2)
+																							storyboard.Children.Add(da3)
+																							storyboard.Children.Add(da4)
+																							storyboard.Children.Add(da5)
+																							storyboard.Children.Add(da6)
 
-																						for sequence in Script.Instance.Sequences:
-																							if sequence.Name.Equals("Activate"):
-																								sequenceList.Add(sequence)
+																							Storyboard.SetTarget(da1, sender1.Content)
+																							Storyboard.SetTarget(da2, sender1.Content)
+																							Storyboard.SetTarget(da3, sender1.Content)
+																							Storyboard.SetTarget(da4, sender1.Content)
+																							Storyboard.SetTarget(da5, sender1.Content)
+																							Storyboard.SetTarget(da6, sender1.Content)
+																							Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+																							Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+																							Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+																							Storyboard.SetTargetProperty(da4, PropertyPath(ContentControl.OpacityProperty))
+																							Storyboard.SetTargetProperty(da5, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+																							Storyboard.SetTargetProperty(da6, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 
-																						Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+																							storyboard.Begin()
+
+																						def onClosed(sender1, args1):
+																							countdownEvent.Signal()
+					
+																						bi = bitmapImageList[r.Next(bitmapImageList.Count)]
+																						width = Convert.ToInt32(bi.Width) / 2
+																						height = Convert.ToInt32(bi.Height) / 2
+							
+																						w = Window()
+																						w.Owner = Application.Current.MainWindow
+																						w.Title = Application.Current.MainWindow.Title
+																						w.Left = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenWidth) - width)
+																						w.Top = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenHeight) - height)
+																						w.AllowsTransparency = True
+																						w.WindowStyle = WindowStyle.None
+																						w.ResizeMode = ResizeMode.NoResize
+																						w.ShowActivated = False
+																						w.ShowInTaskbar = False
+																						w.Topmost = True
+																						w.SizeToContent = SizeToContent.WidthAndHeight
+																						w.Background = Brushes.Transparent
+																						w.Loaded += onLoaded2
+																						w.Closed += onClosed
+
+																						cc = ContentControl()
+																						cc.UseLayoutRounding = True
+																						cc.HorizontalAlignment = HorizontalAlignment.Stretch
+																						cc.VerticalAlignment = VerticalAlignment.Stretch
+																						cc.Opacity = 0
+																						cc.RenderTransform = ScaleTransform(0, 0, width / 2, height / 2)
+															
+																						w.Content = cc
+															
+																						image = Image()
+																						image.CacheMode = BitmapCache(1)
+																						image.HorizontalAlignment = HorizontalAlignment.Left
+																						image.VerticalAlignment = VerticalAlignment.Top
+																						image.Source = bi
+																						image.Width = height
+																						image.Height = height
+																						image.Stretch = Stretch.Uniform
+															
+																						cc.Content = image
+															
+																						w.Show()
+
+																						index += 1
 
 																					if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
 																						def onPlay():
@@ -4577,180 +4554,56 @@ def onIsVisibleChanged(s, e):
 									
 																						Task.Factory.StartNew(onPlay)
 
-																			Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
+																					def onRun(state):
+																						countdownEvent.Wait()
+																						countdownEvent.Dispose()
 
-																		else:
-																			sender4.Tag = sb2 = Storyboard()
-																			color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102) if termHashSet.Contains(sender4.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 102)
-																			isPressed = True if (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control else False
-																			ca = ColorAnimation(sender4.Background.Color, color, TimeSpan.FromMilliseconds(500))
-																			se1 = SineEase()
+																						return enumerateCharacters(state)
 
-																			se1.EasingMode = EasingMode.EaseOut if termHashSet.Contains(sender4.Child.Tag) else EasingMode.EaseIn
-																			ca.EasingFunction = se1
+																					def onCompleted(task):
+																						if task.Result.Count > 1:
+																							characterList = List[Character]()
 
-																			def onCurrentStateInvalidated3(sender5, args5):
-																				if sender5.CurrentState == ClockState.Filling:
-																					sender4.Background = SolidColorBrush(color)
-																					sender4.Tag = None
-																					sb2.Remove(sender4)
+																							for character in task.Result:
+																								isNew = True
 
-																					if not isPressed and termHashSet.Count > 0 or termHashSet.Count == 3:
-																						sb3 = Storyboard()
-																						da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-																						da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-																						da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-																						se2 = SineEase()
+																								for c in Script.Instance.Characters:
+																									if character.Name.Equals(c.Name):
+																										isNew = False
 
-																						se2.EasingMode = EasingMode.EaseIn
-																						da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = se2
+																										break
 
-																						def onCurrentStateInvalidated4(sender6, args6):
-																							if sender6.CurrentState == ClockState.Filling:
-																								contentControl.Opacity = 0
-																								contentControl.RenderTransform.ScaleX = 1.5
-																								contentControl.RenderTransform.ScaleY = 1.5
-																								sb3.Remove(contentControl)
-																								imageHashSet.Clear()
-																								window.Close()
+																								if isNew:
+																									success, likes = likesDictionary.TryGetValue(character.Name)
 
-																						sb3.CurrentStateInvalidated += onCurrentStateInvalidated4
-																						sb3.Children.Add(da1)
-																						sb3.Children.Add(da2)
-																						sb3.Children.Add(da3)
-
-																						Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-																						Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-																						Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-			
-																						contentControl.BeginStoryboard(sb3, HandoffBehavior.SnapshotAndReplace, True)
-																						closeTimer.Tag = False
-
-																						def onEnumerate(state):
-																							return enumerateCharacters(state)
-
-																						def onCompleted(task):
-																							for key in termHashSet:
-																								if not chargesDictionary.ContainsKey(key):
-																									break
-
-																							else:
-																								def comparison(s1, s2):
-																									sum1 = 0.0
-																									sum2 = 0.0
-
-																									for score in chargesDictionary[s1]:
-																										sum1 += score
-
-																									for score in chargesDictionary[s2]:
-																										sum2 += score
-																			
-																									if sum1 / chargesDictionary[s1].Count > sum2 / chargesDictionary[s2].Count:
-																										return 1
-
-																									elif sum1 / chargesDictionary[s1].Count < sum2 / chargesDictionary[s2].Count:
-																										return -1
-																			
-																									return 0
-
-																								list = List[String](termHashSet)
-																								list.Sort(comparison)
-																								list.Reverse()
-
-																								for key in termHashSet:
-																									chargesDictionary.Remove(key)
-
-																									if imageDictionary.ContainsKey(key):
-																										imageDictionary.Remove(key)
-																									
-																								d = Dictionary[String, List[Double]](chargesDictionary)
-																								chargesDictionary.Clear()
-																								charges = 0
-
-																								for kvp in d:
-																									chargesDictionary.Add(kvp.Key, kvp.Value)
-
-																									sum = 0.0
-
-																									for score in kvp.Value:
-																										sum += score
-
-																									if sum >= max:
-																										charges += 1
-
-																								sequenceList = List[Sequence]()
-								
-																								for sequence in Script.Instance.Sequences:
-																									if sequence.Name.Equals("Charge"):
-																										sequenceList.Add(sequence)
-
-																								Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
-
-																								if task.Result.Count > 1:
-																									characterList = List[Character]()
-
-																									for character in task.Result:
-																										isNew = True
-
-																										for c in Script.Instance.Characters:
-																											if character.Name.Equals(c.Name):
-																												isNew = False
-
-																												break
-
-																										if isNew:
-																											success, likes = likesDictionary.TryGetValue(character.Name)
-
-																											if success:
-																												for i in range(likes.Count):
-																													characterList.Add(character)
-
+																									if success:
+																										for i in range(likes.Count):
 																											characterList.Add(character)
 
-																									if characterList.Count > 0:
-																										visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
+																									characterList.Add(character)
 
-																									else:
-																										sequenceList = List[Sequence]()
+																							if characterList.Count > 0:
+																								visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
 
-																										for sequence in Script.Instance.Sequences:
-																											if sequence.Name.Equals("Activate"):
-																												sequenceList.Add(sequence)
+																							else:
+																								sequenceList = List[Sequence]()
 
-																										Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+																								for sequence in Script.Instance.Sequences:
+																									if sequence.Name.Equals("Activate"):
+																										sequenceList.Add(sequence)
 
-																								else:
-																									sequenceList = List[Sequence]()
+																								Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
-																									for sequence in Script.Instance.Sequences:
-																										if sequence.Name.Equals("Activate"):
-																											sequenceList.Add(sequence)
+																						else:
+																							sequenceList = List[Sequence]()
 
-																									Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+																							for sequence in Script.Instance.Sequences:
+																								if sequence.Name.Equals("Activate"):
+																									sequenceList.Add(sequence)
 
-																								if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
-																									def onPlay():
-																										soundPlayer = None
+																							Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
-																										try:
-																											soundPlayer = SoundPlayer("Assets\\Transform.wav")
-																											soundPlayer.Load()
-																											soundPlayer.PlaySync()
-
-																										finally:
-																											if soundPlayer is not None:
-																												soundPlayer.Dispose()
-									
-																									Task.Factory.StartNew(onPlay)
-
-																						Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
-																						
-																			sb2.CurrentStateInvalidated += onCurrentStateInvalidated3
-																			sb2.Children.Add(ca)
-
-																			Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
-
-																			sender4.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
+																					Task.Factory.StartNew[List[Character]](onRun, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 
 																element2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 																element2.MouseEnter += onMouseEnter
@@ -4773,7 +4626,7 @@ def onIsVisibleChanged(s, e):
 									
 									Task.Factory.StartNew(onPlay)
 
-						sb1.CurrentStateInvalidated += onCurrentStateInvalidated2
+						storyboard2.CurrentStateInvalidated += onCurrentStateInvalidated2
 
 						for element1 in stackPanel1.Children:
 							for element2 in element1.Children:
@@ -4788,13 +4641,13 @@ def onIsVisibleChanged(s, e):
 
 												da = DoubleAnimation(element4.Opacity, 1 if sum > max else 0.75 + 0.25 * sum / max, TimeSpan.FromMilliseconds(((50 if sum > max else 50 * sum / max) - element4.Clip.Rect.Height) * 50))
 												ra = RectAnimation(element4.Clip.Rect, Rect(0, 0 if sum > max else 50 - 50 * sum / max, 50, 50 if sum > max else 50 * sum / max), TimeSpan.FromMilliseconds(((50 if sum > max else 50 * sum / max) - element4.Clip.Rect.Height) * 50))
-												se = SineEase()
+												sineEase = SineEase()
 
-												se.EasingMode = EasingMode.EaseOut
-												da.EasingFunction = ra.EasingFunction = se
+												sineEase.EasingMode = EasingMode.EaseOut
+												da.EasingFunction = ra.EasingFunction = sineEase
 
-												sb1.Children.Add(da)
-												sb1.Children.Add(ra)
+												storyboard2.Children.Add(da)
+												storyboard2.Children.Add(ra)
 						
 												Storyboard.SetTarget(da, element4)
 												Storyboard.SetTarget(ra, element4)
@@ -4809,31 +4662,31 @@ def onIsVisibleChanged(s, e):
 															for element6 in element4.Children:
 																if clr.GetClrType(Ellipse).IsInstanceOfType(element6):
 																	if element6.Clip is not None:
-																		sb2 = Storyboard()
+																		storyboard3 = Storyboard()
 																		ra = RectAnimation(element6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
-																		se = SineEase()
+																		sineEase = SineEase()
 
-																		se.EasingMode = EasingMode.EaseOut
-																		ra.EasingFunction = se
+																		sineEase.EasingMode = EasingMode.EaseOut
+																		ra.EasingFunction = sineEase
 
-																		sb2.Children.Add(ra)
+																		storyboard3.Children.Add(ra)
 
 																		Storyboard.SetTarget(ra, element6)
 																		Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
 																
-																		sb2.Begin()
+																		storyboard3.Begin()
 
 														elif not imageHashSet.Contains(element5.Tag):
 															imageHashSet.Add(element5.Tag)
 																
-															def onUpdated(t):
+															def onUpdated(task):
 																bi = None
 
-																if t.Result.Value is not None:
+																if task.Result.Value is not None:
 																	try:
 																		bi = BitmapImage()
 																		bi.BeginInit()
-																		bi.StreamSource = t.Result.Value
+																		bi.StreamSource = task.Result.Value
 																		bi.CacheOption = BitmapCacheOption.OnLoad
 																		bi.CreateOptions = BitmapCreateOptions.None
 																		bi.EndInit()
@@ -4842,13 +4695,13 @@ def onIsVisibleChanged(s, e):
 																		bi = None
 
 																	finally:
-																		t.Result.Value.Close()
+																		task.Result.Value.Close()
 
-																if imageHashSet.Contains(t.Result.Key):
+																if imageHashSet.Contains(task.Result.Key):
 																	for e1 in stackPanel1.Children:
 																		for e2 in e1.Children:
 																			if imageDictionary.ContainsKey(e2.Child.Tag):
-																				if imageDictionary[e2.Child.Tag].Equals(t.Result.Key):
+																				if imageDictionary[e2.Child.Tag].Equals(task.Result.Key):
 																					for e3 in e2.Child.Children:
 																						if clr.GetClrType(Grid).IsInstanceOfType(e3):
 																							for e4 in e3.Children:
@@ -4856,7 +4709,7 @@ def onIsVisibleChanged(s, e):
 																									for e5 in e4.Children:
 																										if clr.GetClrType(Image).IsInstanceOfType(e5):
 																											if e5.Tag is not None:
-																												if e5.Tag.Equals(t.Result.Key):
+																												if e5.Tag.Equals(task.Result.Key):
 																													if bi is None:
 																														e5.Source = createColorBarsImage(Size(70, 70))
 																												
@@ -4866,36 +4719,36 @@ def onIsVisibleChanged(s, e):
 																													for e6 in e4.Children:
 																														if clr.GetClrType(Ellipse).IsInstanceOfType(e6):
 																															if e6.Clip is not None:
-																																sb = Storyboard()
+																																storyboard = Storyboard()
 																																ra = RectAnimation(e6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
-																																se = SineEase()
+																																sineEase = SineEase()
 
-																																se.EasingMode = EasingMode.EaseOut
-																																ra.EasingFunction = se
+																																sineEase.EasingMode = EasingMode.EaseOut
+																																ra.EasingFunction = sineEase
 
-																																sb.Children.Add(ra)
+																																storyboard.Children.Add(ra)
 
 																																Storyboard.SetTarget(ra, e6)
 																																Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
 																
-																																sb.Begin()
+																																storyboard.Begin()
 
 															task = createUpdateImageTask(imageDictionary[element2.Child.Tag])
 															task.ContinueWith(Action[Task[KeyValuePair[Uri, MemoryStream]]](onUpdated), TaskScheduler.FromCurrentSynchronizationContext())
 															task.Start()
 
-						sb1.Begin()
+						storyboard2.Begin()
 
-				storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
-				storyboard.Children.Add(da1)
-				storyboard.Children.Add(da2)
-				storyboard.Children.Add(da3)
+				storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated1
+				storyboard1.Children.Add(da1)
+				storyboard1.Children.Add(da2)
+				storyboard1.Children.Add(da3)
 
 				Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
 				Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
 				Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 
-				contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+				contentControl.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 
 			def onWindowMouseEnter(sender, args):
 				closeTimer.Stop()
@@ -4907,6 +4760,300 @@ def onIsVisibleChanged(s, e):
 
 				border1.Tag = False
 
+			def onClose(sender, args):
+				from System.IO import Path as _Path
+				global remainingCount
+	
+				closeTimer.Stop()
+						
+				storyboard = Storyboard()
+				da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
+				da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+				da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+				sineEase = SineEase()
+
+				sineEase.EasingMode = EasingMode.EaseIn
+				da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
+
+				def onCurrentStateInvalidated1(sender, args):
+					if sender.CurrentState == ClockState.Filling:
+						contentControl.Opacity = 0
+						contentControl.RenderTransform.ScaleX = 1.5
+						contentControl.RenderTransform.ScaleY = 1.5
+						storyboard.Remove(contentControl)
+						imageHashSet.Clear()
+						window.Close()
+
+				storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
+				storyboard.Children.Add(da1)
+				storyboard.Children.Add(da2)
+				storyboard.Children.Add(da3)
+
+				Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+				Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+				Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+			
+				contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+				closeTimer.Tag = False
+
+				if isLocked:
+					for key in termHashSet:
+						if not chargesDictionary.ContainsKey(key):
+							break
+
+					else:
+						def comparison(s1, s2):
+							sum1 = 0.0
+							sum2 = 0.0
+
+							for score in chargesDictionary[s1]:
+								sum1 += score
+
+							for score in chargesDictionary[s2]:
+								sum2 += score
+
+							if sum1 / chargesDictionary[s1].Count > sum2 / chargesDictionary[s2].Count:
+								return 1
+
+							elif sum1 / chargesDictionary[s1].Count < sum2 / chargesDictionary[s2].Count:
+								return -1
+																			
+							return 0
+
+						list = List[String](termHashSet)
+						list.Sort(comparison)
+						list.Reverse()
+
+						for key in termHashSet:
+							chargesDictionary.Remove(key)
+
+							if imageDictionary.ContainsKey(key):
+								imageDictionary.Remove(key)
+
+						d = Dictionary[String, List[Double]](chargesDictionary)
+						chargesDictionary.Clear()
+						charges = 0
+
+						for kvp in d:
+							chargesDictionary.Add(kvp.Key, kvp.Value)
+
+							sum = 0.0
+
+							for score in kvp.Value:
+								sum += score
+
+							if sum >= max:
+								charges += 1
+
+						if remainingCount + termHashSet.Count < 5:
+							remainingCount += termHashSet.Count
+						else:
+							remainingCount = 5
+																	
+						sequenceList = List[Sequence]()
+								
+						for sequence in Script.Instance.Sequences:
+							if sequence.Name.Equals("Charge"):
+								sequenceList.Add(sequence)
+
+						Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
+
+						maxWidth = Double.MinValue
+						maxHeight = Double.MinValue
+						bitmapImageList = List[BitmapImage]()
+						r = Random(Environment.TickCount)
+						index = 0
+
+						for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
+							fs = None
+																					
+							try:
+								fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
+																						
+								bi = BitmapImage()
+								bi.BeginInit()
+								bi.StreamSource = fs
+								bi.CacheOption = BitmapCacheOption.OnLoad
+								bi.CreateOptions = BitmapCreateOptions.None
+								bi.EndInit()
+
+								if bi.Width > maxWidth:
+									maxWidth = bi.Width
+
+								if bi.Height > maxHeight:
+									maxHeight = bi.Height
+
+								bitmapImageList.Add(bi)
+
+							except:
+								continue
+
+							finally:
+								if fs is not None:
+									fs.Close()
+
+						count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
+						countdownEvent = CountdownEvent(Convert.ToInt32(count))
+
+						while index < count:
+							def onLoaded2(sender1, args1):
+								storyboard = Storyboard()
+								da1 = DoubleAnimation(sender1.Content.Opacity, 1, TimeSpan.FromMilliseconds(500))
+								da2 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+								da3 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+								da4 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+								da5 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+								da6 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+								sineEase1 = SineEase()
+								sineEase2 = SineEase()
+
+								storyboard.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(1000)))
+								sineEase1.EasingMode = EasingMode.EaseOut
+								sineEase2.EasingMode = EasingMode.EaseIn
+								da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase1
+								da4.BeginTime = da5.BeginTime = da6.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(500))
+								da4.EasingFunction = da5.EasingFunction = da6.EasingFunction = sineEase2
+
+								def onCurrentStateInvalidated2(sender2, args2):
+									if sender2.CurrentState == ClockState.Filling:
+										sender1.Close()
+
+								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated2
+								storyboard.Children.Add(da1)
+								storyboard.Children.Add(da2)
+								storyboard.Children.Add(da3)
+								storyboard.Children.Add(da4)
+								storyboard.Children.Add(da5)
+								storyboard.Children.Add(da6)
+
+								Storyboard.SetTarget(da1, sender1.Content)
+								Storyboard.SetTarget(da2, sender1.Content)
+								Storyboard.SetTarget(da3, sender1.Content)
+								Storyboard.SetTarget(da4, sender1.Content)
+								Storyboard.SetTarget(da5, sender1.Content)
+								Storyboard.SetTarget(da6, sender1.Content)
+								Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+								Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+								Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+								Storyboard.SetTargetProperty(da4, PropertyPath(ContentControl.OpacityProperty))
+								Storyboard.SetTargetProperty(da5, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+								Storyboard.SetTargetProperty(da6, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+
+								storyboard.Begin()
+					
+							def onClosed(sender1, args1):
+								countdownEvent.Signal()
+							
+							bi = bitmapImageList[r.Next(bitmapImageList.Count)]
+							width = Convert.ToInt32(bi.Width) / 2
+							height = Convert.ToInt32(bi.Height) / 2
+							
+							w = Window()
+							w.Owner = Application.Current.MainWindow
+							w.Title = Application.Current.MainWindow.Title
+							w.Left = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenWidth) - width)
+							w.Top = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenHeight) - height)
+							w.AllowsTransparency = True
+							w.WindowStyle = WindowStyle.None
+							w.ResizeMode = ResizeMode.NoResize
+							w.ShowActivated = False
+							w.ShowInTaskbar = False
+							w.Topmost = True
+							w.SizeToContent = SizeToContent.WidthAndHeight
+							w.Background = Brushes.Transparent
+							w.Loaded += onLoaded2
+							w.Closed += onClosed
+													
+							cc = ContentControl()
+							cc.UseLayoutRounding = True
+							cc.HorizontalAlignment = HorizontalAlignment.Stretch
+							cc.VerticalAlignment = VerticalAlignment.Stretch
+							cc.Opacity = 0
+							cc.RenderTransform = ScaleTransform(0, 0, width / 2, height / 2)
+															
+							w.Content = cc
+															
+							image = Image()
+							image.CacheMode = BitmapCache(1)
+							image.HorizontalAlignment = HorizontalAlignment.Left
+							image.VerticalAlignment = VerticalAlignment.Top
+							image.Source = bi
+							image.Width = height
+							image.Height = height
+							image.Stretch = Stretch.Uniform
+															
+							cc.Content = image
+															
+							w.Show()
+
+							index += 1
+
+						if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
+							def onPlay():
+								soundPlayer = None
+
+								try:
+									soundPlayer = SoundPlayer("Assets\\Transform.wav")
+									soundPlayer.Load()
+									soundPlayer.PlaySync()
+
+								finally:
+									if soundPlayer is not None:
+										soundPlayer.Dispose()
+									
+							Task.Factory.StartNew(onPlay)
+
+						def onRun(state):
+							countdownEvent.Wait()
+							countdownEvent.Dispose()
+
+							return enumerateCharacters(state)
+
+						def onCompleted(task):
+							if task.Result.Count > 1:
+								characterList = List[Character]()
+
+								for character in task.Result:
+									isNew = True
+
+									for c in Script.Instance.Characters:
+										if character.Name.Equals(c.Name):
+											isNew = False
+
+											break
+
+									if isNew:
+										success, likes = likesDictionary.TryGetValue(character.Name)
+
+										if success:
+											for i in range(likes.Count):
+												characterList.Add(character)
+
+										characterList.Add(character)
+
+								if characterList.Count > 0:
+									visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
+
+								else:
+									sequenceList = List[Sequence]()
+
+									for sequence in Script.Instance.Sequences:
+										if sequence.Name.Equals("Activate"):
+											sequenceList.Add(sequence)
+
+									Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+
+							else:
+								sequenceList = List[Sequence]()
+
+								for sequence in Script.Instance.Sequences:
+									if sequence.Name.Equals("Activate"):
+										sequenceList.Add(sequence)
+
+								Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+
+						Task.Factory.StartNew[List[Character]](onRun, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
+			
 			closeTimer.Tick += onClose
 			closeTimer.Interval = TimeSpan.FromSeconds(3)
 			closeTimer.Tag = True
@@ -4952,7 +5099,7 @@ def onIsVisibleChanged(s, e):
 			window.Topmost = True
 			window.SizeToContent = SizeToContent.WidthAndHeight
 			window.Background = Brushes.Transparent
-			window.Loaded += onLoaded
+			window.Loaded += onLoaded1
 			window.MouseEnter += onWindowMouseEnter
 			window.MouseLeave += onWindowMouseLeave
 
@@ -5056,161 +5203,200 @@ def onIsVisibleChanged(s, e):
 								if sender1.Tag is not None:
 									sender1.Tag.Stop(sender1)
 
-								sender1.Tag = sb1 = Storyboard()
+								sender1.Tag = storyboard1 = Storyboard()
 								ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
-								se1 = SineEase()
+								sineEase = SineEase()
 
-								se1.EasingMode = EasingMode.EaseOut
-								ca.EasingFunction = se1
+								sineEase.EasingMode = EasingMode.EaseOut
+								ca.EasingFunction = sineEase
 
 								def onCurrentStateInvalidated1(sender2, args2):
 									if sender2.CurrentState == ClockState.Filling:
 										sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
 										sender1.Tag = None
-										sb1.Remove(sender1)
+										storyboard1.Remove(sender1)
 
-								sb1.CurrentStateInvalidated += onCurrentStateInvalidated1
-								sb1.Children.Add(ca)
+								storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated1
+								storyboard1.Children.Add(ca)
 
 								Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-								sender1.BeginStoryboard(sb1, HandoffBehavior.SnapshotAndReplace, True)
+								sender1.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 
 								for element1 in sender1.Child.Children:
 									if clr.GetClrType(Grid).IsInstanceOfType(element1):
 										if element1.Tag is not None:
 											element1.Tag.Stop(element1)
 
-										element1.Tag = sb2 = Storyboard()
+										element1.Tag = storyboard2 = Storyboard()
 										da1 = DoubleAnimation(element1.RenderTransform.ScaleX, 1.1, TimeSpan.FromMilliseconds(500))
 										da2 = DoubleAnimation(element1.RenderTransform.ScaleY, 1.1, TimeSpan.FromMilliseconds(500))
-										se2 = SineEase()
+										sineEase = SineEase()
 
-										se2.EasingMode = EasingMode.EaseOut
-										da1.EasingFunction = da2.EasingFunction = se2
+										sineEase.EasingMode = EasingMode.EaseOut
+										da1.EasingFunction = da2.EasingFunction = sineEase
 
-										def onCurrentStateInvalidated2(sender3, args3):
-											if sender3.CurrentState == ClockState.Filling:
+										def onCurrentStateInvalidated2(sender2, args2):
+											if sender2.CurrentState == ClockState.Filling:
 												for element2 in sender1.Child.Children:
-													if element2.Tag == sb2:
+													if element2.Tag == storyboard2:
 														element2.RenderTransform.ScaleX = 1.1
 														element2.RenderTransform.ScaleY = 1.1
 														element2.Tag = None
-														sb2.Remove(element2)
+														storyboard2.Remove(element2)
 
-										sb2.CurrentStateInvalidated += onCurrentStateInvalidated2
-										sb2.Children.Add(da1)
-										sb2.Children.Add(da2)
+										storyboard2.CurrentStateInvalidated += onCurrentStateInvalidated2
+										storyboard2.Children.Add(da1)
+										storyboard2.Children.Add(da2)
 
 										Storyboard.SetTargetProperty(da1, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleXProperty))
 										Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-										element1.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
+										element1.BeginStoryboard(storyboard2, HandoffBehavior.SnapshotAndReplace, True)
 						
 						def onMouseLeave(sender1, args1):
 							if not termHashSet.Contains(sender1.Child.Tag):
 								if sender1.Tag is not None:
 									sender1.Tag.Stop(sender1)
 
-								sender1.Tag = sb1 = Storyboard()
+								sender1.Tag = storyboard1 = Storyboard()
 								ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
-								se1 = SineEase()
+								sineEase = SineEase()
 
-								se1.EasingMode = EasingMode.EaseIn
-								ca.EasingFunction = se1
+								sineEase.EasingMode = EasingMode.EaseIn
+								ca.EasingFunction = sineEase
 
 								def onCurrentStateInvalidated1(sender2, args2):
 									if sender2.CurrentState == ClockState.Filling:
 										sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 										sender1.Tag = None
-										sb1.Remove(sender1)
+										storyboard1.Remove(sender1)
 
-								sb1.CurrentStateInvalidated += onCurrentStateInvalidated1
-								sb1.Children.Add(ca)
+								storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated1
+								storyboard1.Children.Add(ca)
 
 								Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-								sender1.BeginStoryboard(sb1, HandoffBehavior.SnapshotAndReplace, True)
+								sender1.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 
 								for element1 in sender1.Child.Children:
 									if clr.GetClrType(Grid).IsInstanceOfType(element1):
 										if element1.Tag is not None:
 											element1.Tag.Stop(element1)
 
-										element1.Tag = sb2 = Storyboard()
+										element1.Tag = storyboard2 = Storyboard()
 										da1 = DoubleAnimation(element1.RenderTransform.ScaleX, 1, TimeSpan.FromMilliseconds(500))
 										da2 = DoubleAnimation(element1.RenderTransform.ScaleY, 1, TimeSpan.FromMilliseconds(500))
-										se2 = SineEase()
+										sineEase = SineEase()
 
-										se2.EasingMode = EasingMode.EaseIn
-										da1.EasingFunction = da2.EasingFunction = se2
+										sineEase.EasingMode = EasingMode.EaseIn
+										da1.EasingFunction = da2.EasingFunction = sineEase
 
-										def onCurrentStateInvalidated2(sender3, args3):
-											if sender3.CurrentState == ClockState.Filling:
+										def onCurrentStateInvalidated2(sender2, args2):
+											if sender2.CurrentState == ClockState.Filling:
 												for element2 in sender1.Child.Children:
-													if element2.Tag == sb2:
+													if element2.Tag == storyboard2:
 														element2.RenderTransform.ScaleX = 1
 														element2.RenderTransform.ScaleY = 1
 														element2.Tag = None
-														sb2.Remove(element2)
+														storyboard2.Remove(element2)
 
-										sb2.CurrentStateInvalidated += onCurrentStateInvalidated2
-										sb2.Children.Add(da1)
-										sb2.Children.Add(da2)
+										storyboard2.CurrentStateInvalidated += onCurrentStateInvalidated2
+										storyboard2.Children.Add(da1)
+										storyboard2.Children.Add(da2)
 
 										Storyboard.SetTargetProperty(da1, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleXProperty))
 										Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-										element1.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
+										element1.BeginStoryboard(storyboard2, HandoffBehavior.SnapshotAndReplace, True)
 
 						def onMouseLeftButtonUp(sender1, args1):
 							from System.IO import Path as _Path
+							global remainingCount
 
 							if termHashSet.Count < 3:
-								if termHashSet.Contains(sender1.Child.Tag):
-									termHashSet.Remove(sender1.Child.Tag)
-
-								else:
-									termHashSet.Add(sender1.Child.Tag)
-														
 								if sender1.Tag is not None:
 									sender1.Tag.Stop(sender1)
 
-								if termHashSet.Contains(sender1.Child.Tag) and sender1.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
-									sb2 = Storyboard()
-									da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-									da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-									da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-									se2 = SineEase()
+								if termHashSet.Contains(sender1.Child.Tag):
+									termHashSet.Remove(sender1.Child.Tag)
 
-									se2.EasingMode = EasingMode.EaseIn
-									da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = se2
+									sender1.Tag = storyboard = Storyboard()
+									color = Color.FromArgb(0, Byte.MaxValue, 0, 102)
+									ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
+									sineEase = SineEase()
 
-									def onCurrentStateInvalidated(sender2, args2):
+									sineEase.EasingMode = EasingMode.EaseIn
+									ca.EasingFunction = sineEase
+
+									def onCurrentStateInvalidated1(sender2, args2):
 										if sender2.CurrentState == ClockState.Filling:
-											contentControl.Opacity = 0
-											contentControl.RenderTransform.ScaleX = 1.5
-											contentControl.RenderTransform.ScaleY = 1.5
-											sb2.Remove(contentControl)
-											imageHashSet.Clear()
-											window.Close()
+											sender1.Background = SolidColorBrush(color)
+											sender1.Tag = None
+											storyboard.Remove(sender1)
 
-									sb2.CurrentStateInvalidated += onCurrentStateInvalidated
-									sb2.Children.Add(da1)
-									sb2.Children.Add(da2)
-									sb2.Children.Add(da3)
+									storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
+									storyboard.Children.Add(ca)
 
-									Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-									Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-									Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+									Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+									sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+								else:
+									termHashSet.Add(sender1.Child.Tag)
+
+									sender1.Tag = storyboard = Storyboard()
+									color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)
+									ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
+									sineEase = SineEase()
+
+									sineEase.EasingMode = EasingMode.EaseOut
+									ca.EasingFunction = sineEase
+
+									def onCurrentStateInvalidated1(sender2, args2):
+										if sender2.CurrentState == ClockState.Filling:
+											sender1.Background = SolidColorBrush(color)
+											sender1.Tag = None
+											storyboard.Remove(sender1)
+
+									storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
+									storyboard.Children.Add(ca)
+
+									Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+									sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+								
+									if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+										storyboard = Storyboard()
+										da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
+										da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+										da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+										sineEase = SineEase()
+
+										sineEase.EasingMode = EasingMode.EaseIn
+										da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
+
+										def onCurrentStateInvalidated2(sender, args):
+											if sender.CurrentState == ClockState.Filling:
+												contentControl.Opacity = 0
+												contentControl.RenderTransform.ScaleX = 1.5
+												contentControl.RenderTransform.ScaleY = 1.5
+												storyboard.Remove(contentControl)
+												imageHashSet.Clear()
+												window.Close()
+
+										storyboard.CurrentStateInvalidated += onCurrentStateInvalidated2
+										storyboard.Children.Add(da1)
+										storyboard.Children.Add(da2)
+										storyboard.Children.Add(da3)
+
+										Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+										Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+										Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-									contentControl.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
-									closeTimer.Tag = False
+										contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+										closeTimer.Tag = False
 
-									def onEnumerate(state):
-										return enumerateCharacters(state)
-
-									def onCompleted(task):
 										for key in termHashSet:
 											if not chargesDictionary.ContainsKey(key):
 												break
@@ -5259,6 +5445,11 @@ def onIsVisibleChanged(s, e):
 												if sum >= max:
 													charges += 1
 
+											if remainingCount + termHashSet.Count < 5:
+												remainingCount += termHashSet.Count
+											else:
+												remainingCount = 5
+																	
 											sequenceList = List[Sequence]()
 								
 											for sequence in Script.Instance.Sequences:
@@ -5266,49 +5457,137 @@ def onIsVisibleChanged(s, e):
 													sequenceList.Add(sequence)
 
 											Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
+										
+											maxWidth = Double.MinValue
+											maxHeight = Double.MinValue
+											bitmapImageList = List[BitmapImage]()
+											r = Random(Environment.TickCount)
+											index = 0
 
-											if task.Result.Count > 1:
-												characterList = List[Character]()
+											for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
+												fs = None
+																					
+												try:
+													fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
+																						
+													bi = BitmapImage()
+													bi.BeginInit()
+													bi.StreamSource = fs
+													bi.CacheOption = BitmapCacheOption.OnLoad
+													bi.CreateOptions = BitmapCreateOptions.None
+													bi.EndInit()
 
-												for character in task.Result:
-													isNew = True
+													if bi.Width > maxWidth:
+														maxWidth = bi.Width
 
-													for c in Script.Instance.Characters:
-														if character.Name.Equals(c.Name):
-															isNew = False
+													if bi.Height > maxHeight:
+														maxHeight = bi.Height
 
-															break
+													bitmapImageList.Add(bi)
 
-													if isNew:
-														success, likes = likesDictionary.TryGetValue(character.Name)
+												except:
+													continue
 
-														if success:
-															for i in range(likes.Count):
-																characterList.Add(character)
+												finally:
+													if fs is not None:
+														fs.Close()
 
-														characterList.Add(character)
+											count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
+											countdownEvent = CountdownEvent(Convert.ToInt32(count))
 
-												if characterList.Count > 0:
-													visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
+											while index < count:
+												def onLoaded2(sender1, args1):
+													storyboard = Storyboard()
+													da1 = DoubleAnimation(sender1.Content.Opacity, 1, TimeSpan.FromMilliseconds(500))
+													da2 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+													da3 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+													da4 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+													da5 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+													da6 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+													sineEase1 = SineEase()
+													sineEase2 = SineEase()
 
-												else:
-													sequenceList = List[Sequence]()
+													storyboard.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(1000)))
+													sineEase1.EasingMode = EasingMode.EaseOut
+													sineEase2.EasingMode = EasingMode.EaseIn
+													da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase1
+													da4.BeginTime = da5.BeginTime = da6.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(500))
+													da4.EasingFunction = da5.EasingFunction = da6.EasingFunction = sineEase2
 
-													for sequence in Script.Instance.Sequences:
-														if sequence.Name.Equals("Activate"):
-															sequenceList.Add(sequence)
+													def onCurrentStateInvalidated3(sender2, args2):
+														if sender2.CurrentState == ClockState.Filling:
+															sender1.Close()
 
-													Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
-									
-											else:
-												sequenceList = List[Sequence]()
+													storyboard.CurrentStateInvalidated += onCurrentStateInvalidated3
+													storyboard.Children.Add(da1)
+													storyboard.Children.Add(da2)
+													storyboard.Children.Add(da3)
+													storyboard.Children.Add(da4)
+													storyboard.Children.Add(da5)
+													storyboard.Children.Add(da6)
 
-												for sequence in Script.Instance.Sequences:
-													if sequence.Name.Equals("Activate"):
-														sequenceList.Add(sequence)
+													Storyboard.SetTarget(da1, sender1.Content)
+													Storyboard.SetTarget(da2, sender1.Content)
+													Storyboard.SetTarget(da3, sender1.Content)
+													Storyboard.SetTarget(da4, sender1.Content)
+													Storyboard.SetTarget(da5, sender1.Content)
+													Storyboard.SetTarget(da6, sender1.Content)
+													Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+													Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+													Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+													Storyboard.SetTargetProperty(da4, PropertyPath(ContentControl.OpacityProperty))
+													Storyboard.SetTargetProperty(da5, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+													Storyboard.SetTargetProperty(da6, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 
-												Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
-									
+													storyboard.Begin()
+					
+												def onClosed(sender1, args1):
+													countdownEvent.Signal()
+
+												bi = bitmapImageList[r.Next(bitmapImageList.Count)]
+												width = Convert.ToInt32(bi.Width) / 2
+												height = Convert.ToInt32(bi.Height) / 2
+							
+												w = Window()
+												w.Owner = Application.Current.MainWindow
+												w.Title = Application.Current.MainWindow.Title
+												w.Left = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenWidth) - width)
+												w.Top = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenHeight) - height)
+												w.AllowsTransparency = True
+												w.WindowStyle = WindowStyle.None
+												w.ResizeMode = ResizeMode.NoResize
+												w.ShowActivated = False
+												w.ShowInTaskbar = False
+												w.Topmost = True
+												w.SizeToContent = SizeToContent.WidthAndHeight
+												w.Background = Brushes.Transparent
+												w.Loaded += onLoaded2
+												w.Closed += onClosed
+													
+												cc = ContentControl()
+												cc.UseLayoutRounding = True
+												cc.HorizontalAlignment = HorizontalAlignment.Stretch
+												cc.VerticalAlignment = VerticalAlignment.Stretch
+												cc.Opacity = 0
+												cc.RenderTransform = ScaleTransform(0, 0, width / 2, height / 2)
+															
+												w.Content = cc
+															
+												image = Image()
+												image.CacheMode = BitmapCache(1)
+												image.HorizontalAlignment = HorizontalAlignment.Left
+												image.VerticalAlignment = VerticalAlignment.Top
+												image.Source = bi
+												image.Width = height
+												image.Height = height
+												image.Stretch = Stretch.Uniform
+															
+												cc.Content = image
+															
+												w.Show()
+
+												index += 1
+
 											if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
 												def onPlay():
 													soundPlayer = None
@@ -5324,180 +5603,63 @@ def onIsVisibleChanged(s, e):
 									
 												Task.Factory.StartNew(onPlay)
 
-									Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
-									
-								else:
-									sender1.Tag = sb1 = Storyboard()
-									color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102) if termHashSet.Contains(sender1.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 102)
-									isPressed = True if (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control else False
-									ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
-									se1 = SineEase()
+											def onRun(state):
+												countdownEvent.Wait()
+												countdownEvent.Dispose()
 
-									se1.EasingMode = EasingMode.EaseOut if termHashSet.Contains(sender1.Child.Tag) else EasingMode.EaseIn
-									ca.EasingFunction = se1
+												return enumerateCharacters(state)
 
-									def onCurrentStateInvalidated1(sender2, args2):
-										if sender2.CurrentState == ClockState.Filling:
-											sender1.Background = SolidColorBrush(color)
-											sender1.Tag = None
-											sb1.Remove(sender1)
+											def onCompleted(task):
+												if task.Result.Count > 1:
+													characterList = List[Character]()
 
-											if not isPressed and termHashSet.Count > 0 or termHashSet.Count == 3:
-												sb2 = Storyboard()
-												da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-												da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-												da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-												se2 = SineEase()
+													for character in task.Result:
+														isNew = True
 
-												se2.EasingMode = EasingMode.EaseIn
-												da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = se2
+														for c in Script.Instance.Characters:
+															if character.Name.Equals(c.Name):
+																isNew = False
 
-												def onCurrentStateInvalidated2(sender3, args3):
-													if sender3.CurrentState == ClockState.Filling:
-														contentControl.Opacity = 0
-														contentControl.RenderTransform.ScaleX = 1.5
-														contentControl.RenderTransform.ScaleY = 1.5
-														sb2.Remove(contentControl)
-														imageHashSet.Clear()
-														window.Close()
+																break
 
-												sb2.CurrentStateInvalidated += onCurrentStateInvalidated2
-												sb2.Children.Add(da1)
-												sb2.Children.Add(da2)
-												sb2.Children.Add(da3)
+														if isNew:
+															success, likes = likesDictionary.TryGetValue(character.Name)
 
-												Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-												Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-												Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-			
-												contentControl.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
-												closeTimer.Tag = False
-
-												def onEnumerate(state):
-													return enumerateCharacters(state)
-
-												def onCompleted(task):
-													for key in termHashSet:
-														if not chargesDictionary.ContainsKey(key):
-															break
-
-													else:
-														def comparison(s1, s2):
-															sum1 = 0.0
-															sum2 = 0.0
-
-															for score in chargesDictionary[s1]:
-																sum1 += score
-
-															for score in chargesDictionary[s2]:
-																sum2 += score
-																			
-															if sum1 / chargesDictionary[s1].Count > sum2 / chargesDictionary[s2].Count:
-																return 1
-
-															elif sum1 / chargesDictionary[s1].Count < sum2 / chargesDictionary[s2].Count:
-																return -1
-																			
-															return 0
-
-														list = List[String](termHashSet)
-														list.Sort(comparison)
-														list.Reverse()
-
-														for key in termHashSet:
-															chargesDictionary.Remove(key)
-
-															if imageDictionary.ContainsKey(key):
-																imageDictionary.Remove(key)
-
-														d = Dictionary[String, List[Double]](chargesDictionary)
-														chargesDictionary.Clear()
-														charges = 0
-
-														for kvp in d:
-															chargesDictionary.Add(kvp.Key, kvp.Value)
-
-															sum = 0.0
-
-															for score in kvp.Value:
-																sum += score
-
-															if sum >= max:
-																charges += 1
-
-														sequenceList = List[Sequence]()
-								
-														for sequence in Script.Instance.Sequences:
-															if sequence.Name.Equals("Charge"):
-																sequenceList.Add(sequence)
-
-														Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
-
-														if task.Result.Count > 1:
-															characterList = List[Character]()
-
-															for character in task.Result:
-																isNew = True
-
-																for c in Script.Instance.Characters:
-																	if character.Name.Equals(c.Name):
-																		isNew = False
-
-																		break
-
-																if isNew:
-																	success, likes = likesDictionary.TryGetValue(character.Name)
-
-																	if success:
-																		for i in range(likes.Count):
-																			characterList.Add(character)
-
+															if success:
+																for i in range(likes.Count):
 																	characterList.Add(character)
 
-															if characterList.Count > 0:
-																visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
+															characterList.Add(character)
 
-															else:
-																sequenceList = List[Sequence]()
+													if characterList.Count > 0:
+														visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
 
-																for sequence in Script.Instance.Sequences:
-																	if sequence.Name.Equals("Activate"):
-																		sequenceList.Add(sequence)
+													else:
+														sequenceList = List[Sequence]()
 
-																Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+														for sequence in Script.Instance.Sequences:
+															if sequence.Name.Equals("Activate"):
+																sequenceList.Add(sequence)
 
-														else:
-															sequenceList = List[Sequence]()
-
-															for sequence in Script.Instance.Sequences:
-																if sequence.Name.Equals("Activate"):
-																	sequenceList.Add(sequence)
-
-															Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
-
-														if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
-															def onPlay():
-																soundPlayer = None
-
-																try:
-																	soundPlayer = SoundPlayer("Assets\\Transform.wav")
-																	soundPlayer.Load()
-																	soundPlayer.PlaySync()
-
-																finally:
-																	if soundPlayer is not None:
-																		soundPlayer.Dispose()
+														Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 									
-															Task.Factory.StartNew(onPlay)
+												else:
+													sequenceList = List[Sequence]()
 
-												Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
-												
-									sb1.CurrentStateInvalidated += onCurrentStateInvalidated1
-									sb1.Children.Add(ca)
+													for sequence in Script.Instance.Sequences:
+														if sequence.Name.Equals("Activate"):
+															sequenceList.Add(sequence)
+
+													Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+
+											Task.Factory.StartNew[List[Character]](onRun, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
+											
+									storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated1
+									storyboard1.Children.Add(ca)
 
 									Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-									sender1.BeginStoryboard(sb1, HandoffBehavior.SnapshotAndReplace, True)
+									sender1.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 
 						border2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 						border2.MouseEnter += onMouseEnter
@@ -5655,19 +5817,19 @@ def visit(character, terms):
 	sourcePreparedSequences = Script.Instance.Prepare(activateSequenceList, None, terms)
 
 	for sourcePreparedSequence in sourcePreparedSequences:
-		for c1 in Script.Instance.Characters:
-			if c1.Name.Equals(sourcePreparedSequence.Owner):
+		for c in Script.Instance.Characters:
+			if c.Name.Equals(sourcePreparedSequence.Owner):
 				exsistingCharacterList = List[Character](Script.Instance.Characters)
 
-				character.Location = Point(c1.BaseLocation.X - c1.Origin.X + c1.Size.Width - character.Origin.X if c1.Mirror else c1.BaseLocation.X + c1.Origin.X - character.Size.Width + character.Origin.X, c1.BaseLocation.Y + (c1.Size.Height - character.Size.Height) / 2)
-				character.Mirror = not c1.Mirror
+				character.Location = Point(c.BaseLocation.X - c.Origin.X + c.Size.Width - character.Origin.X if c.Mirror else c.BaseLocation.X + c.Origin.X - character.Size.Width + character.Origin.X, c.BaseLocation.Y + (c.Size.Height - character.Size.Height) / 2)
+				character.Mirror = not c.Mirror
 
 				Script.Instance.Characters.Add(character)
 				Script.Instance.Parse(character.Script)
 
-				def onClosing(s, e):
+				def onClosing(sender, args):
 					isCleared = False
-					characterList = List[Character]()
+					characterList = List[Character](Script.Instance.Characters)
 					sequenceList = List[Sequence]()
 
 					Script.Instance.Characters.Remove(character)
@@ -5676,17 +5838,14 @@ def visit(character, terms):
 						if sequence.Owner.Equals(character.Name):
 							Script.Instance.Sequences.Remove(sequence)
 
-					characterList.Add(character)
-					characterList.AddRange(Script.Instance.Characters)
-
 					while not isCleared:
 						isCleared = True
 
-						for c2 in characterList:
-							success, sequence = Script.Instance.TryDequeue(c2.Name)
+						for c in characterList:
+							success, sequence = Script.Instance.TryDequeue(c.Name)
 
 							if success:
-								if characterList.Exists(lambda x: x.Name.Equals(c2.Name)):
+								if not character.Name.Equals(c.Name):
 									sequenceList.Add(sequence)
 
 								isCleared = False
@@ -6120,17 +6279,17 @@ def enumerateCharacters(directory):
 									if attribute.Name.LocalName.Equals("name"):
 										character.Name = attribute.Value
 									elif attribute.Name.LocalName.Equals("origin-x"):
-										originX = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
+										originX = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
 									elif attribute.Name.LocalName.Equals("origin-y"):
-										originY = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
+										originY = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
 									elif attribute.Name.LocalName.Equals("x") or attribute.Name.LocalName.Equals("left"):
-										x = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
+										x = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
 									elif attribute.Name.LocalName.Equals("y") or attribute.Name.LocalName.Equals("top"):
-										y = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
+										y = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
 									elif attribute.Name.LocalName.Equals("width"):
-										width = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
+										width = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
 									elif attribute.Name.LocalName.Equals("height"):
-										height = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
+										height = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
 
 								character.Origin = Point(originX, originY)
 								character.BaseLocation = Point(x, y)
@@ -6168,36 +6327,48 @@ def enumerateCharacters(directory):
 
 								if rootElement.Name.LocalName.Equals("script"):
 									for characterElement in rootElement.Elements("character"):
-										character = Character()
-										originX = 0
-										originY = 0
-										x = 0
-										y = 0
-										width = 0
-										height = 0
+										for sequenceElement in characterElement.Elements("sequence"):
+											isReady = False
+							
+											for attribute in sequenceElement.Attributes():
+												if attribute.Name.LocalName.Equals("name") and (attribute.Value.Equals("Greet") or attribute.Value.Equals("Hate") or attribute.Value.Equals("Interest") or attribute.Value.Equals("Thank") or attribute.Value.Equals("Ignore")):
+													isReady = True
+									
+													break
+									
+											if isReady:
+												character = Character()
+												originX = 0
+												originY = 0
+												x = 0
+												y = 0
+												width = 0
+												height = 0
 
-										for attribute in characterElement.Attributes():
-											if attribute.Name.LocalName.Equals("name"):
-												character.Name = attribute.Value
-											elif attribute.Name.LocalName.Equals("origin-x"):
-												originX = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
-											elif attribute.Name.LocalName.Equals("origin-y"):
-												originY = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
-											elif attribute.Name.LocalName.Equals("x") or attribute.Name.LocalName.Equals("left"):
-												x = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
-											elif attribute.Name.LocalName.Equals("y") or attribute.Name.LocalName.Equals("top"):
-												y = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
-											elif attribute.Name.LocalName.Equals("width"):
-												width = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
-											elif attribute.Name.LocalName.Equals("height"):
-												height = Int32.Parse(attribute.Value, CultureInfo.InvariantCulture)
+												for attribute in characterElement.Attributes():
+													if attribute.Name.LocalName.Equals("name"):
+														character.Name = attribute.Value
+													elif attribute.Name.LocalName.Equals("origin-x"):
+														originX = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
+													elif attribute.Name.LocalName.Equals("origin-y"):
+														originY = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
+													elif attribute.Name.LocalName.Equals("x") or attribute.Name.LocalName.Equals("left"):
+														x = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
+													elif attribute.Name.LocalName.Equals("y") or attribute.Name.LocalName.Equals("top"):
+														y = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
+													elif attribute.Name.LocalName.Equals("width"):
+														width = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
+													elif attribute.Name.LocalName.Equals("height"):
+														height = Double.Parse(attribute.Value, CultureInfo.InvariantCulture)
 
-										character.Origin = Point(originX, originY)
-										character.BaseLocation = Point(x, y)
-										character.Size = Size(width, height)
-										character.Script = fileName
+												character.Origin = Point(originX, originY)
+												character.BaseLocation = Point(x, y)
+												character.Size = Size(width, height)
+												character.Script = fileName
 
-										characterList.Add(character)
+												characterList.Add(character)
+
+												break
 
 							finally:
 								if s is not None:
@@ -7084,7 +7255,7 @@ def getTermList(dictionary, text):
 
 	return selectedTermList
 	
-def onStart(s, e):
+def onStart(sender, args):
 	global balloonList, menuItem, separator, timer, chargesDictionary, imageDictionary
 
 	tempList = List[Balloon]()
@@ -7092,16 +7263,16 @@ def onStart(s, e):
 	for window in Application.Current.Windows:
 		if window is Application.Current.MainWindow and window.ContextMenu is not None:
 			if not window.ContextMenu.Items.Contains(menuItem):
-				def onClosing(s, e):
-					for w in Application.Current.Windows:
-						if w != Application.Current.MainWindow and w.Owner is None and clr.GetClrType(Agent).IsInstanceOfType(w):
-							w.Close()
+				def onClosing(sender, args):
+					for window in Application.Current.Windows:
+						if window != Application.Current.MainWindow and window.Owner is None and clr.GetClrType(Agent).IsInstanceOfType(window):
+							window.Close()
 
-				def onMouseUp(s, e):
+				def onMouseUp(sender, args):
 					from System.Windows.Shapes import Path
 					global likesDictionary
 
-					if e.ChangedButton == MouseButton.Middle and (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control or e.ChangedButton == MouseButton.Left and (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.Control | ModifierKeys.Shift:
+					if args.ChangedButton == MouseButton.Middle and (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control or args.ChangedButton == MouseButton.Left and (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.Control | ModifierKeys.Shift:
 						max = 1.5
 						chargesList = List[KeyValuePair[String, Double]]()
 						tmepChargesList = List[KeyValuePair[String, Double]]()
@@ -7142,46 +7313,13 @@ def onStart(s, e):
 
 							termHashSet = HashSet[String]()
 							imageHashSet = HashSet[Uri]()
-							w = Window()
-							closeTimer = DispatcherTimer(DispatcherPriority.Background)
+							window = Window()
 							contentControl = ContentControl()
 							border1 = Border()
 							stackPanel1 = StackPanel()
-			
-							def onClose(sender1, args1):
-								closeTimer.Stop()
-						
-								storyboard = Storyboard()
-								da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-								da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-								da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-								sineEase = SineEase()
-
-								sineEase.EasingMode = EasingMode.EaseIn
-								da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
-
-								def onCurrentStateInvalidated(sender2, args2):
-									if sender2.CurrentState == ClockState.Filling:
-										contentControl.Opacity = 0
-										contentControl.RenderTransform.ScaleX = 1.5
-										contentControl.RenderTransform.ScaleY = 1.5
-										storyboard.Remove(contentControl)
-										imageHashSet.Clear()
-										w.Close()
-
-								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-								storyboard.Children.Add(da1)
-								storyboard.Children.Add(da2)
-								storyboard.Children.Add(da3)
-
-								Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-								Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-								Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-			
-								contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
-								closeTimer.Tag = False
-
-							def onLoaded(sender1, args1):
+							closeTimer = DispatcherTimer(DispatcherPriority.Background)
+							
+							def onLoaded1(sender1, args1):
 								border1.Width = contentControl.ActualWidth
 								border1.Height = contentControl.ActualHeight
 								contentControl.Width = contentControl.ActualWidth * 1.5
@@ -7197,21 +7335,21 @@ def onStart(s, e):
 													element3.RenderTransform.CenterX = element3.ActualWidth / 2
 													element3.RenderTransform.CenterY = element3.ActualHeight / 2
 
-								storyboard = Storyboard()
-								da1 = DoubleAnimation(contentControl.Opacity, 1, TimeSpan.FromMilliseconds(500))
-								da2 = DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500))
-								da3 = DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500))
+								storyboard1 = Storyboard()
+								doubleAnimation1 = DoubleAnimation(contentControl.Opacity, 1, TimeSpan.FromMilliseconds(500))
+								doubleAnimation2 = DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500))
+								doubleAnimation3 = DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500))
 								sineEase = SineEase()
 
 								sineEase.EasingMode = EasingMode.EaseOut
-								da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
+								doubleAnimation1.EasingFunction = doubleAnimation2.EasingFunction = doubleAnimation3.EasingFunction = sineEase
 
-								def onCurrentStateInvalidated(sender2, args2):
-									if sender2.CurrentState == ClockState.Filling:
+								def onCurrentStateInvalidated(sender, args):
+									if sender.CurrentState == ClockState.Filling:
 										contentControl.Opacity = 1
 										contentControl.RenderTransform.ScaleX = 1
 										contentControl.RenderTransform.ScaleY = 1
-										storyboard.Remove(contentControl)
+										storyboard1.Remove(contentControl)
 
 										if not border1.Tag:
 											closeTimer.Start()
@@ -7230,31 +7368,31 @@ def onStart(s, e):
 																			for element6 in element4.Children:
 																				if clr.GetClrType(Ellipse).IsInstanceOfType(element6):
 																					if element6.Clip is not None:
-																						sb2 = Storyboard()
+																						storyboard2 = Storyboard()
 																						ra = RectAnimation(element6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
-																						se = SineEase()
+																						sineEase = SineEase()
 
-																						se.EasingMode = EasingMode.EaseOut
-																						ra.EasingFunction = se
+																						sineEase.EasingMode = EasingMode.EaseOut
+																						ra.EasingFunction = sineEase
 
-																						sb2.Children.Add(ra)
+																						storyboard2.Children.Add(ra)
 
 																						Storyboard.SetTarget(ra, element6)
 																						Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
 																
-																						sb2.Begin()
+																						storyboard2.Begin()
 
 																		elif not imageHashSet.Contains(element5.Tag):
 																			imageHashSet.Add(element5.Tag)
 																
-																			def onUpdated(t):
+																			def onUpdated(task):
 																				bi = None
 
-																				if t.Result.Value is not None:
+																				if task.Result.Value is not None:
 																					try:
 																						bi = BitmapImage()
 																						bi.BeginInit()
-																						bi.StreamSource = t.Result.Value
+																						bi.StreamSource = task.Result.Value
 																						bi.CacheOption = BitmapCacheOption.OnLoad
 																						bi.CreateOptions = BitmapCreateOptions.None
 																						bi.EndInit()
@@ -7263,13 +7401,13 @@ def onStart(s, e):
 																						bi = None
 
 																					finally:
-																						t.Result.Value.Close()
+																						task.Result.Value.Close()
 
-																				if imageHashSet.Contains(t.Result.Key):
+																				if imageHashSet.Contains(task.Result.Key):
 																					for e1 in stackPanel1.Children:
 																						for e2 in e1.Children:
 																							if imageDictionary.ContainsKey(e2.Child.Tag):
-																								if imageDictionary[e2.Child.Tag].Equals(t.Result.Key):
+																								if imageDictionary[e2.Child.Tag].Equals(task.Result.Key):
 																									for e3 in e2.Child.Children:
 																										if clr.GetClrType(Grid).IsInstanceOfType(e3):
 																											for e4 in e3.Children:
@@ -7277,7 +7415,7 @@ def onStart(s, e):
 																													for e5 in e4.Children:
 																														if clr.GetClrType(Image).IsInstanceOfType(e5):
 																															if e5.Tag is not None:
-																																if e5.Tag.Equals(t.Result.Key):
+																																if e5.Tag.Equals(task.Result.Key):
 																																	if bi is None:
 																																		e5.Source = createColorBarsImage(Size(70, 70))
 																												
@@ -7287,34 +7425,34 @@ def onStart(s, e):
 																																	for e6 in e4.Children:
 																																		if clr.GetClrType(Ellipse).IsInstanceOfType(e6):
 																																			if e6.Clip is not None:
-																																				sb = Storyboard()
+																																				storyboard = Storyboard()
 																																				ra = RectAnimation(e6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
-																																				se = SineEase()
+																																				sineEase = SineEase()
 
-																																				se.EasingMode = EasingMode.EaseOut
-																																				ra.EasingFunction = se
+																																				sineEase.EasingMode = EasingMode.EaseOut
+																																				ra.EasingFunction = sineEase
 
-																																				sb.Children.Add(ra)
+																																				storyboard.Children.Add(ra)
 
 																																				Storyboard.SetTarget(ra, e6)
 																																				Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
 																
-																																				sb.Begin()
+																																				storyboard.Begin()
 
 																			task = createUpdateImageTask(imageDictionary[element2.Child.Tag])
 																			task.ContinueWith(Action[Task[KeyValuePair[Uri, MemoryStream]]](onUpdated), TaskScheduler.FromCurrentSynchronizationContext())
 																			task.Start()
 
-								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-								storyboard.Children.Add(da1)
-								storyboard.Children.Add(da2)
-								storyboard.Children.Add(da3)
+								storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated
+								storyboard1.Children.Add(doubleAnimation1)
+								storyboard1.Children.Add(doubleAnimation2)
+								storyboard1.Children.Add(doubleAnimation3)
 
-								Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-								Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-								Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+								Storyboard.SetTargetProperty(doubleAnimation1, PropertyPath(ContentControl.OpacityProperty))
+								Storyboard.SetTargetProperty(doubleAnimation2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+								Storyboard.SetTargetProperty(doubleAnimation3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 
-								contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+								contentControl.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 
 							def onWindowMouseEnter(sender, args):
 								closeTimer.Stop()
@@ -7326,6 +7464,39 @@ def onStart(s, e):
 
 								border1.Tag = False
 
+							def onClose(sender, args):
+								closeTimer.Stop()
+						
+								storyboard = Storyboard()
+								doubleAnimation1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
+								doubleAnimation2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+								doubleAnimation3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+								sineEase = SineEase()
+
+								sineEase.EasingMode = EasingMode.EaseIn
+								doubleAnimation1.EasingFunction = doubleAnimation2.EasingFunction = doubleAnimation3.EasingFunction = sineEase
+
+								def onCurrentStateInvalidated(sender, args):
+									if sender.CurrentState == ClockState.Filling:
+										contentControl.Opacity = 0
+										contentControl.RenderTransform.ScaleX = 1.5
+										contentControl.RenderTransform.ScaleY = 1.5
+										storyboard.Remove(contentControl)
+										imageHashSet.Clear()
+										window.Close()
+
+								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+								storyboard.Children.Add(doubleAnimation1)
+								storyboard.Children.Add(doubleAnimation2)
+								storyboard.Children.Add(doubleAnimation3)
+
+								Storyboard.SetTargetProperty(doubleAnimation1, PropertyPath(ContentControl.OpacityProperty))
+								Storyboard.SetTargetProperty(doubleAnimation2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+								Storyboard.SetTargetProperty(doubleAnimation3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+			
+								contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+								closeTimer.Tag = False
+							
 							closeTimer.Tick += onClose
 							closeTimer.Interval = TimeSpan.FromSeconds(3)
 							closeTimer.Tag = True
@@ -7361,19 +7532,19 @@ def onStart(s, e):
 							dc.DrawRectangle(imageBrush, None, Rect(0, 0, bi.Width, bi.Height))
 							dc.Close()
 
-							w.Owner = Application.Current.MainWindow
-							w.Title = Application.Current.MainWindow.Title
-							w.WindowStartupLocation = WindowStartupLocation.CenterOwner
-							w.AllowsTransparency = True
-							w.WindowStyle = WindowStyle.None
-							w.ResizeMode = ResizeMode.NoResize
-							w.ShowActivated = False
-							w.Topmost = True
-							w.SizeToContent = SizeToContent.WidthAndHeight
-							w.Background = Brushes.Transparent
-							w.Loaded += onLoaded
-							w.MouseEnter += onWindowMouseEnter
-							w.MouseLeave += onWindowMouseLeave
+							window.Owner = Application.Current.MainWindow
+							window.Title = Application.Current.MainWindow.Title
+							window.WindowStartupLocation = WindowStartupLocation.CenterOwner
+							window.AllowsTransparency = True
+							window.WindowStyle = WindowStyle.None
+							window.ResizeMode = ResizeMode.NoResize
+							window.ShowActivated = False
+							window.Topmost = True
+							window.SizeToContent = SizeToContent.WidthAndHeight
+							window.Background = Brushes.Transparent
+							window.Loaded += onLoaded1
+							window.MouseEnter += onWindowMouseEnter
+							window.MouseLeave += onWindowMouseLeave
 
 							contentControl.UseLayoutRounding = True
 							contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
@@ -7381,7 +7552,7 @@ def onStart(s, e):
 							contentControl.Opacity = 0
 							contentControl.RenderTransform = ScaleTransform(1, 1)
 							
-							w.Content = contentControl
+							window.Content = contentControl
 
 							backgroundBrush = ImageBrush(DrawingImage(dg))
 							backgroundBrush.TileMode = TileMode.Tile
@@ -7467,161 +7638,200 @@ def onStart(s, e):
 											if sender1.Tag is not None:
 												sender1.Tag.Stop(sender1)
 
-											sender1.Tag = sb1 = Storyboard()
+											sender1.Tag = storyboard1 = Storyboard()
 											ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
-											se1 = SineEase()
+											sineEase = SineEase()
 
-											se1.EasingMode = EasingMode.EaseOut
-											ca.EasingFunction = se1
+											sineEase.EasingMode = EasingMode.EaseOut
+											ca.EasingFunction = sineEase
 
 											def onCurrentStateInvalidated1(sender2, args2):
 												if sender2.CurrentState == ClockState.Filling:
 													sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
 													sender1.Tag = None
-													sb1.Remove(sender1)
+													storyboard1.Remove(sender1)
 
-											sb1.CurrentStateInvalidated += onCurrentStateInvalidated1
-											sb1.Children.Add(ca)
+											storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated1
+											storyboard1.Children.Add(ca)
 
 											Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-											sender1.BeginStoryboard(sb1, HandoffBehavior.SnapshotAndReplace, True)
+											sender1.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 
 											for element1 in sender1.Child.Children:
 												if clr.GetClrType(Grid).IsInstanceOfType(element1):
 													if element1.Tag is not None:
 														element1.Tag.Stop(element1)
 
-													element1.Tag = sb2 = Storyboard()
+													element1.Tag = storyboard2 = Storyboard()
 													da1 = DoubleAnimation(element1.RenderTransform.ScaleX, 1.1, TimeSpan.FromMilliseconds(500))
 													da2 = DoubleAnimation(element1.RenderTransform.ScaleY, 1.1, TimeSpan.FromMilliseconds(500))
-													se2 = SineEase()
+													sineEase = SineEase()
 
-													se2.EasingMode = EasingMode.EaseOut
-													da1.EasingFunction = da2.EasingFunction = se2
+													sineEase.EasingMode = EasingMode.EaseOut
+													da1.EasingFunction = da2.EasingFunction = sineEase
 
-													def onCurrentStateInvalidated2(sender3, args3):
-														if sender3.CurrentState == ClockState.Filling:
+													def onCurrentStateInvalidated2(sender2, args2):
+														if sender2.CurrentState == ClockState.Filling:
 															for element2 in sender1.Child.Children:
-																if element2.Tag == sb2:
+																if element2.Tag == storyboard2:
 																	element2.RenderTransform.ScaleX = 1.1
 																	element2.RenderTransform.ScaleY = 1.1
 																	element2.Tag = None
-																	sb2.Remove(element2)
+																	storyboard2.Remove(element2)
 
-													sb2.CurrentStateInvalidated += onCurrentStateInvalidated2
-													sb2.Children.Add(da1)
-													sb2.Children.Add(da2)
+													storyboard2.CurrentStateInvalidated += onCurrentStateInvalidated2
+													storyboard2.Children.Add(da1)
+													storyboard2.Children.Add(da2)
 
 													Storyboard.SetTargetProperty(da1, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleXProperty))
 													Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-													element1.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
+													element1.BeginStoryboard(storyboard2, HandoffBehavior.SnapshotAndReplace, True)
 											
 									def onMouseLeave(sender1, args1):
 										if not termHashSet.Contains(sender1.Child.Tag):
 											if sender1.Tag is not None:
 												sender1.Tag.Stop(sender1)
 
-											sender1.Tag = sb1 = Storyboard()
+											sender1.Tag = storyboard1 = Storyboard()
 											ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
-											se1 = SineEase()
+											sineEase = SineEase()
 
-											se1.EasingMode = EasingMode.EaseIn
-											ca.EasingFunction = se1
+											sineEase.EasingMode = EasingMode.EaseIn
+											ca.EasingFunction = sineEase
 
 											def onCurrentStateInvalidated(sender2, args2):
 												if sender2.CurrentState == ClockState.Filling:
 													sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 													sender1.Tag = None
-													sb1.Remove(sender1)
+													storyboard1.Remove(sender1)
 
-											sb1.CurrentStateInvalidated += onCurrentStateInvalidated
-											sb1.Children.Add(ca)
+											storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated
+											storyboard1.Children.Add(ca)
 
 											Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
-											sender1.BeginStoryboard(sb1, HandoffBehavior.SnapshotAndReplace, True)
+											sender1.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
 
 											for element1 in sender1.Child.Children:
 												if clr.GetClrType(Grid).IsInstanceOfType(element1):
 													if element1.Tag is not None:
 														element1.Tag.Stop(element1)
 
-													element1.Tag = sb2 = Storyboard()
+													element1.Tag = storyboard2 = Storyboard()
 													da1 = DoubleAnimation(element1.RenderTransform.ScaleX, 1, TimeSpan.FromMilliseconds(500))
 													da2 = DoubleAnimation(element1.RenderTransform.ScaleY, 1, TimeSpan.FromMilliseconds(500))
-													se2 = SineEase()
+													sineEase = SineEase()
 
-													se2.EasingMode = EasingMode.EaseIn
-													da1.EasingFunction = da2.EasingFunction = se2
+													sineEase.EasingMode = EasingMode.EaseIn
+													da1.EasingFunction = da2.EasingFunction = sineEase
 
-													def onCurrentStateInvalidated2(sender3, args3):
-														if sender3.CurrentState == ClockState.Filling:
+													def onCurrentStateInvalidated2(sender2, args2):
+														if sender2.CurrentState == ClockState.Filling:
 															for element2 in sender1.Child.Children:
-																if element2.Tag == sb2:
+																if element2.Tag == storyboard2:
 																	element2.RenderTransform.ScaleX = 1
 																	element2.RenderTransform.ScaleY = 1
 																	element2.Tag = None
-																	sb2.Remove(element2)
+																	storyboard2.Remove(element2)
 
-													sb2.CurrentStateInvalidated += onCurrentStateInvalidated2
-													sb2.Children.Add(da1)
-													sb2.Children.Add(da2)
+													storyboard2.CurrentStateInvalidated += onCurrentStateInvalidated2
+													storyboard2.Children.Add(da1)
+													storyboard2.Children.Add(da2)
 
 													Storyboard.SetTargetProperty(da1, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleXProperty))
 													Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", Grid.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-													element1.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
+													element1.BeginStoryboard(storyboard2, HandoffBehavior.SnapshotAndReplace, True)
 
 									def onMouseLeftButtonUp(sender1, args1):
 										from System.IO import Path as _Path
+										global remainingCount
 
 										if termHashSet.Count < 3:
-											if termHashSet.Contains(sender1.Child.Tag):
-												termHashSet.Remove(sender1.Child.Tag)
-
-											else:
-												termHashSet.Add(sender1.Child.Tag)
-														
 											if sender1.Tag is not None:
 												sender1.Tag.Stop(sender1)
 
-											if termHashSet.Contains(sender1.Child.Tag) and sender1.Background.Color.Equals(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)) and ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
-												sb2 = Storyboard()
-												da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-												da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-												da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-												se2 = SineEase()
+											if termHashSet.Contains(sender1.Child.Tag):
+												termHashSet.Remove(sender1.Child.Tag)
 
-												se2.EasingMode = EasingMode.EaseIn
-												da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = se2
+												sender1.Tag = storyboard = Storyboard()
+												color = Color.FromArgb(0, Byte.MaxValue, 0, 102)
+												ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
+												sineEase = SineEase()
 
-												def onCurrentStateInvalidated(sender2, args2):
+												sineEase.EasingMode = EasingMode.EaseIn
+												ca.EasingFunction = sineEase
+
+												def onCurrentStateInvalidated1(sender2, args2):
 													if sender2.CurrentState == ClockState.Filling:
-														contentControl.Opacity = 0
-														contentControl.RenderTransform.ScaleX = 1.5
-														contentControl.RenderTransform.ScaleY = 1.5
-														sb2.Remove(contentControl)
-														imageHashSet.Clear()
-														w.Close()
+														sender1.Background = SolidColorBrush(color)
+														sender1.Tag = None
+														storyboard.Remove(sender1)
 
-												sb2.CurrentStateInvalidated += onCurrentStateInvalidated
-												sb2.Children.Add(da1)
-												sb2.Children.Add(da2)
-												sb2.Children.Add(da3)
+												storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
+												storyboard.Children.Add(ca)
 
-												Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-												Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-												Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+												Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+												sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+											else:
+												termHashSet.Add(sender1.Child.Tag)
+
+												sender1.Tag = storyboard = Storyboard()
+												color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102)
+												ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
+												sineEase = SineEase()
+
+												sineEase.EasingMode = EasingMode.EaseOut
+												ca.EasingFunction = sineEase
+
+												def onCurrentStateInvalidated1(sender2, args2):
+													if sender2.CurrentState == ClockState.Filling:
+														sender1.Background = SolidColorBrush(color)
+														sender1.Tag = None
+														storyboard.Remove(sender1)
+
+												storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
+												storyboard.Children.Add(ca)
+
+												Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+												sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+												
+												if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+													storyboard1 = Storyboard()
+													da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
+													da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+													da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
+													sineEase = SineEase()
+
+													sineEase.EasingMode = EasingMode.EaseIn
+													da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
+
+													def onCurrentStateInvalidated2(sender, args):
+														if sender.CurrentState == ClockState.Filling:
+															contentControl.Opacity = 0
+															contentControl.RenderTransform.ScaleX = 1.5
+															contentControl.RenderTransform.ScaleY = 1.5
+															storyboard1.Remove(contentControl)
+															imageHashSet.Clear()
+															window.Close()
+
+													storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated2
+													storyboard1.Children.Add(da1)
+													storyboard1.Children.Add(da2)
+													storyboard1.Children.Add(da3)
+
+													Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+													Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+													Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 			
-												contentControl.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
-												closeTimer.Tag = False
+													contentControl.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
+													closeTimer.Tag = False
 
-												def onEnumerate(state):
-													return enumerateCharacters(state)
-
-												def onCompleted(task):
 													for key in termHashSet:
 														if not chargesDictionary.ContainsKey(key):
 															break
@@ -7670,6 +7880,11 @@ def onStart(s, e):
 															if sum >= max:
 																charges += 1
 
+														if remainingCount + termHashSet.Count < 5:
+															remainingCount += termHashSet.Count
+														else:
+															remainingCount = 5
+														
 														sequenceList = List[Sequence]()
 								
 														for sequence in Script.Instance.Sequences:
@@ -7678,47 +7893,135 @@ def onStart(s, e):
 
 														Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
 
-														if task.Result.Count > 1:
-															characterList = List[Character]()
+														maxWidth = Double.MinValue
+														maxHeight = Double.MinValue
+														bitmapImageList = List[BitmapImage]()
+														r = Random(Environment.TickCount)
+														index = 0
 
-															for character in task.Result:
-																isNew = True
+														for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
+															fs = None
+																					
+															try:
+																fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
+																						
+																bi = BitmapImage()
+																bi.BeginInit()
+																bi.StreamSource = fs
+																bi.CacheOption = BitmapCacheOption.OnLoad
+																bi.CreateOptions = BitmapCreateOptions.None
+																bi.EndInit()
 
-																for c in Script.Instance.Characters:
-																	if character.Name.Equals(c.Name):
-																		isNew = False
+																if bi.Width > maxWidth:
+																	maxWidth = bi.Width
 
-																		break
+																if bi.Height > maxHeight:
+																	maxHeight = bi.Height
 
-																if isNew:
-																	success, likes = likesDictionary.TryGetValue(character.Name)
+																bitmapImageList.Add(bi)
 
-																	if success:
-																		for i in range(likes.Count):
-																			characterList.Add(character)
+															except:
+																continue
 
-																	characterList.Add(character)
+															finally:
+																if fs is not None:
+																	fs.Close()
 
-															if characterList.Count > 0:
-																visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
+														count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
+														countdownEvent = CountdownEvent(Convert.ToInt32(count))
 
-															else:
-																sequenceList = List[Sequence]()
+														while index < count:
+															def onLoaded2(sender1, args1):
+																storyboard = Storyboard()
+																da1 = DoubleAnimation(sender1.Content.Opacity, 1, TimeSpan.FromMilliseconds(500))
+																da2 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+																da3 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+																da4 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+																da5 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+																da6 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+																sineEase1 = SineEase()
+																sineEase2 = SineEase()
 
-																for sequence in Script.Instance.Sequences:
-																	if sequence.Name.Equals("Activate"):
-																		sequenceList.Add(sequence)
+																storyboard.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(1000)))
+																sineEase1.EasingMode = EasingMode.EaseOut
+																sineEase2.EasingMode = EasingMode.EaseIn
+																da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase1
+																da4.BeginTime = da5.BeginTime = da6.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(500))
+																da4.EasingFunction = da5.EasingFunction = da6.EasingFunction = sineEase2
 
-																Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+																def onCurrentStateInvalidated3(sender2, args2):
+																	if sender2.CurrentState == ClockState.Filling:
+																		sender1.Close()
 
-														else:
-															sequenceList = List[Sequence]()
+																storyboard.CurrentStateInvalidated += onCurrentStateInvalidated3
+																storyboard.Children.Add(da1)
+																storyboard.Children.Add(da2)
+																storyboard.Children.Add(da3)
+																storyboard.Children.Add(da4)
+																storyboard.Children.Add(da5)
+																storyboard.Children.Add(da6)
 
-															for sequence in Script.Instance.Sequences:
-																if sequence.Name.Equals("Activate"):
-																	sequenceList.Add(sequence)
+																Storyboard.SetTarget(da1, sender1.Content)
+																Storyboard.SetTarget(da2, sender1.Content)
+																Storyboard.SetTarget(da3, sender1.Content)
+																Storyboard.SetTarget(da4, sender1.Content)
+																Storyboard.SetTarget(da5, sender1.Content)
+																Storyboard.SetTarget(da6, sender1.Content)
+																Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+																Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+																Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+																Storyboard.SetTargetProperty(da4, PropertyPath(ContentControl.OpacityProperty))
+																Storyboard.SetTargetProperty(da5, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+																Storyboard.SetTargetProperty(da6, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
 
-															Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+																storyboard.Begin()
+
+															def onClosed(sender1, args1):
+																countdownEvent.Signal()
+					
+															bi = bitmapImageList[r.Next(bitmapImageList.Count)]
+															width = Convert.ToInt32(bi.Width) / 2
+															height = Convert.ToInt32(bi.Height) / 2
+							
+															w = Window()
+															w.Owner = Application.Current.MainWindow
+															w.Title = Application.Current.MainWindow.Title
+															w.Left = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenWidth) - width)
+															w.Top = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenHeight) - height)
+															w.AllowsTransparency = True
+															w.WindowStyle = WindowStyle.None
+															w.ResizeMode = ResizeMode.NoResize
+															w.ShowActivated = False
+															w.ShowInTaskbar = False
+															w.Topmost = True
+															w.SizeToContent = SizeToContent.WidthAndHeight
+															w.Background = Brushes.Transparent
+															w.Loaded += onLoaded2
+															w.Closed += onClosed
+													
+															cc = ContentControl()
+															cc.UseLayoutRounding = True
+															cc.HorizontalAlignment = HorizontalAlignment.Stretch
+															cc.VerticalAlignment = VerticalAlignment.Stretch
+															cc.Opacity = 0
+															cc.RenderTransform = ScaleTransform(0, 0, width / 2, height / 2)
+															
+															w.Content = cc
+															
+															image = Image()
+															image.CacheMode = BitmapCache(1)
+															image.HorizontalAlignment = HorizontalAlignment.Left
+															image.VerticalAlignment = VerticalAlignment.Top
+															image.Source = bi
+															image.Width = height
+															image.Height = height
+															image.Stretch = Stretch.Uniform
+															
+															cc.Content = image
+															
+															w.Show()
+
+															index += 1
 
 														if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
 															def onPlay():
@@ -7735,180 +8038,56 @@ def onStart(s, e):
 									
 															Task.Factory.StartNew(onPlay)
 
-												Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
-												
-											else:
-												sender1.Tag = sb1 = Storyboard()
-												color = Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102) if termHashSet.Contains(sender1.Child.Tag) else Color.FromArgb(0, Byte.MaxValue, 0, 102)
-												isPressed = True if (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control else False
-												ca = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
-												se1 = SineEase()
+														def onRun(state):
+															countdownEvent.Wait()
+															countdownEvent.Dispose()
 
-												se1.EasingMode = EasingMode.EaseOut if termHashSet.Contains(sender1.Child.Tag) else EasingMode.EaseIn
-												ca.EasingFunction = se1
+															return enumerateCharacters(state)
 
-												def onCurrentStateInvalidated1(sender2, args2):
-													if sender2.CurrentState == ClockState.Filling:
-														sender1.Background = SolidColorBrush(color)
-														sender1.Tag = None
-														sb1.Remove(sender1)
+														def onCompleted(task):
+															if task.Result.Count > 1:
+																characterList = List[Character]()
 
-														if not isPressed and termHashSet.Count > 0 or termHashSet.Count == 3:
-															sb2 = Storyboard()
-															da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-															da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-															da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-															se2 = SineEase()
+																for character in task.Result:
+																	isNew = True
 
-															se2.EasingMode = EasingMode.EaseIn
-															da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = se2
+																	for c in Script.Instance.Characters:
+																		if character.Name.Equals(c.Name):
+																			isNew = False
 
-															def onCurrentStateInvalidated2(sender3, args3):
-																if sender3.CurrentState == ClockState.Filling:
-																	contentControl.Opacity = 0
-																	contentControl.RenderTransform.ScaleX = 1.5
-																	contentControl.RenderTransform.ScaleY = 1.5
-																	sb2.Remove(contentControl)
-																	imageHashSet.Clear()
-																	w.Close()
+																			break
 
-															sb2.CurrentStateInvalidated += onCurrentStateInvalidated2
-															sb2.Children.Add(da1)
-															sb2.Children.Add(da2)
-															sb2.Children.Add(da3)
+																	if isNew:
+																		success, likes = likesDictionary.TryGetValue(character.Name)
 
-															Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-															Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-															Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-			
-															contentControl.BeginStoryboard(sb2, HandoffBehavior.SnapshotAndReplace, True)
-															closeTimer.Tag = False
-
-															def onEnumerate(state):
-																return enumerateCharacters(state)
-
-															def onCompleted(task):
-																for key in termHashSet:
-																	if not chargesDictionary.ContainsKey(key):
-																		break
-
-																else:
-																	def comparison(s1, s2):
-																		sum1 = 0.0
-																		sum2 = 0.0
-
-																		for score in chargesDictionary[s1]:
-																			sum1 += score
-
-																		for score in chargesDictionary[s2]:
-																			sum2 += score
-																			
-																		if sum1 / chargesDictionary[s1].Count > sum2 / chargesDictionary[s2].Count:
-																			return 1
-
-																		elif sum1 / chargesDictionary[s1].Count < sum2 / chargesDictionary[s2].Count:
-																			return -1
-																			
-																		return 0
-
-																	list = List[String](termHashSet)
-																	list.Sort(comparison)
-																	list.Reverse()
-
-																	for key in termHashSet:
-																		chargesDictionary.Remove(key)
-																			
-																		if imageDictionary.ContainsKey(key):
-																			imageDictionary.Remove(key)
-
-																	d = Dictionary[String, List[Double]](chargesDictionary)
-																	chargesDictionary.Clear()
-																	charges = 0
-
-																	for kvp in d:
-																		chargesDictionary.Add(kvp.Key, kvp.Value)
-
-																		sum = 0.0
-
-																		for score in kvp.Value:
-																			sum += score
-
-																		if sum >= max:
-																			charges += 1
-
-																	sequenceList = List[Sequence]()
-								
-																	for sequence in Script.Instance.Sequences:
-																		if sequence.Name.Equals("Charge"):
-																			sequenceList.Add(sequence)
-
-																	Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
-
-																	if task.Result.Count > 1:
-																		characterList = List[Character]()
-
-																		for character in task.Result:
-																			isNew = True
-
-																			for c in Script.Instance.Characters:
-																				if character.Name.Equals(c.Name):
-																					isNew = False
-
-																					break
-
-																			if isNew:
-																				success, likes = likesDictionary.TryGetValue(character.Name)
-
-																				if success:
-																					for i in range(likes.Count):
-																						characterList.Add(character)
-
+																		if success:
+																			for i in range(likes.Count):
 																				characterList.Add(character)
 
-																		if characterList.Count > 0:
-																			visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
-																	
-																		else:
-																			sequenceList = List[Sequence]()
+																		characterList.Add(character)
 
-																			for sequence in Script.Instance.Sequences:
-																				if sequence.Name.Equals("Activate"):
-																					sequenceList.Add(sequence)
+																if characterList.Count > 0:
+																	visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
 
-																			Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+																else:
+																	sequenceList = List[Sequence]()
 
-																	else:
-																		sequenceList = List[Sequence]()
+																	for sequence in Script.Instance.Sequences:
+																		if sequence.Name.Equals("Activate"):
+																			sequenceList.Add(sequence)
 
-																		for sequence in Script.Instance.Sequences:
-																			if sequence.Name.Equals("Activate"):
-																				sequenceList.Add(sequence)
+																	Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
-																		Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
+															else:
+																sequenceList = List[Sequence]()
 
-																	if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
-																		def onPlay():
-																			soundPlayer = None
+																for sequence in Script.Instance.Sequences:
+																	if sequence.Name.Equals("Activate"):
+																		sequenceList.Add(sequence)
 
-																			try:
-																				soundPlayer = SoundPlayer("Assets\\Transform.wav")
-																				soundPlayer.Load()
-																				soundPlayer.PlaySync()
+																Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
-																			finally:
-																				if soundPlayer is not None:
-																					soundPlayer.Dispose()
-									
-																		Task.Factory.StartNew(onPlay)
-
-															Task.Factory.StartNew[List[Character]](onEnumerate, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
-															
-												sb1.CurrentStateInvalidated += onCurrentStateInvalidated1
-												sb1.Children.Add(ca)
-
-												Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
-
-												sender1.BeginStoryboard(sb1, HandoffBehavior.SnapshotAndReplace, True)
+														Task.Factory.StartNew[List[Character]](onRun, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
 
 									border2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 									border2.MouseEnter += onMouseEnter
@@ -8058,7 +8237,7 @@ def onStart(s, e):
 
 								border3.Child = textBlock
 
-							w.Show()
+							window.Show()
 
 				window.Closing += onClosing
 				window.MouseUp += onMouseUp
@@ -8192,7 +8371,7 @@ def onStart(s, e):
 	chargesDictionary.Clear()
 	imageDictionary.Clear()
 
-def onStop(s, e):
+def onStop(sender, args):
 	global timer
 
 	timer.Stop()
