@@ -5354,17 +5354,10 @@ def onIsVisibleChanged(sender, args):
 											sender1.Background = SolidColorBrush(color)
 											sender1.Tag = None
 											storyboard.Remove(sender1)
-<<<<<<< HEAD
 
 									storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
 									storyboard.Children.Add(ca)
 
-=======
-
-									storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
-									storyboard.Children.Add(ca)
-
->>>>>>> FETCH_HEAD
 									Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
 
 									sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
@@ -5458,202 +5451,6 @@ def onIsVisibleChanged(sender, args):
 											for sequence in Script.Instance.Sequences:
 												if sequence.Name.Equals("Charge"):
 													sequenceList.Add(sequence)
-<<<<<<< HEAD
-
-											Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
-										
-											maxWidth = Double.MinValue
-											maxHeight = Double.MinValue
-											bitmapImageList = List[BitmapImage]()
-											r = Random(Environment.TickCount)
-											index = 0
-
-											for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
-												fs = None
-																					
-												try:
-													fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
-																						
-													bi = BitmapImage()
-													bi.BeginInit()
-													bi.StreamSource = fs
-													bi.CacheOption = BitmapCacheOption.OnLoad
-													bi.CreateOptions = BitmapCreateOptions.None
-													bi.EndInit()
-
-													if bi.Width > maxWidth:
-														maxWidth = bi.Width
-
-													if bi.Height > maxHeight:
-														maxHeight = bi.Height
-
-													bitmapImageList.Add(bi)
-
-												except:
-													continue
-
-												finally:
-													if fs is not None:
-														fs.Close()
-
-											count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
-											countdownEvent = CountdownEvent(Convert.ToInt32(count))
-
-											while index < count:
-												def onLoaded2(sender1, args1):
-													storyboard = Storyboard()
-													da1 = DoubleAnimation(sender1.Content.Opacity, 1, TimeSpan.FromMilliseconds(500))
-													da2 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
-													da3 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
-													da4 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
-													da5 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
-													da6 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
-													sineEase1 = SineEase()
-													sineEase2 = SineEase()
-
-													storyboard.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(1000)))
-													sineEase1.EasingMode = EasingMode.EaseOut
-													sineEase2.EasingMode = EasingMode.EaseIn
-													da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase1
-													da4.BeginTime = da5.BeginTime = da6.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(500))
-													da4.EasingFunction = da5.EasingFunction = da6.EasingFunction = sineEase2
-
-													def onCurrentStateInvalidated3(sender2, args2):
-														if sender2.CurrentState == ClockState.Filling:
-															sender1.Close()
-
-													storyboard.CurrentStateInvalidated += onCurrentStateInvalidated3
-													storyboard.Children.Add(da1)
-													storyboard.Children.Add(da2)
-													storyboard.Children.Add(da3)
-													storyboard.Children.Add(da4)
-													storyboard.Children.Add(da5)
-													storyboard.Children.Add(da6)
-
-													Storyboard.SetTarget(da1, sender1.Content)
-													Storyboard.SetTarget(da2, sender1.Content)
-													Storyboard.SetTarget(da3, sender1.Content)
-													Storyboard.SetTarget(da4, sender1.Content)
-													Storyboard.SetTarget(da5, sender1.Content)
-													Storyboard.SetTarget(da6, sender1.Content)
-													Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-													Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-													Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-													Storyboard.SetTargetProperty(da4, PropertyPath(ContentControl.OpacityProperty))
-													Storyboard.SetTargetProperty(da5, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-													Storyboard.SetTargetProperty(da6, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-
-													storyboard.Begin()
-					
-												def onClosed(sender1, args1):
-													countdownEvent.Signal()
-
-												bi = bitmapImageList[r.Next(bitmapImageList.Count)]
-												width = Convert.ToInt32(bi.Width) / 2
-												height = Convert.ToInt32(bi.Height) / 2
-							
-												w = Window()
-												w.Owner = Application.Current.MainWindow
-												w.Title = Application.Current.MainWindow.Title
-												w.Left = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenWidth) - width)
-												w.Top = r.Next(Convert.ToInt32(SystemParameters.PrimaryScreenHeight) - height)
-												w.AllowsTransparency = True
-												w.WindowStyle = WindowStyle.None
-												w.ResizeMode = ResizeMode.NoResize
-												w.ShowActivated = False
-												w.ShowInTaskbar = False
-												w.Topmost = True
-												w.SizeToContent = SizeToContent.WidthAndHeight
-												w.Background = Brushes.Transparent
-												w.Loaded += onLoaded2
-												w.Closed += onClosed
-													
-												cc = ContentControl()
-												cc.UseLayoutRounding = True
-												cc.HorizontalAlignment = HorizontalAlignment.Stretch
-												cc.VerticalAlignment = VerticalAlignment.Stretch
-												cc.Opacity = 0
-												cc.RenderTransform = ScaleTransform(0, 0, width / 2, height / 2)
-															
-												w.Content = cc
-															
-												image = Image()
-												image.CacheMode = BitmapCache(1)
-												image.HorizontalAlignment = HorizontalAlignment.Left
-												image.VerticalAlignment = VerticalAlignment.Top
-												image.Source = bi
-												image.Width = height
-												image.Height = height
-												image.Stretch = Stretch.Uniform
-															
-												cc.Content = image
-															
-												w.Show()
-
-												index += 1
-
-											if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
-												def onPlay():
-													soundPlayer = None
-
-													try:
-														soundPlayer = SoundPlayer("Assets\\Transform.wav")
-														soundPlayer.Load()
-														soundPlayer.PlaySync()
-
-													finally:
-														if soundPlayer is not None:
-															soundPlayer.Dispose()
-									
-												Task.Factory.StartNew(onPlay)
-
-											def onRun(state):
-												countdownEvent.Wait()
-												countdownEvent.Dispose()
-
-												return enumerateCharacters(state)
-
-											def onCompleted(task):
-												if task.Result.Count > 1:
-													characterList = List[Character]()
-
-													for character in task.Result:
-														isNew = True
-
-														for c in Script.Instance.Characters:
-															if character.Name.Equals(c.Name):
-																isNew = False
-
-																break
-
-														if isNew:
-															success, likes = likesDictionary.TryGetValue(character.Name)
-
-															if success:
-																for i in range(likes.Count):
-																	characterList.Add(character)
-
-															characterList.Add(character)
-
-													if characterList.Count > 0:
-														visit(characterList[Random(Environment.TickCount).Next(characterList.Count)], list)
-
-													else:
-														sequenceList = List[Sequence]()
-
-														for sequence in Script.Instance.Sequences:
-															if sequence.Name.Equals("Activate"):
-																sequenceList.Add(sequence)
-
-														Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
-									
-												else:
-													sequenceList = List[Sequence]()
-
-													for sequence in Script.Instance.Sequences:
-														if sequence.Name.Equals("Activate"):
-															sequenceList.Add(sequence)
-=======
 
 											Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
 										
@@ -5852,18 +5649,6 @@ def onIsVisibleChanged(sender, args):
 													Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
 
 											Task.Factory.StartNew[List[Character]](onRun, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
-											
-									storyboard1.CurrentStateInvalidated += onCurrentStateInvalidated1
-									storyboard1.Children.Add(ca)
->>>>>>> FETCH_HEAD
-
-													Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, None, list))
-
-<<<<<<< HEAD
-											Task.Factory.StartNew[List[Character]](onRun, _Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), TaskCreationOptions.LongRunning).ContinueWith(Action[Task[List[Character]]](onCompleted), TaskScheduler.FromCurrentSynchronizationContext())
-=======
-									sender1.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, True)
->>>>>>> FETCH_HEAD
 
 						border2.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
 						border2.MouseEnter += onMouseEnter
