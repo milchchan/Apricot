@@ -175,10 +175,10 @@ def onOpened(s, e):
 		menuItem1.Header = "ブループリント"
 		menuItem2.Header = "ドット1"
 		menuItem3.Header = "ドット2"
-		menuItem4.Header = "リネン"
-		menuItem5.Header = "ノイズ1"
-		menuItem6.Header = "ノイズ2"
-		menuItem7.Header = "ノイズ3"
+		menuItem4.Header = "布"
+		menuItem5.Header = "リネン"
+		menuItem6.Header = "ノイズ1"
+		menuItem7.Header = "ノイズ2"
 		menuItem8.Header = "紙"
 		menuItem9.Header = "雪"
 		menuItem10.Header = "ストライプ"
@@ -186,10 +186,10 @@ def onOpened(s, e):
 		menuItem1.Header = "Blueprint"
 		menuItem2.Header = "Dots 1"
 		menuItem3.Header = "Dots 2"
-		menuItem4.Header = "Linen"
-		menuItem5.Header = "Noise 1"
-		menuItem6.Header = "Noise 2"
-		menuItem7.Header = "Noise 3"
+		menuItem4.Header = "Fabric"
+		menuItem5.Header = "Linen"
+		menuItem6.Header = "Noise 1"
+		menuItem7.Header = "Noise 2"
 		menuItem8.Header = "Paper"
 		menuItem9.Header = "Snow"
 		menuItem10.Header = "Stripes 2"
@@ -236,50 +236,50 @@ def onOpened(s, e):
 			
 		menuItem3.Click += onClick3
 
-		if backColor.Equals("#FF252525") and backImage.Equals("Assets\\Background-Linen.png") and textColor.Equals("#FFFFFFFF") and linkColor.Equals("#FFFF6600"):
+		if backColor.Equals("#FFEAEAEA") and backImage.Equals("Assets\\Background-Fabric.png") and textColor.Equals("#FF000000") and linkColor.Equals("#FFFF0066"):
 			menuItem4.IsChecked = True
 				
 		def onClick4(sender, args):
+			config.AppSettings.Settings["BackgroundColor"].Value = "#FFEAEAEA"
+			config.AppSettings.Settings["BackgroundImage"].Value = "Assets\\Background-Fabric.png"
+			config.AppSettings.Settings["TextColor"].Value = "#FF000000"
+			config.AppSettings.Settings["LinkColor"].Value = "#FFFF0066"
+			config.Save(ConfigurationSaveMode.Modified)
+			
+		menuItem4.Click += onClick4
+
+		if backColor.Equals("#FF252525") and backImage.Equals("Assets\\Background-Linen.png") and textColor.Equals("#FFFFFFFF") and linkColor.Equals("#FFFF6600"):
+			menuItem5.IsChecked = True
+				
+		def onClick5(sender, args):
 			config.AppSettings.Settings["BackgroundColor"].Value = "#FF252525"
 			config.AppSettings.Settings["BackgroundImage"].Value = "Assets\\Background-Linen.png"
 			config.AppSettings.Settings["TextColor"].Value = "#FFFFFFFF"
 			config.AppSettings.Settings["LinkColor"].Value = "#FFFF6600"
 			config.Save(ConfigurationSaveMode.Modified)
 			
-		menuItem4.Click += onClick4
+		menuItem5.Click += onClick5
 			
 		if backColor.Equals("#FFF2F2F2") and backImage.Equals("Assets\\Background-Noise1.png") and textColor.Equals("#FF000000") and linkColor.Equals("#FFFF0066"):
-			menuItem5.IsChecked = True
+			menuItem6.IsChecked = True
 				
-		def onClick5(sender, args):
+		def onClick6(sender, args):
 			config.AppSettings.Settings["BackgroundColor"].Value = "#FFF2F2F2"
 			config.AppSettings.Settings["BackgroundImage"].Value = "Assets\\Background-Noise1.png"
 			config.AppSettings.Settings["TextColor"].Value = "#FF000000"
 			config.AppSettings.Settings["LinkColor"].Value = "#FFFF0066"
 			config.Save(ConfigurationSaveMode.Modified)
 			
-		menuItem5.Click += onClick5
+		menuItem6.Click += onClick6
 			
 		if backColor.Equals("#FFE5E5E5") and backImage.Equals("Assets\\Background-Noise2.png") and textColor.Equals("#FF333333") and linkColor.Equals("#FFDD1A00"):
-			menuItem6.IsChecked = True
+			menuItem7.IsChecked = True
 				
-		def onClick6(sender, args):
+		def onClick7(sender, args):
 			config.AppSettings.Settings["BackgroundColor"].Value = "#FFE5E5E5"
 			config.AppSettings.Settings["BackgroundImage"].Value = "Assets\\Background-Noise2.png"
 			config.AppSettings.Settings["TextColor"].Value = "#FF333333"
 			config.AppSettings.Settings["LinkColor"].Value = "#FFDD1A00"
-			config.Save(ConfigurationSaveMode.Modified)
-			
-		menuItem6.Click += onClick6
-
-		if backColor.Equals("#FF262727") and backImage.Equals("Assets\\Background-Noise3.png") and textColor.Equals("#FFFFFFFF") and linkColor.Equals("#FFFF6600"):
-			menuItem7.IsChecked = True
-				
-		def onClick7(sender, args):
-			config.AppSettings.Settings["BackgroundColor"].Value = "#FF262727"
-			config.AppSettings.Settings["BackgroundImage"].Value = "Assets\\Background-Noise3.png"
-			config.AppSettings.Settings["TextColor"].Value = "#FFFFFFFF"
-			config.AppSettings.Settings["LinkColor"].Value = "#FFFF6600"
 			config.Save(ConfigurationSaveMode.Modified)
 			
 		menuItem7.Click += onClick7
