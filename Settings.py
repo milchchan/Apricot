@@ -192,7 +192,7 @@ def onOpened(s, e):
 		menuItem7.Header = "Noise 2"
 		menuItem8.Header = "Paper"
 		menuItem9.Header = "Snow"
-		menuItem10.Header = "Stripes 2"
+		menuItem10.Header = "Stripes"
 		
 	if config.AppSettings.Settings["BackgroundColor"] is not None and config.AppSettings.Settings["BackgroundImage"] is not None and config.AppSettings.Settings["TextColor"] is not None and config.AppSettings.Settings["LinkColor"]:
 		backColor = config.AppSettings.Settings["BackgroundColor"].Value
