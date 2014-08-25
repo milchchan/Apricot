@@ -45,8 +45,8 @@ from System.Xml.Linq import XDocument, XElement, XAttribute
 from Apricot import Agent, Balloon, Script, Character, Entry, Message, Motion, Word, Sequence
 
 autoUpdate = False
-oauthToken = None
-oauthTokenSecret = None
+oauthToken = "4666871-qk7RATKkPZGPJmxaMdgQStcoQu3VzjyJGh9PKLyThK"
+oauthTokenSecret = "2wh2KS7a9RT4v5RTjLrDr0YqGw0lk2CA5wHfDruhRU"
 consumerKey = "5Y4BpcdcEwkZeIRqIMdJyg"
 consumerSecret = "AMsengQQpxsvKEnuEX8oagKTLjrcujY7hBzVKlo72O0"
 
@@ -2441,12 +2441,10 @@ def onOpened(sender, args):
 				for character in Script.Instance.Characters:
 					attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
 
-				if limitDictionary.Count > 0:
-					for kvp in limitDictionary:
-						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
-					
-				else:
-					for character in Script.Instance.Characters:
+					if limitDictionary.ContainsKey(character.Name):
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush3)
+
+					else:
 						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush3)
 
 				attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, "好感度を上げるための残りポイント", remainingCount.ToString())
@@ -2473,12 +2471,10 @@ def onOpened(sender, args):
 				for character in Script.Instance.Characters:
 					attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
 
-				if limitDictionary.Count > 0:
-					for kvp in limitDictionary:
-						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
-					
-				else:
-					for character in Script.Instance.Characters:
+					if limitDictionary.ContainsKey(character.Name):
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush3)
+
+					else:
 						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush3)
 
 				attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, "Remaining points for Like action", remainingCount.ToString())
@@ -2898,12 +2894,10 @@ def onOpened(sender, args):
 						else:
 							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
 
-					if limitDictionary.Count > 0:
-						for kvp in limitDictionary:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
+						if limitDictionary.ContainsKey(character.Name):
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush3)
 					
-					else:
-						for character in Script.Instance.Characters:
+						else:
 							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush3)
 
 					attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, "好感度を上げるための残りポイント", remainingCount.ToString())
@@ -2960,12 +2954,10 @@ def onOpened(sender, args):
 						else:
 							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
 
-					if limitDictionary.Count > 0:
-						for kvp in limitDictionary:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", kvp.Key.ToString()), kvp.Value.ToString(), solidColorBrush3)
+						if limitDictionary.ContainsKey(character.Name):
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush3)
 					
-					else:
-						for character in Script.Instance.Characters:
+						else:
 							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush3)
 
 					attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, "Remaining points for Like action", remainingCount.ToString())
@@ -5028,7 +5020,7 @@ def onIsVisibleChanged(sender, args):
 																					r = Random(Environment.TickCount)
 																					index = 0
 
-																					for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
+																					for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Dark4.png", "Star-Dark5.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png", "Star-Light4.png", "Star-Light5.png"]:
 																						fs = None
 																					
 																						try:
@@ -5477,7 +5469,7 @@ def onIsVisibleChanged(sender, args):
 						r = Random(Environment.TickCount)
 						index = 0
 
-						for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
+						for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Dark4.png", "Star-Dark5.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png", "Star-Light4.png", "Star-Light5.png"]:
 							fs = None
 																					
 							try:
@@ -6077,7 +6069,7 @@ def onIsVisibleChanged(sender, args):
 											r = Random(Environment.TickCount)
 											index = 0
 
-											for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
+											for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Dark4.png", "Star-Dark5.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png", "Star-Light4.png", "Star-Light5.png"]:
 												fs = None
 																					
 												try:
@@ -8679,7 +8671,7 @@ def onStart(sender, args):
 														r = Random(Environment.TickCount)
 														index = 0
 
-														for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png"]:
+														for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Dark4.png", "Star-Dark5.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png", "Star-Light4.png", "Star-Light5.png"]:
 															fs = None
 																					
 															try:
