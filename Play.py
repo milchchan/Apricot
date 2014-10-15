@@ -536,19 +536,41 @@ class NaiveBayes(Object):
 		selectedWordList = List[String]()
 
 		while stringBuilder.Length > 0:
-			s = stringBuilder.ToString()
-			selectedWord = None
+			s1 = stringBuilder.ToString()
+			selectedWord1 = None
 
-			if dictionary.ContainsKey(s[0]):
-				for word in dictionary[s[0]]:
-					if s.StartsWith(word, StringComparison.Ordinal) and word.Length > (0 if selectedWord is None else selectedWord.Length):
-						selectedWord = word
+			if dictionary.ContainsKey(s1[0]):
+				for word in dictionary[s1[0]]:
+					if s1.StartsWith(word, StringComparison.Ordinal) and word.Length > (0 if selectedWord1 is None else selectedWord1.Length):
+						selectedWord1 = word
 
-			if String.IsNullOrEmpty(selectedWord):
+			if String.IsNullOrEmpty(selectedWord1):
 				stringBuilder.Remove(0, 1)
 			else:
-				selectedWordList.Add(selectedWord)
-				stringBuilder.Remove(0, selectedWord.Length)
+				sb = StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1))
+				selectedWord2 = None
+				i = 0
+				max = 0
+
+				while sb.Length > 0 and i < selectedWord1.Length:
+					s2 = sb.ToString()
+
+					if dictionary.ContainsKey(s2[0]):
+						for word in dictionary[s2[0]]:
+							if s2.StartsWith(word, StringComparison.Ordinal) and word.Length > (0 if selectedWord2 is None else selectedWord2.Length):
+								selectedWord2 = word
+								max = i + selectedWord2.Length
+
+					sb.Remove(0, 1)
+					i += 1
+
+				if not String.IsNullOrEmpty(selectedWord2) and selectedWord1.Length < selectedWord2.Length:
+					selectedWordList.Add(selectedWord2)
+					stringBuilder.Remove(0, max)
+
+				else:
+					selectedWordList.Add(selectedWord1)
+					stringBuilder.Remove(0, selectedWord1.Length)
 
 		return selectedWordList
 
@@ -2212,28 +2234,22 @@ def onOpened(sender, args):
 					limitDictionary.Add(key, 0)
 					
 			for sequence in Script.Instance.Sequences:
-				if sequence.Name.Equals("Like"):
+				if sequence.Name.Equals("Like") and sequence.State is not None:
 					isLocked = True
 					requiredLikes = 0
 					list = List[Object]()
+					likes = likesDictionary[sequence.Owner].Count if likesDictionary.ContainsKey(sequence.Owner) else 0
 
-					if sequence.State is None:
-						available += 1
-						isLocked = False
+					for i in range(likes + 11):
+						if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
+							if i <= likes:
+								available += 1
+								isLocked = False
 
-					else:
-						likes = likesDictionary[sequence.Owner].Count if likesDictionary.ContainsKey(sequence.Owner) else 0
+							else:
+								requiredLikes = i - likes
 
-						for i in range(likes + 11):
-							if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
-								if i <= likes:
-									available += 1
-									isLocked = False
-
-								else:
-									requiredLikes = i - likes
-
-								break
+							break
 
 					for obj in sequence:
 						list.Add(obj)
@@ -2644,28 +2660,22 @@ def onOpened(sender, args):
 						limitDictionary.Add(key, 0)
 					
 				for sequence in Script.Instance.Sequences:
-					if sequence.Name.Equals("Like"):
+					if sequence.Name.Equals("Like") and sequence.State is not None:
 						isLocked = True
 						requiredLikes = 0
 						list = List[Object]()
+						likes = (likesDictionary[sequence.Owner].Count + backingDictionary[sequence.Owner] if backingDictionary.ContainsKey(sequence.Owner) else likesDictionary[sequence.Owner].Count) if likesDictionary.ContainsKey(sequence.Owner) else backingDictionary[sequence.Owner] if backingDictionary.ContainsKey(sequence.Owner) else 0
 
-						if sequence.State is None:
-							available += 1
-							isLocked = False
+						for i in range(likes + 11):
+							if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
+								if i <= likes:
+									available += 1
+									isLocked = False
 
-						else:
-							likes = (likesDictionary[sequence.Owner].Count + backingDictionary[sequence.Owner] if backingDictionary.ContainsKey(sequence.Owner) else likesDictionary[sequence.Owner].Count) if likesDictionary.ContainsKey(sequence.Owner) else backingDictionary[sequence.Owner] if backingDictionary.ContainsKey(sequence.Owner) else 0
+								else:
+									requiredLikes = i - likes
 
-							for i in range(likes + 11):
-								if Regex.IsMatch(i.ToString(CultureInfo.InvariantCulture), sequence.State, RegexOptions.CultureInvariant):
-									if i <= likes:
-										available += 1
-										isLocked = False
-
-									else:
-										requiredLikes = i - likes
-
-									break
+								break
 
 						for obj in sequence:
 							list.Add(obj)
@@ -3337,6 +3347,7 @@ def onOpened(sender, args):
 					window.WindowStyle = WindowStyle.None
 					window.ResizeMode = ResizeMode.NoResize
 					window.ShowActivated = False
+					window.ShowInTaskbar = Application.Current.MainWindow.ContextMenu.Items[5].IsChecked
 					window.Topmost = True
 					window.SizeToContent = SizeToContent.WidthAndHeight
 					window.Background = Brushes.Transparent
@@ -4515,7 +4526,7 @@ def onOpened(sender, args):
 
 def onIsVisibleChanged(sender, args):
 	from System.Windows.Shapes import Path
-	global chargesDictionary, imageDictionary, likesDictionary
+	global chargesDictionary, imageDictionary, likesDictionary, trendsDictionary
 
 	if args.NewValue == True and sender.Messages.Count > 0:
 		max = 1.5
@@ -4607,7 +4618,7 @@ def onIsVisibleChanged(sender, args):
 			termHashSet = HashSet[String]()
 			imageHashSet = HashSet[Uri]()
 									
-			if tempTermList2.Count > 5:
+			if tempTermList2.Count >= 5:
 				for i in range(3):
 					termHashSet.Add(tempTermList2[i])
 
@@ -5701,6 +5712,7 @@ def onIsVisibleChanged(sender, args):
 			window.WindowStyle = WindowStyle.None
 			window.ResizeMode = ResizeMode.NoResize
 			window.ShowActivated = False
+			window.ShowInTaskbar = Application.Current.MainWindow.ContextMenu.Items[5].IsChecked
 			window.Topmost = True
 			window.SizeToContent = SizeToContent.WidthAndHeight
 			window.Background = Brushes.Transparent
@@ -6401,6 +6413,29 @@ def onIsVisibleChanged(sender, args):
 				border3.Child = textBlock
 
 			window.Show()
+
+		if sender.Messages[sender.Messages.Count - 1].HasAttachments:
+			isUpdatable = True
+			hashSet = HashSet[String](trendsDictionary.Keys)
+		
+			for entry in sender.Messages[sender.Messages.Count - 1].Attachments:
+				if entry.Score is None:
+					isUpdatable = False
+					
+					break
+
+				else:
+					if trendsDictionary.ContainsKey(entry.Title):
+						trendsDictionary[entry.Title] = entry.Score
+					else:
+						trendsDictionary.Add(entry.Title, entry.Score)
+
+					if hashSet.Contains(entry.Title):
+						hashSet.Remove(entry.Title)
+
+			if isUpdatable:
+				for key in hashSet:
+					trendsDictionary.Remove(key)
 
 def visit(character, terms):
 	global likesDictionary
@@ -8009,21 +8044,45 @@ def getTermList(dictionary, text):
 	selectedTermList = List[String]()
 
 	while stringBuilder.Length > 0:
-		s = stringBuilder.ToString()
-		selectedTerm = None
+		s1 = stringBuilder.ToString()
+		selectedTerm1 = None
 
-		if dictionary.ContainsKey(s[0]):
-			for term in dictionary[s[0]]:
-				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
-					selectedTerm = term
+		if dictionary.ContainsKey(s1[0]):
+			for term in dictionary[s1[0]]:
+				if s1.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm1 is None else selectedTerm1.Length):
+					selectedTerm1 = term
 		
-		if String.IsNullOrEmpty(selectedTerm):
+		if String.IsNullOrEmpty(selectedTerm1):
 			stringBuilder.Remove(0, 1)
 		else:
-			if not selectedTermList.Contains(selectedTerm):
-				selectedTermList.Add(selectedTerm)
+			sb = StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1))
+			selectedTerm2 = None
+			i = 0
+			max = 0
 
-			stringBuilder.Remove(0, selectedTerm.Length)
+			while sb.Length > 0 and i < selectedTerm1.Length:
+				s2 = sb.ToString()
+
+				if dictionary.ContainsKey(s2[0]):
+					for term in dictionary[s2[0]]:
+						if s2.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm2 is None else selectedTerm2.Length):
+							selectedTerm2 = term
+							max = i + selectedTerm2.Length
+
+				sb.Remove(0, 1)
+				i += 1
+
+			if not String.IsNullOrEmpty(selectedTerm2) and selectedTerm1.Length < selectedTerm2.Length:
+				if not selectedTermList.Contains(selectedTerm2):
+					selectedTermList.Add(selectedTerm2)
+
+				stringBuilder.Remove(0, max)
+
+			else:
+				if not selectedTermList.Contains(selectedTerm1):
+					selectedTermList.Add(selectedTerm1)
+
+				stringBuilder.Remove(0, selectedTerm1.Length)
 
 	return selectedTermList
 	
@@ -8042,7 +8101,7 @@ def onStart(sender, args):
 
 				def onMouseUp(sender, args):
 					from System.Windows.Shapes import Path
-					global likesDictionary
+					global likesDictionary, trendsDictionary
 
 					if args.ChangedButton == MouseButton.Middle and (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control or args.ChangedButton == MouseButton.Left and (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == ModifierKeys.Control | ModifierKeys.Shift:
 						max = 1.5
@@ -8311,6 +8370,7 @@ def onStart(sender, args):
 							window.WindowStyle = WindowStyle.None
 							window.ResizeMode = ResizeMode.NoResize
 							window.ShowActivated = False
+							window.ShowInTaskbar = Application.Current.MainWindow.ContextMenu.Items[5].IsChecked
 							window.Topmost = True
 							window.SizeToContent = SizeToContent.WidthAndHeight
 							window.Background = Brushes.Transparent
@@ -9010,6 +9070,324 @@ def onStart(sender, args):
 
 							window.Show()
 
+					elif trendsDictionary.Count > 0 and args.ChangedButton == MouseButton.Left and (Keyboard.Modifiers & (ModifierKeys.Alt | ModifierKeys.Control)) == ModifierKeys.Alt | ModifierKeys.Control:
+						window = Window()
+						contentControl = ContentControl()
+						stackPanel1 = StackPanel()
+						closeTimer = DispatcherTimer(DispatcherPriority.Background)
+						
+						def onLoaded1(sender, args):
+							storyboard = Storyboard()
+
+							def onCurrentStateInvalidated(sender, args):
+								if sender.CurrentState == ClockState.Filling:
+									for element1 in stackPanel1.Children:
+										for element2 in element1.Children:
+											element2.Opacity = 1
+
+									storyboard.Remove(contentControl)
+
+									if not stackPanel1.Tag:
+										closeTimer.Start()
+
+							storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+
+							r = Random(Environment.TickCount)
+
+							for element1 in stackPanel1.Children:
+								for element2 in element1.Children:
+									doubleAnimation = DoubleAnimation(element2.Opacity, 1, TimeSpan.FromMilliseconds(500))
+									doubleAnimation.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(500)))
+									sineEase = SineEase()
+
+									sineEase.EasingMode = EasingMode.EaseOut
+									doubleAnimation.EasingFunction = sineEase
+
+									storyboard.Children.Add(doubleAnimation)
+								
+									Storyboard.SetTarget(doubleAnimation, element2)
+									Storyboard.SetTargetProperty(doubleAnimation, PropertyPath(Border.OpacityProperty))
+
+							contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+						def onWindowMouseEnter(sender, args):
+							closeTimer.Stop()
+							stackPanel1.Tag = True
+
+						def onWindowMouseLeave(sender, args):
+							if closeTimer.Tag:
+								closeTimer.Start()
+
+							stackPanel1.Tag = False
+
+						def onClose(sender, args):
+							closeTimer.Stop()
+
+							storyboard = Storyboard()
+
+							def onCurrentStateInvalidated(sender, args):
+								if sender.CurrentState == ClockState.Filling:
+									for element1 in stackPanel1.Children:
+										for element2 in element1.Children:
+											element2.Opacity = 0
+
+									storyboard.Remove(contentControl)
+									window.Close()
+
+							storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+
+							r = Random(Environment.TickCount)
+
+							for element1 in stackPanel1.Children:
+								for element2 in element1.Children:
+									doubleAnimation = DoubleAnimation(element2.Opacity, 0, TimeSpan.FromMilliseconds(500))
+									doubleAnimation.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(500)))
+									sineEase = SineEase()
+
+									sineEase.EasingMode = EasingMode.EaseIn
+									doubleAnimation.EasingFunction = sineEase
+
+									storyboard.Children.Add(doubleAnimation)
+
+									Storyboard.SetTarget(doubleAnimation, element2)
+									Storyboard.SetTargetProperty(doubleAnimation, PropertyPath(Border.OpacityProperty))
+
+							contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+							closeTimer.Tag = False
+
+						closeTimer.Tick += onClose
+						closeTimer.Interval = TimeSpan.FromSeconds(3)
+						closeTimer.Tag = True
+
+						window.Owner = Application.Current.MainWindow
+						window.Title = Application.Current.MainWindow.Title
+						window.WindowStartupLocation = WindowStartupLocation.CenterScreen
+						window.AllowsTransparency = True
+						window.WindowStyle = WindowStyle.None
+						window.ResizeMode = ResizeMode.NoResize
+						window.ShowActivated = False
+						window.ShowInTaskbar = Application.Current.MainWindow.ContextMenu.Items[5].IsChecked
+						window.Topmost = True
+						window.SizeToContent = SizeToContent.WidthAndHeight
+						window.Background = Brushes.Transparent
+						window.Loaded += onLoaded1
+						window.MouseEnter += onWindowMouseEnter
+						window.MouseLeave += onWindowMouseLeave
+
+						contentControl.UseLayoutRounding = True
+						contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
+						contentControl.VerticalAlignment = VerticalAlignment.Stretch
+
+						window.Content = contentControl
+
+						stackPanel1.HorizontalAlignment = HorizontalAlignment.Center
+						stackPanel1.VerticalAlignment = VerticalAlignment.Center
+						stackPanel1.Orientation = Orientation.Vertical
+						stackPanel1.Background = Brushes.Transparent
+						stackPanel1.Tag = False
+
+						contentControl.Content = stackPanel1
+
+						stackPanel2 = StackPanel()
+						stackPanel2.HorizontalAlignment = HorizontalAlignment.Center
+						stackPanel2.VerticalAlignment = VerticalAlignment.Top
+						stackPanel2.Orientation = Orientation.Horizontal
+						stackPanel2.Background = Brushes.Transparent
+
+						stackPanel1.Children.Add(stackPanel2)
+
+						keyList = List[String](trendsDictionary.Keys)
+						max = Double.MinValue
+						
+						if keyList.Count > 100:
+							keyList.Sort(lambda s1, s2: trendsDictionary[s1] - trendsDictionary[s2])
+							keyList.Reverse()
+							keyList.RemoveRange(100, keyList.Count - 100)
+
+						for key in keyList:
+							if max < trendsDictionary[key]:
+								max = trendsDictionary[key]
+
+						keyList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.CurrentCulture))
+						
+						fontSizeConverter = FontSizeConverter()
+
+						for key in keyList:
+							if stackPanel2.Children.Count == 10:
+								stackPanel2 = StackPanel()
+								stackPanel2.HorizontalAlignment = HorizontalAlignment.Center
+								stackPanel2.VerticalAlignment = VerticalAlignment.Top
+								stackPanel2.Orientation = Orientation.Horizontal
+								stackPanel2.Background = Brushes.Transparent
+
+								stackPanel1.Children.Add(stackPanel2)
+
+							border1 = Border()
+
+							def onMouseEnter(sender1, args1):
+								if sender1.Tag is not None:
+									sender1.Tag.Stop(sender1)
+
+								sender1.Tag = storyboard = Storyboard()
+								colorAnimation = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
+								sineEase = SineEase()
+
+								sineEase.EasingMode = EasingMode.EaseOut
+								colorAnimation.EasingFunction = sineEase
+
+								def onCurrentStateInvalidated1(sender2, args2):
+									if sender2.CurrentState == ClockState.Filling:
+										sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 102))
+										sender1.Tag = None
+										storyboard.Remove(sender1)
+
+								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated1
+								storyboard.Children.Add(colorAnimation)
+
+								Storyboard.SetTargetProperty(colorAnimation, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+								sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+							def onMouseLeave(sender1, args1):
+								if sender1.Tag is not None:
+									sender1.Tag.Stop(sender1)
+
+								sender1.Tag = storyboard = Storyboard()
+								colorAnimation = ColorAnimation(sender1.Background.Color, Color.FromArgb(Convert.ToByte(Byte.MaxValue * sender1.Child.Tag), 51, 51, 50), TimeSpan.FromMilliseconds(500))
+								sineEase = SineEase()
+
+								sineEase.EasingMode = EasingMode.EaseIn
+								colorAnimation.EasingFunction = sineEase
+
+								def onCurrentStateInvalidated(sender2, args2):
+									if sender2.CurrentState == ClockState.Filling:
+										sender1.Background = SolidColorBrush(Color.FromArgb(Convert.ToByte(Byte.MaxValue * sender1.Child.Tag), 51, 51, 50))
+										sender1.Tag = None
+										storyboard.Remove(sender1)
+
+								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+								storyboard.Children.Add(colorAnimation)
+
+								Storyboard.SetTargetProperty(colorAnimation, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+								sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+							def onMouseLeftButtonUp(sender1, args1):
+								if sender1.Tag is not None:
+									sender1.Tag.Stop(sender1)
+
+								sender1.Tag = storyboard = Storyboard()
+								color = Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 102)
+								colorAnimation = ColorAnimation(sender1.Background.Color, color, TimeSpan.FromMilliseconds(500))
+								sineEase = SineEase()
+
+								sineEase.EasingMode = EasingMode.EaseIn
+								colorAnimation.EasingFunction = sineEase
+
+								def onCurrentStateInvalidated(sender2, args2):
+									if sender2.CurrentState == ClockState.Filling:
+										sender1.Background = SolidColorBrush(color)
+										sender1.Tag = None
+										storyboard.Remove(sender1)
+
+								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+								storyboard.Children.Add(colorAnimation)
+
+								Storyboard.SetTargetProperty(colorAnimation, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+								sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+								closeTimer.Stop()
+
+								sb = Storyboard()
+
+								def onCurrentStateInvalidated(sender, args):
+									if sender.CurrentState == ClockState.Filling:
+										for element1 in stackPanel1.Children:
+											for element2 in element1.Children:
+												element2.Opacity = 0
+
+										sb.Remove(contentControl)
+										window.Close()
+
+								sb.CurrentStateInvalidated += onCurrentStateInvalidated
+
+								r = Random(Environment.TickCount)
+
+								for element1 in stackPanel1.Children:
+									for element2 in element1.Children:
+										doubleAnimation = DoubleAnimation(element2.Opacity, 0, TimeSpan.FromMilliseconds(500))
+
+										if not sender1 == element2:
+											doubleAnimation.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(500)))
+
+										sineEase = SineEase()
+
+										sineEase.EasingMode = EasingMode.EaseIn
+										doubleAnimation.EasingFunction = sineEase
+
+										sb.Children.Add(doubleAnimation)
+
+										Storyboard.SetTarget(doubleAnimation, element2)
+										Storyboard.SetTargetProperty(doubleAnimation, PropertyPath(Border.OpacityProperty))
+
+								contentControl.BeginStoryboard(sb, HandoffBehavior.SnapshotAndReplace, True)
+								closeTimer.Tag = False
+
+								Script.Instance.Search(sender1.Child.Child.Tag)
+
+							score = trendsDictionary[key] / max
+
+							border1.HorizontalAlignment = HorizontalAlignment.Center
+							border1.VerticalAlignment = VerticalAlignment.Center
+							border1.Margin = Thickness(4)
+							border1.Padding = Thickness(16, 10, 16, 10)
+							border1.CornerRadius = CornerRadius(4)
+							border1.Background = SolidColorBrush(Color.FromArgb(Convert.ToByte(Byte.MaxValue * score), 51, 51, 50))
+							border1.Opacity = 0
+							border1.MouseEnter += onMouseEnter
+							border1.MouseLeave += onMouseLeave
+							border1.MouseLeftButtonUp += onMouseLeftButtonUp
+
+							stackPanel2.Children.Add(border1)
+
+							dropShadowEffect = DropShadowEffect()
+							dropShadowEffect.BlurRadius = 1
+							dropShadowEffect.Color = Colors.Black
+							dropShadowEffect.Direction = 270
+							dropShadowEffect.Opacity = 0.5
+							dropShadowEffect.ShadowDepth = 1
+
+							if dropShadowEffect.CanFreeze:
+								dropShadowEffect.Freeze()
+
+							border2 = Border()
+							border2.HorizontalAlignment = HorizontalAlignment.Center
+							border2.VerticalAlignment = VerticalAlignment.Center
+							border2.Margin = Thickness(0)
+							border2.Padding = Thickness(0)
+							border2.Effect = dropShadowEffect
+							border2.Tag = score
+
+							border1.Child = border2
+
+							textBlock = TextBlock()
+							textBlock.HorizontalAlignment = HorizontalAlignment.Center
+							textBlock.VerticalAlignment = VerticalAlignment.Center
+							textBlock.Text = key.ToUpper()
+							textBlock.Foreground = Brushes.White
+							textBlock.FontSize = fontSizeConverter.ConvertFromString("12pt")
+							textBlock.FontWeight = FontWeights.Bold
+							textBlock.TextAlignment = TextAlignment.Center
+							textBlock.TextWrapping = TextWrapping.NoWrap
+							textBlock.Tag = key
+
+							RenderOptions.SetClearTypeHint(textBlock, ClearTypeHint.Enabled)
+
+							border2.Child = textBlock
+
+						window.Show()
+
 				window.Closing += onClosing
 				window.MouseUp += onMouseUp
 				window.ContextMenu.Opened += onOpened
@@ -9155,6 +9533,7 @@ remainingCount = 0
 backingDictionary = Dictionary[String, Int32]()
 chargesDictionary = Dictionary[String, List[Double]]()
 imageDictionary = Dictionary[String, Uri]()
+trendsDictionary = Dictionary[String, Double]()
 dateTime = DateTime.Now - TimeSpan(12, 0, 0)
 recentEntryList = List[Entry]()
 recentWordList = List[Word]()
