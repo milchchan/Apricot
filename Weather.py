@@ -641,6 +641,7 @@ def onTick(timer, e):
 			window.WindowStyle = WindowStyle.None
 			window.ResizeMode = ResizeMode.NoResize
 			window.ShowActivated = False
+			window.ShowInTaskbar = Application.Current.MainWindow.ContextMenu.Items[5].IsChecked
 			window.Topmost = True
 			window.SizeToContent = SizeToContent.WidthAndHeight
 			window.Background = Brushes.Transparent
