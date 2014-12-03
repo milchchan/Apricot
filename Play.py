@@ -5295,62 +5295,122 @@ def onIsVisibleChanged(sender, args):
 														elif not imageHashSet.Contains(element5.Tag):
 															imageHashSet.Add(element5.Tag)
 															
-															if imageDictionary[element2.Child.Tag].Scheme.Equals("data"):
-																match = Regex.Match(imageDictionary[element2.Child.Tag].LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", RegexOptions.CultureInvariant)
-																ms = MemoryStream(Convert.FromBase64String(match.Groups[1].Value))
-																bi = None
-
-																try:
-																	bi = BitmapImage()
-																	bi.BeginInit()
-																	bi.StreamSource = ms
-																	bi.CacheOption = BitmapCacheOption.OnLoad
-																	bi.CreateOptions = BitmapCreateOptions.None
-																	bi.EndInit()
-
-																except:
+															if imageDictionary[element2.Child.Tag].IsAbsoluteUri:
+																if imageDictionary[element2.Child.Tag].Scheme.Equals("data"):
+																	match = Regex.Match(imageDictionary[element2.Child.Tag].LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", RegexOptions.CultureInvariant)
+																	ms = MemoryStream(Convert.FromBase64String(match.Groups[1].Value))
 																	bi = None
 
-																finally:
-																	ms.Close()
+																	try:
+																		bi = BitmapImage()
+																		bi.BeginInit()
+																		bi.StreamSource = ms
+																		bi.CacheOption = BitmapCacheOption.OnLoad
+																		bi.CreateOptions = BitmapCreateOptions.None
+																		bi.EndInit()
 
-																if imageHashSet.Contains(imageDictionary[element2.Child.Tag]):
-																		for e1 in stackPanel1.Children:
-																			for e2 in e1.Children:
-																				if imageDictionary.ContainsKey(e2.Child.Tag):
-																					if imageDictionary[e2.Child.Tag].Equals(imageDictionary[element2.Child.Tag]):
-																						for e3 in e2.Child.Children:
-																							if clr.GetClrType(Grid).IsInstanceOfType(e3):
-																								for e4 in e3.Children:
-																									if clr.GetClrType(Grid).IsInstanceOfType(e4):
-																										for e5 in e4.Children:
-																											if clr.GetClrType(Image).IsInstanceOfType(e5):
-																												if e5.Tag is not None:
-																													if e5.Tag.Equals(imageDictionary[element2.Child.Tag]):
-																														if bi is None:
-																															e5.Source = createColorBarsImage(Size(70, 70))
+																	except:
+																		bi = None
+
+																	finally:
+																		ms.Close()
+
+																	if imageHashSet.Contains(imageDictionary[element2.Child.Tag]):
+																			for e1 in stackPanel1.Children:
+																				for e2 in e1.Children:
+																					if imageDictionary.ContainsKey(e2.Child.Tag):
+																						if imageDictionary[e2.Child.Tag].Equals(imageDictionary[element2.Child.Tag]):
+																							for e3 in e2.Child.Children:
+																								if clr.GetClrType(Grid).IsInstanceOfType(e3):
+																									for e4 in e3.Children:
+																										if clr.GetClrType(Grid).IsInstanceOfType(e4):
+																											for e5 in e4.Children:
+																												if clr.GetClrType(Image).IsInstanceOfType(e5):
+																													if e5.Tag is not None:
+																														if e5.Tag.Equals(imageDictionary[element2.Child.Tag]):
+																															if bi is None:
+																																e5.Source = createColorBarsImage(Size(70, 70))
 																												
-																														else:
-																															e5.Source = cropImage(bi)
+																															else:
+																																e5.Source = cropImage(bi)
 
-																														for e6 in e4.Children:
-																															if clr.GetClrType(Ellipse).IsInstanceOfType(e6):
-																																if e6.Clip is not None:
-																																	storyboard = Storyboard()
-																																	ra = RectAnimation(e6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
-																																	sineEase = SineEase()
+																															for e6 in e4.Children:
+																																if clr.GetClrType(Ellipse).IsInstanceOfType(e6):
+																																	if e6.Clip is not None:
+																																		storyboard = Storyboard()
+																																		ra = RectAnimation(e6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
+																																		sineEase = SineEase()
 
-																																	sineEase.EasingMode = EasingMode.EaseOut
-																																	ra.EasingFunction = sineEase
+																																		sineEase.EasingMode = EasingMode.EaseOut
+																																		ra.EasingFunction = sineEase
 
-																																	storyboard.Children.Add(ra)
+																																		storyboard.Children.Add(ra)
 
-																																	Storyboard.SetTarget(ra, e6)
-																																	Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
+																																		Storyboard.SetTarget(ra, e6)
+																																		Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
 																
-																																	storyboard.Begin()
+																																		storyboard.Begin()
 
-															elif imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeFile) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeFtp) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeHttp) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeHttps):
+																elif imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeFile) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeFtp) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeHttp) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeHttps):
+																	def onUpdated(task):
+																		bi = None
+
+																		if task.Result.Value is not None:
+																			try:
+																				bi = BitmapImage()
+																				bi.BeginInit()
+																				bi.StreamSource = task.Result.Value
+																				bi.CacheOption = BitmapCacheOption.OnLoad
+																				bi.CreateOptions = BitmapCreateOptions.None
+																				bi.EndInit()
+
+																			except:
+																				bi = None
+
+																			finally:
+																				task.Result.Value.Close()
+
+																		if imageHashSet.Contains(task.Result.Key):
+																			for e1 in stackPanel1.Children:
+																				for e2 in e1.Children:
+																					if imageDictionary.ContainsKey(e2.Child.Tag):
+																						if imageDictionary[e2.Child.Tag].Equals(task.Result.Key):
+																							for e3 in e2.Child.Children:
+																								if clr.GetClrType(Grid).IsInstanceOfType(e3):
+																									for e4 in e3.Children:
+																										if clr.GetClrType(Grid).IsInstanceOfType(e4):
+																											for e5 in e4.Children:
+																												if clr.GetClrType(Image).IsInstanceOfType(e5):
+																													if e5.Tag is not None:
+																														if e5.Tag.Equals(task.Result.Key):
+																															if bi is None:
+																																e5.Source = createColorBarsImage(Size(70, 70))
+																												
+																															else:
+																																e5.Source = cropImage(bi)
+
+																															for e6 in e4.Children:
+																																if clr.GetClrType(Ellipse).IsInstanceOfType(e6):
+																																	if e6.Clip is not None:
+																																		storyboard = Storyboard()
+																																		ra = RectAnimation(e6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
+																																		sineEase = SineEase()
+
+																																		sineEase.EasingMode = EasingMode.EaseOut
+																																		ra.EasingFunction = sineEase
+
+																																		storyboard.Children.Add(ra)
+
+																																		Storyboard.SetTarget(ra, e6)
+																																		Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
+																
+																																		storyboard.Begin()
+
+																	task = createUpdateRemoteImageTask(imageDictionary[element2.Child.Tag])
+																	task.ContinueWith(Action[Task[KeyValuePair[Uri, MemoryStream]]](onUpdated), TaskScheduler.FromCurrentSynchronizationContext())
+																	task.Start()
+															
+															else:
 																def onUpdated(task):
 																	bi = None
 
@@ -5405,7 +5465,7 @@ def onIsVisibleChanged(sender, args):
 																
 																																	storyboard.Begin()
 
-																task = createUpdateImageTask(imageDictionary[element2.Child.Tag])
+																task = createUpdateLocalImageTask(imageDictionary[element2.Child.Tag])
 																task.ContinueWith(Action[Task[KeyValuePair[Uri, MemoryStream]]](onUpdated), TaskScheduler.FromCurrentSynchronizationContext())
 																task.Start()
 
@@ -7074,44 +7134,69 @@ def enumerateCharacters(directory):
 
 	return characterList
 
-def createUpdateImageTask(uri):
+def createUpdateLocalImageTask(uri):
+	def onLoad(state):
+		ms = None
+		fs = None
+			
+		try:
+			fs = FileStream(state, FileMode.Open, FileAccess.Read, FileShare.Read)
+			ms = MemoryStream()
+			buffer = Array.CreateInstance(Byte, fs.Length)
+			bytesRead = fs.Read(buffer, 0, buffer.Length)
+
+			while bytesRead > 0:
+				ms.Write(buffer, 0, bytesRead)
+				bytesRead = fs.Read(buffer, 0, buffer.Length)
+
+			ms.Seek(0, SeekOrigin.Begin)
+
+		except:
+			if ms is not None:
+				ms.Close()
+				ms = None
+
+		finally:
+			if fs is not None:
+				fs.Close()
+
+		return KeyValuePair[Uri, MemoryStream](uri, ms)
+
+	return Task[KeyValuePair[Uri, MemoryStream]](onLoad, uri.ToString())
+
+def createUpdateRemoteImageTask(uri):
 	from System.IO import Path
 
 	path = None
+	config = None
+	directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
 
-	if uri.IsAbsoluteUri:
-		config = None
-		directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name)
-
-		if Directory.Exists(directory):
-			fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
+	if Directory.Exists(directory):
+		fileName1 = Path.GetFileName(Assembly.GetEntryAssembly().Location)
 		
-			for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
-				if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
-					exeConfigurationFileMap = ExeConfigurationFileMap()
-					exeConfigurationFileMap.ExeConfigFilename = fileName2
-					config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
+		for fileName2 in Directory.EnumerateFiles(directory, "*.config"):
+			if fileName1.Equals(Path.GetFileNameWithoutExtension(fileName2)):
+				exeConfigurationFileMap = ExeConfigurationFileMap()
+				exeConfigurationFileMap.ExeConfigFilename = fileName2
+				config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None)
 	
-		if config is None:
-			config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-			directory = None
+	if config is None:
+		config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
+		directory = None
 
-		if config.AppSettings.Settings["Cache"] is not None:
-			sha1 = SHA1CryptoServiceProvider()
-			stringBuilder = StringBuilder()
+	if config.AppSettings.Settings["Cache"] is not None:
+		sha1 = SHA1CryptoServiceProvider()
+		stringBuilder = StringBuilder()
 
-			for b in sha1.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)):
-				stringBuilder.Append(b.ToString("x2", CultureInfo.InvariantCulture))
+		for b in sha1.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)):
+			stringBuilder.Append(b.ToString("x2", CultureInfo.InvariantCulture))
 
-			stringBuilder.Append(Path.GetExtension(uri.AbsolutePath))
+		stringBuilder.Append(Path.GetExtension(uri.AbsolutePath))
 
-			tempPath = Path.Combine(config.AppSettings.Settings["Cache"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["Cache"].Value), stringBuilder.ToString())
+		tempPath = Path.Combine(config.AppSettings.Settings["Cache"].Value if directory is None else Path.Combine(directory, config.AppSettings.Settings["Cache"].Value), stringBuilder.ToString())
 
-			if stringBuilder.ToString().IndexOfAny(Path.GetInvalidFileNameChars()) < 0 and File.Exists(tempPath):
-				path = tempPath
-
-	else:
-		path = uri.ToString()
+		if stringBuilder.ToString().IndexOfAny(Path.GetInvalidFileNameChars()) < 0 and File.Exists(tempPath):
+			path = tempPath
 
 	if path is None:
 		webRequest = WebRequest.Create(uri)
@@ -8272,62 +8357,122 @@ def onStart(sender, args):
 																		elif not imageHashSet.Contains(element5.Tag):
 																			imageHashSet.Add(element5.Tag)
 
-																			if imageDictionary[element2.Child.Tag].Scheme.Equals("data"):
-																				match = Regex.Match(imageDictionary[element2.Child.Tag].LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", RegexOptions.CultureInvariant)
-																				ms = MemoryStream(Convert.FromBase64String(match.Groups[1].Value))
-																				bi = None
-
-																				try:
-																					bi = BitmapImage()
-																					bi.BeginInit()
-																					bi.StreamSource = ms
-																					bi.CacheOption = BitmapCacheOption.OnLoad
-																					bi.CreateOptions = BitmapCreateOptions.None
-																					bi.EndInit()
-
-																				except:
+																			if imageDictionary[element2.Child.Tag].IsAbsoluteUri:
+																				if imageDictionary[element2.Child.Tag].Scheme.Equals("data"):
+																					match = Regex.Match(imageDictionary[element2.Child.Tag].LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", RegexOptions.CultureInvariant)
+																					ms = MemoryStream(Convert.FromBase64String(match.Groups[1].Value))
 																					bi = None
 
-																				finally:
-																					ms.Close()
+																					try:
+																						bi = BitmapImage()
+																						bi.BeginInit()
+																						bi.StreamSource = ms
+																						bi.CacheOption = BitmapCacheOption.OnLoad
+																						bi.CreateOptions = BitmapCreateOptions.None
+																						bi.EndInit()
 
-																				if imageHashSet.Contains(imageDictionary[element2.Child.Tag]):
-																					for e1 in stackPanel1.Children:
-																						for e2 in e1.Children:
-																							if imageDictionary.ContainsKey(e2.Child.Tag):
-																								if imageDictionary[e2.Child.Tag].Equals(imageDictionary[element2.Child.Tag]):
-																									for e3 in e2.Child.Children:
-																										if clr.GetClrType(Grid).IsInstanceOfType(e3):
-																											for e4 in e3.Children:
-																												if clr.GetClrType(Grid).IsInstanceOfType(e4):
-																													for e5 in e4.Children:
-																														if clr.GetClrType(Image).IsInstanceOfType(e5):
-																															if e5.Tag is not None:
-																																if e5.Tag.Equals(imageDictionary[element2.Child.Tag]):
-																																	if bi is None:
-																																		e5.Source = createColorBarsImage(Size(70, 70))
+																					except:
+																						bi = None
+
+																					finally:
+																						ms.Close()
+
+																					if imageHashSet.Contains(imageDictionary[element2.Child.Tag]):
+																						for e1 in stackPanel1.Children:
+																							for e2 in e1.Children:
+																								if imageDictionary.ContainsKey(e2.Child.Tag):
+																									if imageDictionary[e2.Child.Tag].Equals(imageDictionary[element2.Child.Tag]):
+																										for e3 in e2.Child.Children:
+																											if clr.GetClrType(Grid).IsInstanceOfType(e3):
+																												for e4 in e3.Children:
+																													if clr.GetClrType(Grid).IsInstanceOfType(e4):
+																														for e5 in e4.Children:
+																															if clr.GetClrType(Image).IsInstanceOfType(e5):
+																																if e5.Tag is not None:
+																																	if e5.Tag.Equals(imageDictionary[element2.Child.Tag]):
+																																		if bi is None:
+																																			e5.Source = createColorBarsImage(Size(70, 70))
 																												
-																																	else:
-																																		e5.Source = cropImage(bi)
+																																		else:
+																																			e5.Source = cropImage(bi)
 
-																																	for e6 in e4.Children:
-																																		if clr.GetClrType(Ellipse).IsInstanceOfType(e6):
-																																			if e6.Clip is not None:
-																																				storyboard = Storyboard()
-																																				ra = RectAnimation(e6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
-																																				sineEase = SineEase()
+																																		for e6 in e4.Children:
+																																			if clr.GetClrType(Ellipse).IsInstanceOfType(e6):
+																																				if e6.Clip is not None:
+																																					storyboard = Storyboard()
+																																					ra = RectAnimation(e6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
+																																					sineEase = SineEase()
 
-																																				sineEase.EasingMode = EasingMode.EaseOut
-																																				ra.EasingFunction = sineEase
+																																					sineEase.EasingMode = EasingMode.EaseOut
+																																					ra.EasingFunction = sineEase
 
-																																				storyboard.Children.Add(ra)
+																																					storyboard.Children.Add(ra)
 
-																																				Storyboard.SetTarget(ra, e6)
-																																				Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
+																																					Storyboard.SetTarget(ra, e6)
+																																					Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
 																
-																																				storyboard.Begin()
+																																					storyboard.Begin()
 
-																			elif imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeFile) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeFtp) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeHttp) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeHttps):
+																				elif imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeFile) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeFtp) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeHttp) or imageDictionary[element2.Child.Tag].Scheme.Equals(Uri.UriSchemeHttps):
+																					def onUpdated(task):
+																						bi = None
+
+																						if task.Result.Value is not None:
+																							try:
+																								bi = BitmapImage()
+																								bi.BeginInit()
+																								bi.StreamSource = task.Result.Value
+																								bi.CacheOption = BitmapCacheOption.OnLoad
+																								bi.CreateOptions = BitmapCreateOptions.None
+																								bi.EndInit()
+
+																							except:
+																								bi = None
+
+																							finally:
+																								task.Result.Value.Close()
+
+																						if imageHashSet.Contains(task.Result.Key):
+																							for e1 in stackPanel1.Children:
+																								for e2 in e1.Children:
+																									if imageDictionary.ContainsKey(e2.Child.Tag):
+																										if imageDictionary[e2.Child.Tag].Equals(task.Result.Key):
+																											for e3 in e2.Child.Children:
+																												if clr.GetClrType(Grid).IsInstanceOfType(e3):
+																													for e4 in e3.Children:
+																														if clr.GetClrType(Grid).IsInstanceOfType(e4):
+																															for e5 in e4.Children:
+																																if clr.GetClrType(Image).IsInstanceOfType(e5):
+																																	if e5.Tag is not None:
+																																		if e5.Tag.Equals(task.Result.Key):
+																																			if bi is None:
+																																				e5.Source = createColorBarsImage(Size(70, 70))
+																												
+																																			else:
+																																				e5.Source = cropImage(bi)
+
+																																			for e6 in e4.Children:
+																																				if clr.GetClrType(Ellipse).IsInstanceOfType(e6):
+																																					if e6.Clip is not None:
+																																						storyboard = Storyboard()
+																																						ra = RectAnimation(e6.Clip.Rect, Rect(0, 0, 50, 0), TimeSpan.FromMilliseconds(500))
+																																						sineEase = SineEase()
+
+																																						sineEase.EasingMode = EasingMode.EaseOut
+																																						ra.EasingFunction = sineEase
+
+																																						storyboard.Children.Add(ra)
+
+																																						Storyboard.SetTarget(ra, e6)
+																																						Storyboard.SetTargetProperty(ra, PropertyPath("(0).(1)", Ellipse.ClipProperty, RectangleGeometry.RectProperty))
+																
+																																						storyboard.Begin()
+
+																					task = createUpdateRemoteImageTask(imageDictionary[element2.Child.Tag])
+																					task.ContinueWith(Action[Task[KeyValuePair[Uri, MemoryStream]]](onUpdated), TaskScheduler.FromCurrentSynchronizationContext())
+																					task.Start()
+																			
+																			else:
 																				def onUpdated(task):
 																					bi = None
 
@@ -8382,7 +8527,7 @@ def onStart(sender, args):
 																
 																																					storyboard.Begin()
 
-																				task = createUpdateImageTask(imageDictionary[element2.Child.Tag])
+																				task = createUpdateLocalImageTask(imageDictionary[element2.Child.Tag])
 																				task.ContinueWith(Action[Task[KeyValuePair[Uri, MemoryStream]]](onUpdated), TaskScheduler.FromCurrentSynchronizationContext())
 																				task.Start()
 
