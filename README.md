@@ -1,2 +1,2 @@
-kawatan.github.io
+apricot.moe
 =================
