@@ -54,11 +54,18 @@ ul.resources > li {
 hr {
     border-width: 4px 0 0 0;
     border-color: #000000;
-    width: 100px;
+    width: 50px;
 }
 .highlight hr {
     border-width: 4px 0 0 0;
     border-color: #ffffff;
+}
+footer hr {
+    border-width: 2px 0 0 0;
+    text-align: left;
+    margin-left: 0;
+    margin-top: 50px;
+    width: 25px;
 }
 table.information {
   margin: 25px 0px 25px 0px;
@@ -397,16 +404,22 @@ i.scroll:hover {
   color: #ffc547;
 }
 li.connection {
+  margin: 0px 8px 0px 0px;
+  padding: 0px 0px 0px 0px;
+  width: 32px;
+  height: 32px;
+  line-height: 0px;
+}
+li.connection span {
   float: left;
   position: relative;
-  margin-right: 8px;
   width: 32px;
   height: 32px;
   border-radius: 16px;
   background-color: #000000;
   line-height: 0px;
 }
-li.connection > a {
+li.connection i {
   position: absolute;
   left: 8px;
   top: 8px;
