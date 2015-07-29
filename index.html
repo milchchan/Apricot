@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="教えた言葉でかわいいキャラクターが気ままにおしゃべりするWindows/iOSアプリ「Apricot」">
+    <meta name="author" content="Masaaki Kawata">
+    <meta property="og:title" content="Apricot" />
+    <meta property="og:description" content="教えた言葉でかわいいキャラクターが気ままにおしゃべりするWindows/iOSアプリ「Apricot」" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="http://apricot.moe/" />
+    <meta property="og:image" content="http://apricot.moe/images/Milch.png" />
+    <meta property="twitter:card" content="summary" />
+    <meta property="twitter:site" content="@kawatan" />
+    <meta property="twitter:title" content="Apricot" />
+    <meta property="twitter:description" content="教えた言葉でかわいいキャラクターが気ままにおしゃべりするWindows/iOSアプリ「Apricot」" />
+    <meta property="twitter:image" content="http://apricot.moe/images/Milch.png" />
+    <meta property="twitter:url" content="http://apricot.moe/" />
+    <title>APRICOT.MOE</title>
+    <link rel="shortcut icon" href="http://apricot.moe/favicon.ico" />
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="css/lightbox.css" rel="stylesheet">
+    <link href="css/layout.css" rel="stylesheet">
+    <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet">
+    <link href='http://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>
+    <link href='//fonts.googleapis.com/css?family=Roboto:400,100,100italic,300,300italic,400italic,500,700,500italic,700italic,900,900italic|Open+Sans' rel='stylesheet' type='text/css'>
+</head>
+<body>
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&appId=161130897240780&version=v2.0";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+    <div id="flyout">
+        <ul class="list-inline">
+            <li class="button"><a href="https://kawatan.booth.pm/" class="btn btn-flyout-highlight btn-lg">BOOTH</a></li>
+            <li class="button accent"><a href="http://blog.apricot.moe/" class="btn btn-flyout btn-lg">Blog</a></li>
+            <li class="button"><a href="http://www.apricotan.net/" class="btn btn-flyout btn-lg"><i class="fa fa-home"></i></a></li>
+        </ul>
+    </div>
+    <div id="top" class="header">
+        <div class="annotations">
+            <div class="fb-like" data-href="http://apricot.moe/" data-layout="button_count" data-action="like" data-show-faces="false" data-share="false"></div><div><a href="https://twitter.com/share" class="twitter-share-button" data-url="http://apricot.moe/" data-via="kawatan" data-lang="en" data-related="anywhereTheJavascriptAPI">Tweet</a><script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="https://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script></div>
+        </div>
+        <div class="background">
+            <div class="blind"></div>
+        </div>
+        <div class="vert-text">
+            <h1><span class="accent">Apricot</span></h1>
+            <!--<p>冬コミに参加します！</p>
+            <p><a href="https://webcatalog.circle.ms/Circle/11617442/" class="btn btn-lg btn-primary">3日目西う-10a アプリコタン</a></p>-->
+            <ul class="list-inline">
+                <li class="button"><a href="http://www.apricotan.net/wp-content/uploads/Apricot780.zip" class="btn btn-default btn-lg" onclick="javascript:ga('send', 'pageview', '/wp-content/uploads/Apricot780.zip');"><i class="fa fa-windows"></i> Windows <small>Desktop</small></a></li>
+                <li class="button"><a href="http://apps.microsoft.com/windows/app/apricot/3278bb5e-c92f-45e1-8014-27c9cee68e25" class="btn btn-default btn-lg"><i class="fa fa-windows"></i> Windows <small>Store App</small></a></li>
+                <li class="button"><a href="https://itunes.apple.com/jp/app/apricotan/id511883414?l=ja&amp;ls=1&amp;mt=8" class="btn btn-default btn-lg"><i class="fa fa-apple"></i> iOS</a></li>
+            </ul>
+        </div>
+    </div>
+    <div id="about" class="highlight">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2 text-center">
+                    <h2 class="accent">Event</h2>
+                    <h5 class="accent">イベント情報</h5>
+                    <hr>
+                    <h3 class="accent">コミックマーケット88</h3>
+                    <h5 class="accent">Comic Market 88</h5>
+                    <p><a href="https://webcatalog.circle.ms/Circle/11912993/" class="btn btn-lg btn-primary">3日目西く22b</a></p>
+                    <p class="lead">Apricotの魔法幼女ミルヒちゃんの薄い本がでる予定です！！</p>
+                    <!--<p class="lead">キャッキャウフフするための魔法少女なオリジナルキャラクター"ミルヒ"ちゃん(イラスト: みずは <a href="http://meg13.com/"><i class="fa fa-globe animatable-highlight"></i></a>)を作っています！</p>
+                    <p class="lead">冬コミ当日は、ミルヒちゃんのイラストを使ったフリーペーパ的なもの <a href="http://blog.apricotan.net/post/106312060390"><i class="fa fa-globe animatable-highlight"></i></a> と、Apricotのアイコンでお馴染みのアリスのラバーストラップ(600円) <a href="http://blog.apricotan.net/post/106285828330/apricot"><i class="fa fa-globe animatable-highlight"></i></a> を会場限定で頒布します。</p>
+                    <p class="lead">過去につくったアリツィアちゃんも含めて持って行きますので、どうぞよろしくお願いします！</p>-->
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2 text-center">
+                    <p><a href="https://kawatan.booth.pm/items/65130" class="btn btn-lg btn-primary"><i class="fa fa-shopping-cart"></i> 魔法少女マジカル☆ミルヒの購入</a></p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-2 text-center">
+                    <div class="normal-item">
+                        <img class="img-normal img-circle img-responsive" src="http://apricot.moe/images/Milch1.png" alt="ミルヒ(変身前)" />
+                        <h4>変身前</h4>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="normal-item">
+                        <img class="img-normal img-circle img-responsive" src="http://apricot.moe/images/Milch2.png" alt="ミルヒ(変身後)" />
+                        <h4>変身後</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2 text-center">
+                    <h3 class="accent">Credits</h3>
+                    <h5 class="accent">クレジット</h5>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>みずは</h4>
+                        <h5>キャラクターデザイン</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>魚 玉猫</h4>
+                        <h5>アイコン</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>Yasuhiro Tsuchiya</h4>
+                        <h5>S.E.</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                 <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>Kawatan</h4>
+                        <h5>プログラミング/デザイン</h5>
+                    </div>
+                </div>
+            </div>
+            <!--<div class="row">
+                <div class="col-md-8 col-md-offset-2 text-center">
+                    <h2 class="accent">Event</h2>
+                    <h5 class="accent">イベント情報</h5>
+                    <hr>
+                    <h3 class="accent">Magical Alicja in Wonderland</h3>
+                    <h5 class="accent">ふしぎの国のマジカルアリツィア</h5>
+                    <p class="lead">今回の夏コミでは、「ふしぎの国アリス」をモチーフにした魔法少女なキャラクター"アリツィア"ちゃん(キャラクターボイス:五十嵐裕美さん/イラスト:蒲焼鰻さん)をデスクトップ上で、魔法少女に変身したりするのをキャッキャウフフしたり、気ままにおしゃべりするのを眺めたり聞いたりして楽しむことができるようアプリをつくりましたので楽しんで頂ければ嬉しいです！</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <ul class="list-inline">
+                        <li class="button"><a href="http://www.apricotan.net/wp-content/uploads/Apricot750-Alicja-Update.zip" class="btn btn-lg btn-primary">アップデート</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <ul class="list-inline">
+                        <li class="button"><a href="https://webcatalog.circle.ms/Circle/11309874/" class="btn btn-lg btn-primary">C86 3日目 西け-18b</a></li>
+                        <li class="button"><a href="http://www.toranoana.jp/mailorder/article/04/0030/22/84/040030228402.html" class="btn btn-lg btn-primary">委託販売</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-2 text-center">
+                    <div class="normal-item">
+                        <img class="img-normal img-circle img-responsive" src="images/Alicja1.png" alt="アリツィア(変身前)" />
+                        <h4>変身前</h4>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="normal-item">
+                        <img class="img-normal img-circle img-responsive" src="images/Alicja2.png" alt="アリツィア(変身後)" />
+                        <h4>変身後</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 col-md-offset-2 text-center">
+                    <div class="highlight-item">
+                        <a href="images/Screenshot01.png" data-lightbox="screenshot1"><img class="img-rounded img-responsive selectable" src="images/Screenshot01.png" alt="スクリーンショット" /></a>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <a href="images/Screenshot02.png" data-lightbox="screenshot2"><img class="img-rounded img-responsive selectable" src="images/Screenshot02.png" alt="スクリーンショット" /></a>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <a href="images/Screenshot03.png" data-lightbox="screenshot3"><img class="img-rounded img-responsive selectable" src="images/Screenshot03.png" alt="スクリーンショット" /></a>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <a href="images/Screenshot04.png" data-lightbox="screenshot4"><img class="img-rounded img-responsive selectable" src="images/Screenshot04.png" alt="スクリーンショット" /></a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 col-md-offset-2 text-center">
+                    <div class="highlight-item">
+                        <a href="images/Screenshot05.png" data-lightbox="screenshot5"><img class="img-rounded img-responsive selectable" src="images/Screenshot05.png" alt="スクリーンショット" /></a>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <a href="images/Screenshot06.png" data-lightbox="screenshot6"><img class="img-rounded img-responsive selectable" src="images/Screenshot06.png" alt="スクリーンショット" /></a>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <a href="images/Screenshot07.png" data-lightbox="screenshot7"><img class="img-rounded img-responsive selectable" src="images/Screenshot07.png" alt="スクリーンショット" /></a>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <a href="images/Screenshot08.png" data-lightbox="screenshot8"><img class="img-rounded img-responsive selectable" src="images/Screenshot08.png" alt="スクリーンショット" /></a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2 text-center">
+                    <table class="table information">
+                        <tr>
+                            <td>タイトル</td>
+                            <td>ふしぎの国のマジカルアリツィア / デスクトップマスコット Apricot 7.5</td>
+                        </tr>
+                        <tr>
+                            <td>対応OS</td>
+                            <td>Windows XP/Vista/7/8/8.1</td>
+                        </tr>
+                        <tr>
+                            <td>価格</td>
+                            <td>会場頒布価格1500円（委託1940円）</td>
+                        </tr>
+                        <tr>
+                            <td>仕様</td>
+                            <td>デジパック (プレスCD)</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2 text-center">
+                    <h3 class="accent">Credits</h3>
+                    <h5 class="accent">クレジット</h5>
+                </div>
+            </div>
+            <div class="row">
+                 <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>五十嵐 裕美</h4>
+                        <h5>キャラクターボイス</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>蒲焼鰻</h4>
+                        <h5>イラスト</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>魚 玉猫</h4>
+                        <h5>アイコン</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>Yasuhiro Tsuchiya</h4>
+                        <h5>S.E.</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                 <div class="col-md-4 col-md-offset-4 text-center">
+                    <div class="highlight-item">
+                        <h4>Kawatan</h4>
+                        <h5>プログラミング/デザイン</h5>
+                    </div>
+                </div>
+            </div>-->
+        </div>
+    </div>
+    <div id="about" class="highlight">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-8 col-md-offset-2 text-center">
+                    <h2 class="accent">About</h2>
+                    <h5 class="accent">Apricotとは</h5>
+                    <hr>
+                    <p class="lead">
+                        「Apricot (アプリコット)」は、教えた言葉でかわいいキャラクターが気ままにおしゃべりするアプリです。おしゃべりはインターネット上にあるニュースやブログなどで配信されている、いろいろな話題をもとにしているので、キャラクターを眺めていたらもしかすると役立つ情報が得られるかもしれません。<br />
+近くにいる人と教えた言葉を交換することでいろんな言葉を覚えていくことができます。ちょっぴりキャラクターに話しかけることもできるのでその反応を楽しんだり、Twitterで発言した内容をシェアすることもできます。<br />
+あなたが話しかけたりすることでキャラクターの好感度が上がっていき、いつもと違うおしゃべりが楽しめます！
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="features" class="highlight">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <h2 class="accent">Features</h2>
+                    <h5 class="accent">主な機能</h5>
+                    <hr>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 col-md-offset-2 text-center">
+                    <div class="highlight-item">
+                        <i class="highlight-icon fa fa-comments"></i>
+                        <h4>おしゃべり</h4>
+                        <p>機械学習を基にいろんな話題をインターネットから探してきておしゃべりします。また、キャラクターに話しかけたり、他のキャラクターが表れてキャラクター同士でおしゃべりできます。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <i class="highlight-icon fa fa-magic"></i>
+                        <h4>変身</h4>
+                        <p>変身に対応しているキャラクターは、条件が満たされると変身することができます。変身した姿を見てキャッキャッウフフできます。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <i class="highlight-icon fa fa-refresh"></i>
+                        <h4>着せ替え</h4>
+                        <p>キャラクターを水着などの違う衣装に着せ替えしたり、メガネなどのアクセサリーをつけたりしてお好みの容姿にして楽しむことができます。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <i class="highlight-icon fa fa-heart"></i>
+                        <h4>好感度</h4>
+                        <p>好感度を上げることでキャラクターとの親密になれたり、実績が解除され台詞やアニメーションなどの追加要素が入手できます。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 col-md-offset-2 text-center">
+                    <div class="highlight-item">
+                        <i class="highlight-icon fa fa-pencil"></i>
+                        <h4>言葉の学習</h4>
+                        <p>言葉を教えるとキャラクターが話す内容がより多彩になります。iOS版ではBluetooth LEを使って近くにいる人と言葉を交換することができます。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <i class="highlight-icon fa fa-cloud"></i>
+                        <h4>SNSとの連携</h4>
+                        <p>FacebookやTwitterと連携し、新着の通知や新着の内容に反応してお喋りをすることができます。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <i class="highlight-icon fa fa-code"></i>
+                        <h4>キャラクターの作成</h4>
+                        <p>キャラクターをつくるための記述言語CHARMLを使って、キャラクターを新しくつくることができます。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <i class="highlight-icon fa fa-puzzle-piece"></i>
+                        <h4>機能拡張</h4>
+                        <p>スクリプト言語「Python」を使ってApricotの機能を拡張することができます。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="instructions" class="highlight">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <h2 class="accent">Instructions</h2>
+                    <h5 class="accent">使い方</h5>
+                    <hr>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 col-md-offset-2 text-center">
+                    <div class="highlight-item">
+                        <h4>眺める</h4>
+                        <p>キャラクターが取得してきたニュースやブログなどの新着の情報を見たり、その情報を基に抽出された話題の言葉を使っておしゃべりを楽しんでください。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <h4>話しかける</h4>
+                        <p>キャラクターに対してテキストで自由に話しかけることができます。キャラクターに話しかけることでキャラクターとの対話を楽しんでください。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <h4>ゲージをためる</h4>
+                        <p>覚えた言葉を使っておしゃべりしているとゲージがたまっていきます。たまったゲージの言葉を選択すると、キャラクターが変身したり他のキャラクターが表れて会話が始まったりします。</p>
+                    </div>
+                </div>
+                <div class="col-md-2 text-center">
+                    <div class="highlight-item">
+                        <h4>育てる</h4>
+                        <p>まだ知らない新しい言葉などを教えてあげたり、新しいニュースソースやブログなどを追加することであなた好みの話題を喋るキャラクターに育てることができます。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="preview">
+        <div class="vert-text">
+            <h2 class="accent">More Characters</h2>
+            <h5 class="accent">他のキャラクターなど</h5>
+            <p><a href="https://kawatan.booth.pm/" class="btn btn-lg btn-preview-highlight">BOOTH</a></p>
+        </div>
+    </div>
+    <!--<div id="more" class="normal">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 col-md-offset-2 text-center">
+                    <div class="normal-item">
+                        <a href="http://jecy.main.jp/Apricot/">
+                            <img class="img-normal img-circle img-responsive animatable popupable" src="images/Komugiko.png" alt="こむぎこをこねたもの" />
+                        </a>
+                        <h4>こむぎこをこねたもの</h4>
+                        <p>ジェシーさんのオリジナルキャラクター「こむぎこをこねたもの」です。</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="normal-item">
+                        <a href="http://www.pixiv.net/member_illust.php?mode=medium&amp;illust_id=36217931">
+                            <img class="img-normal img-circle img-responsive animatable popupable" src="images/Gin.png" alt="天御 銀" />
+                        </a>
+                        <h4>天御 銀</h4>
+                        <p>秋暁さんのオリジナルキャラクター「天御 銀」です。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>-->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3 text-center">
+                    <div class="top-scroll">
+                        <a href="#top"><i class="fa fa-arrow-up scroll animatable"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-2">
+                    <ul class="list-inline">
+                        <li class="connection text-center animatable-highlight"><a href="https://www.facebook.com/apricotan.net"><i class="fa fa-facebook"></i></a></li>
+                        <li class="connection text-center animatable-highlight"><a href="https://instagram.com/kawatan/"><i class="fa fa-instagram"></i></a></li>
+                        <li class="connection text-center animatable-highlight"><a href="https://twitter.com/kawatan"><i class="fa fa-twitter"></i></a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2">
+                    <ul class="resources">
+                        <li><a href="https://github.com/kawatan/Apricot/wiki/FAQ">FAQ</a></li>
+                        <li><a href="https://github.com/kawatan/Apricot/wiki/CHARML-%E6%97%A5%E6%9C%AC%E8%AA%9E">CHARML</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2">
+                    <ul class="resources">
+                        <li><a href="mailto:kawatan@gmail.com">kawatan@gmail.com</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 col-md-offset-2">
+                    <p class="legal">&copy; Masaaki Kawata</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="js/jquery-1.10.2.js"></script>
+    <script src="js/jquery.easing.1.3.js"></script>
+    <script src="js/lightbox.min.js"></script>
+    <script src="js/bootstrap.js"></script>
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-313424-1', 'auto');
+  ga('send', 'pageview');
+
+        var queue = new Array();
+
+        $(function () {
+            $('a[href*=#]:not([href=#])').click(function () {
+                if (location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') || location.hostname == this.hostname) {
+                    var target = $(this.hash);
+
+                    target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
+
+                    if (target.length) {
+                        $('html,body').animate({
+                            scrollTop: target.offset().top
+                        }, 1000);
+                        return false;
+                    }
+                }
+            });
+            
+            $('.selectable').hover(
+                function() {
+                    $(this).stop().animate({'opacity': '0.5'}, 'normal');
+                },
+                function() {
+                    $(this).stop().animate({'opacity': '1'}, 'normal');
+            });
+            
+            function shuffle(array) {
+                function random(min, max) {
+                    return Math.floor(Math.random() * (max - min + 1)) + min;
+                }
+                
+                var length = 0;
+                
+                for (var i in array) {
+                    length++;
+                }
+
+                var a = new Array(length);
+                var n = 0;
+
+                for (var i in array) {
+                    a[n] = array[i];
+                    n++;
+                }
+                
+                while (n > 1)
+                {
+                    var k = random(0, n);
+
+                    n--;
+
+                    var temp = a[n];
+
+                    a[n] = a[k];
+                    a[k] = temp;
+                }
+
+                return a;
+            }
+            
+            queue.push(new Array('http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch2.jpg', 'http://apricot.moe/images/Background-Milch3.jpg', 'http://apricot.moe/images/Background-Milch2.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg', 'http://apricot.moe/images/Background-Milch1.jpg'));
+            queue.push(new Array('http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch5.jpg', 'http://apricot.moe/images/Background-Milch6.jpg', 'http://apricot.moe/images/Background-Milch5.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg', 'http://apricot.moe/images/Background-Milch4.jpg'));
+            //queue.push(new Array('../images/Background1.jpg', '../images/Background2.jpg', '../images/Background3.jpg', '../images/Background2.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg', '../images/Background1.jpg'));
+            //queue.push(new Array('../images/Background4.jpg', '../images/Background5.jpg', '../images/Background6.jpg', '../images/Background5.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg', '../images/Background4.jpg'));
+            
+            queue = shuffle(queue);
+            
+            var urls = queue.shift();
+            
+            queue.push(urls);
+            
+            var q = new Array();
+            
+            for (var i in urls) {
+                q.push(urls[i]);
+            }
+            
+            function onLoad1() {
+                if (q.length > 0) {
+                    $(this).after($('<img />')
+                        .attr('class', 'background')
+                        .attr('src', q.shift())
+                        .attr('alt', 'Background')
+                        .bind('load', onLoad1));
+                    
+                    return;
+                }
+                
+                $('div.blind').animate({ 'margin-top': '-100%' }, 1000, 'easeInExpo', function () {
+                    var parent = $(this).parent();
+                    
+                    $(this).remove();
+                    $('img.background').each(function (index, element) {
+                        $(this)
+                            .css('visibility', 'hidden')
+                            .css('animation-name', 'loop')
+                            .css('animation-duration', '2s')
+                            .css('animation-timing-function', 'steps(20)')
+                            .css('animation-delay', 0.1 * index + 's')
+                            .css('animation-iteration-count', 'infinite')
+                            .css('animation-fill-mode', 'forwards')
+                            .css('animation-play-state', 'running');
+                    });
+                    
+                    setTimeout(function onTick() {
+                        var blind = $('div.blind')
+                        var div = blind.length == 0 ? $('<div />').attr('class', 'blind').css('margin-top', '100%').appendTo(parent) : blind;
+                        
+                        div.animate({ 'margin-top': '0%' }, 1000, 'easeOutExpo', function () {
+                            var array = queue.shift();
+                        
+                            queue.push(array);
+                            
+                            for (var i in array) {
+                                q.push(array[i]);
+                            }
+                        
+                            $('img.background').unbind('load');
+                            $('img.background').remove();
+                            
+                            function onLoad2() {
+                                if (q.length > 0) {
+                                    $(this).after($('<img />')
+                                        .attr('class', 'background')
+                                        .attr('src', q.shift())
+                                        .attr('alt', 'Background')
+                                        .bind('load', onLoad2));
+                                    
+                                    return;
+                                }
+                                
+                                function random(min, max) {
+                                    return Math.floor(Math.random() * (max - min + 1)) + min;
+                                }
+                                
+                                $('div.blind').delay(random(500, 1000)).animate({ 'margin-top': '-100%' }, 1000, 'easeInExpo', function () {
+                                    $(this).remove();
+                                    $('img.background').each(function (index, element) {
+                                        $(this)
+                                            .css('visibility', 'hidden')
+                                            .css('animation-name', 'loop')
+                                            .css('animation-duration', '2s')
+                                            .css('animation-timing-function', 'steps(20)')
+                                            .css('animation-delay', 0.1 * index + 's')
+                                            .css('animation-iteration-count', 'infinite')
+                                            .css('animation-fill-mode', 'forwards')
+                                            .css('animation-play-state', 'running');
+                                    });
+                                });
+                            }
+                            
+                            parent.prepend($('<img />')
+                                .attr('class', 'background')
+                                .attr('src', q.shift())
+                                .attr('alt', 'Background')
+                                .bind('load', onLoad2));
+                        });
+                        
+                        setTimeout(onTick, 10000);
+                    }, 10000);
+                });
+            }
+            
+            $('div.background').prepend($('<img />')
+                .attr('class', 'background')
+                .attr('src', q.shift())
+                .attr('alt', 'Background')
+                .bind('load', onLoad1));
+        });
+    </script>
+</body>
+</html>
