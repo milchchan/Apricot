@@ -34,7 +34,7 @@ from System.Net import WebRequest, WebResponse, HttpWebRequest, HttpWebResponse,
 from System.Net.NetworkInformation import NetworkInterface
 from System.Windows import Application, Window, WindowStartupLocation, WindowStyle, ResizeMode, SizeToContent, HorizontalAlignment, VerticalAlignment, Point, Size, Rect, Thickness, SystemColors, SystemParameters, PropertyPath, CornerRadius, FontSizeConverter, FontWeights, DependencyPropertyChangedEventArgs, TextAlignment, TextWrapping
 from System.Windows.Controls import ContentControl, MenuItem, Separator, Border, Label, Button, StackPanel, Orientation, Grid, DockPanel, Dock, Canvas, Image, TextBlock, TextBox, WebBrowser
-from System.Windows.Input import Keyboard, ModifierKeys, MouseButtonEventArgs, MouseButton
+from System.Windows.Input import Keyboard, ModifierKeys, MouseEventArgs, MouseButtonEventArgs, MouseButton, MouseButtonState
 from System.Windows.Media import Color, Colors, ColorConverter, Brushes, SolidColorBrush, LinearGradientBrush, GradientStopCollection, GradientStop, RenderOptions, ClearTypeHint, ScaleTransform, RectangleGeometry, EllipseGeometry, StreamGeometry, FillRule, StreamGeometryContext, BitmapCache, ImageBrush, TileMode, BrushMappingMode, Stretch, AlignmentX, AlignmentY, DrawingGroup, DrawingContext, DrawingImage
 from System.Windows.Media.Animation import Storyboard, HandoffBehavior, Clock, ClockState, DoubleAnimation, RectAnimation, ColorAnimation, SineEase, EasingMode
 from System.Windows.Media.Effects import DropShadowEffect
@@ -2993,7 +2993,7 @@ def onOpened(sender, args):
 						list.Sort(comparison)
 						list.Reverse()
 
-						attachSectionStackPanel(rightStackPanel, textColor, "Trends")
+						attachSectionStackPanel(rightStackPanel, textColor, "Trending")
 
 						for kvp in list:
 							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2)
@@ -5025,41 +5025,11 @@ def onIsVisibleChanged(sender, args):
 
 																					Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
 
-																					maxWidth = Double.MinValue
-																					maxHeight = Double.MinValue
-																					bitmapImageList = List[BitmapImage]()
+																					maxWidth = 64
+																					maxHeight = 128
 																					r = Random(Environment.TickCount)
 																					index = 0
-
-																					for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Dark4.png", "Star-Dark5.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png", "Star-Light4.png", "Star-Light5.png"]:
-																						fs = None
-																					
-																						try:
-																							fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
-																						
-																							bi = BitmapImage()
-																							bi.BeginInit()
-																							bi.StreamSource = fs
-																							bi.CacheOption = BitmapCacheOption.OnLoad
-																							bi.CreateOptions = BitmapCreateOptions.None
-																							bi.EndInit()
-
-																							if bi.Width > maxWidth:
-																								maxWidth = bi.Width
-
-																							if bi.Height > maxHeight:
-																								maxHeight = bi.Height
-
-																							bitmapImageList.Add(bi)
-
-																						except:
-																							continue
-
-																						finally:
-																							if fs is not None:
-																								fs.Close()
-
-																					count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
+																					count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight * termHashSet.Count)
 																					countdownEvent = CountdownEvent(Convert.ToInt32(count))
 
 																					while index < count:
@@ -5111,9 +5081,8 @@ def onIsVisibleChanged(sender, args):
 																						def onClosed(sender1, args1):
 																							countdownEvent.Signal()
 					
-																						bi = bitmapImageList[r.Next(bitmapImageList.Count)]
-																						width = Convert.ToInt32(bi.Width) / 2
-																						height = Convert.ToInt32(bi.Height) / 2
+																						width = 16 + r.Next(maxWidth / 16) * 16
+																						height = Convert.ToInt32(width + r.Next((maxHeight - maxWidth) / 16 + 1) * 16)
 							
 																						w = Window()
 																						w.Owner = Application.Current.MainWindow
@@ -5140,16 +5109,24 @@ def onIsVisibleChanged(sender, args):
 															
 																						w.Content = cc
 															
-																						image = Image()
-																						image.CacheMode = BitmapCache(1)
-																						image.HorizontalAlignment = HorizontalAlignment.Left
-																						image.VerticalAlignment = VerticalAlignment.Top
-																						image.Source = bi
-																						image.Width = height
-																						image.Height = height
-																						image.Stretch = Stretch.Uniform
-															
-																						cc.Content = image
+																						twinkleGeometry = createTwinkleGeometry(Rect(0, 0, width, height), r.Next(width / 16) * 8, r.Next(height / 16) * 8)
+
+																						if twinkleGeometry.CanFreeze:
+																							twinkleGeometry.Freeze()
+
+																						path = Path()
+																						path.HorizontalAlignment = HorizontalAlignment.Left
+																						path.VerticalAlignment = VerticalAlignment.Top
+
+																						if r.Next(2) == 0:
+																							path.Stroke = path.Fill = Brushes.Black
+																						else:
+																							path.Stroke = path.Fill = Brushes.White
+								
+																						path.StrokeThickness = 1
+																						path.Data = twinkleGeometry
+														
+																						cc.Content = path
 															
 																						w.Show()
 
@@ -5590,41 +5567,11 @@ def onIsVisibleChanged(sender, args):
 
 						Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
 
-						maxWidth = Double.MinValue
-						maxHeight = Double.MinValue
-						bitmapImageList = List[BitmapImage]()
+						maxWidth = 64
+						maxHeight = 128
 						r = Random(Environment.TickCount)
 						index = 0
-
-						for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Dark4.png", "Star-Dark5.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png", "Star-Light4.png", "Star-Light5.png"]:
-							fs = None
-																					
-							try:
-								fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
-																						
-								bi = BitmapImage()
-								bi.BeginInit()
-								bi.StreamSource = fs
-								bi.CacheOption = BitmapCacheOption.OnLoad
-								bi.CreateOptions = BitmapCreateOptions.None
-								bi.EndInit()
-
-								if bi.Width > maxWidth:
-									maxWidth = bi.Width
-
-								if bi.Height > maxHeight:
-									maxHeight = bi.Height
-
-								bitmapImageList.Add(bi)
-
-							except:
-								continue
-
-							finally:
-								if fs is not None:
-									fs.Close()
-
-						count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
+						count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight * termHashSet.Count)
 						countdownEvent = CountdownEvent(Convert.ToInt32(count))
 
 						while index < count:
@@ -5676,9 +5623,8 @@ def onIsVisibleChanged(sender, args):
 							def onClosed(sender1, args1):
 								countdownEvent.Signal()
 							
-							bi = bitmapImageList[r.Next(bitmapImageList.Count)]
-							width = Convert.ToInt32(bi.Width) / 2
-							height = Convert.ToInt32(bi.Height) / 2
+							width = 16 + r.Next(maxWidth / 16) * 16
+							height = Convert.ToInt32(width + r.Next((maxHeight - maxWidth) / 16 + 1) * 16)
 							
 							w = Window()
 							w.Owner = Application.Current.MainWindow
@@ -5705,16 +5651,24 @@ def onIsVisibleChanged(sender, args):
 															
 							w.Content = cc
 															
-							image = Image()
-							image.CacheMode = BitmapCache(1)
-							image.HorizontalAlignment = HorizontalAlignment.Left
-							image.VerticalAlignment = VerticalAlignment.Top
-							image.Source = bi
-							image.Width = height
-							image.Height = height
-							image.Stretch = Stretch.Uniform
-															
-							cc.Content = image
+							twinkleGeometry = createTwinkleGeometry(Rect(0, 0, width, height), r.Next(width / 16) * 8, r.Next(height / 16) * 8)
+
+							if twinkleGeometry.CanFreeze:
+								twinkleGeometry.Freeze()
+
+							path = Path()
+							path.HorizontalAlignment = HorizontalAlignment.Left
+							path.VerticalAlignment = VerticalAlignment.Top
+
+							if r.Next(2) == 0:
+								path.Stroke = path.Fill = Brushes.Black
+							else:
+								path.Stroke = path.Fill = Brushes.White
+								
+							path.StrokeThickness = 1
+							path.Data = twinkleGeometry
+														
+							cc.Content = path
 															
 							w.Show()
 
@@ -6191,41 +6145,11 @@ def onIsVisibleChanged(sender, args):
 
 											Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
 										
-											maxWidth = Double.MinValue
-											maxHeight = Double.MinValue
-											bitmapImageList = List[BitmapImage]()
+											maxWidth = 64
+											maxHeight = 128
 											r = Random(Environment.TickCount)
 											index = 0
-
-											for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Dark4.png", "Star-Dark5.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png", "Star-Light4.png", "Star-Light5.png"]:
-												fs = None
-																					
-												try:
-													fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
-																						
-													bi = BitmapImage()
-													bi.BeginInit()
-													bi.StreamSource = fs
-													bi.CacheOption = BitmapCacheOption.OnLoad
-													bi.CreateOptions = BitmapCreateOptions.None
-													bi.EndInit()
-
-													if bi.Width > maxWidth:
-														maxWidth = bi.Width
-
-													if bi.Height > maxHeight:
-														maxHeight = bi.Height
-
-													bitmapImageList.Add(bi)
-
-												except:
-													continue
-
-												finally:
-													if fs is not None:
-														fs.Close()
-
-											count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
+											count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight * termHashSet.Count)
 											countdownEvent = CountdownEvent(Convert.ToInt32(count))
 
 											while index < count:
@@ -6277,9 +6201,8 @@ def onIsVisibleChanged(sender, args):
 												def onClosed(sender1, args1):
 													countdownEvent.Signal()
 
-												bi = bitmapImageList[r.Next(bitmapImageList.Count)]
-												width = Convert.ToInt32(bi.Width) / 2
-												height = Convert.ToInt32(bi.Height) / 2
+												width = 16 + r.Next(maxWidth / 16) * 16
+												height = Convert.ToInt32(width + r.Next((maxHeight - maxWidth) / 16 + 1) * 16)
 							
 												w = Window()
 												w.Owner = Application.Current.MainWindow
@@ -6306,16 +6229,24 @@ def onIsVisibleChanged(sender, args):
 															
 												w.Content = cc
 															
-												image = Image()
-												image.CacheMode = BitmapCache(1)
-												image.HorizontalAlignment = HorizontalAlignment.Left
-												image.VerticalAlignment = VerticalAlignment.Top
-												image.Source = bi
-												image.Width = height
-												image.Height = height
-												image.Stretch = Stretch.Uniform
-															
-												cc.Content = image
+												twinkleGeometry = createTwinkleGeometry(Rect(0, 0, width, height), r.Next(width / 16) * 8, r.Next(height / 16) * 8)
+
+												if twinkleGeometry.CanFreeze:
+													twinkleGeometry.Freeze()
+
+												path = Path()
+												path.HorizontalAlignment = HorizontalAlignment.Left
+												path.VerticalAlignment = VerticalAlignment.Top
+
+												if r.Next(2) == 0:
+													path.Stroke = path.Fill = Brushes.Black
+												else:
+													path.Stroke = path.Fill = Brushes.White
+								
+												path.StrokeThickness = 1
+												path.Data = twinkleGeometry
+														
+												cc.Content = path
 															
 												w.Show()
 
@@ -8105,6 +8036,43 @@ def createStarGeometry(rect):
 
 	return streamGeometry
 
+def createTwinkleGeometry(rect, a, b):
+	streamGeometry = StreamGeometry()
+	streamGeometry.FillRule = FillRule.Nonzero
+
+	streamGeometryContext = None
+
+	try:
+		streamGeometryContext = streamGeometry.Open()
+
+		streamGeometryContext.BeginFigure(Point(rect.X + rect.Width / 2, rect.Y), True, True)
+
+		if a > 0 and b > 0:
+			streamGeometryContext.LineTo(Point(rect.X + rect.Width / 2, rect.Y + b), True, False)
+			streamGeometryContext.QuadraticBezierTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), Point(rect.X + rect.Width - a, rect.Y + rect.Height / 2), True, False)
+			streamGeometryContext.LineTo(Point(rect.X + rect.Width, rect.Y + rect.Height / 2), True, False)
+			streamGeometryContext.LineTo(Point(rect.X + rect.Width - a, rect.Y + rect.Height / 2), True, False)
+			streamGeometryContext.QuadraticBezierTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), Point(rect.X + rect.Width / 2, rect.Y + rect.Height - b), True, False)
+			streamGeometryContext.LineTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height), True, False)
+			streamGeometryContext.LineTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height - b), True, False)
+			streamGeometryContext.QuadraticBezierTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), Point(rect.X + a, rect.Y + rect.Height / 2), True, False)
+			streamGeometryContext.LineTo(Point(rect.X, rect.Y + rect.Height / 2), True, False)
+			streamGeometryContext.LineTo(Point(rect.X + a, rect.Y + rect.Height / 2), True, False)
+			streamGeometryContext.QuadraticBezierTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), Point(rect.X + rect.Width / 2, rect.Y + b), True, False)
+			streamGeometryContext.LineTo(Point(rect.X + rect.Width / 2, rect.Y), True, False)
+
+		else:
+			streamGeometryContext.QuadraticBezierTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), Point(rect.X + rect.Width, rect.Y + rect.Height / 2), True, False)
+			streamGeometryContext.QuadraticBezierTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), Point(rect.X + rect.Width / 2, rect.Y + rect.Height), True, False)
+			streamGeometryContext.QuadraticBezierTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), Point(rect.X, rect.Y + rect.Height / 2), True, False)
+			streamGeometryContext.QuadraticBezierTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), Point(rect.X + rect.Width / 2, rect.Y), True, False)
+		
+	finally:
+		if streamGeometryContext is not None:
+			streamGeometryContext.Dispose()
+
+	return streamGeometry
+
 def createCommonParameters(consumerKey):
 	sortedDictionary = SortedDictionary[String, String]()
 
@@ -8240,6 +8208,125 @@ def onStart(sender, args):
 						if window != Application.Current.MainWindow and window.Owner is None and clr.GetClrType(Agent).IsInstanceOfType(window):
 							window.Close()
 
+				def onMouseMove(sender1, args1):
+					from System.Windows.Shapes import Path
+
+					max = 1.5
+					chargesList = List[KeyValuePair[String, Double]]()
+					tmepChargesList = List[KeyValuePair[String, Double]]()
+
+					for kvp in chargesDictionary:
+						sum = 0.0
+
+						for score in kvp.Value:
+							sum += score
+
+						if sum >= max and args1.RightButton == MouseButtonState.Released:
+							windows = 0
+							
+							for tempWindow in Application.Current.Windows:
+								if clr.GetClrType(ContentControl).IsInstanceOfType(tempWindow.Content) and clr.GetClrType(Path).IsInstanceOfType(tempWindow.Content.Content):
+									windows += 1
+
+							if windows < 10:
+								r = Random(Environment.TickCount)
+								position = args1.GetPosition(sender1)
+					
+								def onLoaded(sender2, args2):
+									storyboard = Storyboard()
+									da1 = DoubleAnimation(sender2.Content.Opacity, 1, TimeSpan.FromMilliseconds(500))
+									da2 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+									da3 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+									da4 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+									da5 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+									da6 = DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500))
+									sineEase1 = SineEase()
+									sineEase2 = SineEase()
+
+									storyboard.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(r.Next(500)))
+									sineEase1.EasingMode = EasingMode.EaseOut
+									sineEase2.EasingMode = EasingMode.EaseIn
+									da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase1
+									da4.BeginTime = da5.BeginTime = da6.BeginTime = Nullable[TimeSpan](TimeSpan.FromMilliseconds(500))
+									da4.EasingFunction = da5.EasingFunction = da6.EasingFunction = sineEase2
+
+									def onCurrentStateInvalidated(sender3, args3):
+										if sender3.CurrentState == ClockState.Filling:
+											sender2.Close()
+
+									storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+									storyboard.Children.Add(da1)
+									storyboard.Children.Add(da2)
+									storyboard.Children.Add(da3)
+									storyboard.Children.Add(da4)
+									storyboard.Children.Add(da5)
+									storyboard.Children.Add(da6)
+
+									Storyboard.SetTarget(da1, sender2.Content)
+									Storyboard.SetTarget(da2, sender2.Content)
+									Storyboard.SetTarget(da3, sender2.Content)
+									Storyboard.SetTarget(da4, sender2.Content)
+									Storyboard.SetTarget(da5, sender2.Content)
+									Storyboard.SetTarget(da6, sender2.Content)
+									Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
+									Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+									Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+									Storyboard.SetTargetProperty(da4, PropertyPath(ContentControl.OpacityProperty))
+									Storyboard.SetTargetProperty(da5, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+									Storyboard.SetTargetProperty(da6, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+
+									storyboard.Begin()
+					
+								width = 8 + r.Next(3) * 8
+								height = Convert.ToInt32(width + r.Next(4) * 8)
+					
+								w = Window()
+								w.Owner = Application.Current.MainWindow
+								w.Title = Application.Current.MainWindow.Title
+								w.Left = sender1.Left + position.X + r.Next(width) - width / 2
+								w.Top = sender1.Top + position.Y + r.Next(height) - height / 2
+								w.AllowsTransparency = True
+								w.WindowStyle = WindowStyle.None
+								w.ResizeMode = ResizeMode.NoResize
+								w.ShowActivated = False
+								w.ShowInTaskbar = False
+								w.Topmost = True
+								w.SizeToContent = SizeToContent.WidthAndHeight
+								w.Background = Brushes.Transparent
+								w.Loaded += onLoaded
+
+								cc = ContentControl()
+								cc.UseLayoutRounding = True
+								cc.HorizontalAlignment = HorizontalAlignment.Stretch
+								cc.VerticalAlignment = VerticalAlignment.Stretch
+								cc.Opacity = 0
+								cc.RenderTransform = ScaleTransform(0, 0, width / 2, height / 2)
+															
+								w.Content = cc
+
+								twinkleGeometry = createTwinkleGeometry(Rect(0, 0, width, height), r.Next(width / 16) * 8, r.Next(height / 16) * 8)
+
+								if twinkleGeometry.CanFreeze:
+									twinkleGeometry.Freeze()
+
+								path = Path()
+								path.HorizontalAlignment = HorizontalAlignment.Left
+								path.VerticalAlignment = VerticalAlignment.Top
+
+								if r.Next(2) == 0:
+									path.Stroke = path.Fill = Brushes.Black
+								else:
+									path.Stroke = path.Fill = Brushes.White
+								
+								path.StrokeThickness = 1
+								path.Data = twinkleGeometry
+														
+								cc.Content = path
+					
+								w.Show()
+
+							break
+					
 				def onMouseUp(sender, args):
 					from System.Windows.Shapes import Path
 					global likesDictionary, trendsDictionary
@@ -8982,41 +9069,11 @@ def onStart(sender, args):
 
 														Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, charges.ToString(CultureInfo.InvariantCulture)))
 
-														maxWidth = Double.MinValue
-														maxHeight = Double.MinValue
-														bitmapImageList = List[BitmapImage]()
+														maxWidth = 64
+														maxHeight = 128
 														r = Random(Environment.TickCount)
 														index = 0
-
-														for fileName in ["Star-Dark1.png", "Star-Dark2.png", "Star-Dark3.png", "Star-Dark4.png", "Star-Dark5.png", "Star-Light1.png", "Star-Light2.png", "Star-Light3.png", "Star-Light4.png", "Star-Light5.png"]:
-															fs = None
-																					
-															try:
-																fs = FileStream(String.Concat("Assets\\", fileName), FileMode.Open, FileAccess.Read, FileShare.Read)
-																						
-																bi = BitmapImage()
-																bi.BeginInit()
-																bi.StreamSource = fs
-																bi.CacheOption = BitmapCacheOption.OnLoad
-																bi.CreateOptions = BitmapCreateOptions.None
-																bi.EndInit()
-
-																if bi.Width > maxWidth:
-																	maxWidth = bi.Width
-
-																if bi.Height > maxHeight:
-																	maxHeight = bi.Height
-
-																bitmapImageList.Add(bi)
-
-															except:
-																continue
-
-															finally:
-																if fs is not None:
-																	fs.Close()
-
-														count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight / bitmapImageList.Count * termHashSet.Count)
+														count = Math.Round(SystemParameters.PrimaryScreenWidth * SystemParameters.PrimaryScreenHeight / maxWidth / maxHeight * termHashSet.Count)
 														countdownEvent = CountdownEvent(Convert.ToInt32(count))
 
 														while index < count:
@@ -9068,9 +9125,8 @@ def onStart(sender, args):
 															def onClosed(sender1, args1):
 																countdownEvent.Signal()
 					
-															bi = bitmapImageList[r.Next(bitmapImageList.Count)]
-															width = Convert.ToInt32(bi.Width) / 2
-															height = Convert.ToInt32(bi.Height) / 2
+															width = 16 + r.Next(maxWidth / 16) * 16
+															height = Convert.ToInt32(width + r.Next((maxHeight - maxWidth) / 16 + 1) * 16)
 							
 															w = Window()
 															w.Owner = Application.Current.MainWindow
@@ -9097,16 +9153,24 @@ def onStart(sender, args):
 															
 															w.Content = cc
 															
-															image = Image()
-															image.CacheMode = BitmapCache(1)
-															image.HorizontalAlignment = HorizontalAlignment.Left
-															image.VerticalAlignment = VerticalAlignment.Top
-															image.Source = bi
-															image.Width = height
-															image.Height = height
-															image.Stretch = Stretch.Uniform
-															
-															cc.Content = image
+															twinkleGeometry = createTwinkleGeometry(Rect(0, 0, width, height), r.Next(width / 16) * 8, r.Next(height / 16) * 8)
+
+															if twinkleGeometry.CanFreeze:
+																twinkleGeometry.Freeze()
+
+															path = Path()
+															path.HorizontalAlignment = HorizontalAlignment.Left
+															path.VerticalAlignment = VerticalAlignment.Top
+
+															if r.Next(2) == 0:
+																path.Stroke = path.Fill = Brushes.Black
+															else:
+																path.Stroke = path.Fill = Brushes.White
+								
+															path.StrokeThickness = 1
+															path.Data = twinkleGeometry
+														
+															cc.Content = path
 															
 															w.Show()
 
@@ -9646,6 +9710,7 @@ def onStart(sender, args):
 						window.Show()
 
 				window.Closing += onClosing
+				window.MouseMove += onMouseMove
 				window.MouseUp += onMouseUp
 				window.ContextMenu.Opened += onOpened
 				window.ContextMenu.Items.Insert(window.ContextMenu.Items.Count - 4, menuItem)
