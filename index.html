@@ -515,6 +515,8 @@
                     $(this).stop().animate({'opacity': '1'}, 'normal');
             });
             
+            $('.btn').css('border-radius', $(this).height() / 2 + 'px');
+            
             function shuffle(array) {
                 function random(min, max) {
                     return Math.floor(Math.random() * (max - min + 1)) + min;
