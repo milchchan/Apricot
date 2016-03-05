@@ -31,7 +31,7 @@ from Apricot import Agent, Script, Entry, Message, Character, Word, Sequence
 
 appId = "161130897240780"
 appSecret = "07aad39af244adc7eb93b89dc4047bf2"
-accessToken = None
+accessToken = "CAACSjDXkcswBALWslLVeTT2BFfDhnKeBCbmIQqxXH0dZApWqMFCQ0UfXb9rjLU54HauWeCbYjDUynX6hJUBzB34hNBYNqzaFFa3tGOlofqQvHDyUtWl93x6U0d5T7lIvXwQZCI33FIsYw1ZBqDZAwZCvz3VpkZAUtD3pbfyiRaIgORxLyz4iKQ"
 
 # http://www.json.org/
 class JsonDecoder(Object):
@@ -887,7 +887,6 @@ def getTermList(dictionary, text):
 
 			while sb.Length > 0 and i < selectedTerm1.Length:
 				s2 = sb.ToString()
-				selectedTerm2 = None
 
 				if dictionary.ContainsKey(s2[0]):
 					for term in dictionary[s2[0]]:
@@ -898,7 +897,7 @@ def getTermList(dictionary, text):
 				sb.Remove(0, 1)
 				i += 1
 
-			if (not String.IsNullOrEmpty(selectedTerm2)) and selectedTerm1.Length < selectedTerm2.Length:
+			if not String.IsNullOrEmpty(selectedTerm2) and selectedTerm1.Length < selectedTerm2.Length:
 				if not selectedTermList.Contains(selectedTerm2):
 					selectedTermList.Add(selectedTerm2)
 
