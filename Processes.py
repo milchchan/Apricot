@@ -108,45 +108,21 @@ def getTermList(dictionary, text):
 	selectedTermList = List[String]()
 
 	while stringBuilder.Length > 0:
-		s1 = stringBuilder.ToString()
-		selectedTerm1 = None
+		s = stringBuilder.ToString()
+		selectedTerm = None
 
-		if dictionary.ContainsKey(s1[0]):
-			for term in dictionary[s1[0]]:
-				if s1.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm1 is None else selectedTerm1.Length):
-					selectedTerm1 = term
+		if dictionary.ContainsKey(s[0]):
+			for term in dictionary[s[0]]:
+				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
+					selectedTerm = term
 		
-		if String.IsNullOrEmpty(selectedTerm1):
+		if String.IsNullOrEmpty(selectedTerm):
 			stringBuilder.Remove(0, 1)
 		else:
-			sb = StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1))
-			selectedTerm2 = None
-			i = 0
-			max = 0
+			if not selectedTermList.Contains(selectedTerm):
+				selectedTermList.Add(selectedTerm)
 
-			while sb.Length > 0 and i < selectedTerm1.Length:
-				s2 = sb.ToString()
-
-				if dictionary.ContainsKey(s2[0]):
-					for term in dictionary[s2[0]]:
-						if s2.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm2 is None else selectedTerm2.Length):
-							selectedTerm2 = term
-							max = i + selectedTerm2.Length
-
-				sb.Remove(0, 1)
-				i += 1
-
-			if not String.IsNullOrEmpty(selectedTerm2) and selectedTerm1.Length < selectedTerm2.Length:
-				if not selectedTermList.Contains(selectedTerm2):
-					selectedTermList.Add(selectedTerm2)
-
-				stringBuilder.Remove(0, max)
-
-			else:
-				if not selectedTermList.Contains(selectedTerm1):
-					selectedTermList.Add(selectedTerm1)
-
-				stringBuilder.Remove(0, selectedTerm1.Length)
+			stringBuilder.Remove(0, selectedTerm.Length)
 
 	return selectedTermList
 

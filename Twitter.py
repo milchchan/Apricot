@@ -35,8 +35,8 @@ from Apricot import Agent, Script, Entry, Message, Character, Word, Sequence
 
 username = ""
 password = ""
-oauthToken = "4666871-qk7RATKkPZGPJmxaMdgQStcoQu3VzjyJGh9PKLyThK"
-oauthTokenSecret = "2wh2KS7a9RT4v5RTjLrDr0YqGw0lk2CA5wHfDruhRU"
+oauthToken = None
+oauthTokenSecret = None
 consumerKey = "5Y4BpcdcEwkZeIRqIMdJyg"
 consumerSecret = "AMsengQQpxsvKEnuEX8oagKTLjrcujY7hBzVKlo72O0"
 useTwitpic = False
@@ -574,17 +574,30 @@ def search(query):
 											idStr = status["id_str"]
 
 									if status.ContainsKey("text") and status["text"] is not None:
-										match = Regex.Match(status["text"], "(?:\"(?<1>.+?:.+?)\")(?:\\s?#(?<2>.+?))+(?:(?=\\s)|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline)
+										index = 0
+										stringBuilder = StringBuilder()
+										match = Regex.Match(status["text"], "\\s?\\#(.+?)(?:(?=\\s)|$)", RegexOptions.CultureInvariant | RegexOptions.Singleline)
 
-										if match.Success:
-											for capture1 in match.Groups[2].Captures:
-												if capture1.Value.Equals("apricotan"):
-													entry.Title = Regex.Replace(match.Groups[1].Value, "[\r\n]", String.Empty, RegexOptions.CultureInvariant).Trim()
+										while match.Success:
+											if match.Groups[1].Value.Equals("apricotan"):
+												if match.Index > index:
+													text = status["text"].Substring(index, match.Index - index).Trim()
 
-													break
+													if text.StartsWith("\"", StringComparison.Ordinal) and text.EndsWith("\"", StringComparison.Ordinal):
+														text = text.Trim("\"".ToCharArray())
 
-										else:
-											continue
+													stringBuilder.Append(text)
+
+											else:
+												stringBuilder.Append(match.Value)
+
+											index = match.Index + match.Length
+											match = match.NextMatch()
+
+										if status["text"].Length > index:
+											stringBuilder.Append(status["text"].Substring(index, status["text"].Length - index))
+
+										entry.Title = Regex.Replace(stringBuilder.ToString(), "[\r\n]", String.Empty, RegexOptions.CultureInvariant).Trim()
 
 									if status.ContainsKey("created_at") and status["created_at"] is not None:
 										entry.Created = entry.Modified = DateTime.ParseExact(status["created_at"], "ddd MMM dd HH:mm:ss zz00 yyyy", CultureInfo.InvariantCulture.DateTimeFormat, DateTimeStyles.None)
@@ -1587,45 +1600,21 @@ def getTermList(dictionary, text):
 	selectedTermList = List[String]()
 
 	while stringBuilder.Length > 0:
-		s1 = stringBuilder.ToString()
-		selectedTerm1 = None
+		s = stringBuilder.ToString()
+		selectedTerm = None
 
-		if dictionary.ContainsKey(s1[0]):
-			for term in dictionary[s1[0]]:
-				if s1.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm1 is None else selectedTerm1.Length):
-					selectedTerm1 = term
+		if dictionary.ContainsKey(s[0]):
+			for term in dictionary[s[0]]:
+				if s.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm is None else selectedTerm.Length):
+					selectedTerm = term
 		
-		if String.IsNullOrEmpty(selectedTerm1):
+		if String.IsNullOrEmpty(selectedTerm):
 			stringBuilder.Remove(0, 1)
 		else:
-			sb = StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1))
-			selectedTerm2 = None
-			i = 0
-			max = 0
+			if not selectedTermList.Contains(selectedTerm):
+				selectedTermList.Add(selectedTerm)
 
-			while sb.Length > 0 and i < selectedTerm1.Length:
-				s2 = sb.ToString()
-
-				if dictionary.ContainsKey(s2[0]):
-					for term in dictionary[s2[0]]:
-						if s2.StartsWith(term, StringComparison.Ordinal) and term.Length > (0 if selectedTerm2 is None else selectedTerm2.Length):
-							selectedTerm2 = term
-							max = i + selectedTerm2.Length
-
-				sb.Remove(0, 1)
-				i += 1
-
-			if not String.IsNullOrEmpty(selectedTerm2) and selectedTerm1.Length < selectedTerm2.Length:
-				if not selectedTermList.Contains(selectedTerm2):
-					selectedTermList.Add(selectedTerm2)
-
-				stringBuilder.Remove(0, max)
-
-			else:
-				if not selectedTermList.Contains(selectedTerm1):
-					selectedTermList.Add(selectedTerm1)
-
-				stringBuilder.Remove(0, selectedTerm1.Length)
+			stringBuilder.Remove(0, selectedTerm.Length)
 
 	return selectedTermList
 
