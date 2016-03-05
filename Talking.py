@@ -33,7 +33,7 @@ menuItem = MenuItem()
 separator = None
 
 if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-	menuItem.Header = "次のトーク"
+	menuItem.Header = "次のおしゃべり"
 else:
 	menuItem.Header = "Talk"
 

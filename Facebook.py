@@ -887,7 +887,6 @@ def getTermList(dictionary, text):
 
 			while sb.Length > 0 and i < selectedTerm1.Length:
 				s2 = sb.ToString()
-				selectedTerm2 = None
 
 				if dictionary.ContainsKey(s2[0]):
 					for term in dictionary[s2[0]]:
@@ -898,7 +897,7 @@ def getTermList(dictionary, text):
 				sb.Remove(0, 1)
 				i += 1
 
-			if (not String.IsNullOrEmpty(selectedTerm2)) and selectedTerm1.Length < selectedTerm2.Length:
+			if not String.IsNullOrEmpty(selectedTerm2) and selectedTerm1.Length < selectedTerm2.Length:
 				if not selectedTermList.Contains(selectedTerm2):
 					selectedTermList.Add(selectedTerm2)
 
