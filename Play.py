@@ -1731,15 +1731,20 @@ def onOpened(sender, args):
 
 			border1.Child = contentStackPanel
 
-			solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 255, 0, 102))
+			solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 235, 59))
 
 			if solidColorBrush2.CanFreeze:
 				solidColorBrush2.Freeze()
 
-			solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 102, 102, 102))
+			solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 233, 30, 99))
 
 			if solidColorBrush3.CanFreeze:
 				solidColorBrush3.Freeze()
+
+			solidColorBrush4 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 102, 102, 102))
+
+			if solidColorBrush4.CanFreeze:
+				solidColorBrush4.Freeze()
 
 			if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 				attachSectionStackPanel(contentStackPanel, textColor, "ステータス")
@@ -1764,13 +1769,13 @@ def onOpened(sender, args):
 						attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "解除済み")
 
 				for character in Script.Instance.Characters:
-					attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
+					attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush3)
 
 					if limitDictionary.ContainsKey(character.Name):
-						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush3)
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush4)
 
 					else:
-						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush3)
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush4)
 
 				attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, "好感度を上げるための残りポイント", remainingCount.ToString())
 				attachAnnotationStackPanel(contentStackPanel, textColor, "サインインしていません")
@@ -1794,13 +1799,13 @@ def onOpened(sender, args):
 						attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, achievement, "Unlocked")
 
 				for character in Script.Instance.Characters:
-					attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
+					attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush3)
 
 					if limitDictionary.ContainsKey(character.Name):
-						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush3)
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush4)
 
 					else:
-						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush3)
+						attachStackPanelWithHeart(contentStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush4)
 
 				attachStackPanel(contentStackPanel, Thickness(1, 0, 1, 1), textColor, "Remaining points for Like action", remainingCount.ToString())
 				attachAnnotationStackPanel(contentStackPanel, textColor, "You are not Signed in")
@@ -2175,15 +2180,20 @@ def onOpened(sender, args):
 				stackPanel3.Children.Add(leftStackPanel)
 				stackPanel3.Children.Add(rightStackPanel)
 
-				solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 255, 0, 102))
+				solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 235, 59))
 
 				if solidColorBrush2.CanFreeze:
 					solidColorBrush2.Freeze()
 
-				solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 102, 102, 102))
+				solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 233, 30, 99))
 
 				if solidColorBrush3.CanFreeze:
 					solidColorBrush3.Freeze()
+
+				solidColorBrush4 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 102, 102, 102))
+
+				if solidColorBrush4.CanFreeze:
+					solidColorBrush4.Freeze()
 
 				if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
 					attachSectionStackPanel(leftStackPanel, textColor, "ステータス")
@@ -2209,15 +2219,15 @@ def onOpened(sender, args):
 
 					for character in Script.Instance.Characters:
 						if backingDictionary.ContainsKey(character.Name):
-							attachStackPanelWithHeartAndAnnotation(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", String.Concat("+", backingDictionary[character.Name].ToString()), solidColorBrush2)
+							attachStackPanelWithHeartAndAnnotation(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", String.Concat("+", backingDictionary[character.Name].ToString()), solidColorBrush3)
 						else:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("{0}の現在の好感度", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush3)
 
 						if limitDictionary.ContainsKey(character.Name):
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush3)
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush4)
 					
 						else:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush3)
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("3日以内に失う{0}の好感度", character.Name), "N/A", solidColorBrush4)
 
 					attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, "好感度を上げるための残りポイント", remainingCount.ToString())
 					attachAnnotationStackPanel(leftStackPanel, textColor, "サインインしていません" if task.Result is None else String.Format("{0}でサインイン中", task.Result))
@@ -2245,7 +2255,7 @@ def onOpened(sender, args):
 						attachSectionStackPanel(rightStackPanel, textColor, "ランキング")
 
 						for kvp in list:
-							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2)
+							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush3)
 
 						attachAnnotationStackPanel(rightStackPanel, textColor, String.Format("{0}キャラクター", list.Count.ToString()))
 
@@ -2269,15 +2279,15 @@ def onOpened(sender, args):
 
 					for character in Script.Instance.Characters:
 						if backingDictionary.ContainsKey(character.Name):
-							attachStackPanelWithHeartAndAnnotation(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", String.Concat("+", backingDictionary[character.Name].ToString()), solidColorBrush2)
+							attachStackPanelWithHeartAndAnnotation(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", String.Concat("+", backingDictionary[character.Name].ToString()), solidColorBrush3)
 						else:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush2)
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Current Likes of {0}", character.Name), likesDictionary[character.Name].Count.ToString() if likesDictionary.ContainsKey(character.Name) else "N/A", solidColorBrush3)
 
 						if limitDictionary.ContainsKey(character.Name):
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush3)
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name.ToString()), limitDictionary[character.Name].ToString(), solidColorBrush4)
 					
 						else:
-							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush3)
+							attachStackPanelWithHeart(leftStackPanel, Thickness(1, 0, 1, 1), textColor, String.Format("Expired Likes of {0} within 3 days", character.Name), "N/A", solidColorBrush4)
 
 					attachStackPanel(leftStackPanel, Thickness(1, 0, 1, 1), textColor, "Remaining points for Like action", remainingCount.ToString())
 					attachAnnotationStackPanel(leftStackPanel, textColor, "You are not Signed in" if task.Result is None else String.Format("Signed in as {0}", task.Result))
@@ -2305,7 +2315,7 @@ def onOpened(sender, args):
 						attachSectionStackPanel(rightStackPanel, textColor, "Trending")
 
 						for kvp in list:
-							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush2)
+							attachStackPanelWithHeart(rightStackPanel, Thickness(1, 1, 1, 1) if rightStackPanel.Children.Count == 1 else Thickness(1, 0, 1, 1), textColor, kvp.Key.ToString(), String.Format("{0}%", (100 * kvp.Value / sum).ToString("F1", CultureInfo.CurrentCulture), "%"), solidColorBrush3)
 
 						attachAnnotationStackPanel(rightStackPanel, textColor, String.Format("{0} characters", list.Count.ToString()) if list.Count > 1 else String.Format("{0} character", list.Count.ToString()))
 
@@ -2368,12 +2378,14 @@ def onOpened(sender, args):
 	menuItem.Items.Add(tasksMenuItem)
 
 	def onProgressClick(sender, args):
+		from System.Windows.Shapes import Path
+
 		window = Window()
 		contentControl = ContentControl()
 		border1 = Border()
 		closeTimer = DispatcherTimer(DispatcherPriority.Background)
 		countdownTimer = DispatcherTimer(DispatcherPriority.Background)
-		kvpList = List[KeyValuePair[Rectangle, KeyValuePair[DateTime, TimeSpan]]]()
+		rectangleList = List[Rectangle]()
 		nowDateTime = DateTime.Now
 					
 		def onLoaded(sender, args):
@@ -2413,10 +2425,10 @@ def onOpened(sender, args):
 
 			contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 
-		def onMouseEnter(sender, args):
+		def onMouseEnter1(sender, args):
 			closeTimer.Stop()
 
-		def onMouseLeave(sender, args):
+		def onMouseLeave1(sender, args):
 			if closeTimer.Tag:
 				closeTimer.Start()
 
@@ -2456,31 +2468,32 @@ def onOpened(sender, args):
 		def onCountdown(sender, args):
 			dt = DateTime.Now
 
-			def action(kvp):
-				ts = dt - kvp.Value.Key
+			def action(rectangle):
+				if not rectangle.Parent.Parent.Tag:
+					ts = dt - rectangle.Parent.Tag.Key
 
-				if ts.Ticks > kvp.Value.Value.Ticks:
-					width = kvp.Key.Parent.Width
-				else:
-					width = kvp.Key.Parent.Width * ts.Ticks / kvp.Value.Value.Ticks
+					if ts.Ticks > rectangle.Parent.Tag.Value.Ticks:
+						width = rectangle.Parent.Width
+					else:
+						width = rectangle.Parent.Width * ts.Ticks / rectangle.Parent.Tag.Value.Ticks
 			
-				if width != kvp.Key.Width:
-					storyboard = Storyboard()
-					da = DoubleAnimation(kvp.Key.Width, width, TimeSpan.FromMilliseconds(500))
+					if width != rectangle.Width:
+						storyboard = Storyboard()
+						da = DoubleAnimation(rectangle.Width, width, TimeSpan.FromMilliseconds(500))
 
-					def onCurrentStateInvalidated(sender, args):
-						if sender.CurrentState == ClockState.Filling:
-							kvp.Key.Width = width
-							storyboard.Remove(kvp.Key)
+						def onCurrentStateInvalidated(sender, args):
+							if sender.CurrentState == ClockState.Filling:
+								rectangle.Width = width
+								storyboard.Remove(rectangle)
 					
-					storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-					storyboard.Children.Add(da)
+						storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+						storyboard.Children.Add(da)
 
-					Storyboard.SetTargetProperty(da, PropertyPath(Rectangle.WidthProperty))
+						Storyboard.SetTargetProperty(da, PropertyPath(Rectangle.WidthProperty))
 
-					kvp.Key.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+						rectangle.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 
-			kvpList.ForEach(action)
+			rectangleList.ForEach(action)
 
 		closeTimer.Tick += onClose
 		closeTimer.Interval = TimeSpan.FromSeconds(3)
@@ -2532,8 +2545,8 @@ def onOpened(sender, args):
 		window.SizeToContent = SizeToContent.WidthAndHeight
 		window.Background = Brushes.Transparent
 		window.Loaded += onLoaded
-		window.MouseEnter += onMouseEnter
-		window.MouseLeave += onMouseLeave
+		window.MouseEnter += onMouseEnter1
+		window.MouseLeave += onMouseLeave1
 
 		contentControl.UseLayoutRounding = True
 		contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
@@ -2582,7 +2595,7 @@ def onOpened(sender, args):
 		if solidColorBrush1.CanFreeze:
 			solidColorBrush1.Freeze()
 
-		solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 255, 197, 71))
+		solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 235, 59))
 
 		if solidColorBrush2.CanFreeze:
 			solidColorBrush2.Freeze()
@@ -2593,6 +2606,196 @@ def onOpened(sender, args):
 			keyList = List[String](inProgressDictionary.Keys)
 			keyList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.CurrentCulture))
 
+			def onMouseEnter2(sender1, args1):
+				if not sender1.Parent.Parent.Tag:
+					if sender1.Tag is not None:
+						sender1.Tag.Stop(sender1)
+
+					sender1.Tag = storyboard = Storyboard()
+					ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
+					sineEase = SineEase()
+
+					sineEase.EasingMode = EasingMode.EaseOut
+					ca.EasingFunction = sineEase
+
+					def onCurrentStateInvalidated(sender2, args2):
+						if sender2.CurrentState == ClockState.Filling:
+							sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
+							sender1.Tag = None
+							storyboard.Remove(sender1)
+
+					storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+					storyboard.Children.Add(ca)
+
+					Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+					sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+			def onMouseLeave2(sender1, args1):
+				if not sender1.Parent.Parent.Tag:
+					if sender1.Tag is not None:
+						sender1.Tag.Stop(sender1)
+
+					sender1.Tag = storyboard = Storyboard()
+					ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
+					sineEase = SineEase()
+
+					sineEase.EasingMode = EasingMode.EaseIn
+					ca.EasingFunction = sineEase
+
+					def onCurrentStateInvalidated(sender2, args2):
+						if sender2.CurrentState == ClockState.Filling:
+							sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
+							sender1.Tag = None
+							storyboard.Remove(sender1)
+
+					storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+					storyboard.Children.Add(ca)
+
+					Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+					sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+			def onMouseLeftButtonUp(sender1, args1):
+				global remainingCount
+
+				if not sender1.Parent.Parent.Tag:
+					for element1 in sender1.Children:
+						if clr.GetClrType(Ellipse).IsInstanceOfType(element1) and clr.GetClrType(ScaleTransform).IsInstanceOfType(element1.RenderTransform):
+							storyboard = Storyboard()
+							da1 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+							da2 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+							sineEase = SineEase()
+
+							sineEase.EasingMode = EasingMode.EaseOut
+							da1.EasingFunction = da2.EasingFunction = sineEase
+
+							def onCurrentStateInvalidated(sender2, args2):
+								if sender2.CurrentState == ClockState.Filling:
+									for element2 in sender1.Children:
+										if clr.GetClrType(Ellipse).IsInstanceOfType(element2) and clr.GetClrType(ScaleTransform).IsInstanceOfType(element2.RenderTransform):
+											element2.RenderTransform.ScaleX = 1
+											element2.RenderTransform.ScaleY = 1
+											storyboard.Remove(element2)
+
+							storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+							storyboard.Children.Add(da1)
+							storyboard.Children.Add(da2)
+
+							Storyboard.SetTargetProperty(da1, PropertyPath("(0).(1)", Ellipse.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+							Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", Ellipse.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+			
+							element1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+					for element1 in sender1.Parent.Children:
+						if clr.GetClrType(Border).IsInstanceOfType(element1):
+							sequenceList = List[Sequence]()
+							preparedSequenceList = List[Sequence]()
+
+							for sequence in Script.Instance.Sequences:
+								if sequence.Name.Equals("Complete"):
+									sequenceList.Add(sequence)
+
+							for sequence in Script.Instance.Prepare(sequenceList, element1.Child.Content):
+								list = List[Object]()
+								isIncomplete = False
+
+								for o in sequence:
+									if clr.GetClrType(Message).IsInstanceOfType(o):
+										message = o
+										index = 0
+										stringBuilder = StringBuilder()
+										newMessage = Message()
+										isMatched = True
+
+										for m1 in Regex.Matches(message.Text, "(?<1>(?<Open>\\{{2})*)\\{(?<2>(?:[^{}]|(?<3>(?:(?:\\{|}){2})+))+)}(?<4>(?<Close-Open>}{2})*)(?(Open)(?!))(?!})", RegexOptions.CultureInvariant):
+											if m1.Index > index:
+												stringBuilder.Append(Regex.Replace(message.Text.Substring(index, m1.Index - index), "\\{\\{|}}", MatchEvaluator(lambda m2: m2.Value.Substring(m2.Length / 2)), RegexOptions.CultureInvariant))
+
+											if m1.Groups[1].Success:
+												stringBuilder.Append(m1.Groups[1].Value.Substring(m1.Groups[1].Length / 2))
+
+											if m1.Groups[3].Success:
+												i = m1.Groups[2].Index
+												sb = StringBuilder()
+
+												for capture in m1.Groups[3].Captures:
+													if capture.Index > i:
+														sb.Append(message.Text.Substring(i, capture.Index - i))
+
+													sb.Append(capture.Value.Substring(capture.Length / 2))
+													i = capture.Index + capture.Length
+
+												if m1.Groups[2].Index + m1.Groups[2].Length > i:
+													sb.Append(message.Text.Substring(i, m1.Groups[2].Index + m1.Groups[2].Length - i))
+
+												pattern = sb.ToString()
+
+											else:
+												pattern = m1.Groups[2].Value
+
+											if Regex.IsMatch(element1.Child.Content, pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline):
+												stringBuilder.Append(element1.Child.Content)
+											else:
+												isMatched = False
+
+												break
+
+											if m1.Groups[4].Success:
+												stringBuilder.Append(m1.Groups[4].Value.Substring(m1.Groups[4].Length / 2))
+
+											index = m1.Index + m1.Length
+					
+										if isMatched:
+											if message.Text.Length > index:
+												stringBuilder.Append(Regex.Replace(message.Text.Substring(index, message.Text.Length - index), "\\{\\{|}}", MatchEvaluator(lambda m2: m2.Value.Substring(m2.Length / 2)), RegexOptions.CultureInvariant))
+												newMessage.Add(stringBuilder.ToString())
+											else:
+												newMessage.Add(stringBuilder.ToString())
+
+											newMessage.Speed = message.Speed
+											newMessage.Duration = message.Duration
+
+											list.Add(newMessage)
+
+										else:
+											isIncomplete = True
+
+											break
+
+									else:
+										list.Add(o)
+
+								if isIncomplete:
+									continue
+
+								else:
+									sequence.Clear()
+
+									for o in list:
+										sequence.Add(o)
+
+									preparedSequenceList.Add(sequence)
+
+							Script.Instance.TryEnqueue(preparedSequenceList)
+
+							if remainingCount < 10:
+								for element2 in sender1.Parent.Parent.Children:
+									if clr.GetClrType(Canvas).IsInstanceOfType(element2):
+										i1 = 10 - remainingCount
+										i2 = Convert.ToInt32(Math.Floor(Math.Log(element2.Tag.Value.TotalSeconds, 60)))
+									
+										if i1 >= i2:
+											remainingCount += i2
+										else:
+											remainingCount += i1
+
+							if inProgressDictionary.ContainsKey(element1.Child.Content):
+								inProgressDictionary[element1.Child.Content].Value.Cancel()
+								inProgressDictionary.Remove(element1.Child.Content)
+
+					sender1.Parent.Parent.Tag = True
+
 			for key in keyList:
 				stackPanel3 = StackPanel()
 				stackPanel3.HorizontalAlignment = HorizontalAlignment.Center
@@ -2600,11 +2803,75 @@ def onOpened(sender, args):
 				stackPanel3.Margin = Thickness(0, 0, 0, 0)
 				stackPanel3.Orientation = Orientation.Vertical
 				stackPanel3.Background = Brushes.Transparent
+				stackPanel3.Tag = False
 
 				stackPanel2.Children.Add(stackPanel3)
 
+				stackPanel4 = StackPanel()
+				stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
+				stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
+				stackPanel4.Margin = Thickness(0, 0, 0, 0)
+				stackPanel4.Orientation = Orientation.Horizontal
+				stackPanel4.Background = Brushes.Transparent
+
+				stackPanel3.Children.Add(stackPanel4)
+
+				ellipseGeometry = EllipseGeometry(Rect(0, 0, 24, 24))
+
+				if ellipseGeometry.CanFreeze:
+					ellipseGeometry.Freeze()
+
+				grid = Grid()
+				grid.HorizontalAlignment = HorizontalAlignment.Left
+				grid.VerticalAlignment = VerticalAlignment.Center
+				grid.Margin = Thickness(4, 0, 4, 0)
+				grid.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
+				grid.Width = 24
+				grid.Height = 24
+				grid.Clip = ellipseGeometry
+				grid.MouseEnter += onMouseEnter2
+				grid.MouseLeave += onMouseLeave2
+				grid.MouseLeftButtonUp += onMouseLeftButtonUp
+
+				stackPanel4.Children.Add(grid)
+
+				ellipse1 = Ellipse()
+				ellipse1.HorizontalAlignment = HorizontalAlignment.Center
+				ellipse1.VerticalAlignment = VerticalAlignment.Center
+				ellipse1.Fill = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 102))
+				ellipse1.Width = 24
+				ellipse1.Height = 24
+				ellipse1.RenderTransform = ScaleTransform(0, 0, 12, 12)
+				
+				grid.Children.Add(ellipse1)
+				
+				checkGeometry = createCheckGeometry(Rect(0, 0, 8, 8))
+
+				if checkGeometry.CanFreeze:
+					checkGeometry.Freeze()
+
+				path = Path()
+				path.HorizontalAlignment = HorizontalAlignment.Center
+				path.VerticalAlignment = VerticalAlignment.Center
+				path.Stroke = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, Byte.MaxValue, Byte.MaxValue))
+				path.StrokeThickness = 2
+				path.Data = checkGeometry
+				
+				grid.Children.Add(path)
+
+				ellipse2 = Ellipse()
+				ellipse2.HorizontalAlignment = HorizontalAlignment.Center
+				ellipse2.VerticalAlignment = VerticalAlignment.Center
+				ellipse2.Fill = Brushes.Transparent
+				ellipse2.Stroke = Brushes.White
+				ellipse2.StrokeThickness = 2
+				ellipse2.Width = 24
+				ellipse2.Height = 24
+				
+				grid.Children.Add(ellipse2)
+
 				border2 = Border()
-				border2.HorizontalAlignment = HorizontalAlignment.Left
+				border2.HorizontalAlignment = HorizontalAlignment.Right
 				border2.VerticalAlignment = VerticalAlignment.Stretch
 				border2.Margin = Thickness(4, 0, 4, 0)
 				border2.Padding = Thickness(0)
@@ -2623,7 +2890,7 @@ def onOpened(sender, args):
 
 				border2.Effect = dropShadowEffect
 
-				stackPanel3.Children.Add(border2)
+				stackPanel4.Children.Add(border2)
 
 				label = Label()
 				label.HorizontalAlignment = HorizontalAlignment.Stretch
@@ -2645,10 +2912,11 @@ def onOpened(sender, args):
 				canvas.Width = 240
 				canvas.Height = 5
 				canvas.Clip = RectangleGeometry(Rect(0, 0, 240, 5), 2.5, 2.5)
+				canvas.Tag = inProgressDictionary[key].Key
 
 				stackPanel3.Children.Add(canvas)
 
-				solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 255, 0, 102))
+				solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 233, 30, 99))
 
 				if solidColorBrush3.CanFreeze:
 					solidColorBrush3.Freeze()
@@ -2667,7 +2935,7 @@ def onOpened(sender, args):
 				Canvas.SetLeft(rectangle, 0)
 				Canvas.SetTop(rectangle, 0)
 
-				kvpList.Add(KeyValuePair[Rectangle, KeyValuePair[DateTime, TimeSpan]](rectangle, inProgressDictionary[key].Key))
+				rectangleList.Add(rectangle)
 			
 		else:
 			border2 = Border()
@@ -3522,359 +3790,9 @@ def onOpened(sender, args):
 					delayTask = Task.Delay(sender.Tag.Value, tokenSource.Token)
 
 					def onCompleted(task, state):
-						global remainingCount
-						
-						sequenceList = List[Sequence]()
-						preparedSequenceList = List[Sequence]()
-
 						state.Value.Dispose()
 
 						if inProgressDictionary.ContainsKey(state.Key):
-							for sequence in Script.Instance.Sequences:
-								if sequence.Name.Equals("Complete"):
-									sequenceList.Add(sequence)
-
-							for sequence in Script.Instance.Prepare(sequenceList, state.Key):
-								list = List[Object]()
-								isIncomplete = False
-
-								for o in sequence:
-									if clr.GetClrType(Message).IsInstanceOfType(o):
-										message = o
-										index = 0
-										stringBuilder = StringBuilder()
-										newMessage = Message()
-										isMatched = True
-
-										for m1 in Regex.Matches(message.Text, "(?<1>(?<Open>\\{{2})*)\\{(?<2>(?:[^{}]|(?<3>(?:(?:\\{|}){2})+))+)}(?<4>(?<Close-Open>}{2})*)(?(Open)(?!))(?!})", RegexOptions.CultureInvariant):
-											if m1.Index > index:
-												stringBuilder.Append(Regex.Replace(message.Text.Substring(index, m1.Index - index), "\\{\\{|}}", MatchEvaluator(lambda m2: m2.Value.Substring(m2.Length / 2)), RegexOptions.CultureInvariant))
-
-											if m1.Groups[1].Success:
-												stringBuilder.Append(m1.Groups[1].Value.Substring(m1.Groups[1].Length / 2))
-
-											if m1.Groups[3].Success:
-												i = m1.Groups[2].Index
-												sb = StringBuilder()
-
-												for capture in m1.Groups[3].Captures:
-													if capture.Index > i:
-														sb.Append(message.Text.Substring(i, capture.Index - i))
-
-													sb.Append(capture.Value.Substring(capture.Length / 2))
-													i = capture.Index + capture.Length
-
-												if m1.Groups[2].Index + m1.Groups[2].Length > i:
-													sb.Append(message.Text.Substring(i, m1.Groups[2].Index + m1.Groups[2].Length - i))
-
-												pattern = sb.ToString()
-
-											else:
-												pattern = m1.Groups[2].Value
-
-											if Regex.IsMatch(state.Key, pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline):
-												stringBuilder.Append(state.Key)
-											else:
-												isMatched = False
-
-												break
-
-											if m1.Groups[4].Success:
-												stringBuilder.Append(m1.Groups[4].Value.Substring(m1.Groups[4].Length / 2))
-
-											index = m1.Index + m1.Length
-					
-										if isMatched:
-											if message.Text.Length > index:
-												stringBuilder.Append(Regex.Replace(message.Text.Substring(index, message.Text.Length - index), "\\{\\{|}}", MatchEvaluator(lambda m2: m2.Value.Substring(m2.Length / 2)), RegexOptions.CultureInvariant))
-												newMessage.Add(stringBuilder.ToString())
-											else:
-												newMessage.Add(stringBuilder.ToString())
-
-											newMessage.Speed = message.Speed
-											newMessage.Duration = message.Duration
-
-											list.Add(newMessage)
-
-										else:
-											isIncomplete = True
-
-											break
-
-									else:
-										list.Add(o)
-
-								if isIncomplete:
-									continue
-
-								else:
-									sequence.Clear()
-
-									for o in list:
-										sequence.Add(o)
-
-									preparedSequenceList.Add(sequence)
-
-							if not Script.Instance.TryEnqueue(preparedSequenceList):
-								window = Window()
-								contentControl = ContentControl()
-								border1 = Border()
-								closeTimer = DispatcherTimer(DispatcherPriority.Background)
-					
-								def onLoaded(sender, args):
-									border1.Width = contentControl.ActualWidth if contentControl.ActualWidth > contentControl.ActualHeight else contentControl.ActualHeight
-									border1.Height = contentControl.ActualWidth if contentControl.ActualWidth > contentControl.ActualHeight else contentControl.ActualHeight
-									contentControl.Width = contentControl.ActualWidth * 1.5 if contentControl.ActualWidth > contentControl.ActualHeight else contentControl.ActualHeight * 1.5 
-									contentControl.Height = contentControl.ActualWidth * 1.5 if contentControl.ActualWidth > contentControl.ActualHeight else contentControl.ActualHeight * 1.5
-									contentControl.RenderTransform.CenterX = contentControl.Width / 2
-									contentControl.RenderTransform.CenterY = contentControl.Height / 2
-
-									storyboard = Storyboard()
-									da1 = DoubleAnimation(contentControl.Opacity, 1, TimeSpan.FromMilliseconds(500))
-									da2 = DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500))
-									da3 = DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500))
-									sineEase = SineEase()
-
-									sineEase.EasingMode = EasingMode.EaseOut
-									da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
-
-									def onCurrentStateInvalidated(sender, args):
-										if sender.CurrentState == ClockState.Filling:
-											contentControl.Opacity = 1
-											contentControl.RenderTransform.ScaleX = 1
-											contentControl.RenderTransform.ScaleY = 1
-											storyboard.Remove(contentControl)
-											closeTimer.Start()
-
-											if not Application.Current.MainWindow.ContextMenu.Items[7].IsChecked:
-												def onPlay():
-													soundPlayer = None
-
-													try:
-														soundPlayer = SoundPlayer("Assets\\Complete.wav")
-														soundPlayer.Load()
-														soundPlayer.PlaySync()
-
-													finally:
-														if soundPlayer is not None:
-															soundPlayer.Dispose()
-									
-												Task.Factory.StartNew(onPlay)
-
-									storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-									storyboard.Children.Add(da1)
-									storyboard.Children.Add(da2)
-									storyboard.Children.Add(da3)
-
-									Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-									Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-									Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-
-									contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
-
-								def onClose(sender, args):
-									closeTimer.Stop()
-
-									storyboard = Storyboard()
-									da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
-									da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-									da3 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
-									sineEase = SineEase()
-
-									sineEase.EasingMode = EasingMode.EaseIn
-									da1.EasingFunction = da2.EasingFunction = da3.EasingFunction = sineEase
-
-									def onCurrentStateInvalidated(sender, args):
-										if sender.CurrentState == ClockState.Filling:
-											contentControl.Opacity = 0
-											contentControl.RenderTransform.ScaleX = 1.5
-											contentControl.RenderTransform.ScaleY = 1.5
-											storyboard.Remove(contentControl)
-											window.Close()
-
-									storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-									storyboard.Children.Add(da1)
-									storyboard.Children.Add(da2)
-									storyboard.Children.Add(da3)
-
-									Storyboard.SetTargetProperty(da1, PropertyPath(ContentControl.OpacityProperty))
-									Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty))
-									Storyboard.SetTargetProperty(da3, PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty))
-			
-									contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
-
-								closeTimer.Tick += onClose
-								closeTimer.Interval = TimeSpan.FromSeconds(3)
-
-								fs = None
-								bi = BitmapImage()
-
-								try:
-									fs = FileStream("Assets\\Background-Popup.png", FileMode.Open, FileAccess.Read, FileShare.Read)
-
-									bi.BeginInit()
-									bi.StreamSource = fs
-									bi.CacheOption = BitmapCacheOption.OnLoad
-									bi.CreateOptions = BitmapCreateOptions.None
-									bi.EndInit()
-
-								finally:
-									if fs is not None:
-										fs.Close()
-
-								imageBrush = ImageBrush(bi)
-								imageBrush.TileMode = TileMode.None
-								imageBrush.Stretch = Stretch.Fill
-								imageBrush.ViewboxUnits = BrushMappingMode.Absolute
-								imageBrush.Viewbox = Rect(0, 0, bi.Width, bi.Height)
-								imageBrush.AlignmentX = AlignmentX.Left
-								imageBrush.AlignmentY = AlignmentY.Top
-								imageBrush.Opacity = 0.5
-
-								dg = DrawingGroup()
-								dc = dg.Open()
-								dc.DrawRectangle(SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, 0, 0, 0)), None, Rect(0, 0, bi.Width, bi.Height))
-								dc.DrawRectangle(imageBrush, None, Rect(0, 0, bi.Width, bi.Height))
-								dc.Close()
-
-								window.Owner = Application.Current.MainWindow
-								window.Title = Application.Current.MainWindow.Title
-								window.WindowStartupLocation = WindowStartupLocation.CenterOwner
-								window.AllowsTransparency = True
-								window.WindowStyle = WindowStyle.None
-								window.ResizeMode = ResizeMode.NoResize
-								window.ShowActivated = False
-								window.ShowInTaskbar = Application.Current.MainWindow.ContextMenu.Items[5].IsChecked
-								window.Topmost = True
-								window.SizeToContent = SizeToContent.WidthAndHeight
-								window.Background = Brushes.Transparent
-								window.Loaded += onLoaded
-
-								contentControl.UseLayoutRounding = True
-								contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
-								contentControl.VerticalAlignment = VerticalAlignment.Stretch
-								contentControl.Opacity = 0
-								contentControl.RenderTransform = ScaleTransform(1, 1)
-					
-								window.Content = contentControl
-					
-								backgroundBrush = ImageBrush(DrawingImage(dg))
-								backgroundBrush.TileMode = TileMode.Tile
-								backgroundBrush.ViewportUnits = BrushMappingMode.Absolute
-								backgroundBrush.Viewport = Rect(0, 0, bi.Width, bi.Height)
-								backgroundBrush.Stretch = Stretch.None
-
-								if backgroundBrush.CanFreeze:
-									backgroundBrush.Freeze()
-
-								border1.HorizontalAlignment = HorizontalAlignment.Center
-								border1.VerticalAlignment = VerticalAlignment.Center
-								border1.Padding = Thickness(4)
-								border1.CornerRadius = CornerRadius(4)
-								border1.Background = backgroundBrush
-
-								contentControl.Content = border1
-
-								stackPanel1 = StackPanel()
-								stackPanel1.HorizontalAlignment = HorizontalAlignment.Center
-								stackPanel1.VerticalAlignment = VerticalAlignment.Center
-								stackPanel1.Orientation = Orientation.Vertical
-								stackPanel1.Background = Brushes.Transparent
-
-								border1.Child = stackPanel1
-
-								stackPanel2 = StackPanel()
-								stackPanel2.HorizontalAlignment = HorizontalAlignment.Center
-								stackPanel2.VerticalAlignment = VerticalAlignment.Center
-								stackPanel2.Margin = Thickness(0, 4, 0, 0)
-								stackPanel2.Orientation = Orientation.Vertical
-								stackPanel2.Background = Brushes.Transparent
-
-								fontSizeConverter = FontSizeConverter()
-
-								border2 = Border()
-								border2.HorizontalAlignment = HorizontalAlignment.Center
-								border2.VerticalAlignment = VerticalAlignment.Stretch
-								border2.Margin = Thickness(0, 0, 0, 4)
-								border2.Padding = Thickness(0)
-								border2.CornerRadius = CornerRadius(0)
-								border2.Background = Brushes.Transparent
-
-								dropShadowEffect = DropShadowEffect()
-								dropShadowEffect.BlurRadius = 1
-								dropShadowEffect.Color = Colors.Black
-								dropShadowEffect.Direction = 270
-								dropShadowEffect.Opacity = 0.5
-								dropShadowEffect.ShadowDepth = 1
-
-								if dropShadowEffect.CanFreeze:
-									dropShadowEffect.Freeze()
-
-								border2.Effect = dropShadowEffect
-
-								stackPanel1.Children.Add(border2)
-
-								label1 = Label()
-								label1.HorizontalAlignment = HorizontalAlignment.Stretch
-								label1.VerticalAlignment = VerticalAlignment.Stretch
-								label1.FontSize = fontSizeConverter.ConvertFromString("8pt")
-								label1.Foreground = Brushes.White
-								label1.FontWeight = FontWeights.Bold
-
-								if CultureInfo.CurrentCulture.Equals(CultureInfo.GetCultureInfo("ja-JP")):
-									label1.Content = "時間になりました！"
-								else:
-									label1.Content = "Task Complete"
-
-								RenderOptions.SetClearTypeHint(label1, ClearTypeHint.Enabled)
-
-								border2.Child = label1
-
-								border3 = Border()
-								border3.HorizontalAlignment = HorizontalAlignment.Center
-								border3.VerticalAlignment = VerticalAlignment.Stretch
-								border3.Margin = Thickness(0, 0, 0, 4)
-								border3.Padding = Thickness(0)
-								border3.CornerRadius = CornerRadius(0)
-								border3.Background = Brushes.Transparent
-
-								effect = DropShadowEffect()
-								effect.BlurRadius = 1
-								effect.Color = Colors.Black
-								effect.Direction = 270
-								effect.Opacity = 0.5
-								effect.ShadowDepth = 1
-
-								if effect.CanFreeze:
-									effect.Freeze()
-
-								border3.Effect = effect
-
-								stackPanel1.Children.Add(border3)
-
-								label2 = Label()
-								label2.HorizontalAlignment = HorizontalAlignment.Stretch
-								label2.VerticalAlignment = VerticalAlignment.Stretch
-								label2.FontSize = fontSizeConverter.ConvertFromString("8pt")
-								label2.Foreground = Brushes.White
-								label2.FontWeight = FontWeights.Normal
-								label2.Content = state.Key
-
-								RenderOptions.SetClearTypeHint(label2, ClearTypeHint.Enabled)
-
-								border3.Child = label2
-					
-								window.Show()
-
-							if remainingCount < 10:
-								i1 = 10 - remainingCount
-								i2 = Convert.ToInt32(Math.Floor(Math.Log(inProgressDictionary[state.Key].Key.Value.TotalSeconds, 60)))
-
-								if i1 >= i2:
-									remainingCount += i2
-								else:
-									remainingCount += i1
-
 							inProgressDictionary.Remove(state.Key)
 
 					delayTask.ContinueWith(onCompleted, KeyValuePair[String, CancellationTokenSource](sender.Tag.Key, tokenSource), TaskScheduler.FromCurrentSynchronizationContext())
@@ -4257,7 +4175,7 @@ def onOpened(sender, args):
 
 					stackPanel1.Children.Add(stackPanel2)
 
-					solidColorBrush1 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 255, 0, 102))
+					solidColorBrush1 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 233, 30, 99))
 
 					if solidColorBrush1.CanFreeze:
 						solidColorBrush1.Freeze()
@@ -5687,7 +5605,7 @@ def onIsVisibleChanged(sender, args):
 
 																			sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 
-																			if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+																			if (Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3:
 																				storyboard = Storyboard()
 																				da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
 																				da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
@@ -6869,7 +6787,7 @@ def onIsVisibleChanged(sender, args):
 
 									sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 								
-									if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+									if (Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3:
 										storyboard = Storyboard()
 										da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
 										da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
@@ -9857,6 +9775,24 @@ def createTwinkleGeometry(rect, a, b):
 
 	return streamGeometry
 
+def createCheckGeometry(rect):
+	streamGeometry = StreamGeometry()
+	streamGeometry.FillRule = FillRule.Nonzero
+
+	streamGeometryContext = None
+
+	try:
+		streamGeometryContext = streamGeometry.Open()
+		streamGeometryContext.BeginFigure(Point(rect.X, rect.Y + rect.Height * 75 / 100), False, False)
+		streamGeometryContext.LineTo(Point(rect.X + rect.Width / 2, rect.Y + rect.Height), True, False)
+		streamGeometryContext.LineTo(Point(rect.X + rect.Width, rect.Y), True, False)
+
+	finally:
+		if streamGeometryContext is not None:
+			streamGeometryContext.Dispose()
+
+	return streamGeometry
+
 def createCommonParameters(consumerKey):
 	sortedDictionary = SortedDictionary[String, String]()
 
@@ -10761,7 +10697,7 @@ def onStart(sender, args):
 
 												sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 												
-												if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3):
+												if (Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control and termHashSet.Count > 0 or termHashSet.Count == 3:
 													storyboard1 = Storyboard()
 													da1 = DoubleAnimation(contentControl.Opacity, 0, TimeSpan.FromMilliseconds(500))
 													da2 = DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500))
@@ -11214,7 +11150,7 @@ def onStart(sender, args):
 						border1 = Border()
 						closeTimer = DispatcherTimer(DispatcherPriority.Background)
 						countdownTimer = DispatcherTimer(DispatcherPriority.Background)
-						kvpList = List[KeyValuePair[Rectangle, KeyValuePair[DateTime, TimeSpan]]]()
+						rectangleList = List[Rectangle]()
 						nowDateTime = DateTime.Now
 					
 						def onLoaded(sender, args):
@@ -11254,10 +11190,10 @@ def onStart(sender, args):
 
 							contentControl.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 
-						def onWindowMouseEnter(sender, args):
+						def onWindowMouseEnter1(sender, args):
 							closeTimer.Stop()
 
-						def onWindowMouseLeave(sender, args):
+						def onWindowMouseLeave1(sender, args):
 							if closeTimer.Tag:
 								closeTimer.Start()
 
@@ -11297,31 +11233,32 @@ def onStart(sender, args):
 						def onCountdown(sender, args):
 							dt = DateTime.Now
 
-							def action(kvp):
-								ts = dt - kvp.Value.Key
+							def action(rectangle):
+								if not rectangle.Parent.Parent.Tag:
+									ts = dt - rectangle.Parent.Tag.Key
 
-								if ts.Ticks > kvp.Value.Value.Ticks:
-									width = kvp.Key.Parent.Width
-								else:
-									width = kvp.Key.Parent.Width * ts.Ticks / kvp.Value.Value.Ticks
+									if ts.Ticks > rectangle.Parent.Tag.Value.Ticks:
+										width = rectangle.Parent.Width
+									else:
+										width = rectangle.Parent.Width * ts.Ticks / rectangle.Parent.Tag.Value.Ticks
 			
-								if width != kvp.Key.Width:
-									storyboard = Storyboard()
-									da = DoubleAnimation(kvp.Key.Width, width, TimeSpan.FromMilliseconds(500))
+									if width != rectangle.Width:
+										storyboard = Storyboard()
+										da = DoubleAnimation(rectangle.Width, width, TimeSpan.FromMilliseconds(500))
 
-									def onCurrentStateInvalidated(sender, args):
-										if sender.CurrentState == ClockState.Filling:
-											kvp.Key.Width = width
-											storyboard.Remove(kvp.Key)
+										def onCurrentStateInvalidated(sender, args):
+											if sender.CurrentState == ClockState.Filling:
+												rectangle.Width = width
+												storyboard.Remove(rectangle)
 					
-									storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
-									storyboard.Children.Add(da)
+										storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+										storyboard.Children.Add(da)
 
-									Storyboard.SetTargetProperty(da, PropertyPath(Rectangle.WidthProperty))
+										Storyboard.SetTargetProperty(da, PropertyPath(Rectangle.WidthProperty))
 
-									kvp.Key.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+										rectangle.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
 
-							kvpList.ForEach(action)
+							rectangleList.ForEach(action)
 
 						closeTimer.Tick += onClose
 						closeTimer.Interval = TimeSpan.FromSeconds(3)
@@ -11373,8 +11310,8 @@ def onStart(sender, args):
 						window.SizeToContent = SizeToContent.WidthAndHeight
 						window.Background = Brushes.Transparent
 						window.Loaded += onLoaded
-						window.MouseEnter += onWindowMouseEnter
-						window.MouseLeave += onWindowMouseLeave
+						window.MouseEnter += onWindowMouseEnter1
+						window.MouseLeave += onWindowMouseLeave1
 
 						contentControl.UseLayoutRounding = True
 						contentControl.HorizontalAlignment = HorizontalAlignment.Stretch
@@ -11423,7 +11360,7 @@ def onStart(sender, args):
 						if solidColorBrush1.CanFreeze:
 							solidColorBrush1.Freeze()
 
-						solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 255, 197, 71))
+						solidColorBrush2 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 235, 59))
 
 						if solidColorBrush2.CanFreeze:
 							solidColorBrush2.Freeze()
@@ -11432,6 +11369,196 @@ def onStart(sender, args):
 						keyList = List[String](inProgressDictionary.Keys)
 						keyList.Sort(lambda s1, s2: String.Compare(s1, s2, StringComparison.CurrentCulture))
 
+						def onWindowMouseEnter2(sender1, args1):
+							if not sender1.Parent.Parent.Tag:
+								if sender1.Tag is not None:
+									sender1.Tag.Stop(sender1)
+
+								sender1.Tag = storyboard = Storyboard()
+								ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
+								sineEase = SineEase()
+
+								sineEase.EasingMode = EasingMode.EaseOut
+								ca.EasingFunction = sineEase
+
+								def onCurrentStateInvalidated(sender2, args2):
+									if sender2.CurrentState == ClockState.Filling:
+										sender1.Background = SolidColorBrush(Color.FromArgb(Byte.MaxValue * 50 / 100, Byte.MaxValue, 0, 102))
+										sender1.Tag = None
+										storyboard.Remove(sender1)
+
+								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+								storyboard.Children.Add(ca)
+
+								Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+								sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+						def onWindowMouseLeave2(sender1, args1):
+							if not sender1.Parent.Parent.Tag:
+								if sender1.Tag is not None:
+									sender1.Tag.Stop(sender1)
+
+								sender1.Tag = storyboard = Storyboard()
+								ca = ColorAnimation(sender1.Background.Color, Color.FromArgb(0, Byte.MaxValue, 0, 102), TimeSpan.FromMilliseconds(500))
+								sineEase = SineEase()
+
+								sineEase.EasingMode = EasingMode.EaseIn
+								ca.EasingFunction = sineEase
+
+								def onCurrentStateInvalidated(sender2, args2):
+									if sender2.CurrentState == ClockState.Filling:
+										sender1.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
+										sender1.Tag = None
+										storyboard.Remove(sender1)
+
+								storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+								storyboard.Children.Add(ca)
+
+								Storyboard.SetTargetProperty(ca, PropertyPath("(0).(1)", Border.BackgroundProperty, SolidColorBrush.ColorProperty))
+
+								sender1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+						def onMouseLeftButtonUp(sender1, args1):
+							global remainingCount
+
+							if not sender1.Parent.Parent.Tag:
+								for element1 in sender1.Children:
+									if clr.GetClrType(Ellipse).IsInstanceOfType(element1) and clr.GetClrType(ScaleTransform).IsInstanceOfType(element1.RenderTransform):
+										storyboard = Storyboard()
+										da1 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+										da2 = DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(500))
+										sineEase = SineEase()
+
+										sineEase.EasingMode = EasingMode.EaseOut
+										da1.EasingFunction = da2.EasingFunction = sineEase
+
+										def onCurrentStateInvalidated(sender2, args2):
+											if sender2.CurrentState == ClockState.Filling:
+												for element2 in sender1.Children:
+													if clr.GetClrType(Ellipse).IsInstanceOfType(element2) and clr.GetClrType(ScaleTransform).IsInstanceOfType(element2.RenderTransform):
+														element2.RenderTransform.ScaleX = 1
+														element2.RenderTransform.ScaleY = 1
+														storyboard.Remove(element2)
+
+										storyboard.CurrentStateInvalidated += onCurrentStateInvalidated
+										storyboard.Children.Add(da1)
+										storyboard.Children.Add(da2)
+
+										Storyboard.SetTargetProperty(da1, PropertyPath("(0).(1)", Ellipse.RenderTransformProperty, ScaleTransform.ScaleXProperty))
+										Storyboard.SetTargetProperty(da2, PropertyPath("(0).(1)", Ellipse.RenderTransformProperty, ScaleTransform.ScaleYProperty))
+			
+										element1.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, True)
+
+								for element1 in sender1.Parent.Children:
+									if clr.GetClrType(Border).IsInstanceOfType(element1):
+										sequenceList = List[Sequence]()
+										preparedSequenceList = List[Sequence]()
+
+										for sequence in Script.Instance.Sequences:
+											if sequence.Name.Equals("Complete"):
+												sequenceList.Add(sequence)
+
+										for sequence in Script.Instance.Prepare(sequenceList, element1.Child.Content):
+											list = List[Object]()
+											isIncomplete = False
+
+											for o in sequence:
+												if clr.GetClrType(Message).IsInstanceOfType(o):
+													message = o
+													index = 0
+													stringBuilder = StringBuilder()
+													newMessage = Message()
+													isMatched = True
+
+													for m1 in Regex.Matches(message.Text, "(?<1>(?<Open>\\{{2})*)\\{(?<2>(?:[^{}]|(?<3>(?:(?:\\{|}){2})+))+)}(?<4>(?<Close-Open>}{2})*)(?(Open)(?!))(?!})", RegexOptions.CultureInvariant):
+														if m1.Index > index:
+															stringBuilder.Append(Regex.Replace(message.Text.Substring(index, m1.Index - index), "\\{\\{|}}", MatchEvaluator(lambda m2: m2.Value.Substring(m2.Length / 2)), RegexOptions.CultureInvariant))
+
+														if m1.Groups[1].Success:
+															stringBuilder.Append(m1.Groups[1].Value.Substring(m1.Groups[1].Length / 2))
+
+														if m1.Groups[3].Success:
+															i = m1.Groups[2].Index
+															sb = StringBuilder()
+
+															for capture in m1.Groups[3].Captures:
+																if capture.Index > i:
+																	sb.Append(message.Text.Substring(i, capture.Index - i))
+
+																sb.Append(capture.Value.Substring(capture.Length / 2))
+																i = capture.Index + capture.Length
+
+															if m1.Groups[2].Index + m1.Groups[2].Length > i:
+																sb.Append(message.Text.Substring(i, m1.Groups[2].Index + m1.Groups[2].Length - i))
+
+															pattern = sb.ToString()
+
+														else:
+															pattern = m1.Groups[2].Value
+
+														if Regex.IsMatch(element1.Child.Content, pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline):
+															stringBuilder.Append(element1.Child.Content)
+														else:
+															isMatched = False
+
+															break
+
+														if m1.Groups[4].Success:
+															stringBuilder.Append(m1.Groups[4].Value.Substring(m1.Groups[4].Length / 2))
+
+														index = m1.Index + m1.Length
+					
+													if isMatched:
+														if message.Text.Length > index:
+															stringBuilder.Append(Regex.Replace(message.Text.Substring(index, message.Text.Length - index), "\\{\\{|}}", MatchEvaluator(lambda m2: m2.Value.Substring(m2.Length / 2)), RegexOptions.CultureInvariant))
+															newMessage.Add(stringBuilder.ToString())
+														else:
+															newMessage.Add(stringBuilder.ToString())
+
+														newMessage.Speed = message.Speed
+														newMessage.Duration = message.Duration
+
+														list.Add(newMessage)
+
+													else:
+														isIncomplete = True
+
+														break
+
+												else:
+													list.Add(o)
+
+											if isIncomplete:
+												continue
+
+											else:
+												sequence.Clear()
+
+												for o in list:
+													sequence.Add(o)
+
+												preparedSequenceList.Add(sequence)
+
+										Script.Instance.TryEnqueue(preparedSequenceList)
+
+										if remainingCount < 10:
+											for element2 in sender1.Parent.Parent.Children:
+												if clr.GetClrType(Canvas).IsInstanceOfType(element2):
+													i1 = 10 - remainingCount
+													i2 = Convert.ToInt32(Math.Floor(Math.Log(element2.Tag.Value.TotalSeconds, 60)))
+									
+													if i1 >= i2:
+														remainingCount += i2
+													else:
+														remainingCount += i1
+
+										if inProgressDictionary.ContainsKey(element1.Child.Content):
+											inProgressDictionary[element1.Child.Content].Value.Cancel()
+											inProgressDictionary.Remove(element1.Child.Content)
+
+								sender1.Parent.Parent.Tag = True
+
 						for key in keyList:
 							stackPanel3 = StackPanel()
 							stackPanel3.HorizontalAlignment = HorizontalAlignment.Center
@@ -11439,11 +11566,75 @@ def onStart(sender, args):
 							stackPanel3.Margin = Thickness(0, 0, 0, 0)
 							stackPanel3.Orientation = Orientation.Vertical
 							stackPanel3.Background = Brushes.Transparent
+							stackPanel3.Tag = False
 
 							stackPanel2.Children.Add(stackPanel3)
 
+							stackPanel4 = StackPanel()
+							stackPanel4.HorizontalAlignment = HorizontalAlignment.Stretch
+							stackPanel4.VerticalAlignment = VerticalAlignment.Stretch
+							stackPanel4.Margin = Thickness(0, 0, 0, 0)
+							stackPanel4.Orientation = Orientation.Horizontal
+							stackPanel4.Background = Brushes.Transparent
+
+							stackPanel3.Children.Add(stackPanel4)
+
+							ellipseGeometry = EllipseGeometry(Rect(0, 0, 24, 24))
+
+							if ellipseGeometry.CanFreeze:
+								ellipseGeometry.Freeze()
+
+							grid = Grid()
+							grid.HorizontalAlignment = HorizontalAlignment.Left
+							grid.VerticalAlignment = VerticalAlignment.Center
+							grid.Margin = Thickness(4, 0, 4, 0)
+							grid.Background = SolidColorBrush(Color.FromArgb(0, Byte.MaxValue, 0, 102))
+							grid.Width = 24
+							grid.Height = 24
+							grid.Clip = ellipseGeometry
+							grid.MouseEnter += onWindowMouseEnter2
+							grid.MouseLeave += onWindowMouseLeave2
+							grid.MouseLeftButtonUp += onMouseLeftButtonUp
+
+							stackPanel4.Children.Add(grid)
+
+							ellipse1 = Ellipse()
+							ellipse1.HorizontalAlignment = HorizontalAlignment.Center
+							ellipse1.VerticalAlignment = VerticalAlignment.Center
+							ellipse1.Fill = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, 0, 102))
+							ellipse1.Width = 24
+							ellipse1.Height = 24
+							ellipse1.RenderTransform = ScaleTransform(0, 0, 12, 12)
+				
+							grid.Children.Add(ellipse1)
+				
+							checkGeometry = createCheckGeometry(Rect(0, 0, 8, 8))
+
+							if checkGeometry.CanFreeze:
+								checkGeometry.Freeze()
+
+							path = Path()
+							path.HorizontalAlignment = HorizontalAlignment.Center
+							path.VerticalAlignment = VerticalAlignment.Center
+							path.Stroke = SolidColorBrush(Color.FromArgb(Byte.MaxValue, Byte.MaxValue, Byte.MaxValue, Byte.MaxValue))
+							path.StrokeThickness = 2
+							path.Data = checkGeometry
+				
+							grid.Children.Add(path)
+
+							ellipse2 = Ellipse()
+							ellipse2.HorizontalAlignment = HorizontalAlignment.Center
+							ellipse2.VerticalAlignment = VerticalAlignment.Center
+							ellipse2.Fill = Brushes.Transparent
+							ellipse2.Stroke = Brushes.White
+							ellipse2.StrokeThickness = 2
+							ellipse2.Width = 24
+							ellipse2.Height = 24
+				
+							grid.Children.Add(ellipse2)
+
 							border2 = Border()
-							border2.HorizontalAlignment = HorizontalAlignment.Left
+							border2.HorizontalAlignment = HorizontalAlignment.Right
 							border2.VerticalAlignment = VerticalAlignment.Stretch
 							border2.Margin = Thickness(4, 0, 4, 0)
 							border2.Padding = Thickness(0)
@@ -11462,7 +11653,7 @@ def onStart(sender, args):
 
 							border2.Effect = dropShadowEffect
 
-							stackPanel3.Children.Add(border2)
+							stackPanel4.Children.Add(border2)
 
 							label = Label()
 							label.HorizontalAlignment = HorizontalAlignment.Stretch
@@ -11484,10 +11675,11 @@ def onStart(sender, args):
 							canvas.Width = 240
 							canvas.Height = 5
 							canvas.Clip = RectangleGeometry(Rect(0, 0, 240, 5), 2.5, 2.5)
+							canvas.Tag = inProgressDictionary[key].Key
 
 							stackPanel3.Children.Add(canvas)
 
-							solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 255, 0, 102))
+							solidColorBrush3 = SolidColorBrush(Color.FromArgb(Byte.MaxValue, 233, 30, 99))
 
 							if solidColorBrush3.CanFreeze:
 								solidColorBrush3.Freeze()
@@ -11506,7 +11698,7 @@ def onStart(sender, args):
 							Canvas.SetLeft(rectangle, 0)
 							Canvas.SetTop(rectangle, 0)
 
-							kvpList.Add(KeyValuePair[Rectangle, KeyValuePair[DateTime, TimeSpan]](rectangle, inProgressDictionary[key].Key))
+							rectangleList.Add(rectangle)
 			
 						window.Show()
 					
