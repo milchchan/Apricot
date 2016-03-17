@@ -1,1 +1,1 @@
-Please see http://www.apricotan.net for more information.
+Please see http://apricot.moe for more information.
