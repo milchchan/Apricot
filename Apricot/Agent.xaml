@@ -1,0 +1,19 @@
+﻿<Window x:Class="Apricot.Agent"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Apricot"
+        mc:Ignorable="d"
+        Title="Apricot" WindowStyle="None" AllowsTransparency="True" WindowState="Normal" ShowActivated="False" ResizeMode="NoResize" AllowDrop="True" Background="Transparent" Opacity="0" Loaded="OnLoaded" IsVisibleChanged="OnIsVisibleChanged">
+    <ContentControl x:Name="LayoutRoot" HorizontalAlignment="Left" VerticalAlignment="Top" UseLayoutRounding="True" Width="0" Height="0" SizeChanged="OnSizeChanged" RenderTransformOrigin="0.5,0.5">
+        <ContentControl.RenderTransform>
+            <ScaleTransform x:Name="FlipScaleTransform" CenterX="0" CenterY="0" ScaleX="1" ScaleY="1" />
+        </ContentControl.RenderTransform>
+        <Canvas x:Name="Canvas" HorizontalAlignment="Left" VerticalAlignment="Top" Width="0" Height="0" Background="Transparent">
+            <Canvas.RenderTransform>
+                <ScaleTransform x:Name="ZoomScaleTransform" CenterX="0" CenterY="0" ScaleX="1" ScaleY="1" />
+            </Canvas.RenderTransform>
+        </Canvas>
+    </ContentControl>
+</Window>
