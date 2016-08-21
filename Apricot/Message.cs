@@ -71,12 +71,7 @@ namespace Apricot
         {
             get
             {
-                if (this.attachedEntryCollection.Count == 0)
-                {
-                    return false;
-                }
-
-                return true;
+                return this.attachedEntryCollection.Count > 0;
             }
         }
 

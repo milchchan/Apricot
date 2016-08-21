@@ -17,27 +17,6 @@ namespace Apricot
 		private Node<double> rootNode = null;
 		private Dictionary<Node<double>, string> nodeDictionary = null;
 
-        public bool IsTrained
-        {
-            get
-            {
-                if (this.iterations < this.maxIterations)
-                {
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
-        public int Iterations
-        {
-            get
-            {
-                return this.iterations;
-            }
-        }
-
         public int MaxIterations
         {
             get

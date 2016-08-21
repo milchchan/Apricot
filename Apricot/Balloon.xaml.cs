@@ -1468,19 +1468,19 @@ namespace Apricot
                 this.maxScore = scoreList.Max<double>();
                 this.minScore = scoreList.Min<double>();
                 this.isReversed = false;
-                bool enable = false;
+                bool isAvailable = false;
 
                 for (int i = 0; i < scoreList.Count - 1; i++)
                 {
                     if (scoreList[i] != scoreList[i + 1])
                     {
-                        enable = true;
+                        isAvailable = true;
 
                         break;
                     }
                 }
 
-                if (enable)
+                if (isAvailable)
                 {
                     int counter = 0;
 
@@ -1514,8 +1514,9 @@ namespace Apricot
             {
                 List<Message> messageList = this.messageCollection.ToList();
 
-                isRecyclable = !messageList.GetRange(0, messageList.Count - this.maxHistory).Exists(delegate (Message m)
+                for (int i = 0; i < messageList.Count - this.maxHistory; i++)
                 {
+                    Message m = messageList[i];
                     Size size1 = GetBalloonSize(m);
                     double height = 0;
 
@@ -1536,10 +1537,7 @@ namespace Apricot
 
                     if (m.HasAttachments)
                     {
-                        double h = m.Attachments.Max<Entry, double>(delegate (Entry entry)
-                        {
-                            return GetInspectorSize(entry).Height;
-                        });
+                        double h = m.Attachments.Max<Entry, double>(entry => GetInspectorSize(entry).Height);
 
                         if (h > height)
                         {
@@ -1554,11 +1552,12 @@ namespace Apricot
 
                     if (size1.Width * this.maxScale == this.LayoutRoot.Width && (size1.Height + height) * this.maxScale == this.LayoutRoot.Height)
                     {
-                        return true;
-                    }
+                        isRecyclable = false;
 
-                    return false;
-                });
+                        break;
+                    }
+                }
+
                 messageList.RemoveRange(0, messageList.Count - this.maxHistory);
 
                 this.messageCollection.Clear();
@@ -1594,10 +1593,7 @@ namespace Apricot
 
             if (message.HasAttachments)
             {
-                double height = message.Attachments.Max<Entry, double>(delegate (Entry entry)
-                {
-                    return GetInspectorSize(entry).Height;
-                });
+                double height = message.Attachments.Max<Entry, double>(entry => GetInspectorSize(entry).Height);
 
                 if (height > maxHeight)
                 {
@@ -1641,10 +1637,7 @@ namespace Apricot
 
                     if (m.HasAttachments)
                     {
-                        double h = m.Attachments.Max<Entry, double>(delegate (Entry entry)
-                        {
-                            return GetInspectorSize(entry).Height;
-                        });
+                        double h = m.Attachments.Max<Entry, double>(entry => GetInspectorSize(entry).Height);
 
                         if (h > height)
                         {
@@ -1780,100 +1773,35 @@ namespace Apricot
 
         private void OnTick(object sender, EventArgs e)
         {
-            if (sender == this.waitTimer)
+            if (sender == this.waitTimer && !this.isPinned && this.targetOpacity > 0 && this.targetScaleX > 0 && this.targetScaleY > 0)
             {
-                if (this.IsVisible && !this.isPinned)
-                {
-                    if (this.targetOpacity > 0 && this.targetScaleX > 0 && this.targetScaleY > 0)
-                    {
-                        this.sourceOpacity = this.Canvas.Opacity;
-                        this.targetOpacity = 0;
-                        this.sourceScaleX = this.ScaleTransform.ScaleX;
-                        this.sourceScaleY = this.ScaleTransform.ScaleY;
-                        this.targetScaleX = this.targetScaleY = 0;
-                        this.popupStep = 0;
-                    }
-                }
-
+                this.sourceOpacity = this.Canvas.Opacity;
+                this.targetOpacity = 0;
+                this.sourceScaleX = this.ScaleTransform.ScaleX;
+                this.sourceScaleY = this.ScaleTransform.ScaleY;
+                this.targetScaleX = this.targetScaleY = 0;
+                this.popupStep = 0;
                 this.waitTimer.Stop();
             }
-            else if (sender == this.messageTypeTimer)
+            else if (sender == this.messageTypeTimer && this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
             {
+                Message message = this.messageCollection[this.historyPoint.Value];
                 bool stopRequired = true;
-
-                if (this.IsVisible && this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                
+                if (this.messageBuffer.Length < this.targetMessageLength)
                 {
-                    Message message = this.messageCollection[this.historyPoint.Value];
+                    int index = this.messageBuffer.Length;
+                    string text = message.Text;
 
-                    if (this.messageBuffer.Length < this.targetMessageLength)
+                    if (index < text.Length)
                     {
-                        int index = this.messageBuffer.Length;
-                        string text = message.Text;
+                        int width = text.Length / 2 + text.Length % 2;
+                        int length = text.Length;
+                        int start = text.LastIndexOf(Environment.NewLine, index, StringComparison.Ordinal);
+                        int end = text.IndexOf(Environment.NewLine, index, StringComparison.Ordinal);
 
-                        if (index < text.Length)
+                        if (start >= 0 || end >= 0)
                         {
-                            int width = text.Length / 2 + text.Length % 2;
-                            int length = text.Length;
-                            int start = text.LastIndexOf(Environment.NewLine, index, StringComparison.Ordinal);
-                            int end = text.IndexOf(Environment.NewLine, index, StringComparison.Ordinal);
-
-                            if (start >= 0 || end >= 0)
-                            {
-                                if (start < 0)
-                                {
-                                    start = 0;
-                                }
-                                else
-                                {
-                                    start += Environment.NewLine.Length;
-                                }
-
-                                if (end < 0)
-                                {
-                                    end = text.Length;
-                                }
-
-                                width = start + (end - start) / 2 + (end - start) % 2;
-                                length = end;
-                            }
-
-                            if (this.randomMessageLength >= width)
-                            {
-                                if (text.IndexOf(Environment.NewLine, this.messageBuffer.Length, StringComparison.Ordinal) == this.messageBuffer.Length)
-                                {
-                                    this.messageBuffer.Append(Environment.NewLine);
-                                }
-                                else
-                                {
-                                    this.messageBuffer.Append(text[index]);
-                                }
-                            }
-
-                            if (this.randomMessageLength < length)
-                            {
-                                if (text.IndexOf(Environment.NewLine, this.randomMessageLength, StringComparison.Ordinal) == this.randomMessageLength)
-                                {
-                                    this.randomMessageLength += Environment.NewLine.Length;
-                                }
-                                else
-                                {
-                                    this.randomMessageLength++;
-                                }
-                            }
-                        }
-
-                        stopRequired = false;
-                    }
-                    else if (this.randomMessageLength > this.targetMessageLength)
-                    {
-                        int index = this.randomMessageLength - 1;
-                        string text = message.Text;
-
-                        if (index < text.Length)
-                        {
-                            int start = text.LastIndexOf(Environment.NewLine, index, StringComparison.Ordinal);
-                            int end = text.IndexOf(Environment.NewLine, index, StringComparison.Ordinal);
-
                             if (start < 0)
                             {
                                 start = 0;
@@ -1888,33 +1816,98 @@ namespace Apricot
                                 end = text.Length;
                             }
 
-                            if (this.messageBuffer.Length <= start + (end - start) / 2)
+                            width = start + (end - start) / 2 + (end - start) % 2;
+                            length = end;
+                        }
+
+                        if (this.randomMessageLength >= width)
+                        {
+                            if (text.IndexOf(Environment.NewLine, this.messageBuffer.Length, StringComparison.Ordinal) == this.messageBuffer.Length)
                             {
-                                if (this.randomMessageLength - Environment.NewLine.Length >= 0 && text.LastIndexOf(Environment.NewLine, this.randomMessageLength, StringComparison.Ordinal) == this.randomMessageLength - Environment.NewLine.Length)
-                                {
-                                    this.randomMessageLength -= Environment.NewLine.Length;
-                                }
-                                else
-                                {
-                                    this.randomMessageLength--;
-                                }
+                                this.messageBuffer.Append(Environment.NewLine);
+                            }
+                            else
+                            {
+                                this.messageBuffer.Append(text[index]);
                             }
 
-                            if (this.messageBuffer.Length > start)
+                            if (this.messageBuffer.Length != this.targetMessageLength)
                             {
-                                if (this.messageBuffer.Length - Environment.NewLine.Length >= 0 && text.LastIndexOf(Environment.NewLine, this.messageBuffer.Length, StringComparison.Ordinal) == this.messageBuffer.Length - Environment.NewLine.Length)
-                                {
-                                    this.messageBuffer.Remove(this.messageBuffer.Length - Environment.NewLine.Length, Environment.NewLine.Length);
-                                }
-                                else
-                                {
-                                    this.messageBuffer.Remove(this.messageBuffer.Length - 1, 1);
-                                }
+                                stopRequired = false;
+                            }
+                        }
+                        else
+                        {
+                            stopRequired = false;
+                        }
+
+                        if (this.randomMessageLength < length)
+                        {
+                            if (text.IndexOf(Environment.NewLine, this.randomMessageLength, StringComparison.Ordinal) == this.randomMessageLength)
+                            {
+                                this.randomMessageLength += Environment.NewLine.Length;
+                            }
+                            else
+                            {
+                                this.randomMessageLength++;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        stopRequired = false;
+                    }
+                }
+                else if (this.randomMessageLength > this.targetMessageLength)
+                {
+                    int index = this.randomMessageLength - 1;
+                    string text = message.Text;
+
+                    if (index < text.Length)
+                    {
+                        int start = text.LastIndexOf(Environment.NewLine, index, StringComparison.Ordinal);
+                        int end = text.IndexOf(Environment.NewLine, index, StringComparison.Ordinal);
+
+                        if (start < 0)
+                        {
+                            start = 0;
+                        }
+                        else
+                        {
+                            start += Environment.NewLine.Length;
+                        }
+
+                        if (end < 0)
+                        {
+                            end = text.Length;
+                        }
+
+                        if (this.messageBuffer.Length <= start + (end - start) / 2)
+                        {
+                            if (this.randomMessageLength - Environment.NewLine.Length >= 0 && text.LastIndexOf(Environment.NewLine, this.randomMessageLength, StringComparison.Ordinal) == this.randomMessageLength - Environment.NewLine.Length)
+                            {
+                                this.randomMessageLength -= Environment.NewLine.Length;
+                            }
+                            else
+                            {
+                                this.randomMessageLength--;
                             }
                         }
 
-                        stopRequired = false;
+                        if (this.messageBuffer.Length > start)
+                        {
+                            if (this.messageBuffer.Length - Environment.NewLine.Length >= 0 && text.LastIndexOf(Environment.NewLine, this.messageBuffer.Length, StringComparison.Ordinal) == this.messageBuffer.Length - Environment.NewLine.Length)
+                            {
+                                this.messageBuffer.Remove(this.messageBuffer.Length - Environment.NewLine.Length, Environment.NewLine.Length);
+                            }
+                            else
+                            {
+                                this.messageBuffer.Remove(this.messageBuffer.Length - 1, 1);
+                            }
+                        }
                     }
+
+                    stopRequired = false;
                 }
 
                 if (stopRequired)
@@ -1922,83 +1915,80 @@ namespace Apricot
                     this.messageTypeTimer.Stop();
                 }
             }
-            else if (sender == this.switchTimer)
+            else if (sender == this.switchTimer && this.inspectorEntry != null)
             {
-                if (this.IsVisible && this.inspectorEntry != null)
+                const double space = 10;
+                double x = 0;
+
+                if (this.inspectorEntry.HasMultipleImages)
                 {
-                    const double space = 10;
-                    double x = 0;
+                    this.inspectorEntry.NextImage();
 
-                    if (this.inspectorEntry.HasMultipleImages)
+                    if (!this.imageDictionary.ContainsKey(this.inspectorEntry.Image) && !this.imageUriHashSet.Contains(this.inspectorEntry.Image))
                     {
-                        this.inspectorEntry.NextImage();
+                        this.imageUriHashSet.Add(this.inspectorEntry.Image);
 
-                        if (!this.imageDictionary.ContainsKey(this.inspectorEntry.Image) && !this.imageUriHashSet.Contains(this.inspectorEntry.Image))
-                        {
-                            this.imageUriHashSet.Add(this.inspectorEntry.Image);
-
-                            UpdateImage(this.inspectorEntry.Image, false);
-                        }
-
-                        this.imageUriQueue.Enqueue(this.inspectorEntry.Image);
+                        UpdateImage(this.inspectorEntry.Image, false);
                     }
 
-                    foreach (string tag in this.inspectorEntry.Tags)
+                    this.imageUriQueue.Enqueue(this.inspectorEntry.Image);
+                }
+
+                foreach (string tag in this.inspectorEntry.Tags)
+                {
+                    Dictionary<int, int> dictionary = new Dictionary<int, int>();
+                    StringBuilder lineStringBuilder = new StringBuilder();
+                    bool isCirculatable = false;
+
+                    foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(tag, @"[\p{IsBasicLatin}-[\s]]+\s?"))
                     {
-                        Dictionary<int, int> dictionary = new Dictionary<int, int>();
-                        StringBuilder lineStringBuilder = new StringBuilder();
-                        bool isCirculatable = false;
+                        dictionary.Add(match.Index, match.Length);
+                    }
 
-                        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(tag, @"[\p{IsBasicLatin}-[\s]]+\s?"))
-                        {
-                            dictionary.Add(match.Index, match.Length);
-                        }
+                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
+                    {
+                        this.circulationQueue.Enqueue(1);
 
-                        if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
+                        break;
+                    }
+
+                    for (int i = 0; i < tag.Length; i++)
+                    {
+                        int length;
+
+                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
                         {
-                            this.circulationQueue.Enqueue(1);
+                            isCirculatable = true;
 
                             break;
                         }
 
-                        for (int i = 0; i < tag.Length; i++)
+                        lineStringBuilder.Append(tag[i]);
+
+                        if (lineStringBuilder.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal))
                         {
-                            int length;
-
-                            if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
-                            {
-                                isCirculatable = true;
-
-                                break;
-                            }
-
-                            lineStringBuilder.Append(tag[i]);
-
-                            if (lineStringBuilder.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal))
-                            {
-                                isCirculatable = true;
-
-                                break;
-                            }
-                            else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
-                            {
-                                isCirculatable = true;
-
-                                break;
-                            }
-                        }
-
-                        if (isCirculatable)
-                        {
-                            this.circulationQueue.Enqueue(1);
+                            isCirculatable = true;
 
                             break;
                         }
-
-                        if (lineStringBuilder.Length > 0)
+                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                         {
-                            x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace);
+                            isCirculatable = true;
+
+                            break;
                         }
+                    }
+
+                    if (isCirculatable)
+                    {
+                        this.circulationQueue.Enqueue(1);
+
+                        break;
+                    }
+
+                    if (lineStringBuilder.Length > 0)
+                    {
+                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace);
                     }
                 }
             }
@@ -2173,7 +2163,7 @@ namespace Apricot
                         {
                             if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                             {
-                                Lazy<List<Point>> inlinePointList = new Lazy<List<Point>>(delegate
+                                Lazy<List<Point>> inlinePointList = new Lazy<List<Point>>(() =>
                                 {
                                     Point location = new Point(0, 0);
                                     bool isBreaked = true;
@@ -2326,7 +2316,7 @@ namespace Apricot
 
                                     if (totalSelectedPosition.HasValue || this.scrollQueue.Count > 0)
                                     {
-                                        int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), delegate (HashSet<double> hashSet, Point point)
+                                        int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), (hashSet, point) =>
                                         {
                                             if (!hashSet.Contains(point.Y))
                                             {
@@ -2465,22 +2455,14 @@ namespace Apricot
                                     }
                                 }
 
-                                if (isFragmented || !isTyped || isReady && this.nextHistoryPoint.HasValue || this.embedColorStepDictionary.Values.Any(delegate (double step)
-                                {
-                                    if (isReady && this.nextHistoryPoint.HasValue && step > 0 || (!isReady || !this.nextHistoryPoint.HasValue) && step < 1)
-                                    {
-                                        return true;
-                                    }
-
-                                    return false;
-                                }) || this.embedIsScrollableHashSet.Count > 0 || this.embedScrollStepDictionary.Count > 0 || this.hoverEmbeddedIndex.HasValue && this.embedIsScrollableHashSet.Count == 0 && this.embedScrollStepDictionary.Count == 0)
+                                if (isFragmented || !isTyped || isReady && this.nextHistoryPoint.HasValue || this.embedColorStepDictionary.Values.Any(step => isReady && this.nextHistoryPoint.HasValue && step > 0 || (!isReady || !this.nextHistoryPoint.HasValue) && step < 1) || this.embedIsScrollableHashSet.Count > 0 || this.embedScrollStepDictionary.Count > 0 || this.hoverEmbeddedIndex.HasValue && this.embedIsScrollableHashSet.Count == 0 && this.embedScrollStepDictionary.Count == 0)
                                 {
                                     List<char> charList = new List<char>();
                                     Random random = new Random(Environment.TickCount);
                                     StringBuilder randomStringBuilder = new StringBuilder();
                                     string text = this.messageCollection[this.historyPoint.Value].Text.Replace(Environment.NewLine, String.Empty);
                                     int minScrollIndex = (int)Math.Floor(Math.Min(this.sourceScrollPosition, this.targetScrollPosition));
-                                    int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), delegate (HashSet<double> hs, Point point)
+                                    int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), (hs, point) =>
                                     {
                                         if (!hs.Contains(point.Y))
                                         {
@@ -2767,15 +2749,7 @@ namespace Apricot
                                             StringBuilder lineStringBuilder = new StringBuilder();
                                             Nullable<double> maxY = null;
 
-                                            if (this.messageCollection[this.historyPoint.Value].Cast<object>().Any(delegate (object o)
-                                            {
-                                                if (o == obj)
-                                                {
-                                                    return true;
-                                                }
-
-                                                return false;
-                                            }))
+                                            if (this.messageCollection[this.historyPoint.Value].Cast<object>().Any(o => o == obj))
                                             {
                                                 foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline, @"[\p{IsBasicLatin}-[\s]]+\s?"))
                                                 {
@@ -2799,12 +2773,7 @@ namespace Apricot
 
                                                 while ((i = inlinePointList.Value.FindIndex(i + 1, delegate (Point point)
                                                 {
-                                                    if (Double.IsNaN(point.X) && point.Y >= location.Y)
-                                                    {
-                                                        return true;
-                                                    }
-
-                                                    return false;
+                                                    return Double.IsNaN(point.X) && point.Y >= location.Y;
                                                 })) >= 0)
                                                 {
                                                     if (j == breaks)
@@ -2819,10 +2788,7 @@ namespace Apricot
 
                                                 if (maxY == null)
                                                 {
-                                                    maxY = new Nullable<double>(inlinePointList.Value.Max(delegate (Point point)
-                                                    {
-                                                        return point.Y;
-                                                    }) + this.lineHeight);
+                                                    maxY = new Nullable<double>(inlinePointList.Value.Max(point => point.Y) + this.lineHeight);
                                                 }
                                             }
 
@@ -2830,7 +2796,7 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && ((maxY.HasValue ? location.Y + this.lineHeight < maxY.Value : true) ? location.X + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > inlinePointList.Value.Aggregate<Point, double>(0, delegate (double width, Point point)
+                                                if (dictionary.TryGetValue(i, out length) && ((maxY.HasValue ? location.Y + this.lineHeight < maxY.Value : true) ? location.X + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > inlinePointList.Value.Aggregate<Point, double>(0, (width, point) =>
                                                 {
                                                     if (point.X > width && point.Y == location.Y)
                                                     {
@@ -2866,7 +2832,7 @@ namespace Apricot
                                                     location.Y += this.lineHeight;
                                                     isReseted = true;
                                                 }
-                                                else if (((maxY.HasValue ? location.Y + this.lineHeight < maxY.Value : true) ? location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > inlinePointList.Value.Aggregate<Point, double>(0, delegate (double width, Point point)
+                                                else if (((maxY.HasValue ? location.Y + this.lineHeight < maxY.Value : true) ? location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > inlinePointList.Value.Aggregate<Point, double>(0, (width, point) =>
                                                 {
                                                     if (point.X > width && point.Y == location.Y)
                                                     {
@@ -3425,23 +3391,7 @@ namespace Apricot
                                 {
                                     waitRequired = false;
 
-                                    if ((isTyped || isReady && this.nextHistoryPoint.HasValue) && (isFragmented || isReady && this.nextHistoryPoint.HasValue && this.attachmentFadeStepDictionary.Values.Any(delegate (double step)
-                                    {
-                                        if (step > 0)
-                                        {
-                                            return true;
-                                        }
-
-                                        return false;
-                                    }) || this.attachmentFadeStepDictionary.Count == 0 || !this.attachmentFadeStepDictionary.Values.All(delegate (double step)
-                                    {
-                                        if (step < 1)
-                                        {
-                                            return false;
-                                        }
-
-                                        return true;
-                                    }) || this.messageCollection[this.historyPoint.Value].Attachments.Where(delegate (Entry entry, int i)
+                                    if ((isTyped || isReady && this.nextHistoryPoint.HasValue) && (isFragmented || isReady && this.nextHistoryPoint.HasValue && this.attachmentFadeStepDictionary.Values.Any(step => step > 0) || this.attachmentFadeStepDictionary.Count == 0 || this.attachmentFadeStepDictionary.Values.Any(step => step < 1) || this.messageCollection[this.historyPoint.Value].Attachments.Where((entry, i) =>
                                     {
                                         double fadeStep;
 
@@ -3531,7 +3481,7 @@ namespace Apricot
                                         const int leftMargin = 25;
                                         const int rightMargin = 3;
                                         int minScrollIndex = (int)Math.Floor(Math.Min(this.sourceScrollPosition, this.targetScrollPosition));
-                                        int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), delegate (HashSet<double> hs, Point point)
+                                        int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), (hs, point) =>
                                         {
                                             if (!hs.Contains(point.Y))
                                             {
@@ -4165,10 +4115,7 @@ namespace Apricot
 
                                                                                         foreach (Word word in from word in Script.Instance.Words where word.Name.Equals(term) select word)
                                                                                         {
-                                                                                            if (this.messageCollection[this.historyPoint.Value].Attachments.Any(delegate (Entry e2)
-                                                                                            {
-                                                                                                return word.Attributes.Contains(e2.Title);
-                                                                                            }) && !word.Attributes.Contains(attribute))
+                                                                                            if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title)) && !word.Attributes.Contains(attribute))
                                                                                             {
                                                                                                 word.Attributes.Add(attribute);
                                                                                             }
@@ -4215,10 +4162,7 @@ namespace Apricot
 
                                                                                         foreach (Word word in from word in Script.Instance.Words where word.Name.Equals(term) select word)
                                                                                         {
-                                                                                            if (this.messageCollection[this.historyPoint.Value].Attachments.Any(delegate (Entry e2)
-                                                                                            {
-                                                                                                return word.Attributes.Contains(e2.Title);
-                                                                                            }))
+                                                                                            if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title)))
                                                                                             {
                                                                                                 word.Attributes.Remove(attribute);
                                                                                             }
@@ -4686,10 +4630,7 @@ namespace Apricot
 
                                                                                     foreach (Word word in from word in Script.Instance.Words where word.Name.Equals(term) select word)
                                                                                     {
-                                                                                        if (this.messageCollection[this.historyPoint.Value].Attachments.Any(delegate (Entry e2)
-                                                                                        {
-                                                                                            return word.Attributes.Contains(e2.Title);
-                                                                                        }) && !word.Attributes.Contains(attribute))
+                                                                                        if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title)) && !word.Attributes.Contains(attribute))
                                                                                         {
                                                                                             word.Attributes.Add(attribute);
                                                                                         }
@@ -4736,10 +4677,7 @@ namespace Apricot
 
                                                                                     foreach (Word word in from word in Script.Instance.Words where word.Name.Equals(term) select word)
                                                                                     {
-                                                                                        if (this.messageCollection[this.historyPoint.Value].Attachments.Any(delegate (Entry e2)
-                                                                                        {
-                                                                                            return word.Attributes.Contains(e2.Title);
-                                                                                        }))
+                                                                                        if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title)))
                                                                                         {
                                                                                             word.Attributes.Remove(attribute);
                                                                                         }
@@ -4841,7 +4779,7 @@ namespace Apricot
                                 if (this.counterScrollStep.HasValue && this.cachedCounterCanvas == null || this.counterScrollStep == null && this.cachedCounterCanvas != null)
                                 {
                                     int minScrollIndex = (int)Math.Floor(Math.Min(this.sourceScrollPosition, this.targetScrollPosition));
-                                    int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), delegate (HashSet<double> hashSet, Point point)
+                                    int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), (hashSet, point) =>
                                     {
                                         if (!hashSet.Contains(point.Y))
                                         {
@@ -5112,7 +5050,7 @@ namespace Apricot
 
                                     if (this.previousThresholdScore != this.thresholdScore || this.FilterImage.Source == null)
                                     {
-                                        int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), delegate (HashSet<double> hashSet, Point point)
+                                        int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), (hashSet, point) =>
                                         {
                                             if (!hashSet.Contains(point.Y))
                                             {
@@ -5215,7 +5153,7 @@ namespace Apricot
 
                                 if ((isScrolled || this.ScrollImage.Source == null) && this.scrollStep.HasValue)
                                 {
-                                    int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), delegate (HashSet<double> hashSet, Point point)
+                                    int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), (hashSet, point) =>
                                     {
                                         if (!hashSet.Contains(point.Y))
                                         {
@@ -8247,15 +8185,7 @@ namespace Apricot
                                     }
                                 }
 
-                                if (isReady && this.nextHistoryPoint.HasValue && this.inlineList.Count == 0 && this.messageBuffer.Length == 0 && this.randomMessageLength == 0 && !this.attachmentFadeStepDictionary.Values.Any(delegate (double step)
-                                {
-                                    if (step > 0)
-                                    {
-                                        return true;
-                                    }
-
-                                    return false;
-                                }) && this.filterStep == null && this.scrollStep == null && this.liftStep == null && this.counterScrollStep == null && this.inspectorEntry == null)
+                                if (isReady && this.nextHistoryPoint.HasValue && this.inlineList.Count == 0 && this.messageBuffer.Length == 0 && this.randomMessageLength == 0 && this.attachmentFadeStepDictionary.Values.All(step => step == 0) && this.filterStep == null && this.scrollStep == null && this.liftStep == null && this.counterScrollStep == null && this.inspectorEntry == null)
                                 {
                                     this.isReady = false;
                                     this.hoverEmbeddedIndex = null;

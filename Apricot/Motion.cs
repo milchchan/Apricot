@@ -8,7 +8,7 @@ namespace Apricot
     /// </summary>
     public class Motion : ICloneable
     {
-        private bool isLoop = false;
+        private bool isRepeat = false;
         private double frameRate = 60;
         private int zIndex = 0;
         private String type = null;
@@ -27,15 +27,15 @@ namespace Apricot
             }
         }
 
-        public bool Loop
+        public bool Repeats
         {
             get
             {
-                return this.isLoop;
+                return this.isRepeat;
             }
             set
             {
-                this.isLoop = value;
+                this.isRepeat = value;
             }
         }
 
@@ -91,12 +91,7 @@ namespace Apricot
         {
             get
             {
-                if (this.spriteCollection.Count == 0)
-                {
-                    return false;
-                }
-
-                return true;
+                return this.spriteCollection.Count > 0;
             }
         }
         

@@ -418,7 +418,7 @@ namespace Apricot
                         characterLinkedList.AddLast(new KeyValuePair<Character, string>(character, path));
                     }
 
-                    List<KeyValuePair<string, string>> keyValuePairList = (from fileName in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let extension = Path.GetExtension(fileName) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase) select new KeyValuePair<bool, string>(isZip, fileName)).Concat(from path in pathHashSet select new KeyValuePair<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)).Aggregate<KeyValuePair<bool, string>, List<KeyValuePair<string, string>>>(new List<KeyValuePair<string, string>>(), delegate (List<KeyValuePair<string, string>> list, KeyValuePair<bool, string> kvp1)
+                    List<KeyValuePair<string, string>> keyValuePairList = (from fileName in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let extension = Path.GetExtension(fileName) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase) select new KeyValuePair<bool, string>(isZip, fileName)).Concat(from path in pathHashSet select new KeyValuePair<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)).Aggregate<KeyValuePair<bool, string>, List<KeyValuePair<string, string>>>(new List<KeyValuePair<string, string>>(), (list, kvp1) =>
                     {
                         if (!list.Exists(delegate (KeyValuePair<string, string> kvp2)
                         {
@@ -516,12 +516,7 @@ namespace Apricot
                             {
                                 MenuItem selectedMenuItem = menuItemList.Find(delegate (MenuItem menuItem)
                                 {
-                                    if (kvp.Key.Equals(menuItem.Header as string) && kvp.Value.Equals(menuItem.Tag as string) && (menuItem.IsChecked || menuItem.HasItems))
-                                    {
-                                        return true;
-                                    }
-
-                                    return false;
+                                    return kvp.Key.Equals(menuItem.Header as string) && kvp.Value.Equals(menuItem.Tag as string) && (menuItem.IsChecked || menuItem.HasItems);
                                 });
 
                                 if (selectedMenuItem == null)
@@ -537,57 +532,34 @@ namespace Apricot
                                 }
 
                                 charactersMenuItem.Items.Add(selectedMenuItem);
-
-                                Queue<Sequence> queue = new Queue<Sequence>(Script.Instance.Sequences);
+                                
+                                List<MenuItem> childMenuItemList = new List<MenuItem>();
                                 Dictionary<string, SortedSet<int>> dictionary = new Dictionary<string, SortedSet<int>>();
+                                List<string> motionTypeList = new List<string>();
 
-                                while (queue.Count > 0)
+                                this.cachedMotionList.ForEach(delegate (Motion motion)
                                 {
-                                    Sequence sequence = queue.Dequeue();
-
-                                    foreach (object o in sequence)
+                                    if (motion.Type != null)
                                     {
-                                        Sequence s = o as Sequence;
+                                        SortedSet<int> sortedSet;
 
-                                        if (s == null)
+                                        if (dictionary.TryGetValue(motion.Type, out sortedSet))
                                         {
-                                            if (nextLinkedListNode.Value.Key.Name.Equals(sequence.Owner))
+                                            if (!sortedSet.Contains(motion.ZIndex))
                                             {
-                                                System.Collections.ObjectModel.Collection<Motion> collection = o as System.Collections.ObjectModel.Collection<Motion>;
-
-                                                if (collection != null)
-                                                {
-                                                    foreach (Motion motion in from motion in collection where motion.Type != null select motion)
-                                                    {
-                                                        SortedSet<int> sortedSet;
-
-                                                        if (dictionary.TryGetValue(motion.Type, out sortedSet))
-                                                        {
-                                                            if (!sortedSet.Contains(motion.ZIndex))
-                                                            {
-                                                                sortedSet.Add(motion.ZIndex);
-                                                            }
-                                                        }
-                                                        else
-                                                        {
-                                                            sortedSet = new SortedSet<int>();
-                                                            sortedSet.Add(motion.ZIndex);
-                                                            dictionary.Add(motion.Type, sortedSet);
-                                                        }
-                                                    }
-                                                }
+                                                sortedSet.Add(motion.ZIndex);
                                             }
                                         }
-                                        else if (s.Any())
+                                        else
                                         {
-                                            queue.Enqueue(s);
+                                            sortedSet = new SortedSet<int>();
+                                            sortedSet.Add(motion.ZIndex);
+                                            dictionary.Add(motion.Type, sortedSet);
+                                            motionTypeList.Add(motion.Type);
                                         }
                                     }
-                                }
-
-                                List<MenuItem> childMenuItemList = new List<MenuItem>();
-                                List<string> motionTypeList = dictionary.Keys.ToList();
-
+                                });
+                                
                                 motionTypeList.Sort(delegate (string s1, string s2)
                                 {
                                     return String.Compare(s1, s2, StringComparison.CurrentCulture);
@@ -632,6 +604,8 @@ namespace Apricot
                                                     if (a != null && c.Name.Equals(a.characterName))
                                                     {
                                                         string header = childMenuItem.Header as string;
+
+                                                        a.Render();
 
                                                         if (c.Types.Contains(header))
                                                         {
@@ -864,12 +838,7 @@ namespace Apricot
 
                         MenuItem unselectedMenuItem = menuItemList.Find(delegate (MenuItem menuItem)
                         {
-                            if (kvp.Key.Equals(menuItem.Header as string) && kvp.Value.Equals(menuItem.Tag as string) && !menuItem.IsChecked && !menuItem.HasItems)
-                            {
-                                return true;
-                            }
-
-                            return false;
+                            return kvp.Key.Equals(menuItem.Header as string) && kvp.Value.Equals(menuItem.Tag as string) && !menuItem.IsChecked && !menuItem.HasItems;
                         });
 
                         if (unselectedMenuItem == null)
@@ -2266,10 +2235,17 @@ namespace Apricot
         protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
         {
             base.OnMouseDoubleClick(e);
+            
+            var query = from image in this.Canvas.Children.Cast<Image>() let motion = image.Tag as Motion where motion != null && e.OriginalSource == image select motion;
 
-            foreach (Motion motion in from image in this.Canvas.Children.Cast<Image>() let motion = image.Tag as Motion where motion != null && e.OriginalSource == image select motion)
+            if (query.Any())
             {
-                Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("DoubleClick") && sequence.Owner.Equals(this.characterName) select sequence, motion.Current.Path));
+                var q = from sequence in Script.Instance.Sequences where sequence.Name.Equals("DoubleClick") && sequence.Owner.Equals(this.characterName) select sequence;
+
+                foreach (Motion motion in query)
+                {
+                    Script.Instance.TryEnqueue(Script.Instance.Prepare(q, motion.Current.Path));
+                }
             }
         }
 
@@ -2823,7 +2799,7 @@ namespace Apricot
 
                         if (text.Length > 0)
                         {
-                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("DrawClipboard") select sequence, text).Aggregate<Sequence, List<Sequence>>(new List<Sequence>(), delegate (List<Sequence> preparedSequenceList, Sequence sequence)
+                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("DrawClipboard") select sequence, text).Aggregate<Sequence, List<Sequence>>(new List<Sequence>(), (preparedSequenceList, sequence) =>
                             {
                                 System.Collections.ArrayList arrayList = new System.Collections.ArrayList();
 
@@ -3131,53 +3107,33 @@ namespace Apricot
                             updateLayoutRequired = true;
                         }
                     }
-                    else
+                    else if (motion.Current.Opacity > 0)
                     {
-                        bool isUpdated = false;
+                        BitmapImage bitmapImage;
 
-                        if (motion.Current.Opacity > 0)
+                        if (this.cachedBitmapImageDictionary.TryGetValue(Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), motion.Current.Path) : Path.Combine(Path.GetDirectoryName(character.Script), motion.Current.Path), out bitmapImage))
                         {
-                            BitmapImage bitmapImage;
+                            image.Source = bitmapImage;
 
-                            if (this.cachedBitmapImageDictionary.TryGetValue(Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), motion.Current.Path) : Path.Combine(Path.GetDirectoryName(character.Script), motion.Current.Path), out bitmapImage))
+                            if (motion.Current.Size.IsEmpty)
                             {
-                                image.Source = bitmapImage;
-
-                                if (motion.Current.Size.IsEmpty)
-                                {
-                                    image.Stretch = Stretch.None;
-                                    image.Width = bitmapImage.Width;
-                                    image.Height = bitmapImage.Height;
-                                }
-                                else
-                                {
-                                    image.Stretch = Stretch.Fill;
-
-                                    if (Double.IsNaN(motion.Current.Size.Width) && motion.Current.Size.Height > 0)
-                                    {
-                                        image.Width = motion.Current.Size.Height * bitmapImage.PixelWidth / bitmapImage.PixelHeight;
-                                        image.Height = motion.Current.Size.Height;
-                                    }
-                                    else if (motion.Current.Size.Width > 0 && Double.IsNaN(motion.Current.Size.Height))
-                                    {
-                                        image.Width = motion.Current.Size.Width;
-                                        image.Height = motion.Current.Size.Width * bitmapImage.PixelHeight / bitmapImage.PixelWidth;
-                                    }
-                                    else
-                                    {
-                                        image.Width = motion.Current.Size.Width;
-                                        image.Height = motion.Current.Size.Height;
-                                    }
-                                }
+                                image.Stretch = Stretch.None;
+                                image.Width = bitmapImage.Width;
+                                image.Height = bitmapImage.Height;
                             }
                             else
                             {
-                                image.Source = null;
-                                image.Stretch = Stretch.None;
+                                image.Stretch = Stretch.Fill;
 
-                                if (motion.Current.Size.IsEmpty)
+                                if (Double.IsNaN(motion.Current.Size.Width) && motion.Current.Size.Height > 0)
                                 {
-                                    image.Width = image.Height = Double.NaN;
+                                    image.Width = motion.Current.Size.Height * bitmapImage.PixelWidth / bitmapImage.PixelHeight;
+                                    image.Height = motion.Current.Size.Height;
+                                }
+                                else if (motion.Current.Size.Width > 0 && Double.IsNaN(motion.Current.Size.Height))
+                                {
+                                    image.Width = motion.Current.Size.Width;
+                                    image.Height = motion.Current.Size.Width * bitmapImage.PixelHeight / bitmapImage.PixelWidth;
                                 }
                                 else
                                 {
@@ -3185,81 +3141,94 @@ namespace Apricot
                                     image.Height = motion.Current.Size.Height;
                                 }
                             }
+                        }
+                        else
+                        {
+                            image.Source = null;
+                            image.Stretch = Stretch.None;
 
-                            image.Opacity = motion.Current.Opacity;
-                            image.Tag = motion;
-
-                            if (image.OpacityMask == null)
+                            if (motion.Current.Size.IsEmpty)
                             {
-                                List<string> typeList = null;
-                                bool isVisible;
+                                image.Width = image.Height = Double.NaN;
+                            }
+                            else
+                            {
+                                image.Width = motion.Current.Size.Width;
+                                image.Height = motion.Current.Size.Height;
+                            }
+                        }
 
-                                if (motion.Type == null)
+                        image.Opacity = motion.Current.Opacity;
+                        image.Tag = motion;
+
+                        if (image.OpacityMask == null)
+                        {
+                            List<string> typeList = null;
+                            bool isVisible;
+
+                            if (motion.Type == null)
+                            {
+                                typeList = new List<string>();
+                                this.cachedMotionList.ForEach(delegate (Motion m)
+                                {
+                                    if (m.ZIndex == motion.ZIndex)
+                                    {
+                                        typeList.Add(m.Type);
+                                    }
+                                });
+                            }
+
+                            if (typeList == null)
+                            {
+                                if (character.HasTypes)
                                 {
                                     typeList = new List<string>();
                                     this.cachedMotionList.ForEach(delegate (Motion m)
                                     {
-                                        if (m.ZIndex == motion.ZIndex)
+                                        if (m.ZIndex == motion.ZIndex && character.Types.Contains(m.Type))
                                         {
                                             typeList.Add(m.Type);
                                         }
                                     });
-                                }
-
-                                if (typeList == null)
-                                {
-                                    if (character.HasTypes)
-                                    {
-                                        typeList = new List<string>();
-                                        this.cachedMotionList.ForEach(delegate (Motion m)
-                                        {
-                                            if (m.ZIndex == motion.ZIndex && character.Types.Contains(m.Type))
-                                            {
-                                                typeList.Add(m.Type);
-                                            }
-                                        });
-                                        isVisible = typeList.Count > 0 && typeList.LastIndexOf(motion.Type) == typeList.Count - 1;
-                                    }
-                                    else
-                                    {
-                                        isVisible = false;
-                                    }
-                                }
-                                else if (character.HasTypes)
-                                {
-                                    isVisible = !typeList.Exists(delegate (string type)
-                                    {
-                                        return character.Types.Contains(type);
-                                    });
+                                    isVisible = typeList.Count > 0 && typeList.LastIndexOf(motion.Type) == typeList.Count - 1;
                                 }
                                 else
                                 {
-                                    isVisible = true;
-                                }
-
-                                if (isVisible)
-                                {
-                                    image.Visibility = Visibility.Visible;
-                                }
-                                else
-                                {
-                                    image.Visibility = Visibility.Collapsed;
+                                    isVisible = false;
                                 }
                             }
+                            else if (character.HasTypes)
+                            {
+                                isVisible = !typeList.Exists(delegate (string type)
+                                {
+                                    return character.Types.Contains(type);
+                                });
+                            }
+                            else
+                            {
+                                isVisible = true;
+                            }
 
-                            Canvas.SetLeft(image, character.Origin.X + motion.Current.Location.X);
-                            Canvas.SetTop(image, character.Origin.Y + motion.Current.Location.Y);
-                            Canvas.SetZIndex(image, index);
-
-                            index++;
-                            isUpdated = true;
+                            if (isVisible)
+                            {
+                                image.Visibility = Visibility.Visible;
+                            }
+                            else
+                            {
+                                image.Visibility = Visibility.Collapsed;
+                            }
                         }
 
-                        if (!isUpdated)
-                        {
-                            this.Canvas.Children.Remove(image);
-                            updateLayoutRequired = true;
-                        }
+                        Canvas.SetLeft(image, character.Origin.X + motion.Current.Location.X);
+                        Canvas.SetTop(image, character.Origin.Y + motion.Current.Location.Y);
+                        Canvas.SetZIndex(image, index);
+
+                        index++;
+                    }
+                    else
+                    {
+                        this.Canvas.Children.Remove(image);
+                        updateLayoutRequired = true;
                     }
                 });
 
@@ -3322,151 +3291,10 @@ namespace Apricot
                     }
                     else
                     {
-                        Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> dictionary = new Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>>();
-                        HashSet<string> hashSet = new HashSet<string>();
-
                         foreach (object o in sequence)
                         {
-                            System.Collections.ObjectModel.Collection<Motion> collection = o as System.Collections.ObjectModel.Collection<Motion>;
-
-                            if (collection != null)
-                            {
-                                foreach (KeyValuePair<string, string> kvp in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) from motion in collection from sprite in motion.Sprites where !String.IsNullOrEmpty(sprite.Path) select new KeyValuePair<string, string>(character.Script, sprite.Path))
-                                {
-                                    string key = Path.GetExtension(kvp.Key).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(kvp.Key), Path.GetFileNameWithoutExtension(kvp.Key), kvp.Value) : Path.Combine(Path.GetDirectoryName(kvp.Key), kvp.Value);
-
-                                    if (!dictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
-                                    {
-                                        dictionary.Add(key, new KeyValuePair<KeyValuePair<string, string>, MemoryStream>(kvp, new MemoryStream()));
-                                    }
-
-                                    if (!hashSet.Contains(key))
-                                    {
-                                        hashSet.Add(key);
-                                    }
-                                }
-                            }
-
                             this.queue.Enqueue(o);
                         }
-
-                        Task.Factory.StartNew(delegate
-                        {
-                            foreach (KeyValuePair<KeyValuePair<string, string>, MemoryStream> kvp in dictionary.Values)
-                            {
-                                if (Path.GetExtension(kvp.Key.Key).Equals(".zip", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    FileStream fs = null;
-
-                                    try
-                                    {
-                                        fs = new FileStream(kvp.Key.Key, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                        using (ZipArchive zipArchive = new ZipArchive(fs))
-                                        {
-                                            fs = null;
-
-                                            ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(kvp.Key.Value);
-
-                                            using (Stream stream = zipArchiveEntry.Open())
-                                            {
-                                                byte[] buffer = new byte[zipArchiveEntry.Length];
-                                                int bytesRead;
-
-                                                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
-                                                {
-                                                    kvp.Value.Write(buffer, 0, bytesRead);
-                                                }
-
-                                                kvp.Value.Seek(0, SeekOrigin.Begin);
-                                            }
-                                        }
-                                    }
-                                    finally
-                                    {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(kvp.Key.Key), kvp.Key.Value), FileMode.Open, FileAccess.Read, FileShare.Read))
-                                    {
-                                        byte[] buffer = new byte[fs.Length];
-                                        int bytesRead;
-
-                                        while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
-                                        {
-                                            kvp.Value.Write(buffer, 0, bytesRead);
-                                        }
-
-                                        kvp.Value.Seek(0, SeekOrigin.Begin);
-                                    }
-                                }
-                            }
-                        }).ContinueWith(delegate
-                        {
-                            foreach (KeyValuePair<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> kvp in dictionary)
-                            {
-                                BitmapImage bitmapImage;
-
-                                if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
-                                {
-                                    try
-                                    {
-                                        bitmapImage = new BitmapImage();
-                                        bitmapImage.BeginInit();
-                                        bitmapImage.StreamSource = kvp.Value.Value;
-                                        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                                        bitmapImage.CreateOptions = BitmapCreateOptions.None;
-                                        bitmapImage.EndInit();
-
-                                        if (bitmapImage.CanFreeze)
-                                        {
-                                            bitmapImage.Freeze();
-                                        }
-
-                                        this.cachedBitmapImageDictionary.Add(kvp.Key, bitmapImage);
-                                    }
-                                    finally
-                                    {
-                                        kvp.Value.Value.Close();
-                                    }
-                                }
-                            }
-
-                            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
-                            {
-                                this.cachedMotionList.ForEach(delegate (Motion motion)
-                                {
-                                    foreach (Sprite sprite in motion.Sprites)
-                                    {
-                                        string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), sprite.Path) : Path.Combine(Path.GetDirectoryName(character.Script), sprite.Path);
-
-                                        if (!hashSet.Contains(key))
-                                        {
-                                            hashSet.Add(key);
-                                        }
-                                    }
-                                });
-                            }
-
-                            foreach (string s in (from s in this.cachedBitmapImageDictionary.Keys where !hashSet.Contains(s) select s).ToArray())
-                            {
-                                this.cachedBitmapImageDictionary.Remove(s);
-                            }
-
-                            this.Dispatcher.BeginInvoke(DispatcherPriority.Background, new DispatcherOperationCallback(delegate
-                            {
-                                Run();
-
-                                return null;
-                            }), null);
-                        }, TaskScheduler.FromCurrentSynchronizationContext());
-
-                        return;
                     }
                 }
             }
@@ -3555,7 +3383,7 @@ namespace Apricot
                 {
                     this.cachedMotionList.ForEach(delegate (Motion motion)
                     {
-                        if (motion.Loop)
+                        if (motion.Repeats)
                         {
                             this.motionQueue.Enqueue(motion);
                         }
@@ -3577,19 +3405,18 @@ namespace Apricot
 
                 if (this.cachedMotionList.Count == 0)
                 {
-                    HashSet<DoubleAnimation> hashSet = new HashSet<DoubleAnimation>();
+                    int minZIndex = Int32.MaxValue;
+                    int maxZIndex = Int32.MinValue;
+                    Dictionary<int, List<Motion>> motionDictionary = new Dictionary<int, List<Motion>>();
+                    Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> tempDictionary = new Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>>();
+                    HashSet<DoubleAnimation> animationHashSet = new HashSet<DoubleAnimation>();
                     CountdownEvent countdownEvent = new CountdownEvent(1);
 
                     do
                     {
                         if (motionList1.Exists(delegate (Motion motion)
                         {
-                            if (motion.ZIndex == q.Peek().ZIndex && String.Equals(motion.Type, q.Peek().Type))
-                            {
-                                return true;
-                            }
-
-                            return false;
+                            return motion.ZIndex == q.Peek().ZIndex && String.Equals(motion.Type, q.Peek().Type);
                         }))
                         {
                             q.Dequeue();
@@ -3600,100 +3427,159 @@ namespace Apricot
                         }
                     } while (q.Count > 0);
 
-                    int minZIndex = Int32.MaxValue;
-                    int maxZIndex = Int32.MinValue;
-                    Dictionary<int, List<Motion>> motionDictionary = new Dictionary<int, List<Motion>>();
-
-                    motionList1.ForEach(delegate (Motion motion)
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                     {
-                        List<Motion> motionList2;
-
-                        if (motion.ZIndex < minZIndex)
+                        motionList1.ForEach(delegate (Motion motion)
                         {
-                            minZIndex = motion.ZIndex;
-                        }
+                            List<Motion> motionList2;
 
-                        if (motion.ZIndex > maxZIndex)
-                        {
-                            maxZIndex = motion.ZIndex;
-                        }
-
-                        if (!motionDictionary.TryGetValue(motion.ZIndex, out motionList2))
-                        {
-                            motionList2 = new List<Motion>();
-                            motionDictionary.Add(motion.ZIndex, motionList2);
-                        }
-
-                        motionList2.Add(motion);
-                    });
-
-                    for (int i = minZIndex; i <= maxZIndex; i++)
-                    {
-                        List<Motion> motionList2;
-
-                        if (motionDictionary.TryGetValue(i, out motionList2))
-                        {
-                            motionList2.ForEach(delegate (Motion motion)
+                            if (motion.ZIndex < minZIndex)
                             {
-                                this.cachedMotionList.Add((Motion)motion.Clone());
-                            });
-                        }
-                    }
-
-                    Render();
-
-                    Storyboard storyboard1 = new Storyboard();
-                    DoubleAnimation doubleAnimation1 = new DoubleAnimation(0, this.opacity, TimeSpan.FromMilliseconds(500));
-                    SineEase sineEase1 = new SineEase();
-
-                    foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary)
-                    {
-                        kvp.Key.Stop(kvp.Value);
-                    }
-
-                    this.fadeStoryboardDictionary.Clear();
-
-                    sineEase1.EasingMode = EasingMode.EaseOut;
-
-                    doubleAnimation1.EasingFunction = sineEase1;
-                    doubleAnimation1.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs e)
-                    {
-                        Clock clock = (Clock)s;
-
-                        if (clock.CurrentState == ClockState.Stopped || clock.CurrentState == ClockState.Filling)
-                        {
-                            if (clock.CurrentState == ClockState.Filling)
-                            {
-                                this.Opacity = this.opacity;
-                                storyboard1.Remove(this);
-                                this.fadeStoryboardDictionary.Remove(storyboard1);
+                                minZIndex = motion.ZIndex;
                             }
 
-                            if (!hashSet.Contains(doubleAnimation1))
+                            if (motion.ZIndex > maxZIndex)
                             {
-                                countdownEvent.Signal();
-                                hashSet.Add(doubleAnimation1);
+                                maxZIndex = motion.ZIndex;
+                            }
+
+                            if (!motionDictionary.TryGetValue(motion.ZIndex, out motionList2))
+                            {
+                                motionList2 = new List<Motion>();
+                                motionDictionary.Add(motion.ZIndex, motionList2);
+                            }
+
+                            motionList2.Add(motion);
+
+                            foreach (string path in from sprite in motion.Sprites where !String.IsNullOrEmpty(sprite.Path) select sprite.Path)
+                            {
+                                string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), path) : Path.Combine(Path.GetDirectoryName(character.Script), path);
+
+                                if (!tempDictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
+                                {
+                                    tempDictionary.Add(key, new KeyValuePair<KeyValuePair<string, string>, MemoryStream>(new KeyValuePair<string, string>(character.Script, path), new MemoryStream()));
+                                }
+                            }
+                        });
+                    }
+
+                    Task.Factory.StartNew(delegate
+                    {
+                        foreach (KeyValuePair<KeyValuePair<string, string>, MemoryStream> kvp in tempDictionary.Values)
+                        {
+                            if (Path.GetExtension(kvp.Key.Key).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                            {
+                                FileStream fs = null;
+
+                                try
+                                {
+                                    fs = new FileStream(kvp.Key.Key, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                    using (ZipArchive zipArchive = new ZipArchive(fs))
+                                    {
+                                        fs = null;
+
+                                        ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(kvp.Key.Value);
+
+                                        using (Stream stream = zipArchiveEntry.Open())
+                                        {
+                                            byte[] buffer = new byte[zipArchiveEntry.Length];
+                                            int bytesRead;
+
+                                            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                                            {
+                                                kvp.Value.Write(buffer, 0, bytesRead);
+                                            }
+
+                                            kvp.Value.Seek(0, SeekOrigin.Begin);
+                                        }
+                                    }
+                                }
+                                finally
+                                {
+                                    if (fs != null)
+                                    {
+                                        fs.Close();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(kvp.Key.Key), kvp.Key.Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+                                    byte[] buffer = new byte[fs.Length];
+                                    int bytesRead;
+
+                                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                                    {
+                                        kvp.Value.Write(buffer, 0, bytesRead);
+                                    }
+
+                                    kvp.Value.Seek(0, SeekOrigin.Begin);
+                                }
                             }
                         }
-                    });
-
-                    storyboard1.Children.Add(doubleAnimation1);
-
-                    Storyboard.SetTargetProperty(doubleAnimation1, new PropertyPath(Window.OpacityProperty));
-
-                    this.fadeStoryboardDictionary.Add(storyboard1, this);
-                    this.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, true);
-
-                    if (this.balloon.Opacity != 1)
+                    }).ContinueWith(delegate
                     {
-                        Storyboard storyboard2 = new Storyboard();
-                        DoubleAnimation doubleAnimation2 = new DoubleAnimation(this.balloon.Opacity, 1, TimeSpan.FromMilliseconds(500));
-                        SineEase sineEase2 = new SineEase();
+                        foreach (KeyValuePair<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> kvp in tempDictionary)
+                        {
+                            BitmapImage bitmapImage;
 
-                        sineEase2.EasingMode = EasingMode.EaseOut;
+                            if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
+                            {
+                                try
+                                {
+                                    bitmapImage = new BitmapImage();
+                                    bitmapImage.BeginInit();
+                                    bitmapImage.StreamSource = kvp.Value.Value;
+                                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                                    bitmapImage.CreateOptions = BitmapCreateOptions.None;
+                                    bitmapImage.EndInit();
 
-                        doubleAnimation2.EasingFunction = sineEase2;
-                        doubleAnimation2.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs e)
+                                    if (bitmapImage.CanFreeze)
+                                    {
+                                        bitmapImage.Freeze();
+                                    }
+
+                                    this.cachedBitmapImageDictionary.Add(kvp.Key, bitmapImage);
+                                }
+                                finally
+                                {
+                                    kvp.Value.Value.Close();
+                                }
+                            }
+                        }
+
+                        for (int i = minZIndex; i <= maxZIndex; i++)
+                        {
+                            List<Motion> motionList2;
+
+                            if (motionDictionary.TryGetValue(i, out motionList2))
+                            {
+                                motionList2.ForEach(delegate (Motion motion)
+                                {
+                                    this.cachedMotionList.Add((Motion)motion.Clone());
+                                });
+                            }
+                        }
+
+                        Render();
+
+                        Storyboard storyboard1 = new Storyboard();
+                        DoubleAnimation doubleAnimation1 = new DoubleAnimation(0, this.opacity, TimeSpan.FromMilliseconds(500));
+                        SineEase sineEase1 = new SineEase();
+
+                        foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary)
+                        {
+                            kvp.Key.Stop(kvp.Value);
+                        }
+
+                        this.fadeStoryboardDictionary.Clear();
+
+                        sineEase1.EasingMode = EasingMode.EaseOut;
+
+                        doubleAnimation1.EasingFunction = sineEase1;
+                        doubleAnimation1.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs e)
                         {
                             Clock clock = (Clock)s;
 
@@ -3701,30 +3587,66 @@ namespace Apricot
                             {
                                 if (clock.CurrentState == ClockState.Filling)
                                 {
-                                    this.balloon.Opacity = 1;
-                                    storyboard2.Remove(this.balloon);
-                                    this.fadeStoryboardDictionary.Remove(storyboard2);
+                                    this.Opacity = this.opacity;
+                                    storyboard1.Remove(this);
+                                    this.fadeStoryboardDictionary.Remove(storyboard1);
                                 }
 
-                                if (!hashSet.Contains(doubleAnimation2))
+                                if (!animationHashSet.Contains(doubleAnimation1))
                                 {
                                     countdownEvent.Signal();
-                                    hashSet.Add(doubleAnimation2);
+                                    animationHashSet.Add(doubleAnimation1);
                                 }
                             }
                         });
 
-                        storyboard2.Children.Add(doubleAnimation2);
+                        storyboard1.Children.Add(doubleAnimation1);
 
-                        Storyboard.SetTargetProperty(doubleAnimation2, new PropertyPath(Window.OpacityProperty));
+                        Storyboard.SetTargetProperty(doubleAnimation1, new PropertyPath(Window.OpacityProperty));
 
-                        this.fadeStoryboardDictionary.Add(storyboard2, this.balloon);
-                        this.balloon.BeginStoryboard(storyboard2, HandoffBehavior.SnapshotAndReplace, true);
+                        this.fadeStoryboardDictionary.Add(storyboard1, this);
+                        this.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, true);
 
-                        countdownEvent.AddCount();
-                    }
+                        if (this.balloon.Opacity != 1)
+                        {
+                            Storyboard storyboard2 = new Storyboard();
+                            DoubleAnimation doubleAnimation2 = new DoubleAnimation(this.balloon.Opacity, 1, TimeSpan.FromMilliseconds(500));
+                            SineEase sineEase2 = new SineEase();
 
-                    Task.Factory.StartNew(delegate
+                            sineEase2.EasingMode = EasingMode.EaseOut;
+
+                            doubleAnimation2.EasingFunction = sineEase2;
+                            doubleAnimation2.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs e)
+                            {
+                                Clock clock = (Clock)s;
+
+                                if (clock.CurrentState == ClockState.Stopped || clock.CurrentState == ClockState.Filling)
+                                {
+                                    if (clock.CurrentState == ClockState.Filling)
+                                    {
+                                        this.balloon.Opacity = 1;
+                                        storyboard2.Remove(this.balloon);
+                                        this.fadeStoryboardDictionary.Remove(storyboard2);
+                                    }
+
+                                    if (!animationHashSet.Contains(doubleAnimation2))
+                                    {
+                                        countdownEvent.Signal();
+                                        animationHashSet.Add(doubleAnimation2);
+                                    }
+                                }
+                            });
+
+                            storyboard2.Children.Add(doubleAnimation2);
+
+                            Storyboard.SetTargetProperty(doubleAnimation2, new PropertyPath(Window.OpacityProperty));
+
+                            this.fadeStoryboardDictionary.Add(storyboard2, this.balloon);
+                            this.balloon.BeginStoryboard(storyboard2, HandoffBehavior.SnapshotAndReplace, true);
+
+                            countdownEvent.AddCount();
+                        }
+                    }, TaskScheduler.FromCurrentSynchronizationContext()).ContinueWith(delegate
                     {
                         countdownEvent.Wait();
                         countdownEvent.Dispose();
@@ -3736,7 +3658,7 @@ namespace Apricot
                             return null;
                         }), null);
                     });
-
+                    
                     return;
                 }
 
@@ -3746,12 +3668,7 @@ namespace Apricot
                 {
                     if (motionList1.Exists(delegate (Motion motion)
                     {
-                        if (motion.ZIndex == q.Peek().ZIndex && String.Equals(motion.Type, q.Peek().Type))
-                        {
-                            return true;
-                        }
-
-                        return false;
+                        return motion.ZIndex == q.Peek().ZIndex && String.Equals(motion.Type, q.Peek().Type);
                     }))
                     {
                         this.motionQueue.Enqueue(q.Dequeue());
@@ -3764,13 +3681,274 @@ namespace Apricot
 
                 if (motionList1.Count > 0)
                 {
-                    this.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new DispatcherOperationCallback(delegate
+                    int minZIndex = Int32.MaxValue;
+                    int maxZIndex = Int32.MinValue;
+                    HashSet<int> zIndexHashSet = new HashSet<int>();
+                    Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> tempDictionary = new Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>>();
+                    HashSet<string> keyHashSet = new HashSet<string>();
+
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                     {
-                        Animate(motionList1, false, System.Diagnostics.Stopwatch.StartNew(), this.frameRate, 0, 0, 0, new Dictionary<Motion, Motion>(), new Dictionary<Motion, int>(), 0, 0, new List<Sprite>());
+                        motionList1.ForEach(delegate (Motion motion)
+                        {
+                            if (motion.ZIndex < minZIndex)
+                            {
+                                minZIndex = motion.ZIndex;
+                            }
 
-                        return null;
-                    }), null);
+                            if (motion.ZIndex > maxZIndex)
+                            {
+                                maxZIndex = motion.ZIndex;
+                            }
 
+                            if (!zIndexHashSet.Contains(motion.ZIndex))
+                            {
+                                zIndexHashSet.Add(motion.ZIndex);
+                            }
+
+                            foreach (string path in from sprite in motion.Sprites where !String.IsNullOrEmpty(sprite.Path) select sprite.Path)
+                            {
+                                string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), path) : Path.Combine(Path.GetDirectoryName(character.Script), path);
+
+                                if (!tempDictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
+                                {
+                                    tempDictionary.Add(key, new KeyValuePair<KeyValuePair<string, string>, MemoryStream>(new KeyValuePair<string, string>(character.Script, path), new MemoryStream()));
+                                }
+
+                                if (!keyHashSet.Contains(key))
+                                {
+                                    keyHashSet.Add(key);
+                                }
+                            }
+                        });
+                    }
+
+                    Task.Factory.StartNew(delegate
+                    {
+                        foreach (KeyValuePair<KeyValuePair<string, string>, MemoryStream> kvp in tempDictionary.Values)
+                        {
+                            if (Path.GetExtension(kvp.Key.Key).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                            {
+                                FileStream fs = null;
+
+                                try
+                                {
+                                    fs = new FileStream(kvp.Key.Key, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                    using (ZipArchive zipArchive = new ZipArchive(fs))
+                                    {
+                                        fs = null;
+
+                                        ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(kvp.Key.Value);
+
+                                        using (Stream stream = zipArchiveEntry.Open())
+                                        {
+                                            byte[] buffer = new byte[zipArchiveEntry.Length];
+                                            int bytesRead;
+
+                                            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                                            {
+                                                kvp.Value.Write(buffer, 0, bytesRead);
+                                            }
+
+                                            kvp.Value.Seek(0, SeekOrigin.Begin);
+                                        }
+                                    }
+                                }
+                                finally
+                                {
+                                    if (fs != null)
+                                    {
+                                        fs.Close();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(kvp.Key.Key), kvp.Key.Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+                                    byte[] buffer = new byte[fs.Length];
+                                    int bytesRead;
+
+                                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                                    {
+                                        kvp.Value.Write(buffer, 0, bytesRead);
+                                    }
+
+                                    kvp.Value.Seek(0, SeekOrigin.Begin);
+                                }
+                            }
+                        }
+                    }).ContinueWith(delegate
+                    {
+                        List<Motion> previousMotionList = new List<Motion>();
+                        List<Sprite> cachedSpriteList = new List<Sprite>();
+                        double maxFrameRate = 0;
+                        Dictionary<Motion, int> skipDictionary = new Dictionary<Motion, int>();
+                        Dictionary<Motion, Motion> switchDictionary = new Dictionary<Motion, Motion>();
+
+                        foreach (KeyValuePair<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> kvp in tempDictionary)
+                        {
+                            BitmapImage bitmapImage;
+
+                            if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
+                            {
+                                try
+                                {
+                                    bitmapImage = new BitmapImage();
+                                    bitmapImage.BeginInit();
+                                    bitmapImage.StreamSource = kvp.Value.Value;
+                                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                                    bitmapImage.CreateOptions = BitmapCreateOptions.None;
+                                    bitmapImage.EndInit();
+
+                                    if (bitmapImage.CanFreeze)
+                                    {
+                                        bitmapImage.Freeze();
+                                    }
+
+                                    this.cachedBitmapImageDictionary.Add(kvp.Key, bitmapImage);
+                                }
+                                finally
+                                {
+                                    kvp.Value.Value.Close();
+                                }
+                            }
+                        }
+
+                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                        {
+                            this.cachedMotionList.ForEach(delegate (Motion motion)
+                            {
+                                if (zIndexHashSet.Contains(motion.ZIndex))
+                                {
+                                    if (character.HasTypes)
+                                    {
+                                        if (!character.Types.Contains(motion.Type))
+                                        {
+                                            return;
+                                        }
+                                    }
+                                    else if (motion.Type != null)
+                                    {
+                                        return;
+                                    }
+                                }
+
+                                if (motion.ZIndex < minZIndex)
+                                {
+                                    minZIndex = motion.ZIndex;
+                                }
+
+                                if (motion.ZIndex > maxZIndex)
+                                {
+                                    maxZIndex = motion.ZIndex;
+                                }
+
+                                foreach (string path in from sprite in motion.Sprites where !String.IsNullOrEmpty(sprite.Path) select sprite.Path)
+                                {
+                                    string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), path) : Path.Combine(Path.GetDirectoryName(character.Script), path);
+
+                                    if (!keyHashSet.Contains(key))
+                                    {
+                                        keyHashSet.Add(key);
+                                    }
+                                }
+
+                                previousMotionList.Add(motion);
+                                cachedSpriteList.Add(motion.Current);
+                            });
+                        }
+
+                        foreach (string s in (from s in this.cachedBitmapImageDictionary.Keys where !keyHashSet.Contains(s) select s).ToArray())
+                        {
+                            this.cachedBitmapImageDictionary.Remove(s);
+                        }
+
+                        this.cachedMotionList.Clear();
+
+                        for (int i = minZIndex; i <= maxZIndex; i++)
+                        {
+                            List<Motion> motionList2 = previousMotionList.FindAll(delegate (Motion m)
+                            {
+                                return i == m.ZIndex;
+                            });
+                            List<Motion> motionList3 = motionList1.FindAll(delegate (Motion m)
+                            {
+                                return i == m.ZIndex;
+                            });
+
+                            motionList2.ForEach(delegate (Motion m1)
+                            {
+                                Motion motion = null;
+                                Motion nextMotion = null;
+                                Motion m2 = motionList3.Find(delegate (Motion m)
+                                {
+                                    return String.Equals(m.Type, m1.Type);
+                                });
+
+                                if (m2 != null)
+                                {
+                                    if (m1 != m2 && m1.Position > 0 && m1.Position < m1.Sprites.Count - 1)
+                                    {
+                                        nextMotion = (Motion)m2.Clone();
+                                    }
+                                    else
+                                    {
+                                        motion = (Motion)m2.Clone();
+                                    }
+
+                                    motionList3.Remove(m2);
+                                }
+
+                                if (motion == null)
+                                {
+                                    motion = (Motion)m1.Clone();
+                                }
+
+                                if (motion.FrameRate > maxFrameRate)
+                                {
+                                    maxFrameRate = motion.FrameRate;
+                                }
+
+                                if (motion.Repeats && motion.Position > 0)
+                                {
+                                    skipDictionary.Add(motion, motion.Position);
+                                }
+
+                                if (nextMotion != null)
+                                {
+                                    switchDictionary.Add(motion, nextMotion);
+                                }
+
+                                this.cachedMotionList.Add(motion);
+                            });
+                            motionList3.ForEach(delegate (Motion m2)
+                            {
+                                Motion motion = (Motion)m2.Clone();
+
+                                if (motion.FrameRate > maxFrameRate)
+                                {
+                                    maxFrameRate = motion.FrameRate;
+                                }
+
+                                if (motion.Repeats && motion.Position > 0)
+                                {
+                                    skipDictionary.Add(motion, motion.Position);
+                                }
+
+                                this.cachedMotionList.Add(motion);
+                            });
+                        }
+                        
+                        this.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new DispatcherOperationCallback(delegate
+                        {
+                            Animate(false, System.Diagnostics.Stopwatch.StartNew(), this.frameRate, maxFrameRate, 0, 0, switchDictionary, skipDictionary, 0, 0, cachedSpriteList);
+
+                            return null;
+                        }), null);
+                    }, TaskScheduler.FromCurrentSynchronizationContext());
+                    
                     return;
                 }
             }
@@ -3793,111 +3971,89 @@ namespace Apricot
 
                     return;
                 }
-                else
+                else if (this.Opacity > 0)
                 {
-                    if (this.Opacity > 0)
+                    Storyboard storyboard = new Storyboard();
+                    DoubleAnimation doubleAnimation = new DoubleAnimation(this.Opacity, 0, TimeSpan.FromMilliseconds(500));
+                    SineEase sineEase = new SineEase();
+
+                    foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary)
                     {
-                        Storyboard storyboard = new Storyboard();
-                        DoubleAnimation doubleAnimation = new DoubleAnimation(this.Opacity, 0, TimeSpan.FromMilliseconds(500));
-                        SineEase sineEase = new SineEase();
-
-                        foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary)
-                        {
-                            kvp.Key.Stop(kvp.Value);
-                        }
-
-                        this.fadeStoryboardDictionary.Clear();
-
-                        sineEase.EasingMode = EasingMode.EaseIn;
-
-                        doubleAnimation.EasingFunction = sineEase;
-                        doubleAnimation.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs e)
-                        {
-                            Clock clock = (Clock)s;
-
-                            if (clock.CurrentState == ClockState.Stopped && this.Opacity > 0)
-                            {
-                                this.isLast = false;
-                                this.Dispatcher.BeginInvoke(DispatcherPriority.Background, new DispatcherOperationCallback(delegate
-                                {
-                                    Run();
-
-                                    return null;
-                                }), null);
-                            }
-                            else if (clock.CurrentState == ClockState.Filling)
-                            {
-                                this.Opacity = 0;
-                                storyboard.Remove(this);
-                                this.fadeStoryboardDictionary.Remove(storyboard);
-
-                                if (this == Application.Current.MainWindow || this.Owner != null)
-                                {
-                                    foreach (Window window in Application.Current.Windows)
-                                    {
-                                        Agent agent = window as Agent;
-
-                                        if (agent != null && agent.Opacity > 0)
-                                        {
-                                            Task.Factory.StartNew(delegate
-                                            {
-                                                Thread.Sleep(1);
-
-                                                this.Dispatcher.BeginInvoke(DispatcherPriority.Background, new DispatcherOperationCallback(delegate
-                                                {
-                                                    Run();
-
-                                                    return null;
-                                                }), null);
-                                            });
-
-                                            return;
-                                        }
-                                    }
-                                }
-
-                                this.LayoutRoot.Width = this.LayoutRoot.Height = this.Canvas.Width = this.Canvas.Height = 0;
-                                Close();
-                            }
-                        });
-
-                        storyboard.Children.Add(doubleAnimation);
-
-                        Storyboard.SetTargetProperty(doubleAnimation, new PropertyPath(Window.OpacityProperty));
-
-                        this.fadeStoryboardDictionary.Add(storyboard, this);
-                        this.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
-
-                        return;
+                        kvp.Key.Stop(kvp.Value);
                     }
-                    else
-                    {
-                        closeRequired = true;
-                    }
-                }
-            }
-            else
-            {
-                if (this.queue.Count > 0)
-                {
-                    if (this.queue.Peek() is Message && !isReady)
-                    {
-                        Task.Factory.StartNew(delegate
-                        {
-                            Thread.Sleep(1);
 
+                    this.fadeStoryboardDictionary.Clear();
+
+                    sineEase.EasingMode = EasingMode.EaseIn;
+
+                    doubleAnimation.EasingFunction = sineEase;
+                    doubleAnimation.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs e)
+                    {
+                        Clock clock = (Clock)s;
+
+                        if (clock.CurrentState == ClockState.Stopped && this.Opacity > 0)
+                        {
+                            this.isLast = false;
                             this.Dispatcher.BeginInvoke(DispatcherPriority.Background, new DispatcherOperationCallback(delegate
                             {
                                 Run();
 
                                 return null;
                             }), null);
-                        });
+                        }
+                        else if (clock.CurrentState == ClockState.Filling)
+                        {
+                            this.Opacity = 0;
+                            storyboard.Remove(this);
+                            this.fadeStoryboardDictionary.Remove(storyboard);
 
-                        return;
-                    }
+                            if (this == Application.Current.MainWindow || this.Owner != null)
+                            {
+                                foreach (Window window in Application.Current.Windows)
+                                {
+                                    Agent agent = window as Agent;
+
+                                    if (agent != null && agent.Opacity > 0)
+                                    {
+                                        Task.Factory.StartNew(delegate
+                                        {
+                                            Thread.Sleep(1);
+
+                                            this.Dispatcher.BeginInvoke(DispatcherPriority.Background, new DispatcherOperationCallback(delegate
+                                            {
+                                                Run();
+
+                                                return null;
+                                            }), null);
+                                        });
+
+                                        return;
+                                    }
+                                }
+                            }
+
+                            this.LayoutRoot.Width = this.LayoutRoot.Height = this.Canvas.Width = this.Canvas.Height = 0;
+                            Close();
+                        }
+                    });
+
+                    storyboard.Children.Add(doubleAnimation);
+
+                    Storyboard.SetTargetProperty(doubleAnimation, new PropertyPath(Window.OpacityProperty));
+
+                    this.fadeStoryboardDictionary.Add(storyboard, this);
+                    this.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
+
+                    return;
                 }
                 else
+                {
+                    closeRequired = true;
+                }
+            }
+            else if (this.queue.Count > 0)
+            {
+                if (this.queue.Peek() is Message && !isReady)
                 {
                     Task.Factory.StartNew(delegate
                     {
@@ -3913,6 +4069,22 @@ namespace Apricot
 
                     return;
                 }
+            }
+            else
+            {
+                Task.Factory.StartNew(delegate
+                {
+                    Thread.Sleep(1);
+
+                    this.Dispatcher.BeginInvoke(DispatcherPriority.Background, new DispatcherOperationCallback(delegate
+                    {
+                        Run();
+
+                        return null;
+                    }), null);
+                });
+
+                return;
             }
 
             if (closeRequired)
@@ -3956,26 +4128,19 @@ namespace Apricot
             }
         }
 
-        private void Animate(List<Motion> motionList, bool isRunning, System.Diagnostics.Stopwatch stopwatch, double frameRate, double maxFrameRate, double nextFrame, double nextRedrawFrame, Dictionary<Motion, Motion> switchDictionary, Dictionary<Motion, int> skipDictionary, long currentFrame, long maxFrames, List<Sprite> spriteList)
+        private void Animate(bool isRunning, System.Diagnostics.Stopwatch stopwatch, double frameRate, double maxFrameRate, double nextFrame, double nextRedrawFrame, Dictionary<Motion, Motion> switchDictionary, Dictionary<Motion, int> skipDictionary, long currentFrame, long maxFrames, List<Sprite> spriteList)
         {
             long elapsedMilliseconds = stopwatch.ElapsedMilliseconds;
 
             if (elapsedMilliseconds >= nextFrame)
             {
-                bool redrawRequired = false;
-
+                Sprite[] sprites = spriteList.ToArray();
+                
                 if (isRunning)
                 {
-                    currentFrame++;
-
                     if (switchDictionary.Count > 0 && this.cachedMotionList.TrueForAll(delegate (Motion motion)
                     {
-                        if (motion.Position == motion.Sprites.Count - 1)
-                        {
-                            return true;
-                        }
-
-                        return false;
+                        return motion.Position == motion.Sprites.Count - 1;
                     }))
                     {
                         foreach (KeyValuePair<Motion, Motion> kvp in switchDictionary)
@@ -3991,9 +4156,16 @@ namespace Apricot
 
                         switchDictionary.Clear();
                         skipDictionary.Clear();
+
+                        spriteList.Clear();
+                        this.cachedMotionList.ForEach(delegate (Motion motion)
+                        {
+                            spriteList.Add(motion.Current);
+                        });
                     }
                     else
                     {
+                        spriteList.Clear();
                         this.cachedMotionList.ForEach(delegate (Motion motion)
                         {
                             int skipFrames;
@@ -4004,162 +4176,28 @@ namespace Apricot
                                 frames += skipFrames * (int)Math.Round(maxFrameRate / motion.FrameRate);
                             }
 
-                            if (frames % (int)Math.Round(maxFrameRate / motion.FrameRate) == 0)
+                            if (frames % (int)Math.Round(maxFrameRate / motion.FrameRate) == 0 && !motion.Next() && motion.Repeats && switchDictionary.Count == 0)
                             {
-                                if (!motion.Next() && motion.Loop && switchDictionary.Count == 0)
-                                {
-                                    motion.Reset();
-                                }
-
-                                redrawRequired = true;
+                                motion.Reset();
                             }
-                        });
-                    }
 
-                    if (currentFrame < maxFrames && !spriteList.SequenceEqual(this.cachedMotionList.ConvertAll<Sprite>(delegate (Motion motion)
-                    {
-                        return motion.Current;
-                    })))
-                    {
-                        spriteList.Clear();
-                        this.cachedMotionList.ForEach(delegate (Motion motion)
-                        {
                             spriteList.Add(motion.Current);
                         });
-
-                        redrawRequired = true;
                     }
                 }
                 else
                 {
-                    int minZIndex = Int32.MaxValue;
-                    int maxZIndex = Int32.MinValue;
-                    List<Motion> previousMotionList = new List<Motion>(this.cachedMotionList);
-                    List<Sprite> cachedSpriteList = new List<Sprite>();
-
-                    this.cachedMotionList.Clear();
-
-                    previousMotionList.ForEach(delegate (Motion motion)
-                    {
-                        if (motion.ZIndex < minZIndex)
-                        {
-                            minZIndex = motion.ZIndex;
-                        }
-
-                        if (motion.ZIndex > maxZIndex)
-                        {
-                            maxZIndex = motion.ZIndex;
-                        }
-
-                        cachedSpriteList.Add(motion.Current);
-                    });
-                    motionList.ForEach(delegate (Motion motion)
-                    {
-                        if (motion.ZIndex < minZIndex)
-                        {
-                            minZIndex = motion.ZIndex;
-                        }
-
-                        if (motion.ZIndex > maxZIndex)
-                        {
-                            maxZIndex = motion.ZIndex;
-                        }
-                    });
-
-                    for (int i = minZIndex; i <= maxZIndex; i++)
-                    {
-                        List<Motion> motionList1 = previousMotionList.FindAll(delegate (Motion m)
-                        {
-                            if (i == m.ZIndex)
-                            {
-                                return true;
-                            }
-
-                            return false;
-                        });
-                        List<Motion> motionList2 = motionList.FindAll(delegate (Motion m)
-                        {
-                            if (i == m.ZIndex)
-                            {
-                                return true;
-                            }
-
-                            return false;
-                        });
-
-                        motionList1.ForEach(delegate (Motion m1)
-                        {
-                            Motion motion = null;
-                            Motion nextMotion = null;
-                            Motion m2 = motionList2.Find(delegate (Motion m)
-                            {
-                                return String.Equals(m.Type, m1.Type);
-                            });
-
-                            if (m2 != null)
-                            {
-                                if (m1 != m2 && m1.Position > 0 && m1.Position < m1.Sprites.Count - 1)
-                                {
-                                    nextMotion = (Motion)m2.Clone();
-                                }
-                                else
-                                {
-                                    motion = (Motion)m2.Clone();
-                                }
-
-                                motionList2.Remove(m2);
-                            }
-
-                            if (motion == null)
-                            {
-                                motion = (Motion)m1.Clone();
-                            }
-
-                            if (motion.FrameRate > maxFrameRate)
-                            {
-                                maxFrameRate = motion.FrameRate;
-                            }
-
-                            if (motion.Loop && motion.Position > 0)
-                            {
-                                skipDictionary.Add(motion, motion.Position);
-                            }
-
-                            if (nextMotion != null)
-                            {
-                                switchDictionary.Add(motion, nextMotion);
-                            }
-
-                            this.cachedMotionList.Add(motion);
-                        });
-                        motionList2.ForEach(delegate (Motion m2)
-                        {
-                            Motion motion = (Motion)m2.Clone();
-
-                            if (motion.FrameRate > maxFrameRate)
-                            {
-                                maxFrameRate = motion.FrameRate;
-                            }
-
-                            if (motion.Loop && motion.Position > 0)
-                            {
-                                skipDictionary.Add(motion, motion.Position);
-                            }
-
-                            this.cachedMotionList.Add(motion);
-                        });
-                    }
-
+                    spriteList.Clear();
                     this.cachedMotionList.ForEach(delegate (Motion motion)
                     {
-                        long frames = 0;
+                        long frames;
                         Motion m;
 
                         if (switchDictionary.TryGetValue(motion, out m))
                         {
                             frames = (motion.Sprites.Count - motion.Position) * (int)Math.Round(maxFrameRate / motion.FrameRate);
 
-                            if (m.Loop)
+                            if (m.Repeats)
                             {
                                 frames += (int)Math.Round(maxFrameRate / m.FrameRate);
                             }
@@ -4168,16 +4206,13 @@ namespace Apricot
                                 frames += m.Sprites.Count * (int)Math.Round(maxFrameRate / m.FrameRate);
                             }
                         }
+                        else if (motion.Repeats)
+                        {
+                            frames = (int)Math.Round(maxFrameRate / motion.FrameRate);
+                        }
                         else
                         {
-                            if (motion.Loop)
-                            {
-                                frames = (int)Math.Round(maxFrameRate / motion.FrameRate);
-                            }
-                            else
-                            {
-                                frames = (motion.Sprites.Count - motion.Position) * (int)Math.Round(maxFrameRate / motion.FrameRate);
-                            }
+                            frames = (motion.Sprites.Count - motion.Position) * (int)Math.Round(maxFrameRate / motion.FrameRate);
                         }
 
                         if (frames > maxFrames)
@@ -4187,7 +4222,6 @@ namespace Apricot
 
                         spriteList.Add(motion.Current);
                     });
-                    redrawRequired = !spriteList.SequenceEqual(cachedSpriteList);
 
                     if (frameRate > maxFrameRate)
                     {
@@ -4197,7 +4231,7 @@ namespace Apricot
 
                 if (elapsedMilliseconds >= nextRedrawFrame)
                 {
-                    if (stopwatch.ElapsedMilliseconds < nextRedrawFrame + 1000 / frameRate && redrawRequired)
+                    if (!spriteList.SequenceEqual(sprites) && stopwatch.ElapsedMilliseconds < nextRedrawFrame + 1000 / frameRate)
                     {
                         Render();
                     }
@@ -4215,7 +4249,7 @@ namespace Apricot
 
                     this.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new DispatcherOperationCallback(delegate
                     {
-                        Animate(motionList, true, stopwatch, frameRate, maxFrameRate, nextFrame, nextRedrawFrame, switchDictionary, skipDictionary, currentFrame, maxFrames, spriteList);
+                        Animate(true, stopwatch, frameRate, maxFrameRate, nextFrame, nextRedrawFrame, switchDictionary, skipDictionary, currentFrame, maxFrames, spriteList);
 
                         return null;
                     }), null);
@@ -4224,11 +4258,13 @@ namespace Apricot
                 return;
             }
 
+            currentFrame++;
+
             if (currentFrame < maxFrames)
             {
                 this.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new DispatcherOperationCallback(delegate
                 {
-                    Animate(motionList, true, stopwatch, frameRate, maxFrameRate, nextFrame, nextRedrawFrame, switchDictionary, skipDictionary, currentFrame, maxFrames, spriteList);
+                    Animate(true, stopwatch, frameRate, maxFrameRate, nextFrame, nextRedrawFrame, switchDictionary, skipDictionary, currentFrame, maxFrames, spriteList);
 
                     return null;
                 }), null);

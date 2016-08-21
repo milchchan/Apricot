@@ -70,12 +70,7 @@ namespace Apricot
 
         public bool Any()
         {
-            if (this.segmentList.Count == 0)
-            {
-                return false;
-            }
-
-            return true;
+            return this.segmentList.Count > 0;
         }
 
         public void Add(object o)

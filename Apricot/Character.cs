@@ -94,12 +94,7 @@ namespace Apricot
         {
             get
             {
-                if (this.typeCollection.Count == 0)
-                {
-                    return false;
-                }
-
-                return true;
+                return this.typeCollection.Count > 0;
             }
         }
 

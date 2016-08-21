@@ -81,7 +81,7 @@ namespace Apricot
                 while (uriQueue.Count > 0 && taskQueue.Count < 2 * Environment.ProcessorCount)
                 {
                     WebRequest webRequest = WebRequest.Create(uriQueue.Dequeue());
-                    Task<IEnumerable<Entry>> task = new Task<IEnumerable<Entry>>(delegate(object state)
+                    Task<IEnumerable<Entry>> task = new Task<IEnumerable<Entry>>(delegate (object state)
                     {
                         WebRequest request = (WebRequest)state;
                         WebResponse response = null;
@@ -194,7 +194,7 @@ namespace Apricot
                     connection.ConnectionString = settings.ConnectionString;
                     connection.Open();
 
-                    this.entryList.ForEach(delegate(Entry entry)
+                    this.entryList.ForEach(delegate (Entry entry)
                     {
                         if (entry.Resource != null)
                         {

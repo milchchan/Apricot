@@ -24,12 +24,7 @@ namespace Apricot
         {
             get
             {
-                if (this.attributeCollection.Count == 0)
-                {
-                    return false;
-                }
-
-                return true;
+                return this.attributeCollection.Count > 0;
             }
         }
 

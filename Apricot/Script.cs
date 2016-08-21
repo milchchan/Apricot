@@ -22,7 +22,7 @@ namespace Apricot
 	{
         public event EventHandler Start = null;
         public event EventHandler Stop = null;
-        private static readonly Lazy<Script> instance = new Lazy<Script>(delegate { return new Script(); });
+        private static readonly Script instance = new Script();
         private readonly long activateThreshold = Int64.MaxValue;
         private bool isEnabled = false;
         private System.Windows.Threading.DispatcherTimer pollingTimer = null;
@@ -43,7 +43,7 @@ namespace Apricot
         {
             get
             {
-                return instance.Value;
+                return instance;
             }
         }
 
@@ -913,7 +913,7 @@ namespace Apricot
 
                                 while (motionQueue.Count > 0)
                                 {
-                                    if (dequeuedMotion.Loop == motionQueue.Peek().Loop)
+                                    if (dequeuedMotion.Repeats == motionQueue.Peek().Repeats)
                                     {
                                         tempMotionList.Add(motionQueue.Dequeue());
                                     }
@@ -1029,9 +1029,9 @@ namespace Apricot
 
             foreach (XmlAttribute motionAttribute in motionNode.Attributes)
             {
-                if (motionAttribute.Name.Equals("loop"))
+                if (motionAttribute.Name.Equals("repeats"))
                 {
-                    motion.Loop = Boolean.Parse(motionAttribute.Value);
+                    motion.Repeats = Boolean.Parse(motionAttribute.Value);
                 }
                 else if (motionAttribute.Name.Equals("fps"))
                 {
@@ -1470,12 +1470,7 @@ namespace Apricot
                 List<Entry> cachedEntryList = (from entry in entryDictionary.Values orderby entry.Modified descending select entry).ToList();
                 List<Entry> recentEntryList = cachedEntryList.FindAll(delegate(Entry entry)
                 {
-                    if (entry.Modified > nowDateTime - new TimeSpan(12, 0, 0) && entry.Modified <= nowDateTime)
-                    {
-                        return true;
-                    }
-
-                    return false;
+                    return entry.Modified > nowDateTime - new TimeSpan(12, 0, 0) && entry.Modified <= nowDateTime;
                 });
                 Dictionary<string, double> idfDictionary = GetInverseDocumentFrequency(termDictionary, cachedEntryList);
                 Dictionary<Uri, double[]> vectorDictionary = new Dictionary<Uri, double[]>();
@@ -1492,12 +1487,7 @@ namespace Apricot
 
                     recentEntryList.AddRange(cachedEntryList.FindAll(delegate(Entry entry)
                     {
-                        if (entry.Modified <= dt)
-                        {
-                            return true;
-                        }
-
-                        return false;
+                        return entry.Modified <= dt;
                     }));
 
                     if (recentEntryList.Count > 25)
@@ -1583,11 +1573,8 @@ namespace Apricot
 
                     filter.Reset();
                     filter.Train(filter.MaxIterations);
-                }
-
-                if (filter.IsTrained)
-                {
                     filter.Build();
+
                     recentEntryList.ForEach(delegate(Entry entry)
                     {
                         List<Entry> similarEntryList = new List<Entry>();
@@ -2343,7 +2330,7 @@ namespace Apricot
 
         public bool TryEnqueue(IEnumerable<Sequence> sequences)
         {
-            var query = from sequence in sequences where this.characterCollection.Any(x => x.Name.Equals(sequence.Owner)) select sequence;
+            var query = from sequence in sequences where this.characterCollection.Any(character => character.Name.Equals(sequence.Owner)) select sequence;
 
             if (!query.Any())
             {
@@ -2379,7 +2366,7 @@ namespace Apricot
 
         public void Idle()
         {
-            foreach (Sequence sequence in from sequence in Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Idle") select sequence, null) where this.characterCollection.Any(x => x.Name.Equals(sequence.Owner)) select sequence)
+            foreach (Sequence sequence in from sequence in Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Idle") select sequence, null) where this.characterCollection.Any(character => character.Name.Equals(sequence.Owner)) select sequence)
             {
                 this.sequenceQueue.Enqueue(sequence);
             }
@@ -2650,7 +2637,7 @@ namespace Apricot
                 Sequence[] sequences = collection.ToArray();
                 Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
 
-                if (query.Any(x => x == sequence) || sequenceHashSet.Contains(sequence))
+                if (query.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                 {
                     foreach (object o in sequence)
                     {
@@ -2853,7 +2840,7 @@ namespace Apricot
                 Sequence[] sequences = collection.ToArray();
                 Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
 
-                if (query.Any(x => x == sequence) || sequenceHashSet.Contains(sequence))
+                if (query.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                 {
                     foreach (object o in sequence)
                     {
@@ -2999,7 +2986,7 @@ namespace Apricot
                 Sequence[] sequences = collection.ToArray();
                 Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
 
-                if (query.Any(x => x == sequence) || sequenceHashSet.Contains(sequence))
+                if (query.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                 {
                     foreach (object o in sequence)
                     {
@@ -3294,7 +3281,7 @@ namespace Apricot
                     Sequence[] sequences = collection.ToArray();
                     Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
 
-                    if (q.Any(x => x == sequence) || sequenceHashSet.Contains(sequence))
+                    if (q.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                     {
                         foreach (object o in sequence)
                         {
@@ -3498,7 +3485,7 @@ namespace Apricot
                 Sequence[] sequences = collection.ToArray();
                 Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
 
-                if (query.Any(x => x == sequence) || sequenceHashSet.Contains(sequence))
+                if (query.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                 {
                     foreach (object o in sequence)
                     {

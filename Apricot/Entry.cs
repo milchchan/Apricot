@@ -147,12 +147,7 @@ namespace Apricot
         {
             get
             {
-                if (this.tagCollection.Count == 0)
-                {
-                    return false;
-                }
-
-                return true;
+                return this.tagCollection.Count > 0;
             }
         }
 
@@ -172,12 +167,7 @@ namespace Apricot
         {
             get
             {
-                if (this.similarEntryCollection.Count == 0)
-                {
-                    return false;
-                }
-
-                return true;
+                return this.similarEntryCollection.Count > 0;
             }
         }
 
@@ -197,12 +187,7 @@ namespace Apricot
         {
             get
             {
-                if (this.imageUriQueue != null && this.imageUriQueue.Count >= 2)
-                {
-                    return true;
-                }
-
-                return false;
+                return this.imageUriQueue != null && this.imageUriQueue.Count >= 2;
             }
         }
 
