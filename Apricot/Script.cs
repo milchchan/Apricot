@@ -2351,13 +2351,24 @@ namespace Apricot
         {
             sequence = null;
 
-            if (this.sequenceQueue.Count > 0)
+            while (this.sequenceQueue.Count > 0)
             {
                 if (this.sequenceQueue.Peek().Owner.Equals(name))
                 {
                     sequence = this.sequenceQueue.Dequeue();
 
                     return true;
+                }
+                else if (this.characterCollection.Any(delegate(Character character)
+                {
+                    return character.Name.Equals(this.sequenceQueue.Peek().Owner);
+                }))
+                {
+                    break;
+                }
+                else
+                {
+                    this.sequenceQueue.Dequeue();
                 }
             }
 
