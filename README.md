@@ -1,1 +1,1 @@
-Please see http://apricot.moe for more information.
+Please see http://kawatan.net for more information.
