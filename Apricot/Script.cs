@@ -15,10 +15,7 @@ using System.Xml.Serialization;
 
 namespace Apricot
 {
-	/// <summary>
-	/// Summary description for Script.
-	/// </summary>
-    public sealed class Script
+	public sealed class Script
 	{
         public event EventHandler Start = null;
         public event EventHandler Stop = null;
@@ -161,9 +158,6 @@ namespace Apricot
 
         private Script()
         {
-            //
-            // TODO: Add constructor logic here
-            //
             this.characterCollection = new Collection<Character>();
             this.wordCollection = new Collection<Word>();
             this.sequenceCollection = new Collection<Sequence>();
@@ -2351,13 +2345,24 @@ namespace Apricot
         {
             sequence = null;
 
-            if (this.sequenceQueue.Count > 0)
+            while (this.sequenceQueue.Count > 0)
             {
                 if (this.sequenceQueue.Peek().Owner.Equals(name))
                 {
                     sequence = this.sequenceQueue.Dequeue();
 
                     return true;
+                }
+                else if (this.characterCollection.Any(delegate(Character character)
+                {
+                    return character.Name.Equals(this.sequenceQueue.Peek().Owner);
+                }))
+                {
+                    break;
+                }
+                else
+                {
+                    this.sequenceQueue.Dequeue();
                 }
             }
 

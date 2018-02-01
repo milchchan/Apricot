@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.IO;
 using System.Data;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
-using Microsoft.Scripting.Hosting;
 
 namespace Apricot
 {
@@ -14,51 +13,7 @@ namespace Apricot
     /// </summary>
     public partial class App : Application
     {
-        private ScriptRuntime runtime = null;
         private bool sessionEnding = false;
-
-        public App()
-        {
-            Configuration config = null;
-            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
-
-            if (Directory.Exists(directory))
-            {
-                string fileName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where String.Equals(fileName, Path.GetFileNameWithoutExtension(s)) select s)
-                {
-                    ExeConfigurationFileMap exeConfigurationFileMap = new ExeConfigurationFileMap();
-
-                    exeConfigurationFileMap.ExeConfigFilename = s;
-                    config = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None);
-                }
-            }
-
-            if (config == null)
-            {
-                config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                directory = null;
-            }
-
-            if (config.AppSettings.Settings["Scripts"] != null)
-            {
-                this.runtime = new ScriptRuntime(ScriptRuntimeSetup.ReadConfiguration());
-
-                foreach (string fileName in Directory.GetFiles(directory == null ? config.AppSettings.Settings["Scripts"].Value : Path.Combine(directory, config.AppSettings.Settings["Scripts"].Value)))
-                {
-                    ScriptEngine engine;
-
-                    if (this.runtime.TryGetEngineByFileExtension(Path.GetExtension(fileName), out engine))
-                    {
-                        ScriptSource source = engine.CreateScriptSourceFromFile(fileName);
-                        CompiledCode code = source.Compile();
-
-                        code.Execute(this.runtime.CreateScope());
-                    }
-                }
-            }
-        }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -96,11 +51,6 @@ namespace Apricot
             if (!this.sessionEnding)
             {
                 Script.Instance.Save();
-
-                if (this.runtime != null)
-                {
-                    this.runtime.Shutdown();
-                }
             }
         }
 
@@ -111,11 +61,6 @@ namespace Apricot
             this.MainWindow.Close();
 
             Script.Instance.Save();
-
-            if (this.runtime != null)
-            {
-                this.runtime.Shutdown();
-            }
 
             this.sessionEnding = true;
         }

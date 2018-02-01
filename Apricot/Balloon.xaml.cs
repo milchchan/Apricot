@@ -675,6 +675,7 @@ namespace Apricot
 
                         if (message.Attachments.Count > (this.selectedPosition.Value + this.numberOfLines) && message.Attachments.Count - (this.selectedPosition.Value + this.numberOfLines) < this.numberOfLines)
                         {
+                            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                             double x = 0;
                             int messageLines = 0;
                             bool isBreaked = true;
@@ -711,7 +712,7 @@ namespace Apricot
                                 {
                                     int length;
 
-                                    if (dictionary.TryGetValue(i, out length) && x + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
+                                    if (dictionary.TryGetValue(i, out length) && x + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
                                     {
                                         lineStringBuilder.Clear();
                                         x = 0;
@@ -735,7 +736,7 @@ namespace Apricot
                                         isBreaked = true;
                                         isReseted = true;
                                     }
-                                    else if (x + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
+                                    else if (x + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
                                     {
                                         if (lineStringBuilder.Length - 1 > 0)
                                         {
@@ -755,7 +756,7 @@ namespace Apricot
 
                                 if (lineStringBuilder.Length > 0)
                                 {
-                                    x += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace);
+                                    x += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                                     isBreaked = false;
                                     isReseted = false;
                                 }
@@ -784,6 +785,7 @@ namespace Apricot
                     if (this.selectedPosition.HasValue)
                     {
                         Message message = this.messageCollection[this.historyPoint.Value];
+                        double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                         double x = 0;
                         int messageLines = 0;
                         bool isBreaked = true;
@@ -820,7 +822,7 @@ namespace Apricot
                             {
                                 int length;
 
-                                if (dictionary.TryGetValue(i, out length) && x + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
+                                if (dictionary.TryGetValue(i, out length) && x + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
                                 {
                                     lineStringBuilder.Clear();
                                     x = 0;
@@ -844,7 +846,7 @@ namespace Apricot
                                     isBreaked = true;
                                     isReseted = true;
                                 }
-                                else if (x + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
+                                else if (x + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
                                 {
                                     if (lineStringBuilder.Length - 1 > 0)
                                     {
@@ -864,7 +866,7 @@ namespace Apricot
 
                             if (lineStringBuilder.Length > 0)
                             {
-                                x += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace);
+                                x += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                                 isBreaked = false;
                                 isReseted = false;
                             }
@@ -888,6 +890,7 @@ namespace Apricot
                 if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     Message message = this.messageCollection[this.historyPoint.Value];
+                    double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                     double x = 0;
                     int messageLines = 0;
                     bool isBreaked = true;
@@ -924,7 +927,7 @@ namespace Apricot
                         {
                             int length;
 
-                            if (dictionary.TryGetValue(i, out length) && x + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
+                            if (dictionary.TryGetValue(i, out length) && x + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
                             {
                                 lineStringBuilder.Clear();
                                 x = 0;
@@ -950,7 +953,7 @@ namespace Apricot
                             }
                             else
                             {
-                                if (x + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
+                                if (x + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
                                 {
                                     if (lineStringBuilder.Length - 1 > 0)
                                     {
@@ -971,7 +974,7 @@ namespace Apricot
 
                         if (lineStringBuilder.Length > 0)
                         {
-                            x += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace);
+                            x += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                             isBreaked = false;
                             isReseted = false;
                         }
@@ -1108,6 +1111,7 @@ namespace Apricot
                     if (!this.inspectorEntry.HasMultipleImages)
                     {
                         const double space = 10;
+                        double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                         double x = 0;
 
                         foreach (string tag in this.inspectorEntry.Tags)
@@ -1120,7 +1124,7 @@ namespace Apricot
                                 dictionary.Add(match.Index, match.Length);
                             }
 
-                            if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
+                            if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
                             {
                                 stopRequired = false;
 
@@ -1131,7 +1135,7 @@ namespace Apricot
                             {
                                 int length;
 
-                                if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
+                                if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
                                 {
                                     stopRequired = false;
 
@@ -1146,7 +1150,7 @@ namespace Apricot
 
                                     break;
                                 }
-                                else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                                else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                 {
                                     stopRequired = false;
 
@@ -1161,7 +1165,7 @@ namespace Apricot
 
                             if (lineStringBuilder.Length > 0)
                             {
-                                x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace);
+                                x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                             }
                         }
                     }
@@ -1787,7 +1791,7 @@ namespace Apricot
             {
                 Message message = this.messageCollection[this.historyPoint.Value];
                 bool stopRequired = true;
-                
+
                 if (this.messageBuffer.Length < this.targetMessageLength)
                 {
                     int index = this.messageBuffer.Length;
@@ -1918,6 +1922,7 @@ namespace Apricot
             else if (sender == this.switchTimer && this.inspectorEntry != null)
             {
                 const double space = 10;
+                double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                 double x = 0;
 
                 if (this.inspectorEntry.HasMultipleImages)
@@ -1945,7 +1950,7 @@ namespace Apricot
                         dictionary.Add(match.Index, match.Length);
                     }
 
-                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
+                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
                     {
                         this.circulationQueue.Enqueue(1);
 
@@ -1956,7 +1961,7 @@ namespace Apricot
                     {
                         int length;
 
-                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
+                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
                         {
                             isCirculatable = true;
 
@@ -1971,7 +1976,7 @@ namespace Apricot
 
                             break;
                         }
-                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                         {
                             isCirculatable = true;
 
@@ -1988,7 +1993,7 @@ namespace Apricot
 
                     if (lineStringBuilder.Length > 0)
                     {
-                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace);
+                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                     }
                 }
             }
@@ -2166,6 +2171,7 @@ namespace Apricot
                                 Lazy<List<Point>> inlinePointList = new Lazy<List<Point>>(() =>
                                 {
                                     Point location = new Point(0, 0);
+                                    double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                                     bool isBreaked = true;
                                     List<Point> pointList = new List<Point>();
                                     bool isReseted = true;
@@ -2201,11 +2207,11 @@ namespace Apricot
                                         {
                                             int length;
 
-                                            if (dictionary.TryGetValue(i, out length) && location.X + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
+                                            if (dictionary.TryGetValue(i, out length) && location.X + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
                                             {
                                                 if (lineStringBuilder.Length > 0)
                                                 {
-                                                    pointList.Add(new Point(location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace), location.Y));
+                                                    pointList.Add(new Point(location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace), location.Y));
                                                 }
 
                                                 lineStringBuilder.Clear();
@@ -2222,7 +2228,7 @@ namespace Apricot
 
                                                 if (lineStringBuilder.Length > 0)
                                                 {
-                                                    pointList.Add(new Point(location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace), location.Y));
+                                                    pointList.Add(new Point(location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace), location.Y));
                                                     lineStringBuilder.Remove(0, lineStringBuilder.Length);
                                                 }
                                                 else
@@ -2238,11 +2244,11 @@ namespace Apricot
                                             }
                                             else
                                             {
-                                                if (location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
+                                                if (location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
                                                 {
                                                     if (lineStringBuilder.Length - 1 > 0)
                                                     {
-                                                        pointList.Add(new Point(location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace), location.Y));
+                                                        pointList.Add(new Point(location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace), location.Y));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length - 1);
                                                     }
                                                     else
@@ -2264,7 +2270,7 @@ namespace Apricot
 
                                         if (lineStringBuilder.Length > 0)
                                         {
-                                            location.X += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace);
+                                            location.X += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                                             pointList.Add(location);
                                             isBreaked = false;
                                             isReseted = false;
@@ -2476,6 +2482,7 @@ namespace Apricot
                                     int usedLines = messageLines - minScrollIndex;
                                     Point baseLocation = new Point(0, -this.lineHeight * Math.Min(minScrollIndex, messageLines));
                                     Point location = new Point(0, 0);
+                                    double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                                     bool isReseted = true;
                                     int inlineIndex1 = 0;
                                     int inlineIndex2 = 0;
@@ -2796,7 +2803,7 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && ((maxY.HasValue ? location.Y + this.lineHeight < maxY.Value : true) ? location.X + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > inlinePointList.Value.Aggregate<Point, double>(0, (width, point) =>
+                                                if (dictionary.TryGetValue(i, out length) && ((maxY.HasValue ? location.Y + this.lineHeight < maxY.Value : true) ? location.X + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inlinePointList.Value.Aggregate<Point, double>(0, (width, point) =>
                                                 {
                                                     if (point.X > width && point.Y == location.Y)
                                                     {
@@ -2804,11 +2811,11 @@ namespace Apricot
                                                     }
 
                                                     return width;
-                                                }) : location.X + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width) && !isReseted)
+                                                }) : location.X + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width) && !isReseted)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<Point, FormattedText>(location, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush)));
+                                                        list.Add(new KeyValuePair<Point, FormattedText>(location, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip)));
                                                     }
 
                                                     lineStringBuilder.Clear();
@@ -2824,7 +2831,7 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<Point, FormattedText>(location, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush)));
+                                                        list.Add(new KeyValuePair<Point, FormattedText>(location, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length);
                                                     }
 
@@ -2832,7 +2839,7 @@ namespace Apricot
                                                     location.Y += this.lineHeight;
                                                     isReseted = true;
                                                 }
-                                                else if (((maxY.HasValue ? location.Y + this.lineHeight < maxY.Value : true) ? location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > inlinePointList.Value.Aggregate<Point, double>(0, (width, point) =>
+                                                else if (((maxY.HasValue ? location.Y + this.lineHeight < maxY.Value : true) ? location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inlinePointList.Value.Aggregate<Point, double>(0, (width, point) =>
                                                 {
                                                     if (point.X > width && point.Y == location.Y)
                                                     {
@@ -2840,11 +2847,11 @@ namespace Apricot
                                                     }
 
                                                     return width;
-                                                }) : location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width))
+                                                }) : location.X + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width))
                                                 {
                                                     if (lineStringBuilder.Length - 1 > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<Point, FormattedText>(location, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush)));
+                                                        list.Add(new KeyValuePair<Point, FormattedText>(location, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length - 1);
                                                     }
 
@@ -2860,7 +2867,7 @@ namespace Apricot
 
                                             if (lineStringBuilder.Length > 0 && (maxY.HasValue ? location.Y < maxY.Value : true))
                                             {
-                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush);
+                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip);
 
                                                 list.Add(new KeyValuePair<Point, FormattedText>(location, formattedText));
                                                 location.X += Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace);
@@ -3007,7 +3014,7 @@ namespace Apricot
 
                                                                 if (sb.Length > 0)
                                                                 {
-                                                                    FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush);
+                                                                    FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip);
 
                                                                     height = Math.Max(height, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -3129,7 +3136,7 @@ namespace Apricot
 
                                                                         if (sb.Length > 0)
                                                                         {
-                                                                            FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush);
+                                                                            FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip);
 
                                                                             if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                             {
@@ -3213,7 +3220,7 @@ namespace Apricot
 
                                                             if (sb.Length > 0)
                                                             {
-                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush);
+                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip);
 
                                                                 height = Math.Max(height, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -3513,6 +3520,7 @@ namespace Apricot
                                         bool imageIsUpdating = false;
                                         bool isImcomplete = false;
                                         int canvasIndex = this.cachedInlineImageDictionary.Count;
+                                        double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                                         HashSet<UIElement> hashSet = new HashSet<UIElement>();
 
                                         if (offset < 0)
@@ -3997,7 +4005,7 @@ namespace Apricot
 
                                                                 if (translateTransform != null)
                                                                 {
-                                                                    FormattedText formattedText = new FormattedText(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                                    FormattedText formattedText = new FormattedText(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                                     translateTransform.X = scrollStep2.HasValue ? -(formattedText.WidthIncludingTrailingWhitespace > formattedText.Width ? Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace) - Math.Floor(formattedText.OverhangLeading) : formattedText.OverhangTrailing < 0 ? Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing) : Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading)) * Math.Sin(scrollStep2.Value / 2 * Math.PI) : 0;
                                                                 }
@@ -4013,7 +4021,7 @@ namespace Apricot
                                                         else
                                                         {
                                                             int index = i;
-                                                            FormattedText formattedText = new FormattedText(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                            FormattedText formattedText = new FormattedText(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
                                                             double width1 = formattedText.WidthIncludingTrailingWhitespace > formattedText.Width ? Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace) - Math.Floor(formattedText.OverhangLeading) : formattedText.OverhangTrailing < 0 ? Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing) : Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading);
                                                             double width2 = Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing);
                                                             double height = formattedText.OverhangAfter > 0 ? formattedText.Height + formattedText.OverhangAfter : formattedText.Height;
@@ -4809,7 +4817,7 @@ namespace Apricot
 
                                     if (this.cachedCounterCanvas == null)
                                     {
-                                        FormattedText formattedText = new FormattedText(this.messageCollection[this.historyPoint.Value].Attachments.Count.ToString(System.Globalization.CultureInfo.CurrentCulture), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush);
+                                        FormattedText formattedText = new FormattedText(this.messageCollection[this.historyPoint.Value].Attachments.Count.ToString(System.Globalization.CultureInfo.CurrentCulture), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
                                         double width = Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing);
                                         double height = formattedText.OverhangAfter > 0 ? formattedText.Height + formattedText.OverhangAfter : formattedText.Height;
                                         DropShadowEffect dropShadowEffect = new DropShadowEffect();
@@ -5473,6 +5481,7 @@ namespace Apricot
                                             else
                                             {
                                                 const double space = 10;
+                                                double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                                                 double x = 0;
 
                                                 foreach (string tag in this.inspectorEntry.Tags)
@@ -5485,7 +5494,7 @@ namespace Apricot
                                                         dictionary.Add(match.Index, match.Length);
                                                     }
 
-                                                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
+                                                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
                                                     {
                                                         this.switchTimer.Start();
 
@@ -5496,7 +5505,7 @@ namespace Apricot
                                                     {
                                                         int length;
 
-                                                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
+                                                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
                                                         {
                                                             this.switchTimer.Start();
 
@@ -5511,7 +5520,7 @@ namespace Apricot
 
                                                             break;
                                                         }
-                                                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                                                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                                         {
                                                             this.switchTimer.Start();
 
@@ -5526,7 +5535,7 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace);
+                                                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                                                     }
                                                 }
                                             }
@@ -5622,13 +5631,14 @@ namespace Apricot
                                         else
                                         {
                                             const double space = 10;
+                                            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                                             double x = 0;
                                             int lines = 0;
 
                                             foreach (string tag in this.inspectorEntry.Tags)
                                             {
                                                 Dictionary<int, int> dictionary = new Dictionary<int, int>();
-                                                FormattedText formattedText = new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                FormattedText formattedText = new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
                                                 StringBuilder lineStringBuilder = new StringBuilder();
 
                                                 foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(tag, @"[\p{IsBasicLatin}-[\s]]+\s?"))
@@ -5640,7 +5650,7 @@ namespace Apricot
                                                 {
                                                     int length;
 
-                                                    if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                                                    if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                                     {
                                                         lineStringBuilder.Clear();
                                                         x = 0;
@@ -5661,7 +5671,7 @@ namespace Apricot
                                                         x = 0;
                                                         lines++;
                                                     }
-                                                    else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                                                    else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                                     {
                                                         if (lineStringBuilder.Length - 1 > 0)
                                                         {
@@ -5675,7 +5685,7 @@ namespace Apricot
 
                                                 if (lineStringBuilder.Length > 0)
                                                 {
-                                                    double width = space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace);
+                                                    double width = space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
 
                                                     if (x + width > this.baseWidth - 74)
                                                     {
@@ -5939,8 +5949,9 @@ namespace Apricot
                                         string title = String.IsNullOrEmpty(this.inspectorEntry.Title) && this.inspectorEntry.Resource != null ? this.inspectorEntry.Resource.ToString() : this.inspectorEntry.Title;
                                         bool isEmpty = this.InspectorCanvas.Children.Count == 0;
                                         Size size = new Size(this.baseWidth - 12, this.Canvas.Height - Canvas.GetTop(this.ScrollCanvas) - this.ScrollCanvas.Height - this.baseFooterHeight + 12);
+                                        double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                                         double textWidth = size.Width - 30 - imageRect.Width;
-
+                                        
                                         if (!String.IsNullOrEmpty(title))
                                         {
                                             List<KeyValuePair<double, FormattedText>> list = new List<KeyValuePair<double, FormattedText>>();
@@ -5961,11 +5972,11 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), title.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > titleWidth && !isReseted)
+                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), title.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth && !isReseted)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                         list.Add(new KeyValuePair<double, FormattedText>(y, formattedText));
 
@@ -5989,7 +6000,7 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                         list.Add(new KeyValuePair<double, FormattedText>(y, formattedText));
 
@@ -6006,11 +6017,11 @@ namespace Apricot
                                                     y += lineHeight;
                                                     isBreaked = true;
                                                 }
-                                                else if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > titleWidth)
+                                                else if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth)
                                                 {
                                                     if (lineStringBuilder.Length - 1 > 0)
                                                     {
-                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                         list.Add(new KeyValuePair<double, FormattedText>(y, formattedText));
 
@@ -6035,7 +6046,7 @@ namespace Apricot
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                 list.Add(new KeyValuePair<double, FormattedText>(y, formattedText));
 
@@ -6129,7 +6140,7 @@ namespace Apricot
 
                                                             if (sb.Length > 0)
                                                             {
-                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                                 if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                 {
@@ -6192,7 +6203,7 @@ namespace Apricot
 
                                                     if (sb.Length > 0)
                                                     {
-                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                         height = Math.Max(height, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -6418,16 +6429,16 @@ namespace Apricot
 
                                                 lineStringBuilder.Append(authority[i]);
 
-                                                if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
+                                                if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
                                                 {
-                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush));
+                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip));
                                                     lineStringBuilder.Remove(0, safeLineLength);
                                                 }
                                             }
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush));
+                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip));
                                             }
 
                                             if (this.subtitleScrollStep.HasValue)
@@ -6506,7 +6517,7 @@ namespace Apricot
 
                                                             if (sb.Length > 0)
                                                             {
-                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                                 if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                 {
@@ -6569,7 +6580,7 @@ namespace Apricot
 
                                                     if (sb.Length > 0)
                                                     {
-                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                         height = Math.Max(height, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -6730,11 +6741,11 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), this.inspectorEntry.Author.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > textWidth)
+                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), this.inspectorEntry.Author.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
                                                     }
 
                                                     lineStringBuilder.Clear();
@@ -6751,7 +6762,7 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length);
                                                     }
 
@@ -6759,11 +6770,11 @@ namespace Apricot
                                                     height1 += this.lineHeight;
                                                     isBreaked = true;
                                                 }
-                                                else if (lineStringBuilder.Length > 0 && Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > textWidth)
+                                                else if (lineStringBuilder.Length > 0 && Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length - 1 > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length - 1);
                                                     }
 
@@ -6775,7 +6786,7 @@ namespace Apricot
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush)));
+                                                list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
                                                 height1 += this.lineHeight;
                                                 isBreaked = false;
                                             }
@@ -6861,7 +6872,7 @@ namespace Apricot
 
                                                             if (sb.Length > 0)
                                                             {
-                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                                 if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                 {
@@ -6924,7 +6935,7 @@ namespace Apricot
 
                                                     if (sb.Length > 0)
                                                     {
-                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                         height2 = Math.Max(height2, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -7080,11 +7091,11 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), modified.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush).WidthIncludingTrailingWhitespace) > textWidth)
+                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), modified.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush));
+                                                        list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
                                                     }
 
                                                     lineStringBuilder.Clear();
@@ -7094,16 +7105,16 @@ namespace Apricot
 
                                                 lineStringBuilder.Append(modified[i]);
 
-                                                if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
+                                                if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
                                                 {
-                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush));
+                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
                                                     lineStringBuilder.Remove(0, safeLineLength);
                                                 }
                                             }
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush));
+                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
                                             }
 
                                             list.ForEach(delegate (FormattedText formattedText)
@@ -7184,16 +7195,16 @@ namespace Apricot
 
                                                 lineStringBuilder.Append(score[i]);
 
-                                                if (space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
+                                                if (space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
                                                 {
-                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush));
+                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
                                                     lineStringBuilder.Remove(0, safeLineLength);
                                                 }
                                             }
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush));
+                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
                                             }
 
                                             list.ForEach(delegate (FormattedText formattedText)
@@ -7304,7 +7315,7 @@ namespace Apricot
                                                 dictionary.Add(match.Index, match.Length);
                                             }
 
-                                            if (nextPoint.X + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > textWidth && nextPoint.X != 0)
+                                            if (nextPoint.X + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && nextPoint.X != 0)
                                             {
                                                 nextPoint.X = 0;
                                                 lines++;
@@ -7314,11 +7325,11 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && nextPoint.X + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > textWidth)
+                                                if (dictionary.TryGetValue(i, out length) && nextPoint.X + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
                                                     }
 
                                                     lineStringBuilder.Clear();
@@ -7333,17 +7344,17 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length);
                                                     }
 
                                                     nextPoint.X = 0;
                                                 }
-                                                else if (lineStringBuilder.Length > 0 && nextPoint.X + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > textWidth)
+                                                else if (lineStringBuilder.Length > 0 && nextPoint.X + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length - 1 > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length - 1);
                                                     }
 
@@ -7353,7 +7364,7 @@ namespace Apricot
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                 list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, formattedText));
                                                 nextPoint.X += space + Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace);
@@ -7440,7 +7451,7 @@ namespace Apricot
 
                                                                 if (sb.Length > 0)
                                                                 {
-                                                                    FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                                    FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                                     if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                     {
@@ -7566,7 +7577,7 @@ namespace Apricot
 
                                                     if (sb.Length > 0)
                                                     {
-                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush);
+                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
 
                                                         height = Math.Max(height, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -8745,6 +8756,7 @@ namespace Apricot
         {
             Size messageSize = new Size(0, 0);
             double x = 0;
+            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             bool isBreaked = true;
             int lineLength = 0;
             bool isReseted = true;
@@ -8780,11 +8792,11 @@ namespace Apricot
                 {
                     int length;
 
-                    if (dictionary.TryGetValue(i, out length) && x + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
+                    if (dictionary.TryGetValue(i, out length) && x + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), inline.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width && !isReseted)
                     {
                         if (lineStringBuilder.Length > 0)
                         {
-                            FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush);
+                            FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip);
 
                             if (x + Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace - formattedText.OverhangLeading - formattedText.OverhangTrailing) > messageSize.Width)
                             {
@@ -8806,7 +8818,7 @@ namespace Apricot
 
                         if (lineStringBuilder.Length > 0)
                         {
-                            FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush);
+                            FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip);
 
                             if (x + Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace) > messageSize.Width)
                             {
@@ -8821,11 +8833,11 @@ namespace Apricot
                         isBreaked = true;
                         isReseted = true;
                     }
-                    else if (x + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
+                    else if (x + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.maxMessageSize.Width)
                     {
                         if (lineStringBuilder.Length - 1 > 0)
                         {
-                            FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush);
+                            FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip);
 
                             if (x + Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace) > messageSize.Width)
                             {
@@ -8848,7 +8860,7 @@ namespace Apricot
 
                 if (lineStringBuilder.Length > 0)
                 {
-                    x += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush).WidthIncludingTrailingWhitespace);
+                    x += Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, brush, pixelsPerDip).WidthIncludingTrailingWhitespace);
 
                     if (x > messageSize.Width)
                     {
@@ -8882,6 +8894,7 @@ namespace Apricot
             Size iconSize = new Size(6, 6);
             string title = String.IsNullOrEmpty(entry.Title) && entry.Resource != null ? entry.Resource.ToString() : entry.Title;
             Size inspectorSize = new Size(this.baseWidth - 12, imageSize.Height / 2);
+            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
             if (!String.IsNullOrEmpty(title))
             {
@@ -8902,7 +8915,7 @@ namespace Apricot
                 {
                     int length;
 
-                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), title.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > titleWidth && !isReseted)
+                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), title.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth && !isReseted)
                     {
                         lineStringBuilder.Clear();
                         lines++;
@@ -8924,7 +8937,7 @@ namespace Apricot
                         isBreaked = true;
                         isReseted = true;
                     }
-                    else if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > titleWidth)
+                    else if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth)
                     {
                         if (lineStringBuilder.Length - 1 > 0)
                         {
@@ -8961,7 +8974,7 @@ namespace Apricot
 
                     lineStringBuilder.Append(authority[i]);
 
-                    if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         if (safeLineLength > 0)
                         {
@@ -8996,7 +9009,7 @@ namespace Apricot
                 {
                     int length;
 
-                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), entry.Author.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), entry.Author.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         lineStringBuilder.Clear();
                         lines++;
@@ -9017,7 +9030,7 @@ namespace Apricot
                         lines++;
                         isBreaked = true;
                     }
-                    else if (lineStringBuilder.Length > 0 && Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    else if (lineStringBuilder.Length > 0 && Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         if (lineStringBuilder.Length - 1 > 0)
                         {
@@ -9053,7 +9066,7 @@ namespace Apricot
                 {
                     int length;
 
-                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), modified.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), modified.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         lineStringBuilder.Clear();
                         lines++;
@@ -9063,7 +9076,7 @@ namespace Apricot
 
                     lineStringBuilder.Append(modified[i]);
 
-                    if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         if (safeLineLength > 0)
                         {
@@ -9094,7 +9107,7 @@ namespace Apricot
 
                     lineStringBuilder.Append(score[i]);
 
-                    if (space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         if (safeLineLength > 0)
                         {
@@ -9371,10 +9384,10 @@ namespace Apricot
                 }
                 else
                 {
-                    System.Security.Cryptography.SHA1CryptoServiceProvider sha1 = new System.Security.Cryptography.SHA1CryptoServiceProvider();
+                    System.Security.Cryptography.SHA512CryptoServiceProvider sha512 = new System.Security.Cryptography.SHA512CryptoServiceProvider();
                     StringBuilder stringBuilder = new StringBuilder();
 
-                    foreach (byte b in sha1.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
+                    foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
                     {
                         stringBuilder.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
                     }

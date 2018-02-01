@@ -3,9 +3,6 @@ using System.Collections.ObjectModel;
 
 namespace Apricot
 {
-    /// <summary>
-    /// Summary description for Motion.
-    /// </summary>
     public class Motion : ICloneable
     {
         private bool isRepeat = false;

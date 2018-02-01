@@ -532,7 +532,7 @@ namespace Apricot
                                 }
 
                                 charactersMenuItem.Items.Add(selectedMenuItem);
-                                
+
                                 List<MenuItem> childMenuItemList = new List<MenuItem>();
                                 Dictionary<string, SortedSet<int>> dictionary = new Dictionary<string, SortedSet<int>>();
                                 List<string> motionTypeList = new List<string>();
@@ -559,7 +559,7 @@ namespace Apricot
                                         }
                                     }
                                 });
-                                
+
                                 motionTypeList.Sort(delegate (string s1, string s2)
                                 {
                                     return String.Compare(s1, s2, StringComparison.CurrentCulture);
@@ -2235,7 +2235,7 @@ namespace Apricot
         protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
         {
             base.OnMouseDoubleClick(e);
-            
+
             var query = from image in this.Canvas.Children.Cast<Image>() let motion = image.Tag as Motion where motion != null && e.OriginalSource == image select motion;
 
             if (query.Any())
@@ -3658,7 +3658,7 @@ namespace Apricot
                             return null;
                         }), null);
                     });
-                    
+
                     return;
                 }
 
@@ -3940,7 +3940,7 @@ namespace Apricot
                                 this.cachedMotionList.Add(motion);
                             });
                         }
-                        
+
                         this.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new DispatcherOperationCallback(delegate
                         {
                             Animate(false, System.Diagnostics.Stopwatch.StartNew(), this.frameRate, maxFrameRate, 0, 0, switchDictionary, skipDictionary, 0, 0, cachedSpriteList);
@@ -3948,7 +3948,7 @@ namespace Apricot
                             return null;
                         }), null);
                     }, TaskScheduler.FromCurrentSynchronizationContext());
-                    
+
                     return;
                 }
             }
@@ -4135,7 +4135,7 @@ namespace Apricot
             if (elapsedMilliseconds >= nextFrame)
             {
                 Sprite[] sprites = spriteList.ToArray();
-                
+
                 if (isRunning)
                 {
                     if (switchDictionary.Count > 0 && this.cachedMotionList.TrueForAll(delegate (Motion motion)
