@@ -2010,9 +2010,10 @@ namespace Apricot
 
                 if (frameRate >= 1)
                 {
-                    int limit = (int)Math.Round(this.frameRate);
-
                     this.frameRateList.Add(frameRate > this.frameRate / 10 ? frameRate : this.frameRate / 10);
+
+                    double averageFrameRate = this.frameRateList.Average();
+                    int limit = (int)Math.Round(averageFrameRate);
 
                     if (this.frameRateList.Count > limit)
                     {
@@ -2021,7 +2022,6 @@ namespace Apricot
 
                     if (this.IsVisible)
                     {
-                        double averageFrameRate = this.frameRateList.Average();
                         bool isReady = this.isReady;
 
                         if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count && this.targetSize.Width == this.Canvas.Width && this.targetSize.Height == this.Canvas.Height && this.inspectorFadeStep == null && this.inspectorEntry != this.nextInspectorEntry && this.nextInspectorEntry == null)
