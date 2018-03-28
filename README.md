@@ -5,7 +5,7 @@ Inspired by fed news articles, a character speaks to you in a way that human bei
 
 # Features
 
-* User Interface (UI) based on WPF
+* User Interface based on WPF
 * Generating messages based on machine leraning
 * Describing an character using flexible character markup language
 
