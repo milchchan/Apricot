@@ -17,8 +17,8 @@ namespace Apricot
 {
 	public sealed class Script
 	{
-        public event EventHandler Start = null;
-        public event EventHandler Stop = null;
+        public event EventHandler<EventArgs> Start = null;
+        public event EventHandler<EventArgs> Stop = null;
         private static readonly Script instance = new Script();
         private readonly long activateThreshold = Int64.MaxValue;
         private bool isEnabled = false;
