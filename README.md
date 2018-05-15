@@ -1,3 +1,5 @@
+![Screenshot](https://user-images.githubusercontent.com/246691/40046950-1da37be0-5869-11e8-97cb-3e0de44c36e9.png "Screenshot")
+
 # Apricot
 
 This repository contains Apricot implementation for Windows. Apricot is a desktop mascot who reads RSS/Atom news feeds and add comments on the news one by one.
