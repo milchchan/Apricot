@@ -408,7 +408,21 @@ namespace Apricot
 
                     foreach (Character character in Script.Instance.Characters)
                     {
-                        string path = Path.IsPathRooted(character.Script) ? character.Script : Path.GetFullPath(character.Script);
+                        string path;
+
+                        if (Path.IsPathRooted(character.Script))
+                        {
+                            path = character.Script;
+                        }
+                        else
+                        {
+                            path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), character.Script);
+
+                            if (!File.Exists(path))
+                            {
+                                path = Path.GetFullPath(character.Script);
+                            }
+                        }
 
                         if (!pathHashSet.Contains(path))
                         {
@@ -1495,6 +1509,7 @@ namespace Apricot
                         bool isCleared;
                         bool isOwner = true;
                         Nullable<Point> point = null;
+                        string directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
                         foreach (Nullable<Point> p in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select new Nullable<Point>(new Point(agent.Left - character.Location.X - character.BaseLocation.X, agent.Top - character.Location.Y - character.BaseLocation.Y)))
                         {
@@ -1576,7 +1591,14 @@ namespace Apricot
                                 return character.Script.Equals(path);
                             }))
                             {
-                                pathList.Add(character.Script);
+                                if (Path.IsPathRooted(character.Script))
+                                {
+                                    pathList.Add(character.Script);
+                                }
+                                else
+                                {
+                                    pathList.Add(Path.Combine(directory, character.Script));
+                                }
                             }
 
                             Script.Instance.Characters.Add(character);
@@ -3327,12 +3349,27 @@ namespace Apricot
                             {
                                 Task.Factory.StartNew(delegate
                                 {
+                                    string path;
                                     FileStream fs = null;
                                     Stream s = null;
+                                    
+                                    if (Path.IsPathRooted(v.Script))
+                                    {
+                                        path = v.Script;
+                                    }
+                                    else
+                                    {
+                                        path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), v.Script);
+
+                                        if (!File.Exists(path))
+                                        {
+                                            path = v.Script;
+                                        }
+                                    }
 
                                     try
                                     {
-                                        fs = new FileStream(v.Script, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                        fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                         using (ZipArchive zipArchive = new ZipArchive(fs))
                                         {
@@ -3365,7 +3402,19 @@ namespace Apricot
                             {
                                 Task.Factory.StartNew(delegate (object state)
                                 {
-                                    using (System.Media.SoundPlayer soundPlayer = new System.Media.SoundPlayer((string)state))
+                                    string path = (string)state;
+
+                                    if (!Path.IsPathRooted(path))
+                                    {
+                                        string p = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), path);
+
+                                        if (File.Exists(p))
+                                        {
+                                            path = p;
+                                        }
+                                    }
+
+                                    using (System.Media.SoundPlayer soundPlayer = new System.Media.SoundPlayer(path))
                                     {
                                         soundPlayer.Load();
                                         soundPlayer.PlaySync();
@@ -3408,7 +3457,7 @@ namespace Apricot
                     int minZIndex = Int32.MaxValue;
                     int maxZIndex = Int32.MinValue;
                     Dictionary<int, List<Motion>> motionDictionary = new Dictionary<int, List<Motion>>();
-                    Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> tempDictionary = new Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>>();
+                    List<Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>>> contentList = new List<Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>>>();
                     HashSet<DoubleAnimation> animationHashSet = new HashSet<DoubleAnimation>();
                     CountdownEvent countdownEvent = new CountdownEvent(1);
 
@@ -3429,6 +3478,8 @@ namespace Apricot
 
                     foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                     {
+                        Dictionary<string, Tuple<string, MemoryStream>> dictionary = new Dictionary<string, Tuple<string, MemoryStream>>();
+
                         motionList1.ForEach(delegate (Motion motion)
                         {
                             List<Motion> motionList2;
@@ -3455,100 +3506,127 @@ namespace Apricot
                             {
                                 string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), path) : Path.Combine(Path.GetDirectoryName(character.Script), path);
 
-                                if (!tempDictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
+                                if (!dictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
                                 {
-                                    tempDictionary.Add(key, new KeyValuePair<KeyValuePair<string, string>, MemoryStream>(new KeyValuePair<string, string>(character.Script, path), new MemoryStream()));
+                                    dictionary.Add(key, Tuple.Create<string, MemoryStream>(path, new MemoryStream()));
                                 }
                             }
                         });
+
+                        contentList.Add(Tuple.Create<string, Dictionary<string, Tuple<string, MemoryStream>>>(character.Script, dictionary));
                     }
 
                     Task.Factory.StartNew(delegate
                     {
-                        foreach (KeyValuePair<KeyValuePair<string, string>, MemoryStream> kvp in tempDictionary.Values)
+                        contentList.ForEach(delegate (Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>> tuple1)
                         {
-                            if (Path.GetExtension(kvp.Key.Key).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                            string path;
+
+                            if (Path.IsPathRooted(tuple1.Item1))
                             {
-                                FileStream fs = null;
+                                path = tuple1.Item1;
+                            }
+                            else
+                            {
+                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), tuple1.Item1);
 
-                                try
+                                if (!File.Exists(path))
                                 {
-                                    fs = new FileStream(kvp.Key.Key, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                    path = tuple1.Item1;
+                                }
+                            }
 
-                                    using (ZipArchive zipArchive = new ZipArchive(fs))
+                            if (Path.GetExtension(tuple1.Item1).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                            {
+                                foreach (Tuple<string, MemoryStream> tuple2 in tuple1.Item2.Values)
+                                {
+                                    FileStream fs = null;
+
+                                    try
                                     {
-                                        fs = null;
+                                        fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-                                        ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(kvp.Key.Value);
-
-                                        using (Stream stream = zipArchiveEntry.Open())
+                                        using (ZipArchive zipArchive = new ZipArchive(fs))
                                         {
-                                            byte[] buffer = new byte[zipArchiveEntry.Length];
-                                            int bytesRead;
+                                            fs = null;
 
-                                            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                                            ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(tuple2.Item1);
+
+                                            using (Stream stream = zipArchiveEntry.Open())
                                             {
-                                                kvp.Value.Write(buffer, 0, bytesRead);
-                                            }
+                                                byte[] buffer = new byte[zipArchiveEntry.Length];
+                                                int bytesRead;
 
-                                            kvp.Value.Seek(0, SeekOrigin.Begin);
+                                                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                                                {
+                                                    tuple2.Item2.Write(buffer, 0, bytesRead);
+                                                }
+
+                                                tuple2.Item2.Seek(0, SeekOrigin.Begin);
+                                            }
                                         }
                                     }
-                                }
-                                finally
-                                {
-                                    if (fs != null)
+                                    finally
                                     {
-                                        fs.Close();
+                                        if (fs != null)
+                                        {
+                                            fs.Close();
+                                        }
                                     }
                                 }
                             }
                             else
                             {
-                                using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(kvp.Key.Key), kvp.Key.Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                foreach (Tuple<string, MemoryStream> tuple2 in tuple1.Item2.Values)
                                 {
-                                    byte[] buffer = new byte[fs.Length];
-                                    int bytesRead;
-
-                                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                                    using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(path), tuple2.Item1), FileMode.Open, FileAccess.Read, FileShare.Read))
                                     {
-                                        kvp.Value.Write(buffer, 0, bytesRead);
-                                    }
+                                        byte[] buffer = new byte[fs.Length];
+                                        int bytesRead;
 
-                                    kvp.Value.Seek(0, SeekOrigin.Begin);
+                                        while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                                        {
+                                            tuple2.Item2.Write(buffer, 0, bytesRead);
+                                        }
+
+                                        tuple2.Item2.Seek(0, SeekOrigin.Begin);
+                                    }
                                 }
                             }
-                        }
+                        });
                     }).ContinueWith(delegate
                     {
-                        foreach (KeyValuePair<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> kvp in tempDictionary)
+                        contentList.ForEach(delegate (Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>> tuple1)
                         {
-                            BitmapImage bitmapImage;
-
-                            if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
+                            foreach (KeyValuePair<string, Tuple<string, MemoryStream>> kvp in tuple1.Item2)
                             {
-                                try
-                                {
-                                    bitmapImage = new BitmapImage();
-                                    bitmapImage.BeginInit();
-                                    bitmapImage.StreamSource = kvp.Value.Value;
-                                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                                    bitmapImage.CreateOptions = BitmapCreateOptions.None;
-                                    bitmapImage.EndInit();
+                                BitmapImage bitmapImage;
 
-                                    if (bitmapImage.CanFreeze)
+                                if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
+                                {
+                                    try
                                     {
-                                        bitmapImage.Freeze();
-                                    }
+                                        bitmapImage = new BitmapImage();
+                                        bitmapImage.BeginInit();
+                                        bitmapImage.StreamSource = kvp.Value.Item2;
+                                        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                                        bitmapImage.CreateOptions = BitmapCreateOptions.None;
+                                        bitmapImage.EndInit();
 
-                                    this.cachedBitmapImageDictionary.Add(kvp.Key, bitmapImage);
-                                }
-                                finally
-                                {
-                                    kvp.Value.Value.Close();
+                                        if (bitmapImage.CanFreeze)
+                                        {
+                                            bitmapImage.Freeze();
+                                        }
+
+                                        this.cachedBitmapImageDictionary.Add(kvp.Key, bitmapImage);
+                                    }
+                                    finally
+                                    {
+                                        kvp.Value.Item2.Close();
+                                    }
                                 }
                             }
-                        }
+                        });
 
                         for (int i = minZIndex; i <= maxZIndex; i++)
                         {
@@ -3684,11 +3762,13 @@ namespace Apricot
                     int minZIndex = Int32.MaxValue;
                     int maxZIndex = Int32.MinValue;
                     HashSet<int> zIndexHashSet = new HashSet<int>();
-                    Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> tempDictionary = new Dictionary<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>>();
+                    List<Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>>> contentList = new List<Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>>>();
                     HashSet<string> keyHashSet = new HashSet<string>();
 
                     foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                     {
+                        Dictionary<string, Tuple<string, MemoryStream>> dictionary = new Dictionary<string, Tuple<string, MemoryStream>>();
+
                         motionList1.ForEach(delegate (Motion motion)
                         {
                             if (motion.ZIndex < minZIndex)
@@ -3710,9 +3790,9 @@ namespace Apricot
                             {
                                 string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), path) : Path.Combine(Path.GetDirectoryName(character.Script), path);
 
-                                if (!tempDictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
+                                if (!dictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
                                 {
-                                    tempDictionary.Add(key, new KeyValuePair<KeyValuePair<string, string>, MemoryStream>(new KeyValuePair<string, string>(character.Script, path), new MemoryStream()));
+                                    dictionary.Add(key, Tuple.Create<string, MemoryStream>(path, new MemoryStream()));
                                 }
 
                                 if (!keyHashSet.Contains(key))
@@ -3721,64 +3801,88 @@ namespace Apricot
                                 }
                             }
                         });
+
+                        contentList.Add(Tuple.Create<string, Dictionary<string, Tuple<string, MemoryStream>>>(character.Script, dictionary));
                     }
 
                     Task.Factory.StartNew(delegate
                     {
-                        foreach (KeyValuePair<KeyValuePair<string, string>, MemoryStream> kvp in tempDictionary.Values)
+                        contentList.ForEach(delegate (Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>> tuple1)
                         {
-                            if (Path.GetExtension(kvp.Key.Key).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                            string path;
+
+                            if (Path.IsPathRooted(tuple1.Item1))
                             {
-                                FileStream fs = null;
+                                path = tuple1.Item1;
+                            }
+                            else
+                            {
+                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), tuple1.Item1);
 
-                                try
+                                if (!File.Exists(path))
                                 {
-                                    fs = new FileStream(kvp.Key.Key, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                    path = tuple1.Item1;
+                                }
+                            }
 
-                                    using (ZipArchive zipArchive = new ZipArchive(fs))
+                            if (Path.GetExtension(tuple1.Item1).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                            {
+                                foreach (Tuple<string, MemoryStream> tuple2 in tuple1.Item2.Values)
+                                {
+                                    FileStream fs = null;
+
+                                    try
                                     {
-                                        fs = null;
+                                        fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-                                        ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(kvp.Key.Value);
-
-                                        using (Stream stream = zipArchiveEntry.Open())
+                                        using (ZipArchive zipArchive = new ZipArchive(fs))
                                         {
-                                            byte[] buffer = new byte[zipArchiveEntry.Length];
-                                            int bytesRead;
+                                            fs = null;
 
-                                            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                                            ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(tuple2.Item1);
+
+                                            using (Stream stream = zipArchiveEntry.Open())
                                             {
-                                                kvp.Value.Write(buffer, 0, bytesRead);
-                                            }
+                                                byte[] buffer = new byte[zipArchiveEntry.Length];
+                                                int bytesRead;
 
-                                            kvp.Value.Seek(0, SeekOrigin.Begin);
+                                                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                                                {
+                                                    tuple2.Item2.Write(buffer, 0, bytesRead);
+                                                }
+
+                                                tuple2.Item2.Seek(0, SeekOrigin.Begin);
+                                            }
                                         }
                                     }
-                                }
-                                finally
-                                {
-                                    if (fs != null)
+                                    finally
                                     {
-                                        fs.Close();
+                                        if (fs != null)
+                                        {
+                                            fs.Close();
+                                        }
                                     }
                                 }
                             }
                             else
                             {
-                                using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(kvp.Key.Key), kvp.Key.Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                foreach (Tuple<string, MemoryStream> tuple2 in tuple1.Item2.Values)
                                 {
-                                    byte[] buffer = new byte[fs.Length];
-                                    int bytesRead;
-
-                                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                                    using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(path), tuple2.Item1), FileMode.Open, FileAccess.Read, FileShare.Read))
                                     {
-                                        kvp.Value.Write(buffer, 0, bytesRead);
-                                    }
+                                        byte[] buffer = new byte[fs.Length];
+                                        int bytesRead;
 
-                                    kvp.Value.Seek(0, SeekOrigin.Begin);
+                                        while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                                        {
+                                            tuple2.Item2.Write(buffer, 0, bytesRead);
+                                        }
+
+                                        tuple2.Item2.Seek(0, SeekOrigin.Begin);
+                                    }
                                 }
                             }
-                        }
+                        });
                     }).ContinueWith(delegate
                     {
                         List<Motion> previousMotionList = new List<Motion>();
@@ -3787,34 +3891,37 @@ namespace Apricot
                         Dictionary<Motion, int> skipDictionary = new Dictionary<Motion, int>();
                         Dictionary<Motion, Motion> switchDictionary = new Dictionary<Motion, Motion>();
 
-                        foreach (KeyValuePair<string, KeyValuePair<KeyValuePair<string, string>, MemoryStream>> kvp in tempDictionary)
+                        contentList.ForEach(delegate (Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>> tuple1)
                         {
-                            BitmapImage bitmapImage;
-
-                            if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
+                            foreach (KeyValuePair<string, Tuple<string, MemoryStream>> kvp in tuple1.Item2)
                             {
-                                try
-                                {
-                                    bitmapImage = new BitmapImage();
-                                    bitmapImage.BeginInit();
-                                    bitmapImage.StreamSource = kvp.Value.Value;
-                                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                                    bitmapImage.CreateOptions = BitmapCreateOptions.None;
-                                    bitmapImage.EndInit();
+                                BitmapImage bitmapImage;
 
-                                    if (bitmapImage.CanFreeze)
+                                if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
+                                {
+                                    try
                                     {
-                                        bitmapImage.Freeze();
-                                    }
+                                        bitmapImage = new BitmapImage();
+                                        bitmapImage.BeginInit();
+                                        bitmapImage.StreamSource = kvp.Value.Item2;
+                                        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                                        bitmapImage.CreateOptions = BitmapCreateOptions.None;
+                                        bitmapImage.EndInit();
 
-                                    this.cachedBitmapImageDictionary.Add(kvp.Key, bitmapImage);
-                                }
-                                finally
-                                {
-                                    kvp.Value.Value.Close();
+                                        if (bitmapImage.CanFreeze)
+                                        {
+                                            bitmapImage.Freeze();
+                                        }
+
+                                        this.cachedBitmapImageDictionary.Add(kvp.Key, bitmapImage);
+                                    }
+                                    finally
+                                    {
+                                        kvp.Value.Item2.Close();
+                                    }
                                 }
                             }
-                        }
+                        });
 
                         foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                         {

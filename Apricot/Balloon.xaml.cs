@@ -315,9 +315,24 @@ namespace Apricot
             }
             else
             {
+                string path;
                 BitmapImage bi = new BitmapImage();
 
-                using (FileStream fs = new FileStream(directory == null ? config.AppSettings.Settings["BackgroundImage"].Value : System.IO.Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                if (directory == null)
+                {
+                    path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config.AppSettings.Settings["BackgroundImage"].Value);
+
+                    if (File.Exists(path))
+                    {
+                        path = config.AppSettings.Settings["BackgroundImage"].Value;
+                    }
+                }
+                else
+                {
+                    path = System.IO.Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value);
+                }
+
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     bi.BeginInit();
                     bi.StreamSource = fs;

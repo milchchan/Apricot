@@ -272,57 +272,126 @@ namespace Apricot
             if (config == null)
             {
                 config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                directory = null;
-            }
+                directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-            if (config.AppSettings.Settings["Words"] != null)
-            {
-                using (FileStream fs = new FileStream(directory == null ? config.AppSettings.Settings["Words"].Value : Path.Combine(directory, config.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                if (config.AppSettings.Settings["Words"] != null)
                 {
-                    XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+                    string path = Path.Combine(directory, config.AppSettings.Settings["Words"].Value);
 
-                    foreach (Word word in (Word[])serializer.Deserialize(fs))
+                    using (FileStream fs = new FileStream(File.Exists(path) ? path : config.AppSettings.Settings["Words"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        this.wordCollection.Add(word);
-                    }
-                }
-            }
+                        XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
 
-            if (config.AppSettings.Settings["Characters"] != null)
-            {
-                List<string> pathList = new List<string>();
-
-                using (FileStream fs = new FileStream(directory == null ? config.AppSettings.Settings["Characters"].Value : Path.Combine(directory, config.AppSettings.Settings["Characters"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
-
-                    foreach (Character character in (Character[])serializer.Deserialize(fs))
-                    {
-                        if (!pathList.Exists(delegate(string path)
+                        foreach (Word word in (Word[])serializer.Deserialize(fs))
                         {
-                            if (Path.IsPathRooted(path) && !Path.IsPathRooted(character.Script))
-                            {
-                                return Path.GetFullPath(character.Script).Equals(path);
-                            }
-                            else if (!Path.IsPathRooted(path) && Path.IsPathRooted(character.Script))
-                            {
-                                return character.Script.Equals(Path.GetFullPath(path));
-                            }
-
-                            return character.Script.Equals(path);
-                        }))
-                        {
-                            pathList.Add(character.Script);
+                            this.wordCollection.Add(word);
                         }
-
-                        this.characterCollection.Add(character);
                     }
                 }
 
-                pathList.ForEach(delegate(string path)
+                if (config.AppSettings.Settings["Characters"] != null)
                 {
-                    Parse(path);
-                });
+                    string path1 = Path.Combine(directory, config.AppSettings.Settings["Characters"].Value);
+                    List<string> pathList = new List<string>();
+
+                    using (FileStream fs = new FileStream(File.Exists(path1) ? path1 : config.AppSettings.Settings["Characters"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+
+                        foreach (Character character in (Character[])serializer.Deserialize(fs))
+                        {
+                            if (!pathList.Exists(delegate (string path2)
+                            {
+                                if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
+                                {
+                                    return Path.GetFullPath(character.Script).Equals(path2);
+                                }
+                                else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
+                                {
+                                    return character.Script.Equals(Path.GetFullPath(path2));
+                                }
+
+                                return character.Script.Equals(path2);
+                            }))
+                            {
+                                if (Path.IsPathRooted(character.Script))
+                                {
+                                    pathList.Add(character.Script);
+                                }
+                                else
+                                {
+                                    pathList.Add(Path.Combine(directory, character.Script));
+                                }
+                            }
+
+                            this.characterCollection.Add(character);
+                        }
+                    }
+
+                    pathList.ForEach(delegate (string path)
+                    {
+                        Parse(path);
+                    });
+                }
+            }
+            else
+            {
+                if (config.AppSettings.Settings["Words"] != null)
+                {
+                    using (FileStream fs = new FileStream(Path.Combine(directory, config.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+
+                        foreach (Word word in (Word[])serializer.Deserialize(fs))
+                        {
+                            this.wordCollection.Add(word);
+                        }
+                    }
+                }
+
+                if (config.AppSettings.Settings["Characters"] != null)
+                {
+                    List<string> pathList = new List<string>();
+
+                    using (FileStream fs = new FileStream(Path.Combine(directory, config.AppSettings.Settings["Characters"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+
+                        foreach (Character character in (Character[])serializer.Deserialize(fs))
+                        {
+                            if (!pathList.Exists(delegate (string path)
+                            {
+                                if (Path.IsPathRooted(path) && !Path.IsPathRooted(character.Script))
+                                {
+                                    return Path.GetFullPath(character.Script).Equals(path);
+                                }
+                                else if (!Path.IsPathRooted(path) && Path.IsPathRooted(character.Script))
+                                {
+                                    return character.Script.Equals(Path.GetFullPath(path));
+                                }
+
+                                return character.Script.Equals(path);
+                            }))
+                            {
+                                if (Path.IsPathRooted(character.Script))
+                                {
+                                    pathList.Add(character.Script);
+                                }
+                                else
+                                {
+                                    pathList.Add(Path.Combine(directory, character.Script));
+                                }
+                            }
+
+                            this.characterCollection.Add(character);
+                        }
+                    }
+
+                    pathList.ForEach(delegate (string path)
+                    {
+                        Parse(path);
+                    });
+                }
             }
         }
 
@@ -347,84 +416,167 @@ namespace Apricot
             if (config == null)
             {
                 config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                directory = null;
-            }
+                directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-            if (config.AppSettings.Settings["Characters"] != null)
-            {
-                foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
+                if (config.AppSettings.Settings["Characters"] != null)
                 {
-                    List<string> typeList = character.Types.ToList();
-
-                    typeList.Sort(delegate(string s1, string s2)
+                    foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
                     {
-                        return String.Compare(s1, s2, StringComparison.InvariantCulture);
-                    });
-                    character.Types.Clear();
-                    typeList.ForEach(delegate(string type)
-                    {
-                        character.Types.Add(type);
-                    });
-                }
+                        List<string> typeList = character.Types.ToList();
 
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    Character[] characters = this.characterCollection.ToArray();
-                    XmlSerializer serializer = new XmlSerializer(characters.GetType());
-
-                    serializer.Serialize(ms, characters);
-                    ms.Seek(0, SeekOrigin.Begin);
-
-                    using (FileStream fs = new FileStream(directory == null ? config.AppSettings.Settings["Characters"].Value : Path.Combine(directory, config.AppSettings.Settings["Characters"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
-                    {
-                        byte[] buffer = ms.ToArray();
-
-                        fs.Write(buffer, 0, buffer.Length);
-                        fs.Flush();
-                    }
-                }
-            }
-
-            if (config.AppSettings.Settings["Words"] != null)
-            {
-                List<Word> wordList = this.wordCollection.ToList();
-
-                wordList.ForEach(delegate(Word word)
-                {
-                    if (word.HasAttributes)
-                    {
-                        List<string> attributeList = word.Attributes.ToList();
-
-                        attributeList.Sort(delegate(string s1, string s2)
+                        typeList.Sort(delegate (string s1, string s2)
                         {
                             return String.Compare(s1, s2, StringComparison.InvariantCulture);
                         });
-                        word.Attributes.Clear();
-                        attributeList.ForEach(delegate(string attribute)
+                        character.Types.Clear();
+                        typeList.ForEach(delegate (string type)
                         {
-                            word.Attributes.Add(attribute);
+                            character.Types.Add(type);
                         });
                     }
-                });
-                wordList.Sort(delegate(Word w1, Word w2)
-                {
-                    return String.Compare(w1.Name, w2.Name, StringComparison.InvariantCulture);
-                });
 
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    Word[] words = wordList.ToArray();
-                    XmlSerializer serializer = new XmlSerializer(words.GetType());
-
-                    serializer.Serialize(ms, words);
-                    ms.Seek(0, SeekOrigin.Begin);
-
-                    using (FileStream fs = new FileStream(directory == null ? config.AppSettings.Settings["Words"].Value : Path.Combine(directory, config.AppSettings.Settings["Words"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                    using (MemoryStream ms = new MemoryStream())
                     {
-                        byte[] buffer = ms.ToArray();
+                        Character[] characters = this.characterCollection.ToArray();
+                        XmlSerializer serializer = new XmlSerializer(characters.GetType());
+                        string path = Path.Combine(directory, config.AppSettings.Settings["Characters"].Value);
 
-                        fs.Write(buffer, 0, buffer.Length);
-                        fs.Flush();
+                        serializer.Serialize(ms, characters);
+                        ms.Seek(0, SeekOrigin.Begin);
+                        
+                        using (FileStream fs = new FileStream(File.Exists(path) ? path : config.AppSettings.Settings["Characters"].Value, FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                    }
+                }
+
+                if (config.AppSettings.Settings["Words"] != null)
+                {
+                    List<Word> wordList = this.wordCollection.ToList();
+
+                    wordList.ForEach(delegate (Word word)
+                    {
+                        if (word.HasAttributes)
+                        {
+                            List<string> attributeList = word.Attributes.ToList();
+
+                            attributeList.Sort(delegate (string s1, string s2)
+                            {
+                                return String.Compare(s1, s2, StringComparison.InvariantCulture);
+                            });
+                            word.Attributes.Clear();
+                            attributeList.ForEach(delegate (string attribute)
+                            {
+                                word.Attributes.Add(attribute);
+                            });
+                        }
+                    });
+                    wordList.Sort(delegate (Word w1, Word w2)
+                    {
+                        return String.Compare(w1.Name, w2.Name, StringComparison.InvariantCulture);
+                    });
+
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        Word[] words = wordList.ToArray();
+                        XmlSerializer serializer = new XmlSerializer(words.GetType());
+                        string path = Path.Combine(directory, config.AppSettings.Settings["Words"].Value);
+
+                        serializer.Serialize(ms, words);
+                        ms.Seek(0, SeekOrigin.Begin);
+
+                        using (FileStream fs = new FileStream(File.Exists(path) ? path : config.AppSettings.Settings["Words"].Value, FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (config.AppSettings.Settings["Characters"] != null)
+                {
+                    foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
+                    {
+                        List<string> typeList = character.Types.ToList();
+
+                        typeList.Sort(delegate (string s1, string s2)
+                        {
+                            return String.Compare(s1, s2, StringComparison.InvariantCulture);
+                        });
+                        character.Types.Clear();
+                        typeList.ForEach(delegate (string type)
+                        {
+                            character.Types.Add(type);
+                        });
+                    }
+
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        Character[] characters = this.characterCollection.ToArray();
+                        XmlSerializer serializer = new XmlSerializer(characters.GetType());
+
+                        serializer.Serialize(ms, characters);
+                        ms.Seek(0, SeekOrigin.Begin);
+
+                        using (FileStream fs = new FileStream(Path.Combine(directory, config.AppSettings.Settings["Characters"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                    }
+                }
+
+                if (config.AppSettings.Settings["Words"] != null)
+                {
+                    List<Word> wordList = this.wordCollection.ToList();
+
+                    wordList.ForEach(delegate (Word word)
+                    {
+                        if (word.HasAttributes)
+                        {
+                            List<string> attributeList = word.Attributes.ToList();
+
+                            attributeList.Sort(delegate (string s1, string s2)
+                            {
+                                return String.Compare(s1, s2, StringComparison.InvariantCulture);
+                            });
+                            word.Attributes.Clear();
+                            attributeList.ForEach(delegate (string attribute)
+                            {
+                                word.Attributes.Add(attribute);
+                            });
+                        }
+                    });
+                    wordList.Sort(delegate (Word w1, Word w2)
+                    {
+                        return String.Compare(w1.Name, w2.Name, StringComparison.InvariantCulture);
+                    });
+
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        Word[] words = wordList.ToArray();
+                        XmlSerializer serializer = new XmlSerializer(words.GetType());
+
+                        serializer.Serialize(ms, words);
+                        ms.Seek(0, SeekOrigin.Begin);
+
+                        using (FileStream fs = new FileStream(Path.Combine(directory, config.AppSettings.Settings["Words"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
                     }
                 }
             }
@@ -1234,7 +1386,23 @@ namespace Apricot
 
                     if (config.AppSettings.Settings["Subscriptions"] != null)
                     {
-                        using (FileStream fs = new FileStream(directory == null ? config.AppSettings.Settings["Subscriptions"].Value : Path.Combine(directory, config.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                        string path;
+
+                        if (directory == null)
+                        {
+                            path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config.AppSettings.Settings["Subscriptions"].Value);
+
+                            if (File.Exists(path))
+                            {
+                                path = config.AppSettings.Settings["Subscriptions"].Value;
+                            }
+                        }
+                        else
+                        {
+                            path = System.IO.Path.Combine(directory, config.AppSettings.Settings["Subscriptions"].Value);
+                        }
+
+                        using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
                             XmlDocument xmlDocument = new XmlDocument();
 
