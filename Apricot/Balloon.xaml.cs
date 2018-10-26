@@ -199,7 +199,7 @@ namespace Apricot
             this.switchTimer.Tick += new EventHandler(this.OnTick);
             this.switchTimer.Interval = TimeSpan.FromSeconds(3);
 
-            System.Configuration.Configuration config = null;
+            System.Configuration.Configuration config1 = null;
             string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
             if (Directory.Exists(directory))
@@ -211,187 +211,448 @@ namespace Apricot
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
                     exeConfigurationFileMap.ExeConfigFilename = s;
-                    config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                    config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
                 }
             }
 
-            if (config == null)
+            if (config1 == null)
             {
-                config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                directory = null;
-            }
+                config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-            if (config.AppSettings.Settings["FrameRate"] != null)
-            {
-                if (config.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                if (config1.AppSettings.Settings["FrameRate"] != null)
                 {
-                    this.frameRate = Double.Parse(config.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                    {
+                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["FontFamily"] != null)
-            {
-                if (config.AppSettings.Settings["FontFamily"].Value.Length > 0)
+                if (config1.AppSettings.Settings["FontFamily"] != null)
                 {
-                    this.FontFamily = new FontFamily(config.AppSettings.Settings["FontFamily"].Value);
+                    if (config1.AppSettings.Settings["FontFamily"].Value.Length > 0)
+                    {
+                        this.FontFamily = new FontFamily(config1.AppSettings.Settings["FontFamily"].Value);
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["FontSize"] != null)
-            {
-                if (config.AppSettings.Settings["FontSize"].Value.Length > 0)
+                if (config1.AppSettings.Settings["FontSize"] != null)
                 {
-                    this.FontSize = (double)new FontSizeConverter().ConvertFromString(config.AppSettings.Settings["FontSize"].Value);
+                    if (config1.AppSettings.Settings["FontSize"].Value.Length > 0)
+                    {
+                        this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["FontStretch"] != null)
-            {
-                if (config.AppSettings.Settings["FontStretch"].Value.Length > 0)
+                if (config1.AppSettings.Settings["FontStretch"] != null)
                 {
-                    this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config.AppSettings.Settings["FontStretch"].Value);
+                    if (config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
+                    {
+                        this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["FontStyle"] != null)
-            {
-                if (config.AppSettings.Settings["FontStyle"].Value.Length > 0)
+                if (config1.AppSettings.Settings["FontStyle"] != null)
                 {
-                    this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config.AppSettings.Settings["FontStyle"].Value);
+                    if (config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
+                    {
+                        this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["FontWeight"] != null)
-            {
-                if (config.AppSettings.Settings["FontWeight"].Value.Length > 0)
+                if (config1.AppSettings.Settings["FontWeight"] != null)
                 {
-                    this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config.AppSettings.Settings["FontWeight"].Value);
+                    if (config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
+                    {
+                        this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["LineLength"] != null)
-            {
-                if (config.AppSettings.Settings["LineLength"].Value.Length > 0)
+                if (config1.AppSettings.Settings["LineLength"] != null)
                 {
-                    this.baseWidth = Double.Parse(config.AppSettings.Settings["LineLength"].Value, System.Globalization.CultureInfo.InvariantCulture) + 30;
+                    if (config1.AppSettings.Settings["LineLength"].Value.Length > 0)
+                    {
+                        this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, System.Globalization.CultureInfo.InvariantCulture) + 30;
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["LineHeight"] != null)
-            {
-                if (config.AppSettings.Settings["LineHeight"].Value.Length > 0)
+                if (config1.AppSettings.Settings["LineHeight"] != null)
                 {
-                    this.lineHeight = Double.Parse(config.AppSettings.Settings["LineHeight"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    if (config1.AppSettings.Settings["LineHeight"].Value.Length > 0)
+                    {
+                        this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["BackgroundColor"] != null)
-            {
-                if (config.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
+                if (config1.AppSettings.Settings["BackgroundColor"] != null)
                 {
-                    this.backgroundColor = (Color)ColorConverter.ConvertFromString(config.AppSettings.Settings["BackgroundColor"].Value);
+                    if (config1.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
+                    {
+                        this.backgroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["BackgroundColor"].Value);
+                    }
                 }
-            }
 
-            SolidColorBrush brush1 = new SolidColorBrush(Color.FromArgb((byte)(this.backgroundColor.A * 75 / 100), this.backgroundColor.R, this.backgroundColor.G, this.backgroundColor.B));
+                SolidColorBrush brush1 = new SolidColorBrush(Color.FromArgb((byte)(this.backgroundColor.A * 75 / 100), this.backgroundColor.R, this.backgroundColor.G, this.backgroundColor.B));
 
-            if (brush1.CanFreeze)
-            {
-                brush1.Freeze();
-            }
-
-            this.OuterPath.Fill = brush1;
-
-            if (config.AppSettings.Settings["BackgroundImage"] == null)
-            {
-                SolidColorBrush brush2 = new SolidColorBrush(this.backgroundColor);
-
-                if (brush2.CanFreeze)
+                if (brush1.CanFreeze)
                 {
-                    brush2.Freeze();
+                    brush1.Freeze();
                 }
 
-                this.InnerPath.Fill = brush2;
+                this.OuterPath.Fill = brush1;
+
+                if (config1.AppSettings.Settings["BackgroundImage"] == null)
+                {
+                    SolidColorBrush brush2 = new SolidColorBrush(this.backgroundColor);
+
+                    if (brush2.CanFreeze)
+                    {
+                        brush2.Freeze();
+                    }
+
+                    this.InnerPath.Fill = brush2;
+                }
+                else
+                {
+                    string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["BackgroundImage"].Value);
+                    BitmapImage bi = new BitmapImage();
+                    
+                    if (!File.Exists(path))
+                    {
+                        path = config1.AppSettings.Settings["BackgroundImage"].Value;
+                    }
+
+                    using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        bi.BeginInit();
+                        bi.StreamSource = fs;
+                        bi.CacheOption = BitmapCacheOption.OnLoad;
+                        bi.CreateOptions = BitmapCreateOptions.None;
+                        bi.EndInit();
+                    }
+
+                    ImageBrush imageBrush = new ImageBrush(bi);
+
+                    imageBrush.TileMode = TileMode.Tile;
+                    imageBrush.ViewportUnits = BrushMappingMode.Absolute;
+                    imageBrush.Viewport = new Rect(0, 0, bi.Width, bi.Height);
+                    imageBrush.Stretch = Stretch.None;
+
+                    if (imageBrush.CanFreeze)
+                    {
+                        imageBrush.Freeze();
+                    }
+
+                    this.InnerPath.Fill = imageBrush;
+                }
+
+                if (config1.AppSettings.Settings["TextColor"] != null)
+                {
+                    if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                    {
+                        this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
+                        this.textBrush = new SolidColorBrush(this.textColor);
+                    }
+                }
+
+                if (this.textBrush == null)
+                {
+                    this.textBrush = new SolidColorBrush(this.textColor);
+                }
+
+                if (this.textBrush.CanFreeze)
+                {
+                    this.textBrush.Freeze();
+                }
+
+                if (config1.AppSettings.Settings["LinkColor"] != null)
+                {
+                    if (config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                    {
+                        this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
+                        this.linkBrush = new SolidColorBrush(this.linkColor);
+                    }
+                }
+
+                if (this.linkBrush == null)
+                {
+                    this.linkBrush = new SolidColorBrush(this.linkColor);
+                }
+
+                if (this.linkBrush.CanFreeze)
+                {
+                    this.linkBrush.Freeze();
+                }
             }
             else
             {
-                string path;
-                BitmapImage bi = new BitmapImage();
+                System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                if (directory == null)
+                if (config1.AppSettings.Settings["FrameRate"] != null)
                 {
-                    path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config.AppSettings.Settings["BackgroundImage"].Value);
-
-                    if (File.Exists(path))
+                    if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
                     {
-                        path = config.AppSettings.Settings["BackgroundImage"].Value;
+                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    }
+                }
+                else if (config2.AppSettings.Settings["FrameRate"] != null)
+                {
+                    if (config2.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                    {
+                        this.frameRate = Double.Parse(config2.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["FontFamily"] != null)
+                {
+                    if (config1.AppSettings.Settings["FontFamily"].Value.Length > 0)
+                    {
+                        this.FontFamily = new FontFamily(config1.AppSettings.Settings["FontFamily"].Value);
+                    }
+                }
+                else if (config2.AppSettings.Settings["FontFamily"] != null)
+                {
+                    if (config2.AppSettings.Settings["FontFamily"].Value.Length > 0)
+                    {
+                        this.FontFamily = new FontFamily(config2.AppSettings.Settings["FontFamily"].Value);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["FontSize"] != null)
+                {
+                    if (config1.AppSettings.Settings["FontSize"].Value.Length > 0)
+                    {
+                        this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
+                    }
+                }
+                else if (config2.AppSettings.Settings["FontSize"] != null)
+                {
+                    if (config2.AppSettings.Settings["FontSize"].Value.Length > 0)
+                    {
+                        this.FontSize = (double)new FontSizeConverter().ConvertFromString(config2.AppSettings.Settings["FontSize"].Value);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["FontStretch"] != null)
+                {
+                    if (config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
+                    {
+                        this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
+                    }
+                }
+                else if (config2.AppSettings.Settings["FontStretch"] != null)
+                {
+                    if (config2.AppSettings.Settings["FontStretch"].Value.Length > 0)
+                    {
+                        this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config2.AppSettings.Settings["FontStretch"].Value);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["FontStyle"] != null)
+                {
+                    if (config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
+                    {
+                        this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
+                    }
+                }
+                else if (config2.AppSettings.Settings["FontStyle"] != null)
+                {
+                    if (config2.AppSettings.Settings["FontStyle"].Value.Length > 0)
+                    {
+                        this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config2.AppSettings.Settings["FontStyle"].Value);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["FontWeight"] != null)
+                {
+                    if (config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
+                    {
+                        this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
+                    }
+                }
+                else if (config2.AppSettings.Settings["FontWeight"] != null)
+                {
+                    if (config2.AppSettings.Settings["FontWeight"].Value.Length > 0)
+                    {
+                        this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config2.AppSettings.Settings["FontWeight"].Value);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["LineLength"] != null)
+                {
+                    if (config1.AppSettings.Settings["LineLength"].Value.Length > 0)
+                    {
+                        this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, System.Globalization.CultureInfo.InvariantCulture) + 30;
+                    }
+                }
+                else if (config2.AppSettings.Settings["LineLength"] != null)
+                {
+                    if (config2.AppSettings.Settings["LineLength"].Value.Length > 0)
+                    {
+                        this.baseWidth = Double.Parse(config2.AppSettings.Settings["LineLength"].Value, System.Globalization.CultureInfo.InvariantCulture) + 30;
+                    }
+                }
+
+                if (config1.AppSettings.Settings["LineHeight"] != null)
+                {
+                    if (config1.AppSettings.Settings["LineHeight"].Value.Length > 0)
+                    {
+                        this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    }
+                }
+                else if (config2.AppSettings.Settings["LineHeight"] != null)
+                {
+                    if (config2.AppSettings.Settings["LineHeight"].Value.Length > 0)
+                    {
+                        this.lineHeight = Double.Parse(config2.AppSettings.Settings["LineHeight"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["BackgroundColor"] != null)
+                {
+                    if (config1.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
+                    {
+                        this.backgroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["BackgroundColor"].Value);
+                    }
+                }
+                else if (config2.AppSettings.Settings["BackgroundColor"] != null)
+                {
+                    if (config2.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
+                    {
+                        this.backgroundColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["BackgroundColor"].Value);
+                    }
+                }
+
+                SolidColorBrush brush1 = new SolidColorBrush(Color.FromArgb((byte)(this.backgroundColor.A * 75 / 100), this.backgroundColor.R, this.backgroundColor.G, this.backgroundColor.B));
+
+                if (brush1.CanFreeze)
+                {
+                    brush1.Freeze();
+                }
+
+                this.OuterPath.Fill = brush1;
+
+                if (config1.AppSettings.Settings["BackgroundImage"] == null)
+                {
+                    if (config2.AppSettings.Settings["BackgroundImage"] == null)
+                    {
+                        SolidColorBrush brush2 = new SolidColorBrush(this.backgroundColor);
+
+                        if (brush2.CanFreeze)
+                        {
+                            brush2.Freeze();
+                        }
+
+                        this.InnerPath.Fill = brush2;
+                    }
+                    else
+                    {
+                        BitmapImage bi = new BitmapImage();
+
+                        using (FileStream fs = new FileStream(System.IO.Path.Combine(directory, config2.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                        {
+                            bi.BeginInit();
+                            bi.StreamSource = fs;
+                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                            bi.CreateOptions = BitmapCreateOptions.None;
+                            bi.EndInit();
+                        }
+
+                        ImageBrush imageBrush = new ImageBrush(bi);
+
+                        imageBrush.TileMode = TileMode.Tile;
+                        imageBrush.ViewportUnits = BrushMappingMode.Absolute;
+                        imageBrush.Viewport = new Rect(0, 0, bi.Width, bi.Height);
+                        imageBrush.Stretch = Stretch.None;
+
+                        if (imageBrush.CanFreeze)
+                        {
+                            imageBrush.Freeze();
+                        }
+
+                        this.InnerPath.Fill = imageBrush;
                     }
                 }
                 else
                 {
-                    path = System.IO.Path.Combine(directory, config.AppSettings.Settings["BackgroundImage"].Value);
+                    BitmapImage bi = new BitmapImage();
+
+                    using (FileStream fs = new FileStream(System.IO.Path.Combine(directory, config1.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        bi.BeginInit();
+                        bi.StreamSource = fs;
+                        bi.CacheOption = BitmapCacheOption.OnLoad;
+                        bi.CreateOptions = BitmapCreateOptions.None;
+                        bi.EndInit();
+                    }
+
+                    ImageBrush imageBrush = new ImageBrush(bi);
+
+                    imageBrush.TileMode = TileMode.Tile;
+                    imageBrush.ViewportUnits = BrushMappingMode.Absolute;
+                    imageBrush.Viewport = new Rect(0, 0, bi.Width, bi.Height);
+                    imageBrush.Stretch = Stretch.None;
+
+                    if (imageBrush.CanFreeze)
+                    {
+                        imageBrush.Freeze();
+                    }
+
+                    this.InnerPath.Fill = imageBrush;
                 }
 
-                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                if (config1.AppSettings.Settings["TextColor"] != null)
                 {
-                    bi.BeginInit();
-                    bi.StreamSource = fs;
-                    bi.CacheOption = BitmapCacheOption.OnLoad;
-                    bi.CreateOptions = BitmapCreateOptions.None;
-                    bi.EndInit();
+                    if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                    {
+                        this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
+                        this.textBrush = new SolidColorBrush(this.textColor);
+                    }
+                }
+                else if (config2.AppSettings.Settings["TextColor"] != null)
+                {
+                    if (config2.AppSettings.Settings["TextColor"].Value.Length > 0)
+                    {
+                        this.textColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["TextColor"].Value);
+                        this.textBrush = new SolidColorBrush(this.textColor);
+                    }
                 }
 
-                ImageBrush imageBrush = new ImageBrush(bi);
-
-                imageBrush.TileMode = TileMode.Tile;
-                imageBrush.ViewportUnits = BrushMappingMode.Absolute;
-                imageBrush.Viewport = new Rect(0, 0, bi.Width, bi.Height);
-                imageBrush.Stretch = Stretch.None;
-
-                if (imageBrush.CanFreeze)
+                if (this.textBrush == null)
                 {
-                    imageBrush.Freeze();
-                }
-
-                this.InnerPath.Fill = imageBrush;
-            }
-
-            if (config.AppSettings.Settings["TextColor"] != null)
-            {
-                if (config.AppSettings.Settings["TextColor"].Value.Length > 0)
-                {
-                    this.textColor = (Color)ColorConverter.ConvertFromString(config.AppSettings.Settings["TextColor"].Value);
                     this.textBrush = new SolidColorBrush(this.textColor);
                 }
-            }
 
-            if (this.textBrush == null)
-            {
-                this.textBrush = new SolidColorBrush(this.textColor);
-            }
-
-            if (this.textBrush.CanFreeze)
-            {
-                this.textBrush.Freeze();
-            }
-
-            if (config.AppSettings.Settings["LinkColor"] != null)
-            {
-                if (config.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                if (this.textBrush.CanFreeze)
                 {
-                    this.linkColor = (Color)ColorConverter.ConvertFromString(config.AppSettings.Settings["LinkColor"].Value);
+                    this.textBrush.Freeze();
+                }
+
+                if (config1.AppSettings.Settings["LinkColor"] != null)
+                {
+                    if (config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                    {
+                        this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
+                        this.linkBrush = new SolidColorBrush(this.linkColor);
+                    }
+                }
+                else if (config2.AppSettings.Settings["LinkColor"] != null)
+                {
+                    if (config2.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                    {
+                        this.linkColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["LinkColor"].Value);
+                        this.linkBrush = new SolidColorBrush(this.linkColor);
+                    }
+                }
+
+                if (this.linkBrush == null)
+                {
                     this.linkBrush = new SolidColorBrush(this.linkColor);
                 }
-            }
 
-            if (this.linkBrush == null)
-            {
-                this.linkBrush = new SolidColorBrush(this.linkColor);
-            }
-
-            if (this.linkBrush.CanFreeze)
-            {
-                this.linkBrush.Freeze();
+                if (this.linkBrush.CanFreeze)
+                {
+                    this.linkBrush.Freeze();
+                }
             }
 
             this.maxMessageSize = new Size(this.baseWidth - 30, this.lineHeight * this.numberOfLines);
@@ -9212,7 +9473,7 @@ namespace Apricot
         {
             if (uri.IsAbsoluteUri)
             {
-                System.Configuration.Configuration config = null;
+                System.Configuration.Configuration config1 = null;
                 string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
                 if (Directory.Exists(directory))
@@ -9224,151 +9485,30 @@ namespace Apricot
                         System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
                         exeConfigurationFileMap.ExeConfigFilename = s;
-                        config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                        config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
                     }
                 }
 
-                if (config == null)
+                if (config1 == null)
                 {
-                    config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                    directory = null;
-                }
+                    config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                if (config.AppSettings.Settings["Cache"] == null)
-                {
-                    if (uri.Scheme.Equals("data"))
+                    if (config1.AppSettings.Settings["Cache"] == null)
                     {
-                        System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
-                        if (match.Success)
+                        if (uri.Scheme.Equals("data"))
                         {
-                            MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
-                            BitmapImage bi = null;
+                            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
-                            try
+                            if (match.Success)
                             {
-                                bi = new BitmapImage();
-                                bi.BeginInit();
-                                bi.StreamSource = ms;
-                                bi.CacheOption = BitmapCacheOption.OnLoad;
-                                bi.CreateOptions = BitmapCreateOptions.None;
-                                bi.EndInit();
-                            }
-                            catch
-                            {
-                                bi = null;
-                            }
-                            finally
-                            {
-                                ms.Close();
-                            }
+                                MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
+                                BitmapImage bi = null;
 
-                            if (this.imageUriHashSet.Contains(uri))
-                            {
-                                if (this.imageDictionary.ContainsKey(uri))
-                                {
-                                    this.imageDictionary[uri] = bi;
-                                }
-                                else
-                                {
-                                    this.imageDictionary.Add(uri, bi);
-                                }
-                            }
-                        }
-                    }
-                    else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
-                    {
-                        WebRequest webRequest = WebRequest.Create(uri);
-
-                        if (config.AppSettings.Settings["Timeout"] != null)
-                        {
-                            if (config.AppSettings.Settings["Timeout"].Value.Length > 0)
-                            {
-                                webRequest.Timeout = Int32.Parse(config.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                            }
-                        }
-
-                        if (config.AppSettings.Settings["UserAgent"] != null)
-                        {
-                            HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                            if (httpWebRequest != null)
-                            {
-                                httpWebRequest.UserAgent = config.AppSettings.Settings["UserAgent"].Value;
-                            }
-                        }
-
-                        Task.Factory.StartNew<MemoryStream>(delegate (object state)
-                        {
-                            MemoryStream ms = null;
-
-                            if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
-                            {
-                                WebRequest request = (WebRequest)state;
-                                WebResponse response = null;
-                                Stream s = null;
-                                BufferedStream bs = null;
-
-                                try
-                                {
-                                    response = request.GetResponse();
-
-                                    if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-                                    {
-                                        s = response.GetResponseStream();
-                                        bs = new BufferedStream(s);
-                                        s = null;
-                                        ms = new MemoryStream();
-
-                                        int i;
-
-                                        while ((i = bs.ReadByte()) != -1)
-                                        {
-                                            ms.WriteByte((byte)i);
-                                        }
-
-                                        ms.Seek(0, SeekOrigin.Begin);
-                                    }
-                                }
-                                catch
-                                {
-                                    if (ms != null)
-                                    {
-                                        ms.Close();
-                                        ms = null;
-                                    }
-                                }
-                                finally
-                                {
-                                    if (bs != null)
-                                    {
-                                        bs.Close();
-                                    }
-
-                                    if (s != null)
-                                    {
-                                        s.Close();
-                                    }
-
-                                    if (response != null)
-                                    {
-                                        response.Close();
-                                    }
-                                }
-                            }
-
-                            return ms;
-                        }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
-                        {
-                            BitmapImage bi = null;
-
-                            if (task.Result != null)
-                            {
                                 try
                                 {
                                     bi = new BitmapImage();
                                     bi.BeginInit();
-                                    bi.StreamSource = task.Result;
+                                    bi.StreamSource = ms;
                                     bi.CacheOption = BitmapCacheOption.OnLoad;
                                     bi.CreateOptions = BitmapCreateOptions.None;
                                     bi.EndInit();
@@ -9379,103 +9519,7 @@ namespace Apricot
                                 }
                                 finally
                                 {
-                                    task.Result.Close();
-                                }
-                            }
-
-                            if (this.imageUriHashSet.Contains(uri))
-                            {
-                                if (this.imageDictionary.ContainsKey(uri))
-                                {
-                                    this.imageDictionary[uri] = bi;
-                                }
-                                else
-                                {
-                                    this.imageDictionary.Add(uri, bi);
-                                }
-                            }
-                        }, TaskScheduler.FromCurrentSynchronizationContext());
-                    }
-                }
-                else
-                {
-                    System.Security.Cryptography.SHA512CryptoServiceProvider sha512 = new System.Security.Cryptography.SHA512CryptoServiceProvider();
-                    StringBuilder stringBuilder = new StringBuilder();
-
-                    foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
-                    {
-                        stringBuilder.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
-                    }
-
-                    stringBuilder.Append(System.IO.Path.GetExtension(uri.AbsolutePath));
-
-                    if (stringBuilder.ToString().IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0)
-                    {
-                        string path1 = directory == null ? config.AppSettings.Settings["Cache"].Value : System.IO.Path.Combine(directory, config.AppSettings.Settings["Cache"].Value);
-                        string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
-
-                        if (!ignoreCache && File.Exists(path2))
-                        {
-                            Task.Factory.StartNew<MemoryStream>(delegate
-                            {
-                                MemoryStream ms = null;
-                                FileStream fs = null;
-
-                                try
-                                {
-                                    fs = new FileStream(path2, FileMode.Open, FileAccess.Read, FileShare.Read);
-                                    ms = new MemoryStream();
-
-                                    byte[] buffer = new byte[fs.Length];
-                                    int bytesRead;
-
-                                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
-                                    {
-                                        ms.Write(buffer, 0, bytesRead);
-                                    }
-
-                                    ms.Seek(0, SeekOrigin.Begin);
-                                }
-                                catch
-                                {
-                                    if (ms != null)
-                                    {
-                                        ms.Close();
-                                        ms = null;
-                                    }
-                                }
-                                finally
-                                {
-                                    if (fs != null)
-                                    {
-                                        fs.Close();
-                                    }
-                                }
-
-                                return ms;
-                            }).ContinueWith(delegate (Task<MemoryStream> task)
-                            {
-                                BitmapImage bi = null;
-
-                                if (task.Result != null)
-                                {
-                                    try
-                                    {
-                                        bi = new BitmapImage();
-                                        bi.BeginInit();
-                                        bi.StreamSource = task.Result;
-                                        bi.CacheOption = BitmapCacheOption.OnLoad;
-                                        bi.CreateOptions = BitmapCreateOptions.None;
-                                        bi.EndInit();
-                                    }
-                                    catch
-                                    {
-                                        bi = null;
-                                    }
-                                    finally
-                                    {
-                                        task.Result.Close();
-                                    }
+                                    ms.Close();
                                 }
 
                                 if (this.imageUriHashSet.Contains(uri))
@@ -9489,115 +9533,27 @@ namespace Apricot
                                         this.imageDictionary.Add(uri, bi);
                                     }
                                 }
-                            }, TaskScheduler.FromCurrentSynchronizationContext());
-                        }
-                        else if (uri.Scheme.Equals("data"))
-                        {
-                            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
-                            if (match.Success)
-                            {
-                                byte[] bytes = Convert.FromBase64String(match.Groups[1].Value);
-
-                                Task.Factory.StartNew<MemoryStream>(delegate
-                                {
-                                    FileStream fs = null;
-                                    MemoryStream ms = null;
-
-                                    try
-                                    {
-                                        if (!Directory.Exists(path1))
-                                        {
-                                            Directory.CreateDirectory(path1);
-                                        }
-
-                                        fs = new FileStream(path2, FileMode.Create, FileAccess.Write, FileShare.None);
-                                        ms = new MemoryStream();
-
-                                        foreach (byte b in bytes)
-                                        {
-                                            fs.WriteByte(b);
-                                            ms.WriteByte(b);
-                                        }
-
-                                        fs.Flush();
-                                        ms.Seek(0, SeekOrigin.Begin);
-                                    }
-                                    catch
-                                    {
-                                        if (ms != null)
-                                        {
-                                            ms.Close();
-                                            ms = null;
-                                        }
-                                    }
-                                    finally
-                                    {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-                                    }
-
-                                    return ms;
-                                }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
-                                {
-                                    BitmapImage bi = null;
-
-                                    if (task.Result != null)
-                                    {
-                                        try
-                                        {
-                                            bi = new BitmapImage();
-                                            bi.BeginInit();
-                                            bi.StreamSource = task.Result;
-                                            bi.CacheOption = BitmapCacheOption.OnLoad;
-                                            bi.CreateOptions = BitmapCreateOptions.None;
-                                            bi.EndInit();
-                                        }
-                                        catch
-                                        {
-                                            bi = null;
-                                        }
-                                        finally
-                                        {
-                                            task.Result.Close();
-                                        }
-                                    }
-
-                                    if (this.imageUriHashSet.Contains(uri))
-                                    {
-                                        if (this.imageDictionary.ContainsKey(uri))
-                                        {
-                                            this.imageDictionary[uri] = bi;
-                                        }
-                                        else
-                                        {
-                                            this.imageDictionary.Add(uri, bi);
-                                        }
-                                    }
-                                }, TaskScheduler.FromCurrentSynchronizationContext());
                             }
                         }
                         else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                         {
                             WebRequest webRequest = WebRequest.Create(uri);
 
-                            if (config.AppSettings.Settings["Timeout"] != null)
+                            if (config1.AppSettings.Settings["Timeout"] != null)
                             {
-                                if (config.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
-                                    webRequest.Timeout = Int32.Parse(config.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                 }
                             }
 
-                            if (config.AppSettings.Settings["UserAgent"] != null)
+                            if (config1.AppSettings.Settings["UserAgent"] != null)
                             {
                                 HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
 
                                 if (httpWebRequest != null)
                                 {
-                                    httpWebRequest.UserAgent = config.AppSettings.Settings["UserAgent"].Value;
+                                    httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
                                 }
                             }
 
@@ -9611,7 +9567,6 @@ namespace Apricot
                                     WebResponse response = null;
                                     Stream s = null;
                                     BufferedStream bs = null;
-                                    FileStream fs = null;
 
                                     try
                                     {
@@ -9622,26 +9577,15 @@ namespace Apricot
                                             s = response.GetResponseStream();
                                             bs = new BufferedStream(s);
                                             s = null;
-
-                                            if (!Directory.Exists(path1))
-                                            {
-                                                Directory.CreateDirectory(path1);
-                                            }
-
-                                            fs = new FileStream(path2, FileMode.Create, FileAccess.Write, FileShare.None);
                                             ms = new MemoryStream();
 
                                             int i;
 
                                             while ((i = bs.ReadByte()) != -1)
                                             {
-                                                byte b = (byte)i;
-
-                                                fs.WriteByte(b);
-                                                ms.WriteByte(b);
+                                                ms.WriteByte((byte)i);
                                             }
 
-                                            fs.Flush();
                                             ms.Seek(0, SeekOrigin.Begin);
                                         }
                                     }
@@ -9655,11 +9599,6 @@ namespace Apricot
                                     }
                                     finally
                                     {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-
                                         if (bs != null)
                                         {
                                             bs.Close();
@@ -9717,139 +9656,340 @@ namespace Apricot
                             }, TaskScheduler.FromCurrentSynchronizationContext());
                         }
                     }
-                    else if (uri.Scheme.Equals("data"))
+                    else
                     {
-                        System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+                        System.Security.Cryptography.SHA512CryptoServiceProvider sha512 = new System.Security.Cryptography.SHA512CryptoServiceProvider();
+                        StringBuilder stringBuilder = new StringBuilder();
 
-                        if (match.Success)
+                        foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
                         {
-                            MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
-                            BitmapImage bi = null;
-
-                            try
-                            {
-                                bi = new BitmapImage();
-                                bi.BeginInit();
-                                bi.StreamSource = ms;
-                                bi.CacheOption = BitmapCacheOption.OnLoad;
-                                bi.CreateOptions = BitmapCreateOptions.None;
-                                bi.EndInit();
-                            }
-                            catch
-                            {
-                                bi = null;
-                            }
-                            finally
-                            {
-                                ms.Close();
-                            }
-
-                            if (this.imageUriHashSet.Contains(uri))
-                            {
-                                if (this.imageDictionary.ContainsKey(uri))
-                                {
-                                    this.imageDictionary[uri] = bi;
-                                }
-                                else
-                                {
-                                    this.imageDictionary.Add(uri, bi);
-                                }
-                            }
-                        }
-                    }
-                    else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
-                    {
-                        WebRequest webRequest = WebRequest.Create(uri);
-
-                        if (config.AppSettings.Settings["Timeout"] != null)
-                        {
-                            if (config.AppSettings.Settings["Timeout"].Value.Length > 0)
-                            {
-                                webRequest.Timeout = Int32.Parse(config.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                            }
+                            stringBuilder.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
                         }
 
-                        if (config.AppSettings.Settings["UserAgent"] != null)
+                        stringBuilder.Append(System.IO.Path.GetExtension(uri.AbsolutePath));
+
+                        if (stringBuilder.ToString().IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0)
                         {
-                            HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+                            string path1 = config1.AppSettings.Settings["Cache"].Value;
+                            string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
 
-                            if (httpWebRequest != null)
+                            if (!ignoreCache && File.Exists(path2))
                             {
-                                httpWebRequest.UserAgent = config.AppSettings.Settings["UserAgent"].Value;
-                            }
-                        }
-
-                        Task.Factory.StartNew<MemoryStream>(delegate (object state)
-                        {
-                            MemoryStream ms = null;
-
-                            if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
-                            {
-                                WebRequest request = (WebRequest)state;
-                                WebResponse response = null;
-                                Stream s = null;
-                                BufferedStream bs = null;
-
-                                try
+                                Task.Factory.StartNew<MemoryStream>(delegate
                                 {
-                                    response = request.GetResponse();
+                                    MemoryStream ms = null;
+                                    FileStream fs = null;
 
-                                    if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                    try
                                     {
-                                        s = response.GetResponseStream();
-                                        bs = new BufferedStream(s);
-                                        s = null;
+                                        fs = new FileStream(path2, FileMode.Open, FileAccess.Read, FileShare.Read);
                                         ms = new MemoryStream();
 
-                                        int i;
+                                        byte[] buffer = new byte[fs.Length];
+                                        int bytesRead;
 
-                                        while ((i = bs.ReadByte()) != -1)
+                                        while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
                                         {
-                                            ms.WriteByte((byte)i);
+                                            ms.Write(buffer, 0, bytesRead);
                                         }
 
                                         ms.Seek(0, SeekOrigin.Begin);
                                     }
-                                }
-                                catch
-                                {
-                                    if (ms != null)
+                                    catch
                                     {
-                                        ms.Close();
-                                        ms = null;
+                                        if (ms != null)
+                                        {
+                                            ms.Close();
+                                            ms = null;
+                                        }
                                     }
-                                }
-                                finally
-                                {
-                                    if (bs != null)
+                                    finally
                                     {
-                                        bs.Close();
-                                    }
-
-                                    if (s != null)
-                                    {
-                                        s.Close();
+                                        if (fs != null)
+                                        {
+                                            fs.Close();
+                                        }
                                     }
 
-                                    if (response != null)
+                                    return ms;
+                                }).ContinueWith(delegate (Task<MemoryStream> task)
+                                {
+                                    BitmapImage bi = null;
+
+                                    if (task.Result != null)
                                     {
-                                        response.Close();
+                                        try
+                                        {
+                                            bi = new BitmapImage();
+                                            bi.BeginInit();
+                                            bi.StreamSource = task.Result;
+                                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                                            bi.CreateOptions = BitmapCreateOptions.None;
+                                            bi.EndInit();
+                                        }
+                                        catch
+                                        {
+                                            bi = null;
+                                        }
+                                        finally
+                                        {
+                                            task.Result.Close();
+                                        }
                                     }
+
+                                    if (this.imageUriHashSet.Contains(uri))
+                                    {
+                                        if (this.imageDictionary.ContainsKey(uri))
+                                        {
+                                            this.imageDictionary[uri] = bi;
+                                        }
+                                        else
+                                        {
+                                            this.imageDictionary.Add(uri, bi);
+                                        }
+                                    }
+                                }, TaskScheduler.FromCurrentSynchronizationContext());
+                            }
+                            else if (uri.Scheme.Equals("data"))
+                            {
+                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+                                if (match.Success)
+                                {
+                                    byte[] bytes = Convert.FromBase64String(match.Groups[1].Value);
+
+                                    Task.Factory.StartNew<MemoryStream>(delegate
+                                    {
+                                        FileStream fs = null;
+                                        MemoryStream ms = null;
+
+                                        try
+                                        {
+                                            if (!Directory.Exists(path1))
+                                            {
+                                                Directory.CreateDirectory(path1);
+                                            }
+
+                                            fs = new FileStream(path2, FileMode.Create, FileAccess.Write, FileShare.None);
+                                            ms = new MemoryStream();
+
+                                            foreach (byte b in bytes)
+                                            {
+                                                fs.WriteByte(b);
+                                                ms.WriteByte(b);
+                                            }
+
+                                            fs.Flush();
+                                            ms.Seek(0, SeekOrigin.Begin);
+                                        }
+                                        catch
+                                        {
+                                            if (ms != null)
+                                            {
+                                                ms.Close();
+                                                ms = null;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            if (fs != null)
+                                            {
+                                                fs.Close();
+                                            }
+                                        }
+
+                                        return ms;
+                                    }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                    {
+                                        BitmapImage bi = null;
+
+                                        if (task.Result != null)
+                                        {
+                                            try
+                                            {
+                                                bi = new BitmapImage();
+                                                bi.BeginInit();
+                                                bi.StreamSource = task.Result;
+                                                bi.CacheOption = BitmapCacheOption.OnLoad;
+                                                bi.CreateOptions = BitmapCreateOptions.None;
+                                                bi.EndInit();
+                                            }
+                                            catch
+                                            {
+                                                bi = null;
+                                            }
+                                            finally
+                                            {
+                                                task.Result.Close();
+                                            }
+                                        }
+
+                                        if (this.imageUriHashSet.Contains(uri))
+                                        {
+                                            if (this.imageDictionary.ContainsKey(uri))
+                                            {
+                                                this.imageDictionary[uri] = bi;
+                                            }
+                                            else
+                                            {
+                                                this.imageDictionary.Add(uri, bi);
+                                            }
+                                        }
+                                    }, TaskScheduler.FromCurrentSynchronizationContext());
                                 }
                             }
-
-                            return ms;
-                        }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
-                        {
-                            BitmapImage bi = null;
-
-                            if (task.Result != null)
+                            else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                             {
+                                WebRequest webRequest = WebRequest.Create(uri);
+
+                                if (config1.AppSettings.Settings["Timeout"] != null)
+                                {
+                                    if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    {
+                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    }
+                                }
+
+                                if (config1.AppSettings.Settings["UserAgent"] != null)
+                                {
+                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                    if (httpWebRequest != null)
+                                    {
+                                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                                    }
+                                }
+
+                                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                {
+                                    MemoryStream ms = null;
+
+                                    if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                                    {
+                                        WebRequest request = (WebRequest)state;
+                                        WebResponse response = null;
+                                        Stream s = null;
+                                        BufferedStream bs = null;
+                                        FileStream fs = null;
+
+                                        try
+                                        {
+                                            response = request.GetResponse();
+
+                                            if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                            {
+                                                s = response.GetResponseStream();
+                                                bs = new BufferedStream(s);
+                                                s = null;
+
+                                                if (!Directory.Exists(path1))
+                                                {
+                                                    Directory.CreateDirectory(path1);
+                                                }
+
+                                                fs = new FileStream(path2, FileMode.Create, FileAccess.Write, FileShare.None);
+                                                ms = new MemoryStream();
+
+                                                int i;
+
+                                                while ((i = bs.ReadByte()) != -1)
+                                                {
+                                                    byte b = (byte)i;
+
+                                                    fs.WriteByte(b);
+                                                    ms.WriteByte(b);
+                                                }
+
+                                                fs.Flush();
+                                                ms.Seek(0, SeekOrigin.Begin);
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            if (ms != null)
+                                            {
+                                                ms.Close();
+                                                ms = null;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            if (fs != null)
+                                            {
+                                                fs.Close();
+                                            }
+
+                                            if (bs != null)
+                                            {
+                                                bs.Close();
+                                            }
+
+                                            if (s != null)
+                                            {
+                                                s.Close();
+                                            }
+
+                                            if (response != null)
+                                            {
+                                                response.Close();
+                                            }
+                                        }
+                                    }
+
+                                    return ms;
+                                }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                {
+                                    BitmapImage bi = null;
+
+                                    if (task.Result != null)
+                                    {
+                                        try
+                                        {
+                                            bi = new BitmapImage();
+                                            bi.BeginInit();
+                                            bi.StreamSource = task.Result;
+                                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                                            bi.CreateOptions = BitmapCreateOptions.None;
+                                            bi.EndInit();
+                                        }
+                                        catch
+                                        {
+                                            bi = null;
+                                        }
+                                        finally
+                                        {
+                                            task.Result.Close();
+                                        }
+                                    }
+
+                                    if (this.imageUriHashSet.Contains(uri))
+                                    {
+                                        if (this.imageDictionary.ContainsKey(uri))
+                                        {
+                                            this.imageDictionary[uri] = bi;
+                                        }
+                                        else
+                                        {
+                                            this.imageDictionary.Add(uri, bi);
+                                        }
+                                    }
+                                }, TaskScheduler.FromCurrentSynchronizationContext());
+                            }
+                        }
+                        else if (uri.Scheme.Equals("data"))
+                        {
+                            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+                            if (match.Success)
+                            {
+                                MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
+                                BitmapImage bi = null;
+
                                 try
                                 {
                                     bi = new BitmapImage();
                                     bi.BeginInit();
-                                    bi.StreamSource = task.Result;
+                                    bi.StreamSource = ms;
                                     bi.CacheOption = BitmapCacheOption.OnLoad;
                                     bi.CreateOptions = BitmapCreateOptions.None;
                                     bi.EndInit();
@@ -9860,22 +10000,1335 @@ namespace Apricot
                                 }
                                 finally
                                 {
-                                    task.Result.Close();
+                                    ms.Close();
+                                }
+
+                                if (this.imageUriHashSet.Contains(uri))
+                                {
+                                    if (this.imageDictionary.ContainsKey(uri))
+                                    {
+                                        this.imageDictionary[uri] = bi;
+                                    }
+                                    else
+                                    {
+                                        this.imageDictionary.Add(uri, bi);
+                                    }
+                                }
+                            }
+                        }
+                        else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
+                        {
+                            WebRequest webRequest = WebRequest.Create(uri);
+
+                            if (config1.AppSettings.Settings["Timeout"] != null)
+                            {
+                                if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                {
+                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                 }
                             }
 
-                            if (this.imageUriHashSet.Contains(uri))
+                            if (config1.AppSettings.Settings["UserAgent"] != null)
                             {
-                                if (this.imageDictionary.ContainsKey(uri))
+                                HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                if (httpWebRequest != null)
                                 {
-                                    this.imageDictionary[uri] = bi;
-                                }
-                                else
-                                {
-                                    this.imageDictionary.Add(uri, bi);
+                                    httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
                                 }
                             }
-                        }, TaskScheduler.FromCurrentSynchronizationContext());
+
+                            Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                            {
+                                MemoryStream ms = null;
+
+                                if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                                {
+                                    WebRequest request = (WebRequest)state;
+                                    WebResponse response = null;
+                                    Stream s = null;
+                                    BufferedStream bs = null;
+
+                                    try
+                                    {
+                                        response = request.GetResponse();
+
+                                        if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                        {
+                                            s = response.GetResponseStream();
+                                            bs = new BufferedStream(s);
+                                            s = null;
+                                            ms = new MemoryStream();
+
+                                            int i;
+
+                                            while ((i = bs.ReadByte()) != -1)
+                                            {
+                                                ms.WriteByte((byte)i);
+                                            }
+
+                                            ms.Seek(0, SeekOrigin.Begin);
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        if (ms != null)
+                                        {
+                                            ms.Close();
+                                            ms = null;
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        if (bs != null)
+                                        {
+                                            bs.Close();
+                                        }
+
+                                        if (s != null)
+                                        {
+                                            s.Close();
+                                        }
+
+                                        if (response != null)
+                                        {
+                                            response.Close();
+                                        }
+                                    }
+                                }
+
+                                return ms;
+                            }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                            {
+                                BitmapImage bi = null;
+
+                                if (task.Result != null)
+                                {
+                                    try
+                                    {
+                                        bi = new BitmapImage();
+                                        bi.BeginInit();
+                                        bi.StreamSource = task.Result;
+                                        bi.CacheOption = BitmapCacheOption.OnLoad;
+                                        bi.CreateOptions = BitmapCreateOptions.None;
+                                        bi.EndInit();
+                                    }
+                                    catch
+                                    {
+                                        bi = null;
+                                    }
+                                    finally
+                                    {
+                                        task.Result.Close();
+                                    }
+                                }
+
+                                if (this.imageUriHashSet.Contains(uri))
+                                {
+                                    if (this.imageDictionary.ContainsKey(uri))
+                                    {
+                                        this.imageDictionary[uri] = bi;
+                                    }
+                                    else
+                                    {
+                                        this.imageDictionary.Add(uri, bi);
+                                    }
+                                }
+                            }, TaskScheduler.FromCurrentSynchronizationContext());
+                        }
+                    }
+                }
+                else
+                {
+                    System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                    if (config1.AppSettings.Settings["Cache"] == null)
+                    {
+                        if (config2.AppSettings.Settings["Cache"] == null)
+                        {
+                            if (uri.Scheme.Equals("data"))
+                            {
+                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+                                if (match.Success)
+                                {
+                                    MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
+                                    BitmapImage bi = null;
+
+                                    try
+                                    {
+                                        bi = new BitmapImage();
+                                        bi.BeginInit();
+                                        bi.StreamSource = ms;
+                                        bi.CacheOption = BitmapCacheOption.OnLoad;
+                                        bi.CreateOptions = BitmapCreateOptions.None;
+                                        bi.EndInit();
+                                    }
+                                    catch
+                                    {
+                                        bi = null;
+                                    }
+                                    finally
+                                    {
+                                        ms.Close();
+                                    }
+
+                                    if (this.imageUriHashSet.Contains(uri))
+                                    {
+                                        if (this.imageDictionary.ContainsKey(uri))
+                                        {
+                                            this.imageDictionary[uri] = bi;
+                                        }
+                                        else
+                                        {
+                                            this.imageDictionary.Add(uri, bi);
+                                        }
+                                    }
+                                }
+                            }
+                            else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
+                            {
+                                WebRequest webRequest = WebRequest.Create(uri);
+
+                                if (config1.AppSettings.Settings["Timeout"] != null)
+                                {
+                                    if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    {
+                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    }
+                                }
+
+                                if (config1.AppSettings.Settings["UserAgent"] != null)
+                                {
+                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                    if (httpWebRequest != null)
+                                    {
+                                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                                    }
+                                }
+
+                                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                {
+                                    MemoryStream ms = null;
+
+                                    if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                                    {
+                                        WebRequest request = (WebRequest)state;
+                                        WebResponse response = null;
+                                        Stream s = null;
+                                        BufferedStream bs = null;
+
+                                        try
+                                        {
+                                            response = request.GetResponse();
+
+                                            if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                            {
+                                                s = response.GetResponseStream();
+                                                bs = new BufferedStream(s);
+                                                s = null;
+                                                ms = new MemoryStream();
+
+                                                int i;
+
+                                                while ((i = bs.ReadByte()) != -1)
+                                                {
+                                                    ms.WriteByte((byte)i);
+                                                }
+
+                                                ms.Seek(0, SeekOrigin.Begin);
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            if (ms != null)
+                                            {
+                                                ms.Close();
+                                                ms = null;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            if (bs != null)
+                                            {
+                                                bs.Close();
+                                            }
+
+                                            if (s != null)
+                                            {
+                                                s.Close();
+                                            }
+
+                                            if (response != null)
+                                            {
+                                                response.Close();
+                                            }
+                                        }
+                                    }
+
+                                    return ms;
+                                }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                {
+                                    BitmapImage bi = null;
+
+                                    if (task.Result != null)
+                                    {
+                                        try
+                                        {
+                                            bi = new BitmapImage();
+                                            bi.BeginInit();
+                                            bi.StreamSource = task.Result;
+                                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                                            bi.CreateOptions = BitmapCreateOptions.None;
+                                            bi.EndInit();
+                                        }
+                                        catch
+                                        {
+                                            bi = null;
+                                        }
+                                        finally
+                                        {
+                                            task.Result.Close();
+                                        }
+                                    }
+
+                                    if (this.imageUriHashSet.Contains(uri))
+                                    {
+                                        if (this.imageDictionary.ContainsKey(uri))
+                                        {
+                                            this.imageDictionary[uri] = bi;
+                                        }
+                                        else
+                                        {
+                                            this.imageDictionary.Add(uri, bi);
+                                        }
+                                    }
+                                }, TaskScheduler.FromCurrentSynchronizationContext());
+                            }
+                        }
+                        else
+                        {
+                            System.Security.Cryptography.SHA512CryptoServiceProvider sha512 = new System.Security.Cryptography.SHA512CryptoServiceProvider();
+                            StringBuilder stringBuilder = new StringBuilder();
+
+                            foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
+                            {
+                                stringBuilder.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+                            }
+
+                            stringBuilder.Append(System.IO.Path.GetExtension(uri.AbsolutePath));
+
+                            if (stringBuilder.ToString().IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0)
+                            {
+                                string path1 = System.IO.Path.Combine(directory, config2.AppSettings.Settings["Cache"].Value);
+                                string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
+
+                                if (!ignoreCache && File.Exists(path2))
+                                {
+                                    Task.Factory.StartNew<MemoryStream>(delegate
+                                    {
+                                        MemoryStream ms = null;
+                                        FileStream fs = null;
+
+                                        try
+                                        {
+                                            fs = new FileStream(path2, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                            ms = new MemoryStream();
+
+                                            byte[] buffer = new byte[fs.Length];
+                                            int bytesRead;
+
+                                            while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                                            {
+                                                ms.Write(buffer, 0, bytesRead);
+                                            }
+
+                                            ms.Seek(0, SeekOrigin.Begin);
+                                        }
+                                        catch
+                                        {
+                                            if (ms != null)
+                                            {
+                                                ms.Close();
+                                                ms = null;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            if (fs != null)
+                                            {
+                                                fs.Close();
+                                            }
+                                        }
+
+                                        return ms;
+                                    }).ContinueWith(delegate (Task<MemoryStream> task)
+                                    {
+                                        BitmapImage bi = null;
+
+                                        if (task.Result != null)
+                                        {
+                                            try
+                                            {
+                                                bi = new BitmapImage();
+                                                bi.BeginInit();
+                                                bi.StreamSource = task.Result;
+                                                bi.CacheOption = BitmapCacheOption.OnLoad;
+                                                bi.CreateOptions = BitmapCreateOptions.None;
+                                                bi.EndInit();
+                                            }
+                                            catch
+                                            {
+                                                bi = null;
+                                            }
+                                            finally
+                                            {
+                                                task.Result.Close();
+                                            }
+                                        }
+
+                                        if (this.imageUriHashSet.Contains(uri))
+                                        {
+                                            if (this.imageDictionary.ContainsKey(uri))
+                                            {
+                                                this.imageDictionary[uri] = bi;
+                                            }
+                                            else
+                                            {
+                                                this.imageDictionary.Add(uri, bi);
+                                            }
+                                        }
+                                    }, TaskScheduler.FromCurrentSynchronizationContext());
+                                }
+                                else if (uri.Scheme.Equals("data"))
+                                {
+                                    System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+                                    if (match.Success)
+                                    {
+                                        byte[] bytes = Convert.FromBase64String(match.Groups[1].Value);
+
+                                        Task.Factory.StartNew<MemoryStream>(delegate
+                                        {
+                                            FileStream fs = null;
+                                            MemoryStream ms = null;
+
+                                            try
+                                            {
+                                                if (!Directory.Exists(path1))
+                                                {
+                                                    Directory.CreateDirectory(path1);
+                                                }
+
+                                                fs = new FileStream(path2, FileMode.Create, FileAccess.Write, FileShare.None);
+                                                ms = new MemoryStream();
+
+                                                foreach (byte b in bytes)
+                                                {
+                                                    fs.WriteByte(b);
+                                                    ms.WriteByte(b);
+                                                }
+
+                                                fs.Flush();
+                                                ms.Seek(0, SeekOrigin.Begin);
+                                            }
+                                            catch
+                                            {
+                                                if (ms != null)
+                                                {
+                                                    ms.Close();
+                                                    ms = null;
+                                                }
+                                            }
+                                            finally
+                                            {
+                                                if (fs != null)
+                                                {
+                                                    fs.Close();
+                                                }
+                                            }
+
+                                            return ms;
+                                        }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                        {
+                                            BitmapImage bi = null;
+
+                                            if (task.Result != null)
+                                            {
+                                                try
+                                                {
+                                                    bi = new BitmapImage();
+                                                    bi.BeginInit();
+                                                    bi.StreamSource = task.Result;
+                                                    bi.CacheOption = BitmapCacheOption.OnLoad;
+                                                    bi.CreateOptions = BitmapCreateOptions.None;
+                                                    bi.EndInit();
+                                                }
+                                                catch
+                                                {
+                                                    bi = null;
+                                                }
+                                                finally
+                                                {
+                                                    task.Result.Close();
+                                                }
+                                            }
+
+                                            if (this.imageUriHashSet.Contains(uri))
+                                            {
+                                                if (this.imageDictionary.ContainsKey(uri))
+                                                {
+                                                    this.imageDictionary[uri] = bi;
+                                                }
+                                                else
+                                                {
+                                                    this.imageDictionary.Add(uri, bi);
+                                                }
+                                            }
+                                        }, TaskScheduler.FromCurrentSynchronizationContext());
+                                    }
+                                }
+                                else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
+                                {
+                                    WebRequest webRequest = WebRequest.Create(uri);
+
+                                    if (config1.AppSettings.Settings["Timeout"] != null)
+                                    {
+                                        if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                        {
+                                            webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                        }
+                                    }
+                                    else if (config2.AppSettings.Settings["Timeout"] != null)
+                                    {
+                                        if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                        {
+                                            webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                        }
+                                    }
+
+                                    if (config1.AppSettings.Settings["UserAgent"] != null)
+                                    {
+                                        HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                        if (httpWebRequest != null)
+                                        {
+                                            httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                                        }
+                                    }
+                                    else if (config2.AppSettings.Settings["Timeout"] != null)
+                                    {
+                                        if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                        {
+                                            webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                        }
+                                    }
+
+                                    Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                    {
+                                        MemoryStream ms = null;
+
+                                        if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                                        {
+                                            WebRequest request = (WebRequest)state;
+                                            WebResponse response = null;
+                                            Stream s = null;
+                                            BufferedStream bs = null;
+                                            FileStream fs = null;
+
+                                            try
+                                            {
+                                                response = request.GetResponse();
+
+                                                if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                                {
+                                                    s = response.GetResponseStream();
+                                                    bs = new BufferedStream(s);
+                                                    s = null;
+
+                                                    if (!Directory.Exists(path1))
+                                                    {
+                                                        Directory.CreateDirectory(path1);
+                                                    }
+
+                                                    fs = new FileStream(path2, FileMode.Create, FileAccess.Write, FileShare.None);
+                                                    ms = new MemoryStream();
+
+                                                    int i;
+
+                                                    while ((i = bs.ReadByte()) != -1)
+                                                    {
+                                                        byte b = (byte)i;
+
+                                                        fs.WriteByte(b);
+                                                        ms.WriteByte(b);
+                                                    }
+
+                                                    fs.Flush();
+                                                    ms.Seek(0, SeekOrigin.Begin);
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                if (ms != null)
+                                                {
+                                                    ms.Close();
+                                                    ms = null;
+                                                }
+                                            }
+                                            finally
+                                            {
+                                                if (fs != null)
+                                                {
+                                                    fs.Close();
+                                                }
+
+                                                if (bs != null)
+                                                {
+                                                    bs.Close();
+                                                }
+
+                                                if (s != null)
+                                                {
+                                                    s.Close();
+                                                }
+
+                                                if (response != null)
+                                                {
+                                                    response.Close();
+                                                }
+                                            }
+                                        }
+
+                                        return ms;
+                                    }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                    {
+                                        BitmapImage bi = null;
+
+                                        if (task.Result != null)
+                                        {
+                                            try
+                                            {
+                                                bi = new BitmapImage();
+                                                bi.BeginInit();
+                                                bi.StreamSource = task.Result;
+                                                bi.CacheOption = BitmapCacheOption.OnLoad;
+                                                bi.CreateOptions = BitmapCreateOptions.None;
+                                                bi.EndInit();
+                                            }
+                                            catch
+                                            {
+                                                bi = null;
+                                            }
+                                            finally
+                                            {
+                                                task.Result.Close();
+                                            }
+                                        }
+
+                                        if (this.imageUriHashSet.Contains(uri))
+                                        {
+                                            if (this.imageDictionary.ContainsKey(uri))
+                                            {
+                                                this.imageDictionary[uri] = bi;
+                                            }
+                                            else
+                                            {
+                                                this.imageDictionary.Add(uri, bi);
+                                            }
+                                        }
+                                    }, TaskScheduler.FromCurrentSynchronizationContext());
+                                }
+                            }
+                            else if (uri.Scheme.Equals("data"))
+                            {
+                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+                                if (match.Success)
+                                {
+                                    MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
+                                    BitmapImage bi = null;
+
+                                    try
+                                    {
+                                        bi = new BitmapImage();
+                                        bi.BeginInit();
+                                        bi.StreamSource = ms;
+                                        bi.CacheOption = BitmapCacheOption.OnLoad;
+                                        bi.CreateOptions = BitmapCreateOptions.None;
+                                        bi.EndInit();
+                                    }
+                                    catch
+                                    {
+                                        bi = null;
+                                    }
+                                    finally
+                                    {
+                                        ms.Close();
+                                    }
+
+                                    if (this.imageUriHashSet.Contains(uri))
+                                    {
+                                        if (this.imageDictionary.ContainsKey(uri))
+                                        {
+                                            this.imageDictionary[uri] = bi;
+                                        }
+                                        else
+                                        {
+                                            this.imageDictionary.Add(uri, bi);
+                                        }
+                                    }
+                                }
+                            }
+                            else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
+                            {
+                                WebRequest webRequest = WebRequest.Create(uri);
+
+                                if (config1.AppSettings.Settings["Timeout"] != null)
+                                {
+                                    if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    {
+                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    }
+                                }
+                                else if (config2.AppSettings.Settings["Timeout"] != null)
+                                {
+                                    if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    {
+                                        webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    }
+                                }
+
+                                if (config1.AppSettings.Settings["UserAgent"] != null)
+                                {
+                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                    if (httpWebRequest != null)
+                                    {
+                                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                                    }
+                                }
+                                else if (config2.AppSettings.Settings["UserAgent"] != null)
+                                {
+                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                    if (httpWebRequest != null)
+                                    {
+                                        httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                                    }
+                                }
+
+                                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                {
+                                    MemoryStream ms = null;
+
+                                    if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                                    {
+                                        WebRequest request = (WebRequest)state;
+                                        WebResponse response = null;
+                                        Stream s = null;
+                                        BufferedStream bs = null;
+
+                                        try
+                                        {
+                                            response = request.GetResponse();
+
+                                            if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                            {
+                                                s = response.GetResponseStream();
+                                                bs = new BufferedStream(s);
+                                                s = null;
+                                                ms = new MemoryStream();
+
+                                                int i;
+
+                                                while ((i = bs.ReadByte()) != -1)
+                                                {
+                                                    ms.WriteByte((byte)i);
+                                                }
+
+                                                ms.Seek(0, SeekOrigin.Begin);
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            if (ms != null)
+                                            {
+                                                ms.Close();
+                                                ms = null;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            if (bs != null)
+                                            {
+                                                bs.Close();
+                                            }
+
+                                            if (s != null)
+                                            {
+                                                s.Close();
+                                            }
+
+                                            if (response != null)
+                                            {
+                                                response.Close();
+                                            }
+                                        }
+                                    }
+
+                                    return ms;
+                                }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                {
+                                    BitmapImage bi = null;
+
+                                    if (task.Result != null)
+                                    {
+                                        try
+                                        {
+                                            bi = new BitmapImage();
+                                            bi.BeginInit();
+                                            bi.StreamSource = task.Result;
+                                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                                            bi.CreateOptions = BitmapCreateOptions.None;
+                                            bi.EndInit();
+                                        }
+                                        catch
+                                        {
+                                            bi = null;
+                                        }
+                                        finally
+                                        {
+                                            task.Result.Close();
+                                        }
+                                    }
+
+                                    if (this.imageUriHashSet.Contains(uri))
+                                    {
+                                        if (this.imageDictionary.ContainsKey(uri))
+                                        {
+                                            this.imageDictionary[uri] = bi;
+                                        }
+                                        else
+                                        {
+                                            this.imageDictionary.Add(uri, bi);
+                                        }
+                                    }
+                                }, TaskScheduler.FromCurrentSynchronizationContext());
+                            }
+                        }
+                    }
+                    else
+                    {
+                        System.Security.Cryptography.SHA512CryptoServiceProvider sha512 = new System.Security.Cryptography.SHA512CryptoServiceProvider();
+                        StringBuilder stringBuilder = new StringBuilder();
+
+                        foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
+                        {
+                            stringBuilder.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+                        }
+
+                        stringBuilder.Append(System.IO.Path.GetExtension(uri.AbsolutePath));
+
+                        if (stringBuilder.ToString().IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0)
+                        {
+                            string path1 = System.IO.Path.Combine(directory, config1.AppSettings.Settings["Cache"].Value);
+                            string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
+
+                            if (!ignoreCache && File.Exists(path2))
+                            {
+                                Task.Factory.StartNew<MemoryStream>(delegate
+                                {
+                                    MemoryStream ms = null;
+                                    FileStream fs = null;
+
+                                    try
+                                    {
+                                        fs = new FileStream(path2, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                        ms = new MemoryStream();
+
+                                        byte[] buffer = new byte[fs.Length];
+                                        int bytesRead;
+
+                                        while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
+                                        {
+                                            ms.Write(buffer, 0, bytesRead);
+                                        }
+
+                                        ms.Seek(0, SeekOrigin.Begin);
+                                    }
+                                    catch
+                                    {
+                                        if (ms != null)
+                                        {
+                                            ms.Close();
+                                            ms = null;
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        if (fs != null)
+                                        {
+                                            fs.Close();
+                                        }
+                                    }
+
+                                    return ms;
+                                }).ContinueWith(delegate (Task<MemoryStream> task)
+                                {
+                                    BitmapImage bi = null;
+
+                                    if (task.Result != null)
+                                    {
+                                        try
+                                        {
+                                            bi = new BitmapImage();
+                                            bi.BeginInit();
+                                            bi.StreamSource = task.Result;
+                                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                                            bi.CreateOptions = BitmapCreateOptions.None;
+                                            bi.EndInit();
+                                        }
+                                        catch
+                                        {
+                                            bi = null;
+                                        }
+                                        finally
+                                        {
+                                            task.Result.Close();
+                                        }
+                                    }
+
+                                    if (this.imageUriHashSet.Contains(uri))
+                                    {
+                                        if (this.imageDictionary.ContainsKey(uri))
+                                        {
+                                            this.imageDictionary[uri] = bi;
+                                        }
+                                        else
+                                        {
+                                            this.imageDictionary.Add(uri, bi);
+                                        }
+                                    }
+                                }, TaskScheduler.FromCurrentSynchronizationContext());
+                            }
+                            else if (uri.Scheme.Equals("data"))
+                            {
+                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+                                if (match.Success)
+                                {
+                                    byte[] bytes = Convert.FromBase64String(match.Groups[1].Value);
+
+                                    Task.Factory.StartNew<MemoryStream>(delegate
+                                    {
+                                        FileStream fs = null;
+                                        MemoryStream ms = null;
+
+                                        try
+                                        {
+                                            if (!Directory.Exists(path1))
+                                            {
+                                                Directory.CreateDirectory(path1);
+                                            }
+
+                                            fs = new FileStream(path2, FileMode.Create, FileAccess.Write, FileShare.None);
+                                            ms = new MemoryStream();
+
+                                            foreach (byte b in bytes)
+                                            {
+                                                fs.WriteByte(b);
+                                                ms.WriteByte(b);
+                                            }
+
+                                            fs.Flush();
+                                            ms.Seek(0, SeekOrigin.Begin);
+                                        }
+                                        catch
+                                        {
+                                            if (ms != null)
+                                            {
+                                                ms.Close();
+                                                ms = null;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            if (fs != null)
+                                            {
+                                                fs.Close();
+                                            }
+                                        }
+
+                                        return ms;
+                                    }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                    {
+                                        BitmapImage bi = null;
+
+                                        if (task.Result != null)
+                                        {
+                                            try
+                                            {
+                                                bi = new BitmapImage();
+                                                bi.BeginInit();
+                                                bi.StreamSource = task.Result;
+                                                bi.CacheOption = BitmapCacheOption.OnLoad;
+                                                bi.CreateOptions = BitmapCreateOptions.None;
+                                                bi.EndInit();
+                                            }
+                                            catch
+                                            {
+                                                bi = null;
+                                            }
+                                            finally
+                                            {
+                                                task.Result.Close();
+                                            }
+                                        }
+
+                                        if (this.imageUriHashSet.Contains(uri))
+                                        {
+                                            if (this.imageDictionary.ContainsKey(uri))
+                                            {
+                                                this.imageDictionary[uri] = bi;
+                                            }
+                                            else
+                                            {
+                                                this.imageDictionary.Add(uri, bi);
+                                            }
+                                        }
+                                    }, TaskScheduler.FromCurrentSynchronizationContext());
+                                }
+                            }
+                            else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
+                            {
+                                WebRequest webRequest = WebRequest.Create(uri);
+
+                                if (config1.AppSettings.Settings["Timeout"] != null)
+                                {
+                                    if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    {
+                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    }
+                                }
+                                else if (config2.AppSettings.Settings["Timeout"] != null)
+                                {
+                                    if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    {
+                                        webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    }
+                                }
+
+                                if (config1.AppSettings.Settings["UserAgent"] != null)
+                                {
+                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                    if (httpWebRequest != null)
+                                    {
+                                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                                    }
+                                }
+                                else if (config2.AppSettings.Settings["Timeout"] != null)
+                                {
+                                    if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    {
+                                        webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    }
+                                }
+
+                                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                {
+                                    MemoryStream ms = null;
+
+                                    if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                                    {
+                                        WebRequest request = (WebRequest)state;
+                                        WebResponse response = null;
+                                        Stream s = null;
+                                        BufferedStream bs = null;
+                                        FileStream fs = null;
+
+                                        try
+                                        {
+                                            response = request.GetResponse();
+
+                                            if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                            {
+                                                s = response.GetResponseStream();
+                                                bs = new BufferedStream(s);
+                                                s = null;
+
+                                                if (!Directory.Exists(path1))
+                                                {
+                                                    Directory.CreateDirectory(path1);
+                                                }
+
+                                                fs = new FileStream(path2, FileMode.Create, FileAccess.Write, FileShare.None);
+                                                ms = new MemoryStream();
+
+                                                int i;
+
+                                                while ((i = bs.ReadByte()) != -1)
+                                                {
+                                                    byte b = (byte)i;
+
+                                                    fs.WriteByte(b);
+                                                    ms.WriteByte(b);
+                                                }
+
+                                                fs.Flush();
+                                                ms.Seek(0, SeekOrigin.Begin);
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            if (ms != null)
+                                            {
+                                                ms.Close();
+                                                ms = null;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            if (fs != null)
+                                            {
+                                                fs.Close();
+                                            }
+
+                                            if (bs != null)
+                                            {
+                                                bs.Close();
+                                            }
+
+                                            if (s != null)
+                                            {
+                                                s.Close();
+                                            }
+
+                                            if (response != null)
+                                            {
+                                                response.Close();
+                                            }
+                                        }
+                                    }
+
+                                    return ms;
+                                }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                {
+                                    BitmapImage bi = null;
+
+                                    if (task.Result != null)
+                                    {
+                                        try
+                                        {
+                                            bi = new BitmapImage();
+                                            bi.BeginInit();
+                                            bi.StreamSource = task.Result;
+                                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                                            bi.CreateOptions = BitmapCreateOptions.None;
+                                            bi.EndInit();
+                                        }
+                                        catch
+                                        {
+                                            bi = null;
+                                        }
+                                        finally
+                                        {
+                                            task.Result.Close();
+                                        }
+                                    }
+
+                                    if (this.imageUriHashSet.Contains(uri))
+                                    {
+                                        if (this.imageDictionary.ContainsKey(uri))
+                                        {
+                                            this.imageDictionary[uri] = bi;
+                                        }
+                                        else
+                                        {
+                                            this.imageDictionary.Add(uri, bi);
+                                        }
+                                    }
+                                }, TaskScheduler.FromCurrentSynchronizationContext());
+                            }
+                        }
+                        else if (uri.Scheme.Equals("data"))
+                        {
+                            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(uri.LocalPath, "image/(?:(?:x-)?bmp|gif|jpeg|png|tiff(?:-fx)?);base64,(?<1>.+)", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+                            if (match.Success)
+                            {
+                                MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
+                                BitmapImage bi = null;
+
+                                try
+                                {
+                                    bi = new BitmapImage();
+                                    bi.BeginInit();
+                                    bi.StreamSource = ms;
+                                    bi.CacheOption = BitmapCacheOption.OnLoad;
+                                    bi.CreateOptions = BitmapCreateOptions.None;
+                                    bi.EndInit();
+                                }
+                                catch
+                                {
+                                    bi = null;
+                                }
+                                finally
+                                {
+                                    ms.Close();
+                                }
+
+                                if (this.imageUriHashSet.Contains(uri))
+                                {
+                                    if (this.imageDictionary.ContainsKey(uri))
+                                    {
+                                        this.imageDictionary[uri] = bi;
+                                    }
+                                    else
+                                    {
+                                        this.imageDictionary.Add(uri, bi);
+                                    }
+                                }
+                            }
+                        }
+                        else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
+                        {
+                            WebRequest webRequest = WebRequest.Create(uri);
+
+                            if (config1.AppSettings.Settings["Timeout"] != null)
+                            {
+                                if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                {
+                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                }
+                            }
+                            else if (config2.AppSettings.Settings["Timeout"] != null)
+                            {
+                                if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                {
+                                    webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                }
+                            }
+
+                            if (config1.AppSettings.Settings["UserAgent"] != null)
+                            {
+                                HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                if (httpWebRequest != null)
+                                {
+                                    httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                                }
+                            }
+                            else if (config2.AppSettings.Settings["UserAgent"] != null)
+                            {
+                                HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                if (httpWebRequest != null)
+                                {
+                                    httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                                }
+                            }
+
+                            Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                            {
+                                MemoryStream ms = null;
+
+                                if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                                {
+                                    WebRequest request = (WebRequest)state;
+                                    WebResponse response = null;
+                                    Stream s = null;
+                                    BufferedStream bs = null;
+
+                                    try
+                                    {
+                                        response = request.GetResponse();
+
+                                        if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                        {
+                                            s = response.GetResponseStream();
+                                            bs = new BufferedStream(s);
+                                            s = null;
+                                            ms = new MemoryStream();
+
+                                            int i;
+
+                                            while ((i = bs.ReadByte()) != -1)
+                                            {
+                                                ms.WriteByte((byte)i);
+                                            }
+
+                                            ms.Seek(0, SeekOrigin.Begin);
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        if (ms != null)
+                                        {
+                                            ms.Close();
+                                            ms = null;
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        if (bs != null)
+                                        {
+                                            bs.Close();
+                                        }
+
+                                        if (s != null)
+                                        {
+                                            s.Close();
+                                        }
+
+                                        if (response != null)
+                                        {
+                                            response.Close();
+                                        }
+                                    }
+                                }
+
+                                return ms;
+                            }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                            {
+                                BitmapImage bi = null;
+
+                                if (task.Result != null)
+                                {
+                                    try
+                                    {
+                                        bi = new BitmapImage();
+                                        bi.BeginInit();
+                                        bi.StreamSource = task.Result;
+                                        bi.CacheOption = BitmapCacheOption.OnLoad;
+                                        bi.CreateOptions = BitmapCreateOptions.None;
+                                        bi.EndInit();
+                                    }
+                                    catch
+                                    {
+                                        bi = null;
+                                    }
+                                    finally
+                                    {
+                                        task.Result.Close();
+                                    }
+                                }
+
+                                if (this.imageUriHashSet.Contains(uri))
+                                {
+                                    if (this.imageDictionary.ContainsKey(uri))
+                                    {
+                                        this.imageDictionary[uri] = bi;
+                                    }
+                                    else
+                                    {
+                                        this.imageDictionary.Add(uri, bi);
+                                    }
+                                }
+                            }, TaskScheduler.FromCurrentSynchronizationContext());
+                        }
                     }
                 }
             }

@@ -405,7 +405,8 @@ namespace Apricot
                     List<MenuItem> menuItemList = new List<MenuItem>(charactersMenuItem.Items.Cast<MenuItem>());
                     HashSet<string> pathHashSet = new HashSet<string>();
                     LinkedList<KeyValuePair<Character, string>> characterLinkedList = new LinkedList<KeyValuePair<Character, string>>();
-
+                    string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                    
                     foreach (Character character in Script.Instance.Characters)
                     {
                         string path;
@@ -432,7 +433,7 @@ namespace Apricot
                         characterLinkedList.AddLast(new KeyValuePair<Character, string>(character, path));
                     }
 
-                    List<KeyValuePair<string, string>> keyValuePairList = (from fileName in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let extension = Path.GetExtension(fileName) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase) select new KeyValuePair<bool, string>(isZip, fileName)).Concat(from path in pathHashSet select new KeyValuePair<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)).Aggregate<KeyValuePair<bool, string>, List<KeyValuePair<string, string>>>(new List<KeyValuePair<string, string>>(), (list, kvp1) =>
+                    List<KeyValuePair<string, string>> keyValuePairList = (from fileName in Directory.Exists(directory) ? Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)) : Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let extension = Path.GetExtension(fileName) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase) select new KeyValuePair<bool, string>(isZip, fileName)).Concat(from path in pathHashSet select new KeyValuePair<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)).Aggregate<KeyValuePair<bool, string>, List<KeyValuePair<string, string>>>(new List<KeyValuePair<string, string>>(), (list, kvp1) =>
                     {
                         if (!list.Exists(delegate (KeyValuePair<string, string> kvp2)
                         {
@@ -988,7 +989,7 @@ namespace Apricot
 
             if (this == Application.Current.MainWindow)
             {
-                System.Configuration.Configuration config = null;
+                System.Configuration.Configuration config1 = null;
                 string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
                 if (Directory.Exists(directory))
@@ -1000,93 +1001,251 @@ namespace Apricot
                         System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
                         exeConfigurationFileMap.ExeConfigFilename = s;
-                        config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                        config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
                     }
                 }
 
-                if (config == null)
+                if (config1 == null)
                 {
-                    config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                }
+                    config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                if (config.AppSettings.Settings["Left"] != null && config.AppSettings.Settings["Top"] != null)
-                {
-                    if (config.AppSettings.Settings["Left"].Value.Length > 0 && config.AppSettings.Settings["Top"].Value.Length > 0)
+                    if (config1.AppSettings.Settings["Left"] != null && config1.AppSettings.Settings["Top"] != null)
                     {
-                        this.Left = Double.Parse(config.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                        this.Top = Double.Parse(config.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    }
-                }
-
-                if (config.AppSettings.Settings["Opacity"] != null)
-                {
-                    if (config.AppSettings.Settings["Opacity"].Value.Length > 0)
-                    {
-                        this.opacity = Double.Parse(config.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    }
-                }
-
-                if (config.AppSettings.Settings["Scale"] != null)
-                {
-                    if (config.AppSettings.Settings["Scale"].Value.Length > 0)
-                    {
-                        this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                    }
-                }
-
-                if (config.AppSettings.Settings["Topmost"] != null)
-                {
-                    if (config.AppSettings.Settings["Topmost"].Value.Length > 0)
-                    {
-                        this.Topmost = Boolean.Parse(config.AppSettings.Settings["Topmost"].Value);
-                    }
-                }
-
-                if (config.AppSettings.Settings["ShowInTaskbar"] != null)
-                {
-                    if (config.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
-                    {
-                        this.ShowInTaskbar = Boolean.Parse(config.AppSettings.Settings["ShowInTaskbar"].Value);
-                    }
-                }
-
-                if (config.AppSettings.Settings["DropShadow"] != null)
-                {
-                    if (config.AppSettings.Settings["DropShadow"].Value.Length > 0)
-                    {
-                        if (Boolean.Parse(config.AppSettings.Settings["DropShadow"].Value))
+                        if (config1.AppSettings.Settings["Left"].Value.Length > 0 && config1.AppSettings.Settings["Top"].Value.Length > 0)
                         {
-                            DropShadowEffect dropShadowEffect = new DropShadowEffect();
+                            this.Left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            this.Top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
 
-                            dropShadowEffect.Color = Colors.Black;
-                            dropShadowEffect.BlurRadius = 10;
-                            dropShadowEffect.Direction = 270;
-                            dropShadowEffect.ShadowDepth = 0;
-                            dropShadowEffect.Opacity = 0.5;
+                    if (config1.AppSettings.Settings["Opacity"] != null)
+                    {
+                        if (config1.AppSettings.Settings["Opacity"].Value.Length > 0)
+                        {
+                            this.opacity = Double.Parse(config1.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
 
-                            if (dropShadowEffect.CanFreeze)
+                    if (config1.AppSettings.Settings["Scale"] != null)
+                    {
+                        if (config1.AppSettings.Settings["Scale"].Value.Length > 0)
+                        {
+                            this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config1.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["Topmost"] != null)
+                    {
+                        if (config1.AppSettings.Settings["Topmost"].Value.Length > 0)
+                        {
+                            this.Topmost = Boolean.Parse(config1.AppSettings.Settings["Topmost"].Value);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["ShowInTaskbar"] != null)
+                    {
+                        if (config1.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
+                        {
+                            this.ShowInTaskbar = Boolean.Parse(config1.AppSettings.Settings["ShowInTaskbar"].Value);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["DropShadow"] != null)
+                    {
+                        if (config1.AppSettings.Settings["DropShadow"].Value.Length > 0)
+                        {
+                            if (Boolean.Parse(config1.AppSettings.Settings["DropShadow"].Value))
                             {
-                                dropShadowEffect.Freeze();
-                            }
+                                DropShadowEffect dropShadowEffect = new DropShadowEffect();
 
-                            this.Canvas.Effect = dropShadowEffect;
+                                dropShadowEffect.Color = Colors.Black;
+                                dropShadowEffect.BlurRadius = 10;
+                                dropShadowEffect.Direction = 270;
+                                dropShadowEffect.ShadowDepth = 0;
+                                dropShadowEffect.Opacity = 0.5;
+
+                                if (dropShadowEffect.CanFreeze)
+                                {
+                                    dropShadowEffect.Freeze();
+                                }
+
+                                this.Canvas.Effect = dropShadowEffect;
+                            }
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["Mute"] != null)
+                    {
+                        if (config1.AppSettings.Settings["Mute"].Value.Length > 0)
+                        {
+                            this.isMute = Boolean.Parse(config1.AppSettings.Settings["Mute"].Value);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["FrameRate"] != null)
+                    {
+                        if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                        {
+                            this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
                         }
                     }
                 }
-
-                if (config.AppSettings.Settings["Mute"] != null)
+                else
                 {
-                    if (config.AppSettings.Settings["Mute"].Value.Length > 0)
+                    System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                    if (config1.AppSettings.Settings["Left"] != null && config1.AppSettings.Settings["Top"] != null)
                     {
-                        this.isMute = Boolean.Parse(config.AppSettings.Settings["Mute"].Value);
+                        if (config1.AppSettings.Settings["Left"].Value.Length > 0 && config1.AppSettings.Settings["Top"].Value.Length > 0)
+                        {
+                            this.Left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            this.Top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
                     }
-                }
-
-                if (config.AppSettings.Settings["FrameRate"] != null)
-                {
-                    if (config.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                    else if (config2.AppSettings.Settings["Left"] != null && config2.AppSettings.Settings["Top"] != null)
                     {
-                        this.frameRate = Double.Parse(config.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        if (config2.AppSettings.Settings["Left"].Value.Length > 0 && config2.AppSettings.Settings["Top"].Value.Length > 0)
+                        {
+                            this.Left = Double.Parse(config2.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            this.Top = Double.Parse(config2.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["Opacity"] != null)
+                    {
+                        if (config1.AppSettings.Settings["Opacity"].Value.Length > 0)
+                        {
+                            this.opacity = Double.Parse(config1.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
+                    else if (config2.AppSettings.Settings["Opacity"] != null)
+                    {
+                        if (config2.AppSettings.Settings["Opacity"].Value.Length > 0)
+                        {
+                            this.opacity = Double.Parse(config2.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["Scale"] != null)
+                    {
+                        if (config1.AppSettings.Settings["Scale"].Value.Length > 0)
+                        {
+                            this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config1.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
+                    else if (config2.AppSettings.Settings["Scale"] != null)
+                    {
+                        if (config2.AppSettings.Settings["Scale"].Value.Length > 0)
+                        {
+                            this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config2.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["Topmost"] != null)
+                    {
+                        if (config1.AppSettings.Settings["Topmost"].Value.Length > 0)
+                        {
+                            this.Topmost = Boolean.Parse(config1.AppSettings.Settings["Topmost"].Value);
+                        }
+                    }
+                    else if (config2.AppSettings.Settings["Topmost"] != null)
+                    {
+                        if (config2.AppSettings.Settings["Topmost"].Value.Length > 0)
+                        {
+                            this.Topmost = Boolean.Parse(config2.AppSettings.Settings["Topmost"].Value);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["ShowInTaskbar"] != null)
+                    {
+                        if (config1.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
+                        {
+                            this.ShowInTaskbar = Boolean.Parse(config1.AppSettings.Settings["ShowInTaskbar"].Value);
+                        }
+                    }
+                    else if (config2.AppSettings.Settings["ShowInTaskbar"] != null)
+                    {
+                        if (config2.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
+                        {
+                            this.ShowInTaskbar = Boolean.Parse(config2.AppSettings.Settings["ShowInTaskbar"].Value);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["DropShadow"] != null)
+                    {
+                        if (config1.AppSettings.Settings["DropShadow"].Value.Length > 0)
+                        {
+                            if (Boolean.Parse(config1.AppSettings.Settings["DropShadow"].Value))
+                            {
+                                DropShadowEffect dropShadowEffect = new DropShadowEffect();
+
+                                dropShadowEffect.Color = Colors.Black;
+                                dropShadowEffect.BlurRadius = 10;
+                                dropShadowEffect.Direction = 270;
+                                dropShadowEffect.ShadowDepth = 0;
+                                dropShadowEffect.Opacity = 0.5;
+
+                                if (dropShadowEffect.CanFreeze)
+                                {
+                                    dropShadowEffect.Freeze();
+                                }
+
+                                this.Canvas.Effect = dropShadowEffect;
+                            }
+                        }
+                    }
+                    else if (config2.AppSettings.Settings["DropShadow"] != null)
+                    {
+                        if (config2.AppSettings.Settings["DropShadow"].Value.Length > 0)
+                        {
+                            if (Boolean.Parse(config2.AppSettings.Settings["DropShadow"].Value))
+                            {
+                                DropShadowEffect dropShadowEffect = new DropShadowEffect();
+
+                                dropShadowEffect.Color = Colors.Black;
+                                dropShadowEffect.BlurRadius = 10;
+                                dropShadowEffect.Direction = 270;
+                                dropShadowEffect.ShadowDepth = 0;
+                                dropShadowEffect.Opacity = 0.5;
+
+                                if (dropShadowEffect.CanFreeze)
+                                {
+                                    dropShadowEffect.Freeze();
+                                }
+
+                                this.Canvas.Effect = dropShadowEffect;
+                            }
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["Mute"] != null)
+                    {
+                        if (config1.AppSettings.Settings["Mute"].Value.Length > 0)
+                        {
+                            this.isMute = Boolean.Parse(config1.AppSettings.Settings["Mute"].Value);
+                        }
+                    }
+                    else if (config2.AppSettings.Settings["Mute"] != null)
+                    {
+                        if (config2.AppSettings.Settings["Mute"].Value.Length > 0)
+                        {
+                            this.isMute = Boolean.Parse(config2.AppSettings.Settings["Mute"].Value);
+                        }
+                    }
+
+                    if (config1.AppSettings.Settings["FrameRate"] != null)
+                    {
+                        if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                        {
+                            this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
+                    else if (config2.AppSettings.Settings["FrameRate"] != null)
+                    {
+                        if (config2.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                        {
+                            this.frameRate = Double.Parse(config2.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        }
                     }
                 }
             }
@@ -1509,8 +1668,9 @@ namespace Apricot
                         bool isCleared;
                         bool isOwner = true;
                         Nullable<Point> point = null;
-                        string directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
+                        string directory1 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                        string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                        
                         foreach (Nullable<Point> p in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select new Nullable<Point>(new Point(agent.Left - character.Location.X - character.BaseLocation.X, agent.Top - character.Location.Y - character.BaseLocation.Y)))
                         {
                             point = p;
@@ -1575,33 +1735,76 @@ namespace Apricot
                             });
                         } while (!isCleared);
 
-                        foreach (Character character in characters)
+                        if (Directory.Exists(directory1))
                         {
-                            if (!pathList.Exists(delegate (string path)
+                            foreach (Character character in characters)
                             {
-                                if (Path.IsPathRooted(path) && !Path.IsPathRooted(character.Script))
+                                if (!pathList.Exists(delegate (string path)
                                 {
-                                    return Path.GetFullPath(character.Script).Equals(path);
-                                }
-                                else if (!Path.IsPathRooted(path) && Path.IsPathRooted(character.Script))
+                                    if (Path.IsPathRooted(path) && !Path.IsPathRooted(character.Script))
+                                    {
+                                        return Path.GetFullPath(character.Script).Equals(path);
+                                    }
+                                    else if (!Path.IsPathRooted(path) && Path.IsPathRooted(character.Script))
+                                    {
+                                        return character.Script.Equals(Path.GetFullPath(path));
+                                    }
+
+                                    return character.Script.Equals(path);
+                                }))
                                 {
-                                    return character.Script.Equals(Path.GetFullPath(path));
+                                    if (Path.IsPathRooted(character.Script))
+                                    {
+                                        pathList.Add(character.Script);
+                                    }
+                                    else
+                                    {
+                                        string p = Path.Combine(directory1, character.Script);
+
+                                        if (File.Exists(p))
+                                        {
+                                            pathList.Add(p);
+                                        }
+                                        else
+                                        {
+                                            pathList.Add(Path.Combine(directory2, character.Script));
+                                        }
+                                    }
                                 }
 
-                                return character.Script.Equals(path);
-                            }))
-                            {
-                                if (Path.IsPathRooted(character.Script))
-                                {
-                                    pathList.Add(character.Script);
-                                }
-                                else
-                                {
-                                    pathList.Add(Path.Combine(directory, character.Script));
-                                }
+                                Script.Instance.Characters.Add(character);
                             }
+                        }
+                        else
+                        {
+                            foreach (Character character in characters)
+                            {
+                                if (!pathList.Exists(delegate (string path)
+                                {
+                                    if (Path.IsPathRooted(path) && !Path.IsPathRooted(character.Script))
+                                    {
+                                        return Path.GetFullPath(character.Script).Equals(path);
+                                    }
+                                    else if (!Path.IsPathRooted(path) && Path.IsPathRooted(character.Script))
+                                    {
+                                        return character.Script.Equals(Path.GetFullPath(path));
+                                    }
 
-                            Script.Instance.Characters.Add(character);
+                                    return character.Script.Equals(path);
+                                }))
+                                {
+                                    if (Path.IsPathRooted(character.Script))
+                                    {
+                                        pathList.Add(character.Script);
+                                    }
+                                    else
+                                    {
+                                        pathList.Add(Path.Combine(directory2, character.Script));
+                                    }
+                                }
+
+                                Script.Instance.Characters.Add(character);
+                            }
                         }
 
                         pathList.ForEach(delegate (string path)
@@ -2697,94 +2900,446 @@ namespace Apricot
 
             if (!e.Cancel && this == Application.Current.MainWindow)
             {
-                System.Configuration.Configuration config = null;
+                int versionMajor = Environment.OSVersion.Version.Major;
+                int versionMinor = Environment.OSVersion.Version.Minor;
+                double version = versionMajor + (double)versionMinor / 10;
                 string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
-                if (Directory.Exists(directory))
+                if (version > 6.1)
                 {
-                    string fileName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    const long APPMODEL_ERROR_NO_PACKAGE = 15700L;
+                    int length = 0;
+                    StringBuilder sb = new StringBuilder(0);
+                    int result = NativeMethods.GetCurrentPackageFullName(ref length, sb);
 
-                    foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                    sb = new StringBuilder(length);
+                    result = NativeMethods.GetCurrentPackageFullName(ref length, sb);
+
+                    if (result == APPMODEL_ERROR_NO_PACKAGE)
                     {
+                        System.Configuration.Configuration config = null;
+
+                        if (Directory.Exists(directory))
+                        {
+                            string fileName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                            foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                            {
+                                System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
+
+                                exeConfigurationFileMap.ExeConfigFilename = s;
+                                config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                            }
+                        }
+
+                        if (config == null)
+                        {
+                            config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+                        }
+
+                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                        {
+                            if (config.AppSettings.Settings["Left"] == null)
+                            {
+                                config.AppSettings.Settings.Add("Left", (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                            }
+                            else
+                            {
+                                config.AppSettings.Settings["Left"].Value = (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            }
+
+                            if (config.AppSettings.Settings["Top"] == null)
+                            {
+                                config.AppSettings.Settings.Add("Top", (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                            }
+                            else
+                            {
+                                config.AppSettings.Settings["Top"].Value = (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            }
+                        }
+
+                        if (config.AppSettings.Settings["Opacity"] == null)
+                        {
+                            config.AppSettings.Settings.Add("Opacity", this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            config.AppSettings.Settings["Opacity"].Value = this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        }
+
+                        if (config.AppSettings.Settings["Scale"] == null)
+                        {
+                            config.AppSettings.Settings.Add("Scale", this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            config.AppSettings.Settings["Scale"].Value = this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        }
+
+                        if (config.AppSettings.Settings["Topmost"] == null)
+                        {
+                            config.AppSettings.Settings.Add("Topmost", this.Topmost.ToString());
+                        }
+                        else
+                        {
+                            config.AppSettings.Settings["Topmost"].Value = this.Topmost.ToString();
+                        }
+
+                        if (config.AppSettings.Settings["ShowInTaskbar"] == null)
+                        {
+                            config.AppSettings.Settings.Add("ShowInTaskbar", this.ShowInTaskbar.ToString());
+                        }
+                        else
+                        {
+                            config.AppSettings.Settings["ShowInTaskbar"].Value = this.ShowInTaskbar.ToString();
+                        }
+
+                        if (config.AppSettings.Settings["Mute"] == null)
+                        {
+                            config.AppSettings.Settings.Add("Mute", this.isMute.ToString());
+                        }
+                        else
+                        {
+                            config.AppSettings.Settings["Mute"].Value = this.isMute.ToString();
+                        }
+
+                        config.Save(System.Configuration.ConfigurationSaveMode.Modified);
+                    }
+                    else
+                    {
+                        string filename = String.Concat(Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location), ".config");
+                        string path = Path.Combine(directory, filename);
                         System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
+                        
+                        if (Directory.Exists(directory))
+                        {
+                            if (File.Exists(path))
+                            {
+                                exeConfigurationFileMap.ExeConfigFilename = path;
 
-                        exeConfigurationFileMap.ExeConfigFilename = s;
-                        config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                                System.Configuration.Configuration config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+
+                                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                                {
+                                    if (config.AppSettings.Settings["Left"] == null)
+                                    {
+                                        config.AppSettings.Settings.Add("Left", (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                    }
+                                    else
+                                    {
+                                        config.AppSettings.Settings["Left"].Value = (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                    }
+
+                                    if (config.AppSettings.Settings["Top"] == null)
+                                    {
+                                        config.AppSettings.Settings.Add("Top", (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                    }
+                                    else
+                                    {
+                                        config.AppSettings.Settings["Top"].Value = (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                    }
+                                }
+
+                                if (config.AppSettings.Settings["Opacity"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Opacity", this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Opacity"].Value = this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                }
+
+                                if (config.AppSettings.Settings["Scale"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Scale", this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Scale"].Value = this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                }
+
+                                if (config.AppSettings.Settings["Topmost"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Topmost", this.Topmost.ToString());
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Topmost"].Value = this.Topmost.ToString();
+                                }
+
+                                if (config.AppSettings.Settings["ShowInTaskbar"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("ShowInTaskbar", this.ShowInTaskbar.ToString());
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["ShowInTaskbar"].Value = this.ShowInTaskbar.ToString();
+                                }
+
+                                if (config.AppSettings.Settings["Mute"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Mute", this.isMute.ToString());
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Mute"].Value = this.isMute.ToString();
+                                }
+
+                                config.Save(System.Configuration.ConfigurationSaveMode.Modified);
+                            }
+                            else
+                            {
+                                exeConfigurationFileMap.ExeConfigFilename = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None).FilePath;
+
+                                System.Configuration.Configuration config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                                
+                                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                                {
+                                    if (config.AppSettings.Settings["Left"] == null)
+                                    {
+                                        config.AppSettings.Settings.Add("Left", (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                    }
+                                    else
+                                    {
+                                        config.AppSettings.Settings["Left"].Value = (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                    }
+
+                                    if (config.AppSettings.Settings["Top"] == null)
+                                    {
+                                        config.AppSettings.Settings.Add("Top", (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                    }
+                                    else
+                                    {
+                                        config.AppSettings.Settings["Top"].Value = (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                    }
+                                }
+
+                                if (config.AppSettings.Settings["Opacity"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Opacity", this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Opacity"].Value = this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                }
+
+                                if (config.AppSettings.Settings["Scale"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Scale", this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Scale"].Value = this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                }
+
+                                if (config.AppSettings.Settings["Topmost"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Topmost", this.Topmost.ToString());
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Topmost"].Value = this.Topmost.ToString();
+                                }
+
+                                if (config.AppSettings.Settings["ShowInTaskbar"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("ShowInTaskbar", this.ShowInTaskbar.ToString());
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["ShowInTaskbar"].Value = this.ShowInTaskbar.ToString();
+                                }
+
+                                if (config.AppSettings.Settings["Mute"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Mute", this.isMute.ToString());
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Mute"].Value = this.isMute.ToString();
+                                }
+
+                                foreach (System.Configuration.ConfigurationSection section in (from section in config.Sections.Cast<System.Configuration.ConfigurationSection>() where !config.AppSettings.SectionInformation.Name.Equals(section.SectionInformation.Name) select section).ToArray())
+                                {
+                                    section.SectionInformation.RevertToParent();
+                                }
+
+                                config.SaveAs(path, System.Configuration.ConfigurationSaveMode.Modified);
+                            }
+                        }
+                        else
+                        {
+                            Directory.CreateDirectory(directory);
+
+                            exeConfigurationFileMap.ExeConfigFilename = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None).FilePath;
+
+                            System.Configuration.Configuration config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+
+                            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                            {
+                                if (config.AppSettings.Settings["Left"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Left", (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Left"].Value = (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                }
+
+                                if (config.AppSettings.Settings["Top"] == null)
+                                {
+                                    config.AppSettings.Settings.Add("Top", (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                                }
+                                else
+                                {
+                                    config.AppSettings.Settings["Top"].Value = (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                }
+                            }
+
+                            if (config.AppSettings.Settings["Opacity"] == null)
+                            {
+                                config.AppSettings.Settings.Add("Opacity", this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                            }
+                            else
+                            {
+                                config.AppSettings.Settings["Opacity"].Value = this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            }
+
+                            if (config.AppSettings.Settings["Scale"] == null)
+                            {
+                                config.AppSettings.Settings.Add("Scale", this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                            }
+                            else
+                            {
+                                config.AppSettings.Settings["Scale"].Value = this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            }
+
+                            if (config.AppSettings.Settings["Topmost"] == null)
+                            {
+                                config.AppSettings.Settings.Add("Topmost", this.Topmost.ToString());
+                            }
+                            else
+                            {
+                                config.AppSettings.Settings["Topmost"].Value = this.Topmost.ToString();
+                            }
+
+                            if (config.AppSettings.Settings["ShowInTaskbar"] == null)
+                            {
+                                config.AppSettings.Settings.Add("ShowInTaskbar", this.ShowInTaskbar.ToString());
+                            }
+                            else
+                            {
+                                config.AppSettings.Settings["ShowInTaskbar"].Value = this.ShowInTaskbar.ToString();
+                            }
+
+                            if (config.AppSettings.Settings["Mute"] == null)
+                            {
+                                config.AppSettings.Settings.Add("Mute", this.isMute.ToString());
+                            }
+                            else
+                            {
+                                config.AppSettings.Settings["Mute"].Value = this.isMute.ToString();
+                            }
+
+                            foreach (System.Configuration.ConfigurationSection section in (from section in config.Sections.Cast<System.Configuration.ConfigurationSection>() where !config.AppSettings.SectionInformation.Name.Equals(section.SectionInformation.Name) select section).ToArray())
+                            {
+                                section.SectionInformation.RevertToParent();
+                            }
+
+                            config.SaveAs(path, System.Configuration.ConfigurationSaveMode.Modified);
+                        }
                     }
                 }
-
-                if (config == null)
+                else
                 {
-                    config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                }
+                    System.Configuration.Configuration config = null;
 
-                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
-                {
-                    if (config.AppSettings.Settings["Left"] == null)
+                    if (Directory.Exists(directory))
                     {
-                        config.AppSettings.Settings.Add("Left", (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        string fileName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                        foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                        {
+                            System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
+
+                            exeConfigurationFileMap.ExeConfigFilename = s;
+                            config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                        }
+                    }
+
+                    if (config == null)
+                    {
+                        config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+                    }
+
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                    {
+                        if (config.AppSettings.Settings["Left"] == null)
+                        {
+                            config.AppSettings.Settings.Add("Left", (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            config.AppSettings.Settings["Left"].Value = (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        }
+
+                        if (config.AppSettings.Settings["Top"] == null)
+                        {
+                            config.AppSettings.Settings.Add("Top", (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            config.AppSettings.Settings["Top"].Value = (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        }
+                    }
+
+                    if (config.AppSettings.Settings["Opacity"] == null)
+                    {
+                        config.AppSettings.Settings.Add("Opacity", this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     }
                     else
                     {
-                        config.AppSettings.Settings["Left"].Value = (this.Left - character.Location.X - character.BaseLocation.X).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        config.AppSettings.Settings["Opacity"].Value = this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture);
                     }
 
-                    if (config.AppSettings.Settings["Top"] == null)
+                    if (config.AppSettings.Settings["Scale"] == null)
                     {
-                        config.AppSettings.Settings.Add("Top", (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        config.AppSettings.Settings.Add("Scale", this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     }
                     else
                     {
-                        config.AppSettings.Settings["Top"].Value = (this.Top - character.Location.Y - character.BaseLocation.Y).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        config.AppSettings.Settings["Scale"].Value = this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture);
                     }
-                }
 
-                if (config.AppSettings.Settings["Opacity"] == null)
-                {
-                    config.AppSettings.Settings.Add("Opacity", this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                }
-                else
-                {
-                    config.AppSettings.Settings["Opacity"].Value = this.opacity.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                }
+                    if (config.AppSettings.Settings["Topmost"] == null)
+                    {
+                        config.AppSettings.Settings.Add("Topmost", this.Topmost.ToString());
+                    }
+                    else
+                    {
+                        config.AppSettings.Settings["Topmost"].Value = this.Topmost.ToString();
+                    }
 
-                if (config.AppSettings.Settings["Scale"] == null)
-                {
-                    config.AppSettings.Settings.Add("Scale", this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                }
-                else
-                {
-                    config.AppSettings.Settings["Scale"].Value = this.scale.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                }
+                    if (config.AppSettings.Settings["ShowInTaskbar"] == null)
+                    {
+                        config.AppSettings.Settings.Add("ShowInTaskbar", this.ShowInTaskbar.ToString());
+                    }
+                    else
+                    {
+                        config.AppSettings.Settings["ShowInTaskbar"].Value = this.ShowInTaskbar.ToString();
+                    }
 
-                if (config.AppSettings.Settings["Topmost"] == null)
-                {
-                    config.AppSettings.Settings.Add("Topmost", this.Topmost.ToString());
-                }
-                else
-                {
-                    config.AppSettings.Settings["Topmost"].Value = this.Topmost.ToString();
-                }
+                    if (config.AppSettings.Settings["Mute"] == null)
+                    {
+                        config.AppSettings.Settings.Add("Mute", this.isMute.ToString());
+                    }
+                    else
+                    {
+                        config.AppSettings.Settings["Mute"].Value = this.isMute.ToString();
+                    }
 
-                if (config.AppSettings.Settings["ShowInTaskbar"] == null)
-                {
-                    config.AppSettings.Settings.Add("ShowInTaskbar", this.ShowInTaskbar.ToString());
+                    config.Save(System.Configuration.ConfigurationSaveMode.Modified);
                 }
-                else
-                {
-                    config.AppSettings.Settings["ShowInTaskbar"].Value = this.ShowInTaskbar.ToString();
-                }
-
-                if (config.AppSettings.Settings["Mute"] == null)
-                {
-                    config.AppSettings.Settings.Add("Mute", this.isMute.ToString());
-                }
-                else
-                {
-                    config.AppSettings.Settings["Mute"].Value = this.isMute.ToString();
-                }
-
-                config.Save(System.Configuration.ConfigurationSaveMode.Modified);
             }
 
             base.OnClosing(e);
@@ -4386,48 +4941,5 @@ namespace Apricot
                 }), null);
             }
         }
-    }
-
-    internal static class NativeMethods
-    {
-        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
-        public static extern IntPtr GlobalLock(IntPtr hMem);
-
-        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        public static extern bool GlobalUnlock(IntPtr hMem);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        public static extern bool CloseClipboard();
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        public static extern IntPtr GetClipboardData(uint uFormat);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        public static extern bool IsClipboardFormatAvailable(uint format);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        public static extern bool OpenClipboard(IntPtr hWndNewOwner);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        public static extern IntPtr SetClipboardViewer(IntPtr hWndNewViewer);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        public static extern bool ChangeClipboardChain(IntPtr hWndRemove, IntPtr hWndNewNext);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        public static extern IntPtr SendMessage(IntPtr hWnd, UInt32 Msg, IntPtr wParam, IntPtr lParam);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     }
 }

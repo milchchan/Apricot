@@ -169,7 +169,7 @@ namespace Apricot
             this.lastPolledDateTime = DateTime.Now;
             this.lastUpdatedDateTime = DateTime.Now;
 
-            System.Configuration.Configuration config = null;
+            System.Configuration.Configuration config1 = null;
             string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
             if (Directory.Exists(directory))
@@ -181,104 +181,225 @@ namespace Apricot
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
                     exeConfigurationFileMap.ExeConfigFilename = s;
-                    config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                    config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
                 }
             }
 
-            if (config == null)
+            if (config1 == null)
             {
-                config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-            }
+                config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-            if (config.AppSettings.Settings["PollingInterval"] != null)
-            {
-                if (config.AppSettings.Settings["PollingInterval"].Value.Length > 0)
+                if (config1.AppSettings.Settings["PollingInterval"] != null)
                 {
-                    this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
-                    this.pollingTimer.Tick += new EventHandler(delegate
+                    if (config1.AppSettings.Settings["PollingInterval"].Value.Length > 0)
                     {
-                        DateTime nowDateTime = DateTime.Now;
+                        this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                        this.pollingTimer.Tick += new EventHandler(delegate
+                        {
+                            DateTime nowDateTime = DateTime.Now;
 
-                        for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
-                        {
-                            Tick(dateTime);
-                        }
-                        
-                        if (this.sequenceQueue.Count > 0)
-                        {
-                            this.idleTimeSpan = TimeSpan.Zero;
-                        }
-                        else
-                        {
-                            this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
-                        }
+                            for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
+                            {
+                                Tick(dateTime);
+                            }
 
-                        if (this.idleTimeSpan.Ticks >= this.activateThreshold)
-                        {
-                            Activate();
-                        }
+                            if (this.sequenceQueue.Count > 0)
+                            {
+                                this.idleTimeSpan = TimeSpan.Zero;
+                            }
+                            else
+                            {
+                                this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
+                            }
 
-                        if (this.idleTimeSpan.Ticks > 0)
-                        {
-                            Idle();
-                        }
+                            if (this.idleTimeSpan.Ticks >= this.activateThreshold)
+                            {
+                                Activate();
+                            }
 
-                        this.lastPolledDateTime = nowDateTime;
-                    });
-                    this.pollingTimer.Interval = TimeSpan.Parse(config.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
+                            if (this.idleTimeSpan.Ticks > 0)
+                            {
+                                Idle();
+                            }
+
+                            this.lastPolledDateTime = nowDateTime;
+                        });
+                        this.pollingTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
+                    }
                 }
-            }
 
-            if (config.AppSettings.Settings["UpdateInterval"] != null)
-            {
-                if (config.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
+                if (config1.AppSettings.Settings["UpdateInterval"] != null)
                 {
-                    this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
-                    this.updateTimer.Tick += new EventHandler(delegate
+                    if (config1.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
                     {
-                        Update();
-                    });
-                    this.updateTimer.Interval = TimeSpan.Parse(config.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
+                        this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                        this.updateTimer.Tick += new EventHandler(delegate
+                        {
+                            Update();
+                        });
+                        this.updateTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["ActivateThreshold"] != null)
+                {
+                    if (config1.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
+                    {
+                        this.activateThreshold = Int64.Parse(config1.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
+                    }
                 }
             }
-
-            if (config.AppSettings.Settings["ActivateThreshold"] != null)
+            else
             {
-                if (config.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
+                System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                if (config1.AppSettings.Settings["PollingInterval"] != null)
                 {
-                    this.activateThreshold = Int64.Parse(config.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
+                    if (config1.AppSettings.Settings["PollingInterval"].Value.Length > 0)
+                    {
+                        this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                        this.pollingTimer.Tick += new EventHandler(delegate
+                        {
+                            DateTime nowDateTime = DateTime.Now;
+
+                            for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
+                            {
+                                Tick(dateTime);
+                            }
+
+                            if (this.sequenceQueue.Count > 0)
+                            {
+                                this.idleTimeSpan = TimeSpan.Zero;
+                            }
+                            else
+                            {
+                                this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
+                            }
+
+                            if (this.idleTimeSpan.Ticks >= this.activateThreshold)
+                            {
+                                Activate();
+                            }
+
+                            if (this.idleTimeSpan.Ticks > 0)
+                            {
+                                Idle();
+                            }
+
+                            this.lastPolledDateTime = nowDateTime;
+                        });
+                        this.pollingTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
+                    }
+                }
+                else if (config2.AppSettings.Settings["PollingInterval"] != null)
+                {
+                    if (config2.AppSettings.Settings["PollingInterval"].Value.Length > 0)
+                    {
+                        this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                        this.pollingTimer.Tick += new EventHandler(delegate
+                        {
+                            DateTime nowDateTime = DateTime.Now;
+
+                            for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
+                            {
+                                Tick(dateTime);
+                            }
+
+                            if (this.sequenceQueue.Count > 0)
+                            {
+                                this.idleTimeSpan = TimeSpan.Zero;
+                            }
+                            else
+                            {
+                                this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
+                            }
+
+                            if (this.idleTimeSpan.Ticks >= this.activateThreshold)
+                            {
+                                Activate();
+                            }
+
+                            if (this.idleTimeSpan.Ticks > 0)
+                            {
+                                Idle();
+                            }
+
+                            this.lastPolledDateTime = nowDateTime;
+                        });
+                        this.pollingTimer.Interval = TimeSpan.Parse(config2.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["UpdateInterval"] != null)
+                {
+                    if (config1.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
+                    {
+                        this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                        this.updateTimer.Tick += new EventHandler(delegate
+                        {
+                            Update();
+                        });
+                        this.updateTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
+                    }
+                }
+                else if (config2.AppSettings.Settings["UpdateInterval"] != null)
+                {
+                    if (config2.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
+                    {
+                        this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                        this.updateTimer.Tick += new EventHandler(delegate
+                        {
+                            Update();
+                        });
+                        this.updateTimer.Interval = TimeSpan.Parse(config2.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
+                    }
+                }
+
+                if (config1.AppSettings.Settings["ActivateThreshold"] != null)
+                {
+                    if (config1.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
+                    {
+                        this.activateThreshold = Int64.Parse(config1.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
+                    }
+                }
+                else if (config2.AppSettings.Settings["ActivateThreshold"] != null)
+                {
+                    if (config2.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
+                    {
+                        this.activateThreshold = Int64.Parse(config2.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
+                    }
                 }
             }
         }
 
         public void Load()
         {
-            System.Configuration.Configuration config = null;
-            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            System.Configuration.Configuration config1 = null;
+            string directory1 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
-            if (Directory.Exists(directory))
+            if (Directory.Exists(directory1))
             {
                 string fileName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                foreach (string s in from s in Directory.EnumerateFiles(directory1, "*.config") where fileName.Equals(Path.GetFileNameWithoutExtension(s)) select s)
                 {
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
                     exeConfigurationFileMap.ExeConfigFilename = s;
-                    config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                    config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
                 }
             }
 
-            if (config == null)
+            if (config1 == null)
             {
-                config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+                directory1 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                if (config.AppSettings.Settings["Words"] != null)
+                if (config1.AppSettings.Settings["Words"] != null)
                 {
-                    string path = Path.Combine(directory, config.AppSettings.Settings["Words"].Value);
+                    string path = Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value);
 
-                    using (FileStream fs = new FileStream(File.Exists(path) ? path : config.AppSettings.Settings["Words"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(File.Exists(path) ? path : config1.AppSettings.Settings["Words"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
 
@@ -289,12 +410,12 @@ namespace Apricot
                     }
                 }
 
-                if (config.AppSettings.Settings["Characters"] != null)
+                if (config1.AppSettings.Settings["Characters"] != null)
                 {
-                    string path1 = Path.Combine(directory, config.AppSettings.Settings["Characters"].Value);
+                    string path1 = Path.Combine(directory1, config1.AppSettings.Settings["Characters"].Value);
                     List<string> pathList = new List<string>();
 
-                    using (FileStream fs = new FileStream(File.Exists(path1) ? path1 : config.AppSettings.Settings["Characters"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(File.Exists(path1) ? path1 : config1.AppSettings.Settings["Characters"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
 
@@ -320,7 +441,7 @@ namespace Apricot
                                 }
                                 else
                                 {
-                                    pathList.Add(Path.Combine(directory, character.Script));
+                                    pathList.Add(Path.Combine(directory1, character.Script));
                                 }
                             }
 
@@ -336,9 +457,23 @@ namespace Apricot
             }
             else
             {
-                if (config.AppSettings.Settings["Words"] != null)
+                System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                if (config1.AppSettings.Settings["Words"] != null)
                 {
-                    using (FileStream fs = new FileStream(Path.Combine(directory, config.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+
+                        foreach (Word word in (Word[])serializer.Deserialize(fs))
+                        {
+                            this.wordCollection.Add(word);
+                        }
+                    }
+                }
+                else if (config2.AppSettings.Settings["Words"] != null)
+                {
+                    using (FileStream fs = new FileStream(Path.Combine(directory1, config2.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
 
@@ -349,12 +484,13 @@ namespace Apricot
                     }
                 }
 
-                if (config.AppSettings.Settings["Characters"] != null)
+                if (config1.AppSettings.Settings["Characters"] != null)
                 {
                     List<string> pathList = new List<string>();
 
-                    using (FileStream fs = new FileStream(Path.Combine(directory, config.AppSettings.Settings["Characters"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(Path.Combine(directory1, config1.AppSettings.Settings["Characters"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
+                        string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
                         XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
 
                         foreach (Character character in (Character[])serializer.Deserialize(fs))
@@ -379,7 +515,69 @@ namespace Apricot
                                 }
                                 else
                                 {
-                                    pathList.Add(Path.Combine(directory, character.Script));
+                                    string p = Path.Combine(directory1, character.Script);
+
+                                    if (File.Exists(p))
+                                    {
+                                        pathList.Add(p);
+                                    }
+                                    else
+                                    {
+                                        pathList.Add(Path.Combine(directory2, character.Script));
+                                    }
+                                }
+                            }
+
+                            this.characterCollection.Add(character);
+                        }
+                    }
+
+                    pathList.ForEach(delegate (string path)
+                    {
+                        Parse(path);
+                    });
+                }
+                else if (config2.AppSettings.Settings["Characters"] != null)
+                {
+                    List<string> pathList = new List<string>();
+
+                    using (FileStream fs = new FileStream(Path.Combine(directory1, config2.AppSettings.Settings["Characters"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                        XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+
+                        foreach (Character character in (Character[])serializer.Deserialize(fs))
+                        {
+                            if (!pathList.Exists(delegate (string path)
+                            {
+                                if (Path.IsPathRooted(path) && !Path.IsPathRooted(character.Script))
+                                {
+                                    return Path.GetFullPath(character.Script).Equals(path);
+                                }
+                                else if (!Path.IsPathRooted(path) && Path.IsPathRooted(character.Script))
+                                {
+                                    return character.Script.Equals(Path.GetFullPath(path));
+                                }
+
+                                return character.Script.Equals(path);
+                            }))
+                            {
+                                if (Path.IsPathRooted(character.Script))
+                                {
+                                    pathList.Add(character.Script);
+                                }
+                                else
+                                {
+                                    string p = Path.Combine(directory1, character.Script);
+
+                                    if (File.Exists(p))
+                                    {
+                                        pathList.Add(p);
+                                    }
+                                    else
+                                    {
+                                        pathList.Add(Path.Combine(directory2, character.Script));
+                                    }
                                 }
                             }
 
@@ -397,7 +595,7 @@ namespace Apricot
 
         public void Save()
         {
-            System.Configuration.Configuration config = null;
+            System.Configuration.Configuration config1 = null;
             string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
             if (Directory.Exists(directory))
@@ -409,16 +607,16 @@ namespace Apricot
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
                     exeConfigurationFileMap.ExeConfigFilename = s;
-                    config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                    config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
                 }
             }
 
-            if (config == null)
+            if (config1 == null)
             {
-                config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+                config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
                 directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                if (config.AppSettings.Settings["Characters"] != null)
+                if (config1.AppSettings.Settings["Characters"] != null)
                 {
                     foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
                     {
@@ -439,12 +637,12 @@ namespace Apricot
                     {
                         Character[] characters = this.characterCollection.ToArray();
                         XmlSerializer serializer = new XmlSerializer(characters.GetType());
-                        string path = Path.Combine(directory, config.AppSettings.Settings["Characters"].Value);
+                        string path = Path.Combine(directory, config1.AppSettings.Settings["Characters"].Value);
 
                         serializer.Serialize(ms, characters);
                         ms.Seek(0, SeekOrigin.Begin);
                         
-                        using (FileStream fs = new FileStream(File.Exists(path) ? path : config.AppSettings.Settings["Characters"].Value, FileMode.Create, FileAccess.Write, FileShare.Read))
+                        using (FileStream fs = new FileStream(File.Exists(path) ? path : config1.AppSettings.Settings["Characters"].Value, FileMode.Create, FileAccess.Write, FileShare.Read))
                         {
                             byte[] buffer = ms.ToArray();
 
@@ -454,7 +652,7 @@ namespace Apricot
                     }
                 }
 
-                if (config.AppSettings.Settings["Words"] != null)
+                if (config1.AppSettings.Settings["Words"] != null)
                 {
                     List<Word> wordList = this.wordCollection.ToList();
 
@@ -484,12 +682,12 @@ namespace Apricot
                     {
                         Word[] words = wordList.ToArray();
                         XmlSerializer serializer = new XmlSerializer(words.GetType());
-                        string path = Path.Combine(directory, config.AppSettings.Settings["Words"].Value);
+                        string path = Path.Combine(directory, config1.AppSettings.Settings["Words"].Value);
 
                         serializer.Serialize(ms, words);
                         ms.Seek(0, SeekOrigin.Begin);
 
-                        using (FileStream fs = new FileStream(File.Exists(path) ? path : config.AppSettings.Settings["Words"].Value, FileMode.Create, FileAccess.Write, FileShare.Read))
+                        using (FileStream fs = new FileStream(File.Exists(path) ? path : config1.AppSettings.Settings["Words"].Value, FileMode.Create, FileAccess.Write, FileShare.Read))
                         {
                             byte[] buffer = ms.ToArray();
 
@@ -501,7 +699,9 @@ namespace Apricot
             }
             else
             {
-                if (config.AppSettings.Settings["Characters"] != null)
+                System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                if (config1.AppSettings.Settings["Characters"] != null)
                 {
                     foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
                     {
@@ -526,7 +726,41 @@ namespace Apricot
                         serializer.Serialize(ms, characters);
                         ms.Seek(0, SeekOrigin.Begin);
 
-                        using (FileStream fs = new FileStream(Path.Combine(directory, config.AppSettings.Settings["Characters"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        using (FileStream fs = new FileStream(Path.Combine(directory, config1.AppSettings.Settings["Characters"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                    }
+                }
+                else if (config2.AppSettings.Settings["Characters"] != null)
+                {
+                    foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
+                    {
+                        List<string> typeList = character.Types.ToList();
+
+                        typeList.Sort(delegate (string s1, string s2)
+                        {
+                            return String.Compare(s1, s2, StringComparison.InvariantCulture);
+                        });
+                        character.Types.Clear();
+                        typeList.ForEach(delegate (string type)
+                        {
+                            character.Types.Add(type);
+                        });
+                    }
+
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        Character[] characters = this.characterCollection.ToArray();
+                        XmlSerializer serializer = new XmlSerializer(characters.GetType());
+
+                        serializer.Serialize(ms, characters);
+                        ms.Seek(0, SeekOrigin.Begin);
+
+                        using (FileStream fs = new FileStream(Path.Combine(directory, config2.AppSettings.Settings["Characters"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
                         {
                             byte[] buffer = ms.ToArray();
 
@@ -536,7 +770,7 @@ namespace Apricot
                     }
                 }
 
-                if (config.AppSettings.Settings["Words"] != null)
+                if (config1.AppSettings.Settings["Words"] != null)
                 {
                     List<Word> wordList = this.wordCollection.ToList();
 
@@ -570,7 +804,50 @@ namespace Apricot
                         serializer.Serialize(ms, words);
                         ms.Seek(0, SeekOrigin.Begin);
 
-                        using (FileStream fs = new FileStream(Path.Combine(directory, config.AppSettings.Settings["Words"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        using (FileStream fs = new FileStream(Path.Combine(directory, config1.AppSettings.Settings["Words"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                    }
+                }
+                else if (config2.AppSettings.Settings["Words"] != null)
+                {
+                    List<Word> wordList = this.wordCollection.ToList();
+
+                    wordList.ForEach(delegate (Word word)
+                    {
+                        if (word.HasAttributes)
+                        {
+                            List<string> attributeList = word.Attributes.ToList();
+
+                            attributeList.Sort(delegate (string s1, string s2)
+                            {
+                                return String.Compare(s1, s2, StringComparison.InvariantCulture);
+                            });
+                            word.Attributes.Clear();
+                            attributeList.ForEach(delegate (string attribute)
+                            {
+                                word.Attributes.Add(attribute);
+                            });
+                        }
+                    });
+                    wordList.Sort(delegate (Word w1, Word w2)
+                    {
+                        return String.Compare(w1.Name, w2.Name, StringComparison.InvariantCulture);
+                    });
+
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        Word[] words = wordList.ToArray();
+                        XmlSerializer serializer = new XmlSerializer(words.GetType());
+
+                        serializer.Serialize(ms, words);
+                        ms.Seek(0, SeekOrigin.Begin);
+
+                        using (FileStream fs = new FileStream(Path.Combine(directory, config2.AppSettings.Settings["Words"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
                         {
                             byte[] buffer = ms.ToArray();
 
@@ -1348,7 +1625,7 @@ namespace Apricot
 
                 if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                 {
-                    System.Configuration.Configuration config = null;
+                    System.Configuration.Configuration config1 = null;
                     string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
                     Fetcher fetcher = new Fetcher();
 
@@ -1361,63 +1638,128 @@ namespace Apricot
                             System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
                             exeConfigurationFileMap.ExeConfigFilename = s;
-                            config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                            config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
                         }
                     }
 
-                    if (config == null)
+                    if (config1 == null)
                     {
-                        config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                        directory = null;
-                    }
+                        config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                    if (config.AppSettings.Settings["Timeout"] != null)
-                    {
-                        if (config.AppSettings.Settings["Timeout"].Value.Length > 0)
+                        if (config1.AppSettings.Settings["Timeout"] != null)
                         {
-                            fetcher.Timeout = new Nullable<int>(Int32.Parse(config.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
-                        }
-                    }
-
-                    if (config.AppSettings.Settings["UserAgent"] != null)
-                    {
-                        fetcher.UserAgent = config.AppSettings.Settings["UserAgent"].Value;
-                    }
-
-                    if (config.AppSettings.Settings["Subscriptions"] != null)
-                    {
-                        string path;
-
-                        if (directory == null)
-                        {
-                            path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config.AppSettings.Settings["Subscriptions"].Value);
-
-                            if (File.Exists(path))
+                            if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                             {
-                                path = config.AppSettings.Settings["Subscriptions"].Value;
+                                fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                             }
                         }
-                        else
+
+                        if (config1.AppSettings.Settings["UserAgent"] != null)
                         {
-                            path = System.IO.Path.Combine(directory, config.AppSettings.Settings["Subscriptions"].Value);
+                            fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
                         }
 
-                        using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        if (config1.AppSettings.Settings["Subscriptions"] != null)
                         {
-                            XmlDocument xmlDocument = new XmlDocument();
+                            string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Subscriptions"].Value);
 
-                            xmlDocument.Load(fs);
-                            xmlDocument.Normalize();
-
-                            foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
+                            if (!File.Exists(path))
                             {
-                                foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
-                                {
-                                    if (xmlChildAttribute.Name.Equals("xmlUrl"))
-                                    {
-                                        fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
+                                path = config1.AppSettings.Settings["Subscriptions"].Value;
+                            }
 
-                                        break;
+                            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                XmlDocument xmlDocument = new XmlDocument();
+
+                                xmlDocument.Load(fs);
+                                xmlDocument.Normalize();
+
+                                foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
+                                {
+                                    foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
+                                    {
+                                        if (xmlChildAttribute.Name.Equals("xmlUrl"))
+                                        {
+                                            fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
+
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                        if (config1.AppSettings.Settings["Timeout"] != null)
+                        {
+                            if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                            {
+                                fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
+                            }
+                        }
+                        else if (config2.AppSettings.Settings["Timeout"] != null)
+                        {
+                            if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                            {
+                                fetcher.Timeout = new Nullable<int>(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
+                            }
+                        }
+
+                        if (config1.AppSettings.Settings["UserAgent"] != null)
+                        {
+                            fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                        }
+                        else if (config2.AppSettings.Settings["UserAgent"] != null)
+                        {
+                            fetcher.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                        }
+
+                        if (config1.AppSettings.Settings["Subscriptions"] != null)
+                        {
+                            using (FileStream fs = new FileStream(System.IO.Path.Combine(directory, config1.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                XmlDocument xmlDocument = new XmlDocument();
+
+                                xmlDocument.Load(fs);
+                                xmlDocument.Normalize();
+
+                                foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
+                                {
+                                    foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
+                                    {
+                                        if (xmlChildAttribute.Name.Equals("xmlUrl"))
+                                        {
+                                            fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
+
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else if (config2.AppSettings.Settings["Subscriptions"] != null)
+                        {
+                            using (FileStream fs = new FileStream(System.IO.Path.Combine(directory, config2.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                XmlDocument xmlDocument = new XmlDocument();
+
+                                xmlDocument.Load(fs);
+                                xmlDocument.Normalize();
+
+                                foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
+                                {
+                                    foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
+                                    {
+                                        if (xmlChildAttribute.Name.Equals("xmlUrl"))
+                                        {
+                                            fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
+
+                                            break;
+                                        }
                                     }
                                 }
                             }
