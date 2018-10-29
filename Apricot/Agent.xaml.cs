@@ -406,7 +406,9 @@ namespace Apricot
                     HashSet<string> pathHashSet = new HashSet<string>();
                     LinkedList<KeyValuePair<Character, string>> characterLinkedList = new LinkedList<KeyValuePair<Character, string>>();
                     string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
-                    
+                    Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                    List<KeyValuePair<string, string>> namePathList = new List<KeyValuePair<string, string>>();
+
                     foreach (Character character in Script.Instance.Characters)
                     {
                         string path;
@@ -433,11 +435,17 @@ namespace Apricot
                         characterLinkedList.AddLast(new KeyValuePair<Character, string>(character, path));
                     }
 
-                    List<KeyValuePair<string, string>> keyValuePairList = (from fileName in Directory.Exists(directory) ? Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)) : Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let extension = Path.GetExtension(fileName) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase) select new KeyValuePair<bool, string>(isZip, fileName)).Concat(from path in pathHashSet select new KeyValuePair<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)).Aggregate<KeyValuePair<bool, string>, List<KeyValuePair<string, string>>>(new List<KeyValuePair<string, string>>(), (list, kvp1) =>
+                    foreach (KeyValuePair<bool, string> kvp1 in (from filename in Directory.Exists(directory) ? Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)) : Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select new KeyValuePair<bool, string>(isZip, filename)).Concat(from path in pathHashSet select new KeyValuePair<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)))
                     {
-                        if (!list.Exists(delegate (KeyValuePair<string, string> kvp2)
+                        if (!namePathList.Exists(delegate (KeyValuePair<string, string> kvp2)
                         {
                             return kvp2.Value.Equals(kvp1.Value);
+                        }) && !pathDictionary.Values.Any(delegate (List<Tuple<string, string>> tupleList)
+                        {
+                            return tupleList.Exists(delegate (Tuple<string, string> tuple)
+                            {
+                                return tuple.Item1.Equals(kvp1.Value);
+                            });
                         }))
                         {
                             if (kvp1.Key)
@@ -452,29 +460,115 @@ namespace Apricot
                                     {
                                         fs = null;
 
-                                        foreach (ZipArchiveEntry zipArchiveEntry in from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry)
+                                        foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
                                         {
-                                            Stream stream = null;
+                                            string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
+                                            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+                                            string key;
+                                            List<Tuple<ZipArchiveEntry, string>> tupleList;
 
-                                            try
+                                            if (match.Success)
                                             {
-                                                stream = zipArchiveEntry.Open();
+                                                key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
 
-                                                foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                                if (dictionary.TryGetValue(key, out tupleList))
                                                 {
-                                                    list.Add(new KeyValuePair<string, string>(attribute, kvp1.Value));
+                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                }
+                                                else
+                                                {
+                                                    tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                    dictionary.Add(key, tupleList);
                                                 }
                                             }
-                                            catch
+                                            else
                                             {
-                                                return list;
-                                            }
-                                            finally
-                                            {
-                                                if (stream != null)
+                                                key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+
+                                                if (dictionary.TryGetValue(key, out tupleList))
                                                 {
-                                                    stream.Close();
+                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
                                                 }
+                                                else
+                                                {
+                                                    tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                    dictionary.Add(key, tupleList);
+                                                }
+                                            }
+
+                                            return dictionary;
+                                        }).Values)
+                                        {
+                                            Tuple<ZipArchiveEntry, string> tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                            {
+                                                return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                            });
+
+                                            if (tuple == null)
+                                            {
+                                                tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                                {
+                                                    return t.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                });
+
+                                                if (tuple != null)
+                                                {
+                                                    Stream stream = null;
+                                                    List<KeyValuePair<string, string>> kvpList = new List<KeyValuePair<string, string>>();
+
+                                                    try
+                                                    {
+                                                        stream = tuple.Item1.Open();
+
+                                                        foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                                        {
+                                                            kvpList.Add(new KeyValuePair<string, string>(attribute, kvp1.Value));
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        continue;
+                                                    }
+                                                    finally
+                                                    {
+                                                        if (stream != null)
+                                                        {
+                                                            stream.Close();
+                                                        }
+                                                    }
+
+                                                    namePathList.AddRange(kvpList);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Stream stream = null;
+                                                List<KeyValuePair<string, string>> kvpList = new List<KeyValuePair<string, string>>();
+
+                                                try
+                                                {
+                                                    stream = tuple.Item1.Open();
+
+                                                    foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                                    {
+                                                        kvpList.Add(new KeyValuePair<string, string>(attribute, kvp1.Value));
+                                                    }
+                                                }
+                                                catch
+                                                {
+                                                    continue;
+                                                }
+                                                finally
+                                                {
+                                                    if (stream != null)
+                                                    {
+                                                        stream.Close();
+                                                    }
+                                                }
+
+                                                namePathList.AddRange(kvpList);
                                             }
                                         }
                                     }
@@ -489,20 +583,75 @@ namespace Apricot
                             }
                             else
                             {
+                                string filename = Path.GetFileNameWithoutExtension(kvp1.Value);
+                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+                                string key;
+                                List<Tuple<string, string>> tupleList;
+
+                                if (match.Success)
+                                {
+                                    key = String.Concat(Path.GetDirectoryName(kvp1.Value), match.Groups[1].Value);
+
+                                    if (pathDictionary.TryGetValue(key, out tupleList))
+                                    {
+                                        tupleList.Add(Tuple.Create<string, string>(kvp1.Value, match.Groups[2].Value));
+                                    }
+                                    else
+                                    {
+                                        tupleList = new List<Tuple<string, string>>();
+                                        tupleList.Add(Tuple.Create<string, string>(kvp1.Value, match.Groups[2].Value));
+                                        pathDictionary.Add(key, tupleList);
+                                    }
+                                }
+                                else
+                                {
+                                    key = String.Concat(Path.GetDirectoryName(kvp1.Value), filename);
+
+                                    if (pathDictionary.TryGetValue(key, out tupleList))
+                                    {
+                                        tupleList.Add(Tuple.Create<string, string>(kvp1.Value, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                    }
+                                    else
+                                    {
+                                        tupleList = new List<Tuple<string, string>>();
+                                        tupleList.Add(Tuple.Create<string, string>(kvp1.Value, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                        pathDictionary.Add(key, tupleList);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    foreach (List<Tuple<string, string>> tupleList in pathDictionary.Values)
+                    {
+                        Tuple<string, string> tuple = tupleList.Find(delegate (Tuple<string, string> t)
+                        {
+                            return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                        });
+
+                        if (tuple == null)
+                        {
+                            tuple = tupleList.Find(delegate (Tuple<string, string> t)
+                            {
+                                return t.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                            });
+
+                            if (tuple != null)
+                            {
                                 FileStream fs = null;
 
                                 try
                                 {
-                                    fs = new FileStream(kvp1.Value, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                    fs = new FileStream(tuple.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                     foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                     {
-                                        list.Add(new KeyValuePair<string, string>(attribute, kvp1.Value));
+                                        namePathList.Add(new KeyValuePair<string, string>(attribute, tuple.Item1));
                                     }
                                 }
                                 catch
                                 {
-                                    return list;
+                                    continue;
                                 }
                                 finally
                                 {
@@ -513,17 +662,40 @@ namespace Apricot
                                 }
                             }
                         }
+                        else
+                        {
+                            FileStream fs = null;
 
-                        return list;
-                    });
+                            try
+                            {
+                                fs = new FileStream(tuple.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                {
+                                    namePathList.Add(new KeyValuePair<string, string>(attribute, tuple.Item1));
+                                }
+                            }
+                            catch
+                            {
+                                continue;
+                            }
+                            finally
+                            {
+                                if (fs != null)
+                                {
+                                    fs.Close();
+                                }
+                            }
+                        }
+                    }
 
                     charactersMenuItem.Items.Clear();
 
-                    keyValuePairList.Sort(delegate (KeyValuePair<string, string> kvp1, KeyValuePair<string, string> kvp2)
+                    namePathList.Sort(delegate (KeyValuePair<string, string> kvp1, KeyValuePair<string, string> kvp2)
                     {
                         return String.Compare(kvp1.Key, kvp2.Key, StringComparison.CurrentCulture);
                     });
-                    keyValuePairList.ForEach(delegate (KeyValuePair<string, string> kvp)
+                    namePathList.ForEach(delegate (KeyValuePair<string, string> kvp)
                     {
                         for (LinkedListNode<KeyValuePair<Character, string>> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
                         {
@@ -890,33 +1062,118 @@ namespace Apricot
 
                                                 string path = tag.StartsWith(stringBuilder.ToString(), StringComparison.Ordinal) ? tag.Remove(0, stringBuilder.Length) : tag;
 
-                                                foreach (ZipArchiveEntry zipArchiveEntry in from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry)
+                                                foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
                                                 {
-                                                    Stream stream = null;
+                                                    string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
+                                                    System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+                                                    string key;
+                                                    List<Tuple<ZipArchiveEntry, string>> tupleList;
 
-                                                    try
+                                                    if (match.Success)
                                                     {
-                                                        stream = zipArchiveEntry.Open();
+                                                        key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
 
-                                                        foreach (string a in from a in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select a.Value)
+                                                        if (dictionary.TryGetValue(key, out tupleList))
                                                         {
-                                                            Character character = new Character();
-
-                                                            character.Name = a;
-                                                            character.Script = path;
-
-                                                            characterList.Add(character);
+                                                            tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                        }
+                                                        else
+                                                        {
+                                                            tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                            tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                            dictionary.Add(key, tupleList);
                                                         }
                                                     }
-                                                    catch
+                                                    else
                                                     {
-                                                        return;
-                                                    }
-                                                    finally
-                                                    {
-                                                        if (stream != null)
+                                                        key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+
+                                                        if (dictionary.TryGetValue(key, out tupleList))
                                                         {
-                                                            stream.Close();
+                                                            tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                        }
+                                                        else
+                                                        {
+                                                            tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                            tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                            dictionary.Add(key, tupleList);
+                                                        }
+                                                    }
+
+                                                    return dictionary;
+                                                }).Values)
+                                                {
+                                                    Tuple<ZipArchiveEntry, string> tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                                    {
+                                                        return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                    });
+
+                                                    if (tuple == null)
+                                                    {
+                                                        tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                                        {
+                                                            return t.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                        });
+
+                                                        if (tuple != null)
+                                                        {
+                                                            Stream stream = null;
+
+                                                            try
+                                                            {
+                                                                stream = tuple.Item1.Open();
+
+                                                                foreach (string a in from a in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select a.Value)
+                                                                {
+                                                                    Character character = new Character();
+
+                                                                    character.Name = a;
+                                                                    character.Script = path;
+
+                                                                    characterList.Add(character);
+                                                                }
+                                                            }
+                                                            catch
+                                                            {
+                                                                return;
+                                                            }
+                                                            finally
+                                                            {
+                                                                if (stream != null)
+                                                                {
+                                                                    stream.Close();
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        Stream stream = null;
+
+                                                        try
+                                                        {
+                                                            stream = tuple.Item1.Open();
+
+                                                            foreach (string a in from a in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select a.Value)
+                                                            {
+                                                                Character character = new Character();
+
+                                                                character.Name = a;
+                                                                character.Script = path;
+
+                                                                characterList.Add(character);
+                                                            }
+                                                        }
+                                                        catch
+                                                        {
+                                                            return;
+                                                        }
+                                                        finally
+                                                        {
+                                                            if (stream != null)
+                                                            {
+                                                                stream.Close();
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -994,9 +1251,9 @@ namespace Apricot
 
                 if (Directory.Exists(directory))
                 {
-                    string fileName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    string filename = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                    foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                    foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
                     {
                         System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -1013,8 +1270,14 @@ namespace Apricot
                     {
                         if (config1.AppSettings.Settings["Left"].Value.Length > 0 && config1.AppSettings.Settings["Top"].Value.Length > 0)
                         {
-                            this.Left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                            this.Top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            double left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            double top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+                            if (left <= SystemParameters.VirtualScreenWidth && top <= SystemParameters.VirtualScreenHeight)
+                            {
+                                this.Left = left;
+                                this.Top = top;
+                            }
                         }
                     }
 
@@ -1098,16 +1361,28 @@ namespace Apricot
                     {
                         if (config1.AppSettings.Settings["Left"].Value.Length > 0 && config1.AppSettings.Settings["Top"].Value.Length > 0)
                         {
-                            this.Left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                            this.Top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            double left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            double top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+                            if (left <= SystemParameters.VirtualScreenWidth && top <= SystemParameters.VirtualScreenHeight)
+                            {
+                                this.Left = left;
+                                this.Top = top;
+                            }
                         }
                     }
                     else if (config2.AppSettings.Settings["Left"] != null && config2.AppSettings.Settings["Top"] != null)
                     {
                         if (config2.AppSettings.Settings["Left"].Value.Length > 0 && config2.AppSettings.Settings["Top"].Value.Length > 0)
                         {
-                            this.Left = Double.Parse(config2.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                            this.Top = Double.Parse(config2.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            double left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                            double top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+                            if (left <= SystemParameters.VirtualScreenWidth && top <= SystemParameters.VirtualScreenHeight)
+                            {
+                                this.Left = left;
+                                this.Top = top;
+                            }
                         }
                     }
 
@@ -2461,15 +2736,22 @@ namespace Apricot
         {
             base.OnMouseDoubleClick(e);
 
-            var query = from image in this.Canvas.Children.Cast<Image>() let motion = image.Tag as Motion where motion != null && e.OriginalSource == image select motion;
-
-            if (query.Any())
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
-                var q = from sequence in Script.Instance.Sequences where sequence.Name.Equals("DoubleClick") && sequence.Owner.Equals(this.characterName) select sequence;
+                Script.Instance.Activate();
+            }
+            else
+            {
+                var query = from image in this.Canvas.Children.Cast<Image>() let motion = image.Tag as Motion where motion != null && e.OriginalSource == image select motion;
 
-                foreach (Motion motion in query)
+                if (query.Any())
                 {
-                    Script.Instance.TryEnqueue(Script.Instance.Prepare(q, motion.Current.Path));
+                    var q = from sequence in Script.Instance.Sequences where sequence.Name.Equals("DoubleClick") && sequence.Owner.Equals(this.characterName) select sequence;
+
+                    foreach (Motion motion in query)
+                    {
+                        Script.Instance.TryEnqueue(Script.Instance.Prepare(q, motion.Current.Path));
+                    }
                 }
             }
         }
@@ -2741,42 +3023,136 @@ namespace Apricot
                     {
                         if (Directory.Exists(s))
                         {
-                            foreach (string fileName in Directory.EnumerateFiles(s, "*.xml", SearchOption.AllDirectories))
+                            foreach (List<Tuple<string, string>> tupleList in (from filename in Directory.EnumerateFiles(s, "*.xml", SearchOption.AllDirectories) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename).Aggregate<string, Dictionary<string, List<Tuple<string, string>>>>(new Dictionary<string, List<Tuple<string, string>>>(), delegate (Dictionary<string, List<Tuple<string, string>>> dictionary, string filename1)
                             {
-                                FileStream fs = null;
+                                string filename2 = Path.GetFileNameWithoutExtension(filename1);
+                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+                                string key;
+                                List<Tuple<string, string>> tupleList;
 
-                                try
+                                if (match.Success)
                                 {
-                                    fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                    key = String.Concat(Path.GetDirectoryName(filename1), match.Groups[1].Value);
 
-                                    StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
-
-                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                    if (dictionary.TryGetValue(key, out tupleList))
                                     {
-                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        tupleList.Add(Tuple.Create<string, string>(filename1, match.Groups[2].Value));
                                     }
-
-                                    string path = fileName.StartsWith(stringBuilder.ToString(), StringComparison.Ordinal) ? fileName.Remove(0, stringBuilder.Length) : fileName;
-
-                                    foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                    else
                                     {
-                                        Character character = new Character();
-
-                                        character.Name = attribute;
-                                        character.Script = path;
-
-                                        characterList.Add(character);
+                                        tupleList = new List<Tuple<string, string>>();
+                                        tupleList.Add(Tuple.Create<string, string>(filename1, match.Groups[2].Value));
+                                        dictionary.Add(key, tupleList);
                                     }
                                 }
-                                catch
+                                else
                                 {
-                                    return;
-                                }
-                                finally
-                                {
-                                    if (fs != null)
+                                    key = String.Concat(Path.GetDirectoryName(filename1), filename2);
+
+                                    if (dictionary.TryGetValue(key, out tupleList))
                                     {
-                                        fs.Close();
+                                        tupleList.Add(Tuple.Create<string, string>(filename1, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                    }
+                                    else
+                                    {
+                                        tupleList = new List<Tuple<string, string>>();
+                                        tupleList.Add(Tuple.Create<string, string>(filename1, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                        dictionary.Add(key, tupleList);
+                                    }
+                                }
+
+                                return dictionary;
+                            }).Values)
+                            {
+                                Tuple<string, string> tuple = tupleList.Find(delegate (Tuple<string, string> t)
+                                {
+                                    return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                });
+
+                                if (tuple == null)
+                                {
+                                    tuple = tupleList.Find(delegate (Tuple<string, string> t)
+                                    {
+                                        return t.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                    });
+
+                                    if (tuple != null)
+                                    {
+                                        FileStream fs = null;
+
+                                        try
+                                        {
+                                            fs = new FileStream(tuple.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                            StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
+
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            {
+                                                stringBuilder.Append(Path.DirectorySeparatorChar);
+                                            }
+
+                                            string path = tuple.Item1.StartsWith(stringBuilder.ToString(), StringComparison.Ordinal) ? tuple.Item1.Remove(0, stringBuilder.Length) : tuple.Item1;
+
+                                            foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                            {
+                                                Character character = new Character();
+
+                                                character.Name = attribute;
+                                                character.Script = path;
+
+                                                characterList.Add(character);
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            return;
+                                        }
+                                        finally
+                                        {
+                                            if (fs != null)
+                                            {
+                                                fs.Close();
+                                            }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    FileStream fs = null;
+
+                                    try
+                                    {
+                                        fs = new FileStream(tuple.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                        StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
+
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        {
+                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        }
+
+                                        string path = tuple.Item1.StartsWith(stringBuilder.ToString(), StringComparison.Ordinal) ? tuple.Item1.Remove(0, stringBuilder.Length) : tuple.Item1;
+
+                                        foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                        {
+                                            Character character = new Character();
+
+                                            character.Name = attribute;
+                                            character.Script = path;
+
+                                            characterList.Add(character);
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        return;
+                                    }
+                                    finally
+                                    {
+                                        if (fs != null)
+                                        {
+                                            fs.Close();
+                                        }
                                     }
                                 }
                             }
@@ -2802,33 +3178,118 @@ namespace Apricot
 
                                     string path = s.StartsWith(stringBuilder.ToString(), StringComparison.Ordinal) ? s.Remove(0, stringBuilder.Length) : s;
 
-                                    foreach (ZipArchiveEntry zipArchiveEntry in from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry)
+                                    foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
                                     {
-                                        Stream stream = null;
+                                        string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
+                                        System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+                                        string key;
+                                        List<Tuple<ZipArchiveEntry, string>> tupleList;
 
-                                        try
+                                        if (match.Success)
                                         {
-                                            stream = zipArchiveEntry.Open();
+                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
 
-                                            foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                            if (dictionary.TryGetValue(key, out tupleList))
                                             {
-                                                Character character = new Character();
-
-                                                character.Name = attribute;
-                                                character.Script = path;
-
-                                                characterList.Add(character);
+                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                            }
+                                            else
+                                            {
+                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                dictionary.Add(key, tupleList);
                                             }
                                         }
-                                        catch
+                                        else
                                         {
-                                            return;
-                                        }
-                                        finally
-                                        {
-                                            if (stream != null)
+                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+
+                                            if (dictionary.TryGetValue(key, out tupleList))
                                             {
-                                                stream.Close();
+                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                            }
+                                            else
+                                            {
+                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                dictionary.Add(key, tupleList);
+                                            }
+                                        }
+
+                                        return dictionary;
+                                    }).Values)
+                                    {
+                                        Tuple<ZipArchiveEntry, string> tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                        {
+                                            return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                        });
+
+                                        if (tuple == null)
+                                        {
+                                            tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                            {
+                                                return t.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                            });
+
+                                            if (tuple != null)
+                                            {
+                                                Stream stream = null;
+
+                                                try
+                                                {
+                                                    stream = tuple.Item1.Open();
+
+                                                    foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                                    {
+                                                        Character character = new Character();
+
+                                                        character.Name = attribute;
+                                                        character.Script = path;
+
+                                                        characterList.Add(character);
+                                                    }
+                                                }
+                                                catch
+                                                {
+                                                    return;
+                                                }
+                                                finally
+                                                {
+                                                    if (stream != null)
+                                                    {
+                                                        stream.Close();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Stream stream = null;
+
+                                            try
+                                            {
+                                                stream = tuple.Item1.Open();
+
+                                                foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
+                                                {
+                                                    Character character = new Character();
+
+                                                    character.Name = attribute;
+                                                    character.Script = path;
+
+                                                    characterList.Add(character);
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                return;
+                                            }
+                                            finally
+                                            {
+                                                if (stream != null)
+                                                {
+                                                    stream.Close();
+                                                }
                                             }
                                         }
                                     }
@@ -2921,9 +3382,9 @@ namespace Apricot
 
                         if (Directory.Exists(directory))
                         {
-                            string fileName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                            string filename = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                            foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                            foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
                             {
                                 System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -3256,9 +3717,9 @@ namespace Apricot
 
                     if (Directory.Exists(directory))
                     {
-                        string fileName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                        string filename = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                        foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                        foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
                         {
                             System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 

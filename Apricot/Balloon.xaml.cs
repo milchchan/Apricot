@@ -204,9 +204,9 @@ namespace Apricot
 
             if (Directory.Exists(directory))
             {
-                string fileName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                string filename = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
+                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
                 {
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -223,7 +223,7 @@ namespace Apricot
                 {
                     if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
                     {
-                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, CultureInfo.InvariantCulture);
                     }
                 }
 
@@ -271,7 +271,7 @@ namespace Apricot
                 {
                     if (config1.AppSettings.Settings["LineLength"].Value.Length > 0)
                     {
-                        this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, System.Globalization.CultureInfo.InvariantCulture) + 30;
+                        this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, CultureInfo.InvariantCulture) + 30;
                     }
                 }
 
@@ -279,7 +279,7 @@ namespace Apricot
                 {
                     if (config1.AppSettings.Settings["LineHeight"].Value.Length > 0)
                     {
-                        this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, CultureInfo.InvariantCulture);
                     }
                 }
 
@@ -313,15 +313,9 @@ namespace Apricot
                 }
                 else
                 {
-                    string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["BackgroundImage"].Value);
                     BitmapImage bi = new BitmapImage();
-                    
-                    if (!File.Exists(path))
-                    {
-                        path = config1.AppSettings.Settings["BackgroundImage"].Value;
-                    }
 
-                    using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(System.IO.Path.IsPathRooted(config1.AppSettings.Settings["BackgroundImage"].Value) ? config1.AppSettings.Settings["BackgroundImage"].Value : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         bi.BeginInit();
                         bi.StreamSource = fs;
@@ -345,18 +339,21 @@ namespace Apricot
                     this.InnerPath.Fill = imageBrush;
                 }
 
-                if (config1.AppSettings.Settings["TextColor"] != null)
+                if (config1.AppSettings.Settings["TextColor"] == null)
+                {
+                    this.textBrush = new SolidColorBrush(this.textColor);
+                }
+                else
                 {
                     if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
                     {
                         this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
                         this.textBrush = new SolidColorBrush(this.textColor);
                     }
-                }
-
-                if (this.textBrush == null)
-                {
-                    this.textBrush = new SolidColorBrush(this.textColor);
+                    else
+                    {
+                        this.textBrush = new SolidColorBrush(this.textColor);
+                    }
                 }
 
                 if (this.textBrush.CanFreeze)
@@ -364,18 +361,21 @@ namespace Apricot
                     this.textBrush.Freeze();
                 }
 
-                if (config1.AppSettings.Settings["LinkColor"] != null)
+                if (config1.AppSettings.Settings["LinkColor"] == null)
+                {
+                    this.linkBrush = new SolidColorBrush(this.linkColor);
+                }
+                else
                 {
                     if (config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
                     {
                         this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
                         this.linkBrush = new SolidColorBrush(this.linkColor);
                     }
-                }
-
-                if (this.linkBrush == null)
-                {
-                    this.linkBrush = new SolidColorBrush(this.linkColor);
+                    else
+                    {
+                        this.linkBrush = new SolidColorBrush(this.linkColor);
+                    }
                 }
 
                 if (this.linkBrush.CanFreeze)
@@ -391,14 +391,14 @@ namespace Apricot
                 {
                     if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
                     {
-                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, CultureInfo.InvariantCulture);
                     }
                 }
                 else if (config2.AppSettings.Settings["FrameRate"] != null)
                 {
                     if (config2.AppSettings.Settings["FrameRate"].Value.Length > 0)
                     {
-                        this.frameRate = Double.Parse(config2.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        this.frameRate = Double.Parse(config2.AppSettings.Settings["FrameRate"].Value, CultureInfo.InvariantCulture);
                     }
                 }
 
@@ -481,14 +481,14 @@ namespace Apricot
                 {
                     if (config1.AppSettings.Settings["LineLength"].Value.Length > 0)
                     {
-                        this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, System.Globalization.CultureInfo.InvariantCulture) + 30;
+                        this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, CultureInfo.InvariantCulture) + 30;
                     }
                 }
                 else if (config2.AppSettings.Settings["LineLength"] != null)
                 {
                     if (config2.AppSettings.Settings["LineLength"].Value.Length > 0)
                     {
-                        this.baseWidth = Double.Parse(config2.AppSettings.Settings["LineLength"].Value, System.Globalization.CultureInfo.InvariantCulture) + 30;
+                        this.baseWidth = Double.Parse(config2.AppSettings.Settings["LineLength"].Value, CultureInfo.InvariantCulture) + 30;
                     }
                 }
 
@@ -496,14 +496,14 @@ namespace Apricot
                 {
                     if (config1.AppSettings.Settings["LineHeight"].Value.Length > 0)
                     {
-                        this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, CultureInfo.InvariantCulture);
                     }
                 }
                 else if (config2.AppSettings.Settings["LineHeight"] != null)
                 {
                     if (config2.AppSettings.Settings["LineHeight"].Value.Length > 0)
                     {
-                        this.lineHeight = Double.Parse(config2.AppSettings.Settings["LineHeight"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        this.lineHeight = Double.Parse(config2.AppSettings.Settings["LineHeight"].Value, CultureInfo.InvariantCulture);
                     }
                 }
 
@@ -548,13 +548,29 @@ namespace Apricot
                     {
                         BitmapImage bi = new BitmapImage();
 
-                        using (FileStream fs = new FileStream(System.IO.Path.Combine(directory, config2.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                        if (System.IO.Path.IsPathRooted(config2.AppSettings.Settings["BackgroundImage"].Value))
                         {
-                            bi.BeginInit();
-                            bi.StreamSource = fs;
-                            bi.CacheOption = BitmapCacheOption.OnLoad;
-                            bi.CreateOptions = BitmapCreateOptions.None;
-                            bi.EndInit();
+                            using (FileStream fs = new FileStream(config2.AppSettings.Settings["BackgroundImage"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                bi.BeginInit();
+                                bi.StreamSource = fs;
+                                bi.CacheOption = BitmapCacheOption.OnLoad;
+                                bi.CreateOptions = BitmapCreateOptions.None;
+                                bi.EndInit();
+                            }
+                        }
+                        else
+                        {
+                            string path = System.IO.Path.Combine(directory, config2.AppSettings.Settings["BackgroundImage"].Value);
+
+                            using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                bi.BeginInit();
+                                bi.StreamSource = fs;
+                                bi.CacheOption = BitmapCacheOption.OnLoad;
+                                bi.CreateOptions = BitmapCreateOptions.None;
+                                bi.EndInit();
+                            }
                         }
 
                         ImageBrush imageBrush = new ImageBrush(bi);
@@ -576,13 +592,29 @@ namespace Apricot
                 {
                     BitmapImage bi = new BitmapImage();
 
-                    using (FileStream fs = new FileStream(System.IO.Path.Combine(directory, config1.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    if (System.IO.Path.IsPathRooted(config1.AppSettings.Settings["BackgroundImage"].Value))
                     {
-                        bi.BeginInit();
-                        bi.StreamSource = fs;
-                        bi.CacheOption = BitmapCacheOption.OnLoad;
-                        bi.CreateOptions = BitmapCreateOptions.None;
-                        bi.EndInit();
+                        using (FileStream fs = new FileStream(config1.AppSettings.Settings["BackgroundImage"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        {
+                            bi.BeginInit();
+                            bi.StreamSource = fs;
+                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                            bi.CreateOptions = BitmapCreateOptions.None;
+                            bi.EndInit();
+                        }
+                    }
+                    else
+                    {
+                        string path = System.IO.Path.Combine(directory, config1.AppSettings.Settings["BackgroundImage"].Value);
+
+                        using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                        {
+                            bi.BeginInit();
+                            bi.StreamSource = fs;
+                            bi.CacheOption = BitmapCacheOption.OnLoad;
+                            bi.CreateOptions = BitmapCreateOptions.None;
+                            bi.EndInit();
+                        }
                     }
 
                     ImageBrush imageBrush = new ImageBrush(bi);
@@ -600,24 +632,28 @@ namespace Apricot
                     this.InnerPath.Fill = imageBrush;
                 }
 
-                if (config1.AppSettings.Settings["TextColor"] != null)
+                if (config1.AppSettings.Settings["TextColor"] == null)
                 {
-                    if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["TextColor"] == null)
                     {
-                        this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
                         this.textBrush = new SolidColorBrush(this.textColor);
                     }
-                }
-                else if (config2.AppSettings.Settings["TextColor"] != null)
-                {
-                    if (config2.AppSettings.Settings["TextColor"].Value.Length > 0)
+                    else if (config2.AppSettings.Settings["TextColor"].Value.Length > 0)
                     {
                         this.textColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["TextColor"].Value);
                         this.textBrush = new SolidColorBrush(this.textColor);
                     }
+                    else
+                    {
+                        this.textBrush = new SolidColorBrush(this.textColor);
+                    }
                 }
-
-                if (this.textBrush == null)
+                else if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                {
+                    this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
+                    this.textBrush = new SolidColorBrush(this.textColor);
+                }
+                else
                 {
                     this.textBrush = new SolidColorBrush(this.textColor);
                 }
@@ -627,24 +663,28 @@ namespace Apricot
                     this.textBrush.Freeze();
                 }
 
-                if (config1.AppSettings.Settings["LinkColor"] != null)
+                if (config1.AppSettings.Settings["LinkColor"] == null)
                 {
-                    if (config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["LinkColor"] == null)
                     {
-                        this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
                         this.linkBrush = new SolidColorBrush(this.linkColor);
                     }
-                }
-                else if (config2.AppSettings.Settings["LinkColor"] != null)
-                {
-                    if (config2.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                    else if (config2.AppSettings.Settings["LinkColor"].Value.Length > 0)
                     {
                         this.linkColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["LinkColor"].Value);
                         this.linkBrush = new SolidColorBrush(this.linkColor);
                     }
+                    else
+                    {
+                        this.linkBrush = new SolidColorBrush(this.linkColor);
+                    }
                 }
-
-                if (this.linkBrush == null)
+                else if (config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                {
+                    this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
+                    this.linkBrush = new SolidColorBrush(this.linkColor);
+                }
+                else
                 {
                     this.linkBrush = new SolidColorBrush(this.linkColor);
                 }
@@ -5093,7 +5133,7 @@ namespace Apricot
 
                                     if (this.cachedCounterCanvas == null)
                                     {
-                                        FormattedText formattedText = new FormattedText(this.messageCollection[this.historyPoint.Value].Attachments.Count.ToString(System.Globalization.CultureInfo.CurrentCulture), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                                        FormattedText formattedText = new FormattedText(this.messageCollection[this.historyPoint.Value].Attachments.Count.ToString(CultureInfo.CurrentCulture), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
                                         double width = Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing);
                                         double height = formattedText.OverhangAfter > 0 ? formattedText.Height + formattedText.OverhangAfter : formattedText.Height;
                                         DropShadowEffect dropShadowEffect = new DropShadowEffect();
@@ -7353,7 +7393,7 @@ namespace Apricot
 
                                         if (this.inspectorEntry.Modified.Ticks > 0)
                                         {
-                                            string modified = this.inspectorEntry.Modified.ToString("G", System.Globalization.CultureInfo.CurrentCulture);
+                                            string modified = this.inspectorEntry.Modified.ToString("G", CultureInfo.CurrentCulture);
                                             List<FormattedText> list = new List<FormattedText>();
                                             Dictionary<int, int> dictionary = new Dictionary<int, int>();
                                             StringBuilder lineStringBuilder = new StringBuilder();
@@ -7460,7 +7500,7 @@ namespace Apricot
 
                                         if (this.inspectorEntry.Score.HasValue)
                                         {
-                                            string score = this.inspectorEntry.Score.Value.ToString("F3", System.Globalization.CultureInfo.CurrentCulture);
+                                            string score = this.inspectorEntry.Score.Value.ToString("F3", CultureInfo.CurrentCulture);
                                             List<FormattedText> list = new List<FormattedText>();
                                             StringBuilder lineStringBuilder = new StringBuilder();
                                             bool isFirst = true;
@@ -9328,7 +9368,7 @@ namespace Apricot
 
             if (entry.Modified.Ticks > 0)
             {
-                string modified = entry.Modified.ToString("G", System.Globalization.CultureInfo.CurrentCulture);
+                string modified = entry.Modified.ToString("G", CultureInfo.CurrentCulture);
                 Dictionary<int, int> dictionary = new Dictionary<int, int>();
                 StringBuilder lineStringBuilder = new StringBuilder();
                 int lines = 0;
@@ -9373,7 +9413,7 @@ namespace Apricot
 
             if (entry.Score.HasValue)
             {
-                string score = entry.Score.Value.ToString("F3", System.Globalization.CultureInfo.CurrentCulture);
+                string score = entry.Score.Value.ToString("F3", CultureInfo.CurrentCulture);
                 StringBuilder lineStringBuilder = new StringBuilder();
                 int lines = 0;
 
@@ -9478,9 +9518,9 @@ namespace Apricot
 
                 if (Directory.Exists(directory))
                 {
-                    string fileName = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    string filename = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                    foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where fileName.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
+                    foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
                     {
                         System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -9663,14 +9703,14 @@ namespace Apricot
 
                         foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
                         {
-                            stringBuilder.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+                            stringBuilder.Append(b.ToString("x2", CultureInfo.InvariantCulture));
                         }
 
                         stringBuilder.Append(System.IO.Path.GetExtension(uri.AbsolutePath));
 
                         if (stringBuilder.ToString().IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0)
                         {
-                            string path1 = config1.AppSettings.Settings["Cache"].Value;
+                            string path1 = System.IO.Path.IsPathRooted(config1.AppSettings.Settings["Cache"].Value) ? config1.AppSettings.Settings["Cache"].Value : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Cache"].Value);
                             string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
 
                             if (!ignoreCache && File.Exists(path2))
@@ -9765,7 +9805,14 @@ namespace Apricot
 
                                         try
                                         {
-                                            if (!Directory.Exists(path1))
+                                            if (Directory.Exists(path1))
+                                            {
+                                                foreach (string filename in from filename in Directory.EnumerateFiles(path1, "*", SearchOption.TopDirectoryOnly) let expiredDateTime = DateTime.Now - new TimeSpan(7, 0, 0, 0) let creationTime = File.GetCreationTime(filename) where creationTime < expiredDateTime select filename)
+                                                {
+                                                    File.Delete(filename);
+                                                }
+                                            }
+                                            else
                                             {
                                                 Directory.CreateDirectory(path1);
                                             }
@@ -9882,7 +9929,14 @@ namespace Apricot
                                                 bs = new BufferedStream(s);
                                                 s = null;
 
-                                                if (!Directory.Exists(path1))
+                                                if (Directory.Exists(path1))
+                                                {
+                                                    foreach (string filename in from filename in Directory.EnumerateFiles(path1, "*", SearchOption.TopDirectoryOnly) let expiredDateTime = DateTime.Now - new TimeSpan(7, 0, 0, 0) let creationTime = File.GetCreationTime(filename) where creationTime < expiredDateTime select filename)
+                                                    {
+                                                        File.Delete(filename);
+                                                    }
+                                                }
+                                                else
                                                 {
                                                     Directory.CreateDirectory(path1);
                                                 }
@@ -10314,14 +10368,20 @@ namespace Apricot
 
                             foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
                             {
-                                stringBuilder.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+                                stringBuilder.Append(b.ToString("x2", CultureInfo.InvariantCulture));
                             }
 
                             stringBuilder.Append(System.IO.Path.GetExtension(uri.AbsolutePath));
 
                             if (stringBuilder.ToString().IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0)
                             {
-                                string path1 = System.IO.Path.Combine(directory, config2.AppSettings.Settings["Cache"].Value);
+                                string path1 = System.IO.Path.IsPathRooted(config2.AppSettings.Settings["Cache"].Value) ? config2.AppSettings.Settings["Cache"].Value : System.IO.Path.Combine(directory, config2.AppSettings.Settings["Cache"].Value);
+
+                                if (!Directory.Exists(path1))
+                                {
+                                    path1 = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Cache"].Value);
+                                }
+
                                 string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
 
                                 if (!ignoreCache && File.Exists(path2))
@@ -10416,7 +10476,14 @@ namespace Apricot
 
                                             try
                                             {
-                                                if (!Directory.Exists(path1))
+                                                if (Directory.Exists(path1))
+                                                {
+                                                    foreach (string filename in from filename in Directory.EnumerateFiles(path1, "*", SearchOption.TopDirectoryOnly) let expiredDateTime = DateTime.Now - new TimeSpan(7, 0, 0, 0) let creationTime = File.GetCreationTime(filename) where creationTime < expiredDateTime select filename)
+                                                    {
+                                                        File.Delete(filename);
+                                                    }
+                                                }
+                                                else
                                                 {
                                                     Directory.CreateDirectory(path1);
                                                 }
@@ -10547,7 +10614,14 @@ namespace Apricot
                                                     bs = new BufferedStream(s);
                                                     s = null;
 
-                                                    if (!Directory.Exists(path1))
+                                                    if (Directory.Exists(path1))
+                                                    {
+                                                        foreach (string filename in from filename in Directory.EnumerateFiles(path1, "*", SearchOption.TopDirectoryOnly) let expiredDateTime = DateTime.Now - new TimeSpan(7, 0, 0, 0) let creationTime = File.GetCreationTime(filename) where creationTime < expiredDateTime select filename)
+                                                        {
+                                                            File.Delete(filename);
+                                                        }
+                                                    }
+                                                    else
                                                     {
                                                         Directory.CreateDirectory(path1);
                                                     }
@@ -10826,14 +10900,20 @@ namespace Apricot
 
                         foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
                         {
-                            stringBuilder.Append(b.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+                            stringBuilder.Append(b.ToString("x2", CultureInfo.InvariantCulture));
                         }
 
                         stringBuilder.Append(System.IO.Path.GetExtension(uri.AbsolutePath));
 
                         if (stringBuilder.ToString().IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0)
                         {
-                            string path1 = System.IO.Path.Combine(directory, config1.AppSettings.Settings["Cache"].Value);
+                            string path1 = System.IO.Path.IsPathRooted(config1.AppSettings.Settings["Cache"].Value) ? config1.AppSettings.Settings["Cache"].Value : System.IO.Path.Combine(directory, config1.AppSettings.Settings["Cache"].Value);
+
+                            if (!Directory.Exists(path1))
+                            {
+                                path1 = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Cache"].Value);
+                            }
+
                             string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
 
                             if (!ignoreCache && File.Exists(path2))
@@ -10928,7 +11008,14 @@ namespace Apricot
 
                                         try
                                         {
-                                            if (!Directory.Exists(path1))
+                                            if (Directory.Exists(path1))
+                                            {
+                                                foreach (string filename in from filename in Directory.EnumerateFiles(path1, "*", SearchOption.TopDirectoryOnly) let expiredDateTime = DateTime.Now - new TimeSpan(7, 0, 0, 0) let creationTime = File.GetCreationTime(filename) where creationTime < expiredDateTime select filename)
+                                                {
+                                                    File.Delete(filename);
+                                                }
+                                            }
+                                            else
                                             {
                                                 Directory.CreateDirectory(path1);
                                             }
@@ -11059,7 +11146,14 @@ namespace Apricot
                                                 bs = new BufferedStream(s);
                                                 s = null;
 
-                                                if (!Directory.Exists(path1))
+                                                if (Directory.Exists(path1))
+                                                {
+                                                    foreach (string filename in from filename in Directory.EnumerateFiles(path1, "*", SearchOption.TopDirectoryOnly) let expiredDateTime = DateTime.Now - new TimeSpan(7, 0, 0, 0) let creationTime = File.GetCreationTime(filename) where creationTime < expiredDateTime select filename)
+                                                    {
+                                                        File.Delete(filename);
+                                                    }
+                                                }
+                                                else
                                                 {
                                                     Directory.CreateDirectory(path1);
                                                 }

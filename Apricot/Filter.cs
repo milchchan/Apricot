@@ -322,7 +322,7 @@ namespace Apricot
 			int k = nodeList[0].Vector.Length;
 			int axis = depth % k;
 
-            nodeList.Sort(delegate(Node<double> n1, Node<double> n2)
+            nodeList.Sort(delegate (Node<double> n1, Node<double> n2)
             {
                 if (n1.Vector[axis] > n2.Vector[axis])
 				{
