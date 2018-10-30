@@ -14,8 +14,8 @@ namespace Apricot
         private int width = 10;
         private int height = 10;
         private Dictionary<String, int> labelDictionary = null;
-		private Node<double> rootNode = null;
-		private Dictionary<Node<double>, string> nodeDictionary = null;
+        private Node<double> rootNode = null;
+        private Dictionary<Node<double>, string> nodeDictionary = null;
 
         public int MaxIterations
         {
@@ -174,7 +174,7 @@ namespace Apricot
             double r_max = Math.Max(max_x, max_y) * (1 - (double)t / t_max);
             double alpha = 0.1 * Math.Exp(-(double)t / t_max);
             double sigma = r_max * Math.Exp(-(double)t / t_max);
-            
+
             return alpha * Math.Exp(-(r * r) / (2 * (sigma * sigma)));
         }
 
@@ -232,7 +232,7 @@ namespace Apricot
             {
                 return Query(this.inputVectorList[index], width, height);
             }
-            
+
             return Enumerable.Empty<string>();
         }
 
@@ -249,16 +249,16 @@ namespace Apricot
         }
 
         public IEnumerable<string> Query(int x, int y, int width, int height)
-		{
-			if (this.rootNode != null)
-			{
-				double[] location = new double[2];
+        {
+            if (this.rootNode != null)
+            {
+                double[] location = new double[2];
                 double[] size = new double[2];
 
-				location[0] = x;
-				location[1] = y;
-				size[0] = width;
-				size[1] = height;
+                location[0] = x;
+                location[1] = y;
+                size[0] = width;
+                size[1] = height;
 
                 foreach (Node<double> node in Query(this.rootNode, location, size, 0))
                 {
@@ -269,8 +269,8 @@ namespace Apricot
                         yield return label;
                     }
                 }
-			}
-		}
+            }
+        }
 
         private IEnumerable<Node<double>> Query(Node<double> node, double[] location, double[] size, int depth)
         {
@@ -312,71 +312,71 @@ namespace Apricot
         }
 
         private Node<double> KdTree(List<Node<double>> nodeList, int depth)
-		{
-			/// K-d tree (k-dimensional tree).
-			if (nodeList.Count == 0)
-			{
-				return null;
-			}
+        {
+            /// K-d tree (k-dimensional tree).
+            if (nodeList.Count == 0)
+            {
+                return null;
+            }
 
-			int k = nodeList[0].Vector.Length;
-			int axis = depth % k;
+            int k = nodeList[0].Vector.Length;
+            int axis = depth % k;
 
             nodeList.Sort(delegate (Node<double> n1, Node<double> n2)
             {
                 if (n1.Vector[axis] > n2.Vector[axis])
-				{
-					return 1;
-				}
-				else if (n1.Vector[axis] < n2.Vector[axis])
-				{
-					return -1;
-				}
+                {
+                    return 1;
+                }
+                else if (n1.Vector[axis] < n2.Vector[axis])
+                {
+                    return -1;
+                }
 
-				return 0;
+                return 0;
             });
 
-			int median = nodeList.Count / 2;
+            int median = nodeList.Count / 2;
             List<Node<double>> leftNodeList = new List<Node<double>>();
             List<Node<double>> rightNodeList = new List<Node<double>>();
 
-			for (int i = 0; i < median; i++)
-			{
-				leftNodeList.Add(nodeList[i]);
-			}
+            for (int i = 0; i < median; i++)
+            {
+                leftNodeList.Add(nodeList[i]);
+            }
 
-			for (int i = median + 1; i < nodeList.Count; i++)
-			{
-				rightNodeList.Add(nodeList[i]);
-			}
+            for (int i = median + 1; i < nodeList.Count; i++)
+            {
+                rightNodeList.Add(nodeList[i]);
+            }
 
             Node<double> node = nodeList[median];
 
-			node.LeftChild = KdTree(leftNodeList, depth + 1);
-			node.RightChild = KdTree(rightNodeList, depth + 1);
+            node.LeftChild = KdTree(leftNodeList, depth + 1);
+            node.RightChild = KdTree(rightNodeList, depth + 1);
 
-			if (node.LeftChild != null)
-			{
-				node.LeftChild.Parent = node;
-			}
+            if (node.LeftChild != null)
+            {
+                node.LeftChild.Parent = node;
+            }
 
-			if (node.RightChild != null)
-			{
-				node.RightChild.Parent = node;
-			}
+            if (node.RightChild != null)
+            {
+                node.RightChild.Parent = node;
+            }
 
-			return node;
-		}
+            return node;
+        }
 
         private class Node<T>
-		{
-			Node<T> parentNode = null;
-			Node<T> leftChildNode = null;
-			Node<T> rightChildNode = null;
-			T[] vector = null;
+        {
+            Node<T> parentNode = null;
+            Node<T> leftChildNode = null;
+            Node<T> rightChildNode = null;
+            T[] vector = null;
 
-			public Node<T> Parent
-			{
+            public Node<T> Parent
+            {
                 get
                 {
                     return this.parentNode;
@@ -385,10 +385,10 @@ namespace Apricot
                 {
                     this.parentNode = value;
                 }
-			}
+            }
 
-			public Node<T> LeftChild
-			{
+            public Node<T> LeftChild
+            {
                 get
                 {
                     return this.leftChildNode;
@@ -397,10 +397,10 @@ namespace Apricot
                 {
                     this.leftChildNode = value;
                 }
-			}
+            }
 
-			public Node<T> RightChild
-			{
+            public Node<T> RightChild
+            {
                 get
                 {
                     return this.rightChildNode;
@@ -409,10 +409,10 @@ namespace Apricot
                 {
                     this.rightChildNode = value;
                 }
-			}
+            }
 
-			public T[] Vector
-			{
+            public T[] Vector
+            {
                 get
                 {
                     return this.vector;
@@ -421,7 +421,7 @@ namespace Apricot
                 {
                     this.vector = value;
                 }
-			}
-		}
+            }
+        }
     }
 }

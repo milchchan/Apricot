@@ -404,10 +404,10 @@ namespace Apricot
 
                     List<MenuItem> menuItemList = new List<MenuItem>(charactersMenuItem.Items.Cast<MenuItem>());
                     HashSet<string> pathHashSet = new HashSet<string>();
-                    LinkedList<KeyValuePair<Character, string>> characterLinkedList = new LinkedList<KeyValuePair<Character, string>>();
-                    string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                    LinkedList<Tuple<Character, string>> characterLinkedList = new LinkedList<Tuple<Character, string>>();
+                    string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
                     Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
-                    List<KeyValuePair<string, string>> namePathList = new List<KeyValuePair<string, string>>();
+                    List<Tuple<string, string>> namePathList = new List<Tuple<string, string>>();
 
                     foreach (Character character in Script.Instance.Characters)
                     {
@@ -432,99 +432,99 @@ namespace Apricot
                             pathHashSet.Add(path);
                         }
 
-                        characterLinkedList.AddLast(new KeyValuePair<Character, string>(character, path));
+                        characterLinkedList.AddLast(Tuple.Create<Character, string>(character, path));
                     }
 
-                    foreach (KeyValuePair<bool, string> kvp1 in (from filename in Directory.Exists(directory) ? Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)) : Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select new KeyValuePair<bool, string>(isZip, filename)).Concat(from path in pathHashSet select new KeyValuePair<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)))
+                    foreach (Tuple<bool, string> tuple1 in (from filename in Directory.Exists(dataDirectory) ? Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(dataDirectory, "*", SearchOption.AllDirectories)) : Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).Concat(from path in pathHashSet select Tuple.Create<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)))
                     {
-                        if (!namePathList.Exists(delegate (KeyValuePair<string, string> kvp2)
+                        if (!namePathList.Exists(delegate (Tuple<string, string> tuple2)
                         {
-                            return kvp2.Value.Equals(kvp1.Value);
-                        }) && !pathDictionary.Values.Any(delegate (List<Tuple<string, string>> tupleList)
+                            return tuple2.Item2.Equals(tuple1.Item2);
+                        }) && !pathDictionary.Values.Any(delegate (List<Tuple<string, string>> tupleList1)
                         {
-                            return tupleList.Exists(delegate (Tuple<string, string> tuple)
+                            return tupleList1.Exists(delegate (Tuple<string, string> tuple)
                             {
-                                return tuple.Item1.Equals(kvp1.Value);
+                                return tuple.Item1.Equals(tuple1.Item2);
                             });
                         }))
                         {
-                            if (kvp1.Key)
+                            if (tuple1.Item1)
                             {
                                 FileStream fs = null;
 
                                 try
                                 {
-                                    fs = new FileStream(kvp1.Value, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                    fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                     using (ZipArchive zipArchive = new ZipArchive(fs))
                                     {
                                         fs = null;
 
-                                        foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
+                                        foreach (List<Tuple<ZipArchiveEntry, string>> tupleList1 in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
                                         {
                                             string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                                             System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
                                             string key;
-                                            List<Tuple<ZipArchiveEntry, string>> tupleList;
+                                            List<Tuple<ZipArchiveEntry, string>> tupleList1;
 
                                             if (match.Success)
                                             {
                                                 key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
 
-                                                if (dictionary.TryGetValue(key, out tupleList))
+                                                if (dictionary.TryGetValue(key, out tupleList1))
                                                 {
-                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                    tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
                                                 }
                                                 else
                                                 {
-                                                    tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                                    dictionary.Add(key, tupleList);
+                                                    tupleList1 = new List<Tuple<ZipArchiveEntry, string>>();
+                                                    tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                    dictionary.Add(key, tupleList1);
                                                 }
                                             }
                                             else
                                             {
                                                 key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
 
-                                                if (dictionary.TryGetValue(key, out tupleList))
+                                                if (dictionary.TryGetValue(key, out tupleList1))
                                                 {
-                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                    tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
                                                 }
                                                 else
                                                 {
-                                                    tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-                                                    dictionary.Add(key, tupleList);
+                                                    tupleList1 = new List<Tuple<ZipArchiveEntry, string>>();
+                                                    tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                    dictionary.Add(key, tupleList1);
                                                 }
                                             }
 
                                             return dictionary;
                                         }).Values)
                                         {
-                                            Tuple<ZipArchiveEntry, string> tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                            Tuple<ZipArchiveEntry, string> tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                             {
-                                                return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                return tuple3.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                             });
 
-                                            if (tuple == null)
+                                            if (tuple2 == null)
                                             {
-                                                tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                                tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                 {
-                                                    return t.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                    return tuple3.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
                                                 });
 
-                                                if (tuple != null)
+                                                if (tuple2 != null)
                                                 {
                                                     Stream stream = null;
-                                                    List<KeyValuePair<string, string>> kvpList = new List<KeyValuePair<string, string>>();
+                                                    List<Tuple<string, string>> tupleList2 = new List<Tuple<string, string>>();
 
                                                     try
                                                     {
-                                                        stream = tuple.Item1.Open();
+                                                        stream = tuple2.Item1.Open();
 
                                                         foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                                         {
-                                                            kvpList.Add(new KeyValuePair<string, string>(attribute, kvp1.Value));
+                                                            tupleList2.Add(Tuple.Create<string, string>(attribute, tuple1.Item2));
                                                         }
                                                     }
                                                     catch
@@ -539,21 +539,21 @@ namespace Apricot
                                                         }
                                                     }
 
-                                                    namePathList.AddRange(kvpList);
+                                                    namePathList.AddRange(tupleList2);
                                                 }
                                             }
                                             else
                                             {
                                                 Stream stream = null;
-                                                List<KeyValuePair<string, string>> kvpList = new List<KeyValuePair<string, string>>();
+                                                List<Tuple<string, string>> tupleList2 = new List<Tuple<string, string>>();
 
                                                 try
                                                 {
-                                                    stream = tuple.Item1.Open();
+                                                    stream = tuple2.Item1.Open();
 
                                                     foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                                     {
-                                                        kvpList.Add(new KeyValuePair<string, string>(attribute, kvp1.Value));
+                                                        tupleList2.Add(Tuple.Create<string, string>(attribute, tuple1.Item2));
                                                     }
                                                 }
                                                 catch
@@ -568,7 +568,7 @@ namespace Apricot
                                                     }
                                                 }
 
-                                                namePathList.AddRange(kvpList);
+                                                namePathList.AddRange(tupleList2);
                                             }
                                         }
                                     }
@@ -583,38 +583,38 @@ namespace Apricot
                             }
                             else
                             {
-                                string filename = Path.GetFileNameWithoutExtension(kvp1.Value);
+                                string filename = Path.GetFileNameWithoutExtension(tuple1.Item2);
                                 System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
                                 string key;
                                 List<Tuple<string, string>> tupleList;
 
                                 if (match.Success)
                                 {
-                                    key = String.Concat(Path.GetDirectoryName(kvp1.Value), match.Groups[1].Value);
+                                    key = String.Concat(Path.GetDirectoryName(tuple1.Item2), match.Groups[1].Value);
 
                                     if (pathDictionary.TryGetValue(key, out tupleList))
                                     {
-                                        tupleList.Add(Tuple.Create<string, string>(kvp1.Value, match.Groups[2].Value));
+                                        tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match.Groups[2].Value));
                                     }
                                     else
                                     {
                                         tupleList = new List<Tuple<string, string>>();
-                                        tupleList.Add(Tuple.Create<string, string>(kvp1.Value, match.Groups[2].Value));
+                                        tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match.Groups[2].Value));
                                         pathDictionary.Add(key, tupleList);
                                     }
                                 }
                                 else
                                 {
-                                    key = String.Concat(Path.GetDirectoryName(kvp1.Value), filename);
+                                    key = String.Concat(Path.GetDirectoryName(tuple1.Item2), filename);
 
                                     if (pathDictionary.TryGetValue(key, out tupleList))
                                     {
-                                        tupleList.Add(Tuple.Create<string, string>(kvp1.Value, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                        tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
                                     }
                                     else
                                     {
                                         tupleList = new List<Tuple<string, string>>();
-                                        tupleList.Add(Tuple.Create<string, string>(kvp1.Value, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                        tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
                                         pathDictionary.Add(key, tupleList);
                                     }
                                 }
@@ -646,7 +646,7 @@ namespace Apricot
 
                                     foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                     {
-                                        namePathList.Add(new KeyValuePair<string, string>(attribute, tuple.Item1));
+                                        namePathList.Add(Tuple.Create<string, string>(attribute, tuple.Item1));
                                     }
                                 }
                                 catch
@@ -672,7 +672,7 @@ namespace Apricot
 
                                 foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                 {
-                                    namePathList.Add(new KeyValuePair<string, string>(attribute, tuple.Item1));
+                                    namePathList.Add(Tuple.Create<string, string>(attribute, tuple.Item1));
                                 }
                             }
                             catch
@@ -691,26 +691,26 @@ namespace Apricot
 
                     charactersMenuItem.Items.Clear();
 
-                    namePathList.Sort(delegate (KeyValuePair<string, string> kvp1, KeyValuePair<string, string> kvp2)
+                    namePathList.Sort(delegate (Tuple<string, string> tuple1, Tuple<string, string> tuple2)
                     {
-                        return String.Compare(kvp1.Key, kvp2.Key, StringComparison.CurrentCulture);
+                        return String.Compare(tuple1.Item1, tuple2.Item1, StringComparison.CurrentCulture);
                     });
-                    namePathList.ForEach(delegate (KeyValuePair<string, string> kvp)
+                    namePathList.ForEach(delegate (Tuple<string, string> tuple1)
                     {
-                        for (LinkedListNode<KeyValuePair<Character, string>> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                        for (LinkedListNode<Tuple<Character, string>> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
                         {
-                            if (nextLinkedListNode.Value.Key.Name.Equals(kvp.Key) && nextLinkedListNode.Value.Value.Equals(kvp.Value))
+                            if (nextLinkedListNode.Value.Item1.Name.Equals(tuple1.Item1) && nextLinkedListNode.Value.Item2.Equals(tuple1.Item2))
                             {
                                 MenuItem selectedMenuItem = menuItemList.Find(delegate (MenuItem menuItem)
                                 {
-                                    return kvp.Key.Equals(menuItem.Header as string) && kvp.Value.Equals(menuItem.Tag as string) && (menuItem.IsChecked || menuItem.HasItems);
+                                    return tuple1.Item1.Equals(menuItem.Header as string) && tuple1.Item2.Equals(menuItem.Tag as string) && (menuItem.IsChecked || menuItem.HasItems);
                                 });
 
                                 if (selectedMenuItem == null)
                                 {
                                     selectedMenuItem = new MenuItem();
-                                    selectedMenuItem.Header = kvp.Key;
-                                    selectedMenuItem.Tag = kvp.Value;
+                                    selectedMenuItem.Header = tuple1.Item1;
+                                    selectedMenuItem.Tag = tuple1.Item2;
                                 }
                                 else
                                 {
@@ -757,9 +757,9 @@ namespace Apricot
                                     {
                                         if (type.Equals(menuItem.Header as string))
                                         {
-                                            if (nextLinkedListNode.Value.Key.HasTypes)
+                                            if (nextLinkedListNode.Value.Item1.HasTypes)
                                             {
-                                                menuItem.IsChecked = nextLinkedListNode.Value.Key.Types.Contains(menuItem.Header as string);
+                                                menuItem.IsChecked = nextLinkedListNode.Value.Item1.Types.Contains(menuItem.Header as string);
                                             }
                                             else
                                             {
@@ -775,7 +775,7 @@ namespace Apricot
                                     MenuItem childMenuItem = new MenuItem();
 
                                     childMenuItem.Header = type;
-                                    childMenuItem.Tag = nextLinkedListNode.Value.Key.Name;
+                                    childMenuItem.Tag = nextLinkedListNode.Value.Item1.Name;
                                     childMenuItem.Click += new RoutedEventHandler(delegate
                                     {
                                         string tag = childMenuItem.Tag as string;
@@ -990,9 +990,9 @@ namespace Apricot
                                         }
                                     });
 
-                                    if (nextLinkedListNode.Value.Key.HasTypes)
+                                    if (nextLinkedListNode.Value.Item1.HasTypes)
                                     {
-                                        childMenuItem.IsChecked = nextLinkedListNode.Value.Key.Types.Contains(childMenuItem.Header as string);
+                                        childMenuItem.IsChecked = nextLinkedListNode.Value.Item1.Types.Contains(childMenuItem.Header as string);
                                     }
                                     else
                                     {
@@ -1025,14 +1025,14 @@ namespace Apricot
 
                         MenuItem unselectedMenuItem = menuItemList.Find(delegate (MenuItem menuItem)
                         {
-                            return kvp.Key.Equals(menuItem.Header as string) && kvp.Value.Equals(menuItem.Tag as string) && !menuItem.IsChecked && !menuItem.HasItems;
+                            return tuple1.Item1.Equals(menuItem.Header as string) && tuple1.Item2.Equals(menuItem.Tag as string) && !menuItem.IsChecked && !menuItem.HasItems;
                         });
 
                         if (unselectedMenuItem == null)
                         {
                             unselectedMenuItem = new MenuItem();
-                            unselectedMenuItem.Header = kvp.Key;
-                            unselectedMenuItem.Tag = kvp.Value;
+                            unselectedMenuItem.Header = tuple1.Item1;
+                            unselectedMenuItem.Tag = tuple1.Item2;
                             unselectedMenuItem.Click += new RoutedEventHandler(delegate
                             {
                                 string tag = unselectedMenuItem.Tag as string;
@@ -1103,25 +1103,25 @@ namespace Apricot
                                                     return dictionary;
                                                 }).Values)
                                                 {
-                                                    Tuple<ZipArchiveEntry, string> tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                                    Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                     {
-                                                        return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                        return tuple3.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                     });
 
-                                                    if (tuple == null)
+                                                    if (tuple2 == null)
                                                     {
-                                                        tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                                        tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                         {
-                                                            return t.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                            return tuple3.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
                                                         });
 
-                                                        if (tuple != null)
+                                                        if (tuple2 != null)
                                                         {
                                                             Stream stream = null;
 
                                                             try
                                                             {
-                                                                stream = tuple.Item1.Open();
+                                                                stream = tuple2.Item1.Open();
 
                                                                 foreach (string a in from a in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select a.Value)
                                                                 {
@@ -1152,7 +1152,7 @@ namespace Apricot
 
                                                         try
                                                         {
-                                                            stream = tuple.Item1.Open();
+                                                            stream = tuple2.Item1.Open();
 
                                                             foreach (string a in from a in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select a.Value)
                                                             {
