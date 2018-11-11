@@ -206,7 +206,7 @@ namespace Apricot
             {
                 string filename = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
+                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly) where filename.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
                 {
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -563,7 +563,7 @@ namespace Apricot
                         {
                             string path = System.IO.Path.Combine(directory, config2.AppSettings.Settings["BackgroundImage"].Value);
 
-                            using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
                                 bi.BeginInit();
                                 bi.StreamSource = fs;
@@ -607,7 +607,7 @@ namespace Apricot
                     {
                         string path = System.IO.Path.Combine(directory, config1.AppSettings.Settings["BackgroundImage"].Value);
 
-                        using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
                             bi.BeginInit();
                             bi.StreamSource = fs;
@@ -9520,7 +9520,7 @@ namespace Apricot
                 {
                     string filename = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                    foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
+                    foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly) where filename.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
                     {
                         System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 

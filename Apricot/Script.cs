@@ -178,7 +178,7 @@ namespace Apricot
             {
                 string filename = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly) where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
                 {
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -401,7 +401,7 @@ namespace Apricot
             {
                 string filename = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                foreach (string s in from s in Directory.EnumerateFiles(directory1, "*.config") where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                foreach (string s in from s in Directory.EnumerateFiles(directory1, "*.config", SearchOption.TopDirectoryOnly) where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
                 {
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -529,12 +529,16 @@ namespace Apricot
                         }
                     }
 
-                    Queue<Tuple<bool, string>> pathQueue = new Queue<Tuple<bool, string>>(Shuffle<Tuple<bool, string>>(from filename in Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories) let extension = Path.GetExtension(filename) let attributes = File.GetAttributes(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)));
-                    List<string> pathList2 = new List<string>();
+                    List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories) let extension = Path.GetExtension(filename) let attributes = File.GetAttributes(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
+                    Random random = new Random(Environment.TickCount);
+                    List<string> pathList3 = new List<string>();
 
-                    while (pathQueue.Count > 0)
+                    while (pathList2.Count > 0)
                     {
-                        Tuple<bool, string> tuple1 = pathQueue.Dequeue();
+                        int i = random.Next(pathList2.Count);
+                        Tuple<bool, string> tuple1 = pathList2[i];
+
+                        pathList2.RemoveAt(i);
 
                         if (tuple1.Item1)
                         {
@@ -646,7 +650,7 @@ namespace Apricot
 
                                                 characterList.ForEach(delegate (Character character)
                                                 {
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -662,11 +666,11 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
-                                                            pathList2.Add(Path.Combine(directory1, character.Script));
+                                                            pathList3.Add(Path.Combine(directory1, character.Script));
                                                         }
                                                     }
 
@@ -719,7 +723,7 @@ namespace Apricot
 
                                             characterList.ForEach(delegate (Character character)
                                             {
-                                                if (!pathList2.Exists(delegate (string path2)
+                                                if (!pathList3.Exists(delegate (string path2)
                                                 {
                                                     if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                     {
@@ -735,11 +739,11 @@ namespace Apricot
                                                 {
                                                     if (Path.IsPathRooted(character.Script))
                                                     {
-                                                        pathList2.Add(character.Script);
+                                                        pathList3.Add(character.Script);
                                                     }
                                                     else
                                                     {
-                                                        pathList2.Add(Path.Combine(directory1, character.Script));
+                                                        pathList3.Add(Path.Combine(directory1, character.Script));
                                                     }
                                                 }
 
@@ -767,17 +771,20 @@ namespace Apricot
                             string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
                             Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                             List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
-                            Queue<Tuple<bool, string>> tempPathQueue = new Queue<Tuple<bool, string>>();
+                            List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
 
                             if (match1.Success)
                             {
                                 tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
 
-                                while (pathQueue.Count > 0)
+                                while (pathList2.Count > 0)
                                 {
-                                    Tuple<bool, string> tuple2 = pathQueue.Dequeue();
+                                    int j = random.Next(pathList2.Count);
+                                    Tuple<bool, string> tuple2 = pathList2[j];
                                     string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                     Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                    pathList2.RemoveAt(j);
 
                                     if (match2.Success)
                                     {
@@ -795,7 +802,7 @@ namespace Apricot
                                         continue;
                                     }
 
-                                    tempPathQueue.Enqueue(tuple2);
+                                    tempPathList.Add(tuple2);
                                 }
 
                                 Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
@@ -833,7 +840,7 @@ namespace Apricot
 
                                                         character.Script = tuple3.Item1;
 
-                                                        if (!pathList2.Exists(delegate (string path2)
+                                                        if (!pathList3.Exists(delegate (string path2)
                                                         {
                                                             if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                             {
@@ -849,11 +856,11 @@ namespace Apricot
                                                         {
                                                             if (Path.IsPathRooted(character.Script))
                                                             {
-                                                                pathList2.Add(character.Script);
+                                                                pathList3.Add(character.Script);
                                                             }
                                                             else
                                                             {
-                                                                pathList2.Add(Path.Combine(directory1, character.Script));
+                                                                pathList3.Add(Path.Combine(directory1, character.Script));
                                                             }
                                                         }
 
@@ -864,9 +871,9 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList2.Clear();
+                                            pathList3.Clear();
                                             this.characterCollection.Clear();
-                                            pathQueue = tempPathQueue;
+                                            pathList2 = tempPathList;
 
                                             continue;
                                         }
@@ -907,7 +914,7 @@ namespace Apricot
 
                                                     character.Script = tuple3.Item1;
 
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -923,11 +930,11 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
-                                                            pathList2.Add(Path.Combine(directory1, character.Script));
+                                                            pathList3.Add(Path.Combine(directory1, character.Script));
                                                         }
                                                     }
 
@@ -938,9 +945,9 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList2.Clear();
+                                        pathList3.Clear();
                                         this.characterCollection.Clear();
-                                        pathQueue = tempPathQueue;
+                                        pathList2 = tempPathList;
 
                                         continue;
                                     }
@@ -958,17 +965,20 @@ namespace Apricot
                                     }
                                 }
 
-                                pathQueue = tempPathQueue;
+                                pathList2 = tempPathList;
                             }
                             else
                             {
                                 tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
 
-                                while (pathQueue.Count > 0)
+                                while (pathList2.Count > 0)
                                 {
-                                    Tuple<bool, string> tuple2 = pathQueue.Dequeue();
+                                    int j = random.Next(pathList2.Count);
+                                    Tuple<bool, string> tuple2 = pathList2[j];
                                     string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                     Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                    pathList2.RemoveAt(j);
 
                                     if (match2.Success)
                                     {
@@ -986,7 +996,7 @@ namespace Apricot
                                         continue;
                                     }
 
-                                    tempPathQueue.Enqueue(tuple2);
+                                    tempPathList.Add(tuple2);
                                 }
 
                                 Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
@@ -1024,7 +1034,7 @@ namespace Apricot
 
                                                         character.Script = tuple3.Item1;
 
-                                                        if (!pathList2.Exists(delegate (string path2)
+                                                        if (!pathList3.Exists(delegate (string path2)
                                                         {
                                                             if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                             {
@@ -1040,11 +1050,11 @@ namespace Apricot
                                                         {
                                                             if (Path.IsPathRooted(character.Script))
                                                             {
-                                                                pathList2.Add(character.Script);
+                                                                pathList3.Add(character.Script);
                                                             }
                                                             else
                                                             {
-                                                                pathList2.Add(Path.Combine(directory1, character.Script));
+                                                                pathList3.Add(Path.Combine(directory1, character.Script));
                                                             }
                                                         }
 
@@ -1055,9 +1065,9 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList2.Clear();
+                                            pathList3.Clear();
                                             this.characterCollection.Clear();
-                                            pathQueue = tempPathQueue;
+                                            pathList2 = tempPathList;
 
                                             continue;
                                         }
@@ -1098,7 +1108,7 @@ namespace Apricot
 
                                                     character.Script = tuple3.Item1;
 
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -1114,11 +1124,11 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
-                                                            pathList2.Add(Path.Combine(directory1, character.Script));
+                                                            pathList3.Add(Path.Combine(directory1, character.Script));
                                                         }
                                                     }
 
@@ -1129,9 +1139,9 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList2.Clear();
+                                        pathList3.Clear();
                                         this.characterCollection.Clear();
-                                        pathQueue = tempPathQueue;
+                                        pathList2 = tempPathList;
 
                                         continue;
                                     }
@@ -1149,12 +1159,12 @@ namespace Apricot
                                     }
                                 }
 
-                                pathQueue = tempPathQueue;
+                                pathList2 = tempPathList;
                             }
                         }
                     }
 
-                    pathList2.ForEach(delegate (string path2)
+                    pathList3.ForEach(delegate (string path2)
                     {
                         Parse(path2);
                     });
@@ -1366,12 +1376,16 @@ namespace Apricot
                     }
 
                     string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                    Queue<Tuple<bool, string>> pathQueue = new Queue<Tuple<bool, string>>(Shuffle<Tuple<bool, string>>(from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)));
-                    List<string> pathList2 = new List<string>();
+                    List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
+                    Random random = new Random(Environment.TickCount);
+                    List<string> pathList3 = new List<string>();
 
-                    while (pathQueue.Count > 0)
+                    while (pathList2.Count > 0)
                     {
-                        Tuple<bool, string> tuple1 = pathQueue.Dequeue();
+                        int i = random.Next(pathList2.Count);
+                        Tuple<bool, string> tuple1 = pathList2[i];
+
+                        pathList2.RemoveAt(i);
 
                         if (tuple1.Item1)
                         {
@@ -1483,7 +1497,7 @@ namespace Apricot
 
                                                 characterList.ForEach(delegate (Character character)
                                                 {
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -1499,7 +1513,7 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
@@ -1507,11 +1521,11 @@ namespace Apricot
 
                                                             if (File.Exists(p))
                                                             {
-                                                                pathList2.Add(p);
+                                                                pathList3.Add(p);
                                                             }
                                                             else
                                                             {
-                                                                pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                pathList3.Add(Path.Combine(directory3, character.Script));
                                                             }
                                                         }
                                                     }
@@ -1565,7 +1579,7 @@ namespace Apricot
 
                                             characterList.ForEach(delegate (Character character)
                                             {
-                                                if (!pathList2.Exists(delegate (string path2)
+                                                if (!pathList3.Exists(delegate (string path2)
                                                 {
                                                     if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                     {
@@ -1581,7 +1595,7 @@ namespace Apricot
                                                 {
                                                     if (Path.IsPathRooted(character.Script))
                                                     {
-                                                        pathList2.Add(character.Script);
+                                                        pathList3.Add(character.Script);
                                                     }
                                                     else
                                                     {
@@ -1589,11 +1603,11 @@ namespace Apricot
 
                                                         if (File.Exists(p))
                                                         {
-                                                            pathList2.Add(p);
+                                                            pathList3.Add(p);
                                                         }
                                                         else
                                                         {
-                                                            pathList2.Add(Path.Combine(directory3, character.Script));
+                                                            pathList3.Add(Path.Combine(directory3, character.Script));
                                                         }
                                                     }
                                                 }
@@ -1622,17 +1636,20 @@ namespace Apricot
                             string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
                             Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                             List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
-                            Queue<Tuple<bool, string>> tempPathQueue = new Queue<Tuple<bool, string>>();
+                            List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
 
                             if (match1.Success)
                             {
                                 tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
 
-                                while (pathQueue.Count > 0)
+                                while (pathList2.Count > 0)
                                 {
-                                    Tuple<bool, string> tuple2 = pathQueue.Dequeue();
+                                    int j = random.Next(pathList2.Count);
+                                    Tuple<bool, string> tuple2 = pathList2[j];
                                     string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                     Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                    pathList2.RemoveAt(j);
 
                                     if (match2.Success)
                                     {
@@ -1650,7 +1667,7 @@ namespace Apricot
                                         continue;
                                     }
 
-                                    tempPathQueue.Enqueue(tuple2);
+                                    tempPathList.Add(tuple2);
                                 }
 
                                 Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
@@ -1688,7 +1705,7 @@ namespace Apricot
 
                                                         character.Script = tuple3.Item1;
 
-                                                        if (!pathList2.Exists(delegate (string path2)
+                                                        if (!pathList3.Exists(delegate (string path2)
                                                         {
                                                             if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                             {
@@ -1704,7 +1721,7 @@ namespace Apricot
                                                         {
                                                             if (Path.IsPathRooted(character.Script))
                                                             {
-                                                                pathList2.Add(character.Script);
+                                                                pathList3.Add(character.Script);
                                                             }
                                                             else
                                                             {
@@ -1712,11 +1729,11 @@ namespace Apricot
 
                                                                 if (File.Exists(p))
                                                                 {
-                                                                    pathList2.Add(p);
+                                                                    pathList3.Add(p);
                                                                 }
                                                                 else
                                                                 {
-                                                                    pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                    pathList3.Add(Path.Combine(directory3, character.Script));
                                                                 }
                                                             }
                                                         }
@@ -1728,9 +1745,9 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList2.Clear();
+                                            pathList3.Clear();
                                             this.characterCollection.Clear();
-                                            pathQueue = tempPathQueue;
+                                            pathList2 = tempPathList;
 
                                             continue;
                                         }
@@ -1771,7 +1788,7 @@ namespace Apricot
 
                                                     character.Script = tuple3.Item1;
 
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -1787,7 +1804,7 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
@@ -1795,11 +1812,11 @@ namespace Apricot
 
                                                             if (File.Exists(p))
                                                             {
-                                                                pathList2.Add(p);
+                                                                pathList3.Add(p);
                                                             }
                                                             else
                                                             {
-                                                                pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                pathList3.Add(Path.Combine(directory3, character.Script));
                                                             }
                                                         }
                                                     }
@@ -1811,9 +1828,9 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList2.Clear();
+                                        pathList3.Clear();
                                         this.characterCollection.Clear();
-                                        pathQueue = tempPathQueue;
+                                        pathList2 = tempPathList;
 
                                         continue;
                                     }
@@ -1831,17 +1848,20 @@ namespace Apricot
                                     }
                                 }
 
-                                pathQueue = tempPathQueue;
+                                pathList2 = tempPathList;
                             }
                             else
                             {
                                 tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
 
-                                while (pathQueue.Count > 0)
+                                while (pathList2.Count > 0)
                                 {
-                                    Tuple<bool, string> tuple2 = pathQueue.Dequeue();
+                                    int j = random.Next(pathList2.Count);
+                                    Tuple<bool, string> tuple2 = pathList2[j];
                                     string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                     Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                    pathList2.RemoveAt(j);
 
                                     if (match2.Success)
                                     {
@@ -1859,7 +1879,7 @@ namespace Apricot
                                         continue;
                                     }
 
-                                    tempPathQueue.Enqueue(tuple2);
+                                    tempPathList.Add(tuple2);
                                 }
 
                                 Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
@@ -1897,7 +1917,7 @@ namespace Apricot
 
                                                         character.Script = tuple3.Item1;
 
-                                                        if (!pathList2.Exists(delegate (string path2)
+                                                        if (!pathList3.Exists(delegate (string path2)
                                                         {
                                                             if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                             {
@@ -1913,7 +1933,7 @@ namespace Apricot
                                                         {
                                                             if (Path.IsPathRooted(character.Script))
                                                             {
-                                                                pathList2.Add(character.Script);
+                                                                pathList3.Add(character.Script);
                                                             }
                                                             else
                                                             {
@@ -1921,11 +1941,11 @@ namespace Apricot
 
                                                                 if (File.Exists(p))
                                                                 {
-                                                                    pathList2.Add(p);
+                                                                    pathList3.Add(p);
                                                                 }
                                                                 else
                                                                 {
-                                                                    pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                    pathList3.Add(Path.Combine(directory3, character.Script));
                                                                 }
                                                             }
                                                         }
@@ -1937,9 +1957,9 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList2.Clear();
+                                            pathList3.Clear();
                                             this.characterCollection.Clear();
-                                            pathQueue = tempPathQueue;
+                                            pathList2 = tempPathList;
 
                                             continue;
                                         }
@@ -1980,7 +2000,7 @@ namespace Apricot
 
                                                     character.Script = tuple3.Item1;
 
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -1996,7 +2016,7 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
@@ -2004,11 +2024,11 @@ namespace Apricot
 
                                                             if (File.Exists(p))
                                                             {
-                                                                pathList2.Add(p);
+                                                                pathList3.Add(p);
                                                             }
                                                             else
                                                             {
-                                                                pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                pathList3.Add(Path.Combine(directory3, character.Script));
                                                             }
                                                         }
                                                     }
@@ -2020,9 +2040,9 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList2.Clear();
+                                        pathList3.Clear();
                                         this.characterCollection.Clear();
-                                        pathQueue = tempPathQueue;
+                                        pathList2 = tempPathList;
 
                                         continue;
                                     }
@@ -2040,12 +2060,12 @@ namespace Apricot
                                     }
                                 }
 
-                                pathQueue = tempPathQueue;
+                                pathList2 = tempPathList;
                             }
                         }
                     }
 
-                    pathList2.ForEach(delegate (string path2)
+                    pathList3.ForEach(delegate (string path2)
                     {
                         Parse(path2);
                     });
@@ -2227,12 +2247,16 @@ namespace Apricot
                     }
 
                     string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                    Queue<Tuple<bool, string>> pathQueue = new Queue<Tuple<bool, string>>(Shuffle<Tuple<bool, string>>(from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)));
-                    List<string> pathList2 = new List<string>();
+                    List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
+                    Random random = new Random(Environment.TickCount);
+                    List<string> pathList3 = new List<string>();
 
-                    while (pathQueue.Count > 0)
+                    while (pathList2.Count > 0)
                     {
-                        Tuple<bool, string> tuple1 = pathQueue.Dequeue();
+                        int i = random.Next(pathList3.Count);
+                        Tuple<bool, string> tuple1 = pathList2[i];
+
+                        pathList3.RemoveAt(i);
 
                         if (tuple1.Item1)
                         {
@@ -2344,7 +2368,7 @@ namespace Apricot
 
                                                 characterList.ForEach(delegate (Character character)
                                                 {
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -2360,7 +2384,7 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
@@ -2368,11 +2392,11 @@ namespace Apricot
 
                                                             if (File.Exists(p))
                                                             {
-                                                                pathList2.Add(p);
+                                                                pathList3.Add(p);
                                                             }
                                                             else
                                                             {
-                                                                pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                pathList3.Add(Path.Combine(directory3, character.Script));
                                                             }
                                                         }
                                                     }
@@ -2426,7 +2450,7 @@ namespace Apricot
 
                                             characterList.ForEach(delegate (Character character)
                                             {
-                                                if (!pathList2.Exists(delegate (string path2)
+                                                if (!pathList3.Exists(delegate (string path2)
                                                 {
                                                     if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                     {
@@ -2442,7 +2466,7 @@ namespace Apricot
                                                 {
                                                     if (Path.IsPathRooted(character.Script))
                                                     {
-                                                        pathList2.Add(character.Script);
+                                                        pathList3.Add(character.Script);
                                                     }
                                                     else
                                                     {
@@ -2450,11 +2474,11 @@ namespace Apricot
 
                                                         if (File.Exists(p))
                                                         {
-                                                            pathList2.Add(p);
+                                                            pathList3.Add(p);
                                                         }
                                                         else
                                                         {
-                                                            pathList2.Add(Path.Combine(directory3, character.Script));
+                                                            pathList3.Add(Path.Combine(directory3, character.Script));
                                                         }
                                                     }
                                                 }
@@ -2483,17 +2507,20 @@ namespace Apricot
                             string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
                             Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                             List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
-                            Queue<Tuple<bool, string>> tempPathQueue = new Queue<Tuple<bool, string>>();
+                            List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
 
                             if (match1.Success)
                             {
                                 tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
 
-                                while (pathQueue.Count > 0)
+                                while (pathList2.Count > 0)
                                 {
-                                    Tuple<bool, string> tuple2 = pathQueue.Dequeue();
+                                    int j = random.Next(pathList2.Count);
+                                    Tuple<bool, string> tuple2 = pathList2[j];
                                     string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                     Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                    pathList2.RemoveAt(j);
 
                                     if (match2.Success)
                                     {
@@ -2511,7 +2538,7 @@ namespace Apricot
                                         continue;
                                     }
 
-                                    tempPathQueue.Enqueue(tuple2);
+                                    tempPathList.Add(tuple2);
                                 }
 
                                 Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
@@ -2549,7 +2576,7 @@ namespace Apricot
 
                                                         character.Script = tuple3.Item1;
 
-                                                        if (!pathList2.Exists(delegate (string path2)
+                                                        if (!pathList3.Exists(delegate (string path2)
                                                         {
                                                             if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                             {
@@ -2565,7 +2592,7 @@ namespace Apricot
                                                         {
                                                             if (Path.IsPathRooted(character.Script))
                                                             {
-                                                                pathList2.Add(character.Script);
+                                                                pathList3.Add(character.Script);
                                                             }
                                                             else
                                                             {
@@ -2573,11 +2600,11 @@ namespace Apricot
 
                                                                 if (File.Exists(p))
                                                                 {
-                                                                    pathList2.Add(p);
+                                                                    pathList3.Add(p);
                                                                 }
                                                                 else
                                                                 {
-                                                                    pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                    pathList3.Add(Path.Combine(directory3, character.Script));
                                                                 }
                                                             }
                                                         }
@@ -2589,9 +2616,9 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList2.Clear();
+                                            pathList3.Clear();
                                             this.characterCollection.Clear();
-                                            pathQueue = tempPathQueue;
+                                            pathList2 = tempPathList;
 
                                             continue;
                                         }
@@ -2632,7 +2659,7 @@ namespace Apricot
 
                                                     character.Script = tuple3.Item1;
 
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -2648,7 +2675,7 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
@@ -2656,11 +2683,11 @@ namespace Apricot
 
                                                             if (File.Exists(p))
                                                             {
-                                                                pathList2.Add(p);
+                                                                pathList3.Add(p);
                                                             }
                                                             else
                                                             {
-                                                                pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                pathList3.Add(Path.Combine(directory3, character.Script));
                                                             }
                                                         }
                                                     }
@@ -2672,9 +2699,9 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList2.Clear();
+                                        pathList3.Clear();
                                         this.characterCollection.Clear();
-                                        pathQueue = tempPathQueue;
+                                        pathList2 = tempPathList;
 
                                         continue;
                                     }
@@ -2692,17 +2719,20 @@ namespace Apricot
                                     }
                                 }
 
-                                pathQueue = tempPathQueue;
+                                pathList2 = tempPathList;
                             }
                             else
                             {
                                 tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
 
-                                while (pathQueue.Count > 0)
+                                while (pathList2.Count > 0)
                                 {
-                                    Tuple<bool, string> tuple2 = pathQueue.Dequeue();
+                                    int j = random.Next(pathList2.Count);
+                                    Tuple<bool, string> tuple2 = pathList2[j];
                                     string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                     Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                    pathList2.RemoveAt(j);
 
                                     if (match2.Success)
                                     {
@@ -2720,7 +2750,7 @@ namespace Apricot
                                         continue;
                                     }
 
-                                    tempPathQueue.Enqueue(tuple2);
+                                    tempPathList.Add(tuple2);
                                 }
 
                                 Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
@@ -2758,7 +2788,7 @@ namespace Apricot
 
                                                         character.Script = tuple3.Item1;
 
-                                                        if (!pathList2.Exists(delegate (string path2)
+                                                        if (!pathList3.Exists(delegate (string path2)
                                                         {
                                                             if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                             {
@@ -2774,7 +2804,7 @@ namespace Apricot
                                                         {
                                                             if (Path.IsPathRooted(character.Script))
                                                             {
-                                                                pathList2.Add(character.Script);
+                                                                pathList3.Add(character.Script);
                                                             }
                                                             else
                                                             {
@@ -2782,11 +2812,11 @@ namespace Apricot
 
                                                                 if (File.Exists(p))
                                                                 {
-                                                                    pathList2.Add(p);
+                                                                    pathList3.Add(p);
                                                                 }
                                                                 else
                                                                 {
-                                                                    pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                    pathList3.Add(Path.Combine(directory3, character.Script));
                                                                 }
                                                             }
                                                         }
@@ -2798,9 +2828,9 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList2.Clear();
+                                            pathList3.Clear();
                                             this.characterCollection.Clear();
-                                            pathQueue = tempPathQueue;
+                                            pathList2 = tempPathList;
 
                                             continue;
                                         }
@@ -2841,7 +2871,7 @@ namespace Apricot
 
                                                     character.Script = tuple3.Item1;
 
-                                                    if (!pathList2.Exists(delegate (string path2)
+                                                    if (!pathList3.Exists(delegate (string path2)
                                                     {
                                                         if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
                                                         {
@@ -2857,7 +2887,7 @@ namespace Apricot
                                                     {
                                                         if (Path.IsPathRooted(character.Script))
                                                         {
-                                                            pathList2.Add(character.Script);
+                                                            pathList3.Add(character.Script);
                                                         }
                                                         else
                                                         {
@@ -2865,11 +2895,11 @@ namespace Apricot
 
                                                             if (File.Exists(p))
                                                             {
-                                                                pathList2.Add(p);
+                                                                pathList3.Add(p);
                                                             }
                                                             else
                                                             {
-                                                                pathList2.Add(Path.Combine(directory3, character.Script));
+                                                                pathList3.Add(Path.Combine(directory3, character.Script));
                                                             }
                                                         }
                                                     }
@@ -2881,9 +2911,9 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList2.Clear();
+                                        pathList3.Clear();
                                         this.characterCollection.Clear();
-                                        pathQueue = tempPathQueue;
+                                        pathList2 = tempPathList;
 
                                         continue;
                                     }
@@ -2901,12 +2931,12 @@ namespace Apricot
                                     }
                                 }
 
-                                pathQueue = tempPathQueue;
+                                pathList2 = tempPathList;
                             }
                         }
                     }
 
-                    pathList2.ForEach(delegate (string path2)
+                    pathList3.ForEach(delegate (string path2)
                     {
                         Parse(path2);
                     });
@@ -2923,7 +2953,7 @@ namespace Apricot
             {
                 string filename = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly) where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
                 {
                     System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -4109,7 +4139,7 @@ namespace Apricot
             string[] terms = (from word in this.wordCollection select word.Name).Distinct().ToArray();
             Dictionary<Uri, Entry> entryDictionary = new Dictionary<Uri, Entry>();
             Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> tempCacheDictionary = new Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>();
-            
+
             this.lastUpdatedDateTime = nowDateTime;
 
             Task.Factory.StartNew(delegate
@@ -4126,7 +4156,7 @@ namespace Apricot
                     {
                         string filename = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                        foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config") where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                        foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly) where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
                         {
                             System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
@@ -4152,7 +4182,103 @@ namespace Apricot
                             fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
                         }
 
-                        if (config1.AppSettings.Settings["Subscriptions"] != null)
+                        if (config1.AppSettings.Settings["Subscriptions"] == null)
+                        {
+                            Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                            HashSet<string> pathHashSet = new HashSet<string>();
+                            List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+
+                            foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                            {
+                                string key = Path.GetFileNameWithoutExtension(filename);
+                                Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                if (match.Success)
+                                {
+                                    List<Tuple<string, string>> tupleList;
+
+                                    key = match.Groups[1].Value;
+
+                                    if (pathDictionary.TryGetValue(key, out tupleList))
+                                    {
+                                        tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                    }
+                                    else
+                                    {
+                                        tupleList = new List<Tuple<string, string>>();
+                                        tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                        pathDictionary.Add(key, tupleList);
+                                        pathList.Add(Tuple.Create<string, string>(null, key));
+                                    }
+                                }
+                                else
+                                {
+                                    pathHashSet.Add(key);
+                                    pathList.Add(Tuple.Create<string, string>(filename, key));
+                                }
+                            }
+
+                            pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                            {
+                                if (tuple1.Item1 == null)
+                                {
+                                    if (!pathHashSet.Contains(tuple1.Item2))
+                                    {
+                                        List<Tuple<string, string>> tupleList;
+
+                                        if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                                        {
+                                            Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                            {
+                                                return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                            });
+
+                                            if (tuple2 != null)
+                                            {
+                                                using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                                {
+                                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                                    xmlDocument.Load(fs);
+                                                    xmlDocument.Normalize();
+
+                                                    foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
+                                                    {
+                                                        fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    List<Tuple<string, string>> tupleList;
+
+                                    if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                                    {
+                                        Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                        {
+                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                        });
+
+                                        using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                        {
+                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                            xmlDocument.Load(fs);
+                                            xmlDocument.Normalize();
+
+                                            foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
+                                            {
+                                                fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        else
                         {
                             using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Subscriptions"].Value) ? config1.AppSettings.Settings["Subscriptions"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
@@ -4161,17 +4287,9 @@ namespace Apricot
                                 xmlDocument.Load(fs);
                                 xmlDocument.Normalize();
 
-                                foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
+                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                 {
-                                    foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
-                                    {
-                                        if (xmlChildAttribute.Name.Equals("xmlUrl"))
-                                        {
-                                            fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
-
-                                            break;
-                                        }
-                                    }
+                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                 }
                             }
                         }
@@ -4204,105 +4322,169 @@ namespace Apricot
                             fetcher.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
                         }
 
-                        if (config1.AppSettings.Settings["Subscriptions"] != null)
+                        if (config1.AppSettings.Settings["Subscriptions"] == null)
                         {
-                            if (Path.IsPathRooted(config1.AppSettings.Settings["Subscriptions"].Value))
+                            if (config2.AppSettings.Settings["Subscriptions"] == null)
                             {
-                                using (FileStream fs = new FileStream(config1.AppSettings.Settings["Subscriptions"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                                HashSet<string> pathHashSet = new HashSet<string>();
+                                List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+
+                                foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
                                 {
-                                    XmlDocument xmlDocument = new XmlDocument();
+                                    string key = Path.GetFileNameWithoutExtension(filename);
+                                    Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
 
-                                    xmlDocument.Load(fs);
-                                    xmlDocument.Normalize();
-
-                                    foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
+                                    if (match.Success)
                                     {
-                                        foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
-                                        {
-                                            if (xmlChildAttribute.Name.Equals("xmlUrl"))
-                                            {
-                                                fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
+                                        List<Tuple<string, string>> tupleList;
 
-                                                break;
+                                        key = match.Groups[1].Value;
+
+                                        if (pathDictionary.TryGetValue(key, out tupleList))
+                                        {
+                                            tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                        }
+                                        else
+                                        {
+                                            tupleList = new List<Tuple<string, string>>();
+                                            tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                            pathDictionary.Add(key, tupleList);
+                                            pathList.Add(Tuple.Create<string, string>(null, key));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        pathHashSet.Add(key);
+                                        pathList.Add(Tuple.Create<string, string>(filename, key));
+                                    }
+                                }
+
+                                pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                                {
+                                    if (tuple1.Item1 == null)
+                                    {
+                                        if (!pathHashSet.Contains(tuple1.Item2))
+                                        {
+                                            List<Tuple<string, string>> tupleList;
+
+                                            if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                                            {
+                                                Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                                {
+                                                    return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                });
+
+                                                if (tuple2 != null)
+                                                {
+                                                    using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                                    {
+                                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                                        xmlDocument.Load(fs);
+                                                        xmlDocument.Normalize();
+
+                                                        foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
+                                                        {
+                                                            fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
-                                }
+                                    else
+                                    {
+                                        List<Tuple<string, string>> tupleList;
+
+                                        if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                                        {
+                                            Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                            {
+                                                return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                            });
+
+                                            using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                            {
+                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                xmlDocument.Load(fs);
+                                                xmlDocument.Normalize();
+
+                                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
+                                                {
+                                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
                             }
                             else
                             {
-                                string path = Path.Combine(directory, config1.AppSettings.Settings["Subscriptions"].Value);
-
-                                using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                if (Path.IsPathRooted(config2.AppSettings.Settings["Subscriptions"].Value))
                                 {
-                                    XmlDocument xmlDocument = new XmlDocument();
-
-                                    xmlDocument.Load(fs);
-                                    xmlDocument.Normalize();
-
-                                    foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
+                                    using (FileStream fs = new FileStream(config2.AppSettings.Settings["Subscriptions"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                                     {
-                                        foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
-                                        {
-                                            if (xmlChildAttribute.Name.Equals("xmlUrl"))
-                                            {
-                                                fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
+                                        XmlDocument xmlDocument = new XmlDocument();
 
-                                                break;
-                                            }
+                                        xmlDocument.Load(fs);
+                                        xmlDocument.Normalize();
+
+                                        foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
+                                        {
+                                            fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    string path = Path.Combine(directory, config2.AppSettings.Settings["Subscriptions"].Value);
+
+                                    using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
+                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                        xmlDocument.Load(fs);
+                                        xmlDocument.Normalize();
+
+                                        foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
+                                        {
+                                            fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                         }
                                     }
                                 }
                             }
                         }
-                        else if (config2.AppSettings.Settings["Subscriptions"] != null)
+                        else if (Path.IsPathRooted(config1.AppSettings.Settings["Subscriptions"].Value))
                         {
-                            if (Path.IsPathRooted(config2.AppSettings.Settings["Subscriptions"].Value))
+                            using (FileStream fs = new FileStream(config1.AppSettings.Settings["Subscriptions"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
-                                using (FileStream fs = new FileStream(config2.AppSettings.Settings["Subscriptions"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                XmlDocument xmlDocument = new XmlDocument();
+
+                                xmlDocument.Load(fs);
+                                xmlDocument.Normalize();
+
+                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                 {
-                                    XmlDocument xmlDocument = new XmlDocument();
-
-                                    xmlDocument.Load(fs);
-                                    xmlDocument.Normalize();
-
-                                    foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
-                                    {
-                                        foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
-                                        {
-                                            if (xmlChildAttribute.Name.Equals("xmlUrl"))
-                                            {
-                                                fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
-
-                                                break;
-                                            }
-                                        }
-                                    }
+                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                 }
                             }
-                            else
+                        }
+                        else
+                        {
+                            string path = Path.Combine(directory, config1.AppSettings.Settings["Subscriptions"].Value);
+
+                            using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
-                                string path = Path.Combine(directory, config2.AppSettings.Settings["Subscriptions"].Value);
+                                XmlDocument xmlDocument = new XmlDocument();
 
-                                using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                xmlDocument.Load(fs);
+                                xmlDocument.Normalize();
+
+                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                 {
-                                    XmlDocument xmlDocument = new XmlDocument();
-
-                                    xmlDocument.Load(fs);
-                                    xmlDocument.Normalize();
-
-                                    foreach (XmlNode xmlOutlineNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline"))
-                                    {
-                                        foreach (XmlAttribute xmlChildAttribute in xmlOutlineNode.Attributes)
-                                        {
-                                            if (xmlChildAttribute.Name.Equals("xmlUrl"))
-                                            {
-                                                fetcher.Subscriptions.Add(new Uri(xmlChildAttribute.Value, UriKind.Absolute));
-
-                                                break;
-                                            }
-                                        }
-                                    }
+                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                 }
                             }
                         }
