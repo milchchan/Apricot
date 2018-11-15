@@ -4275,6 +4275,21 @@ namespace Apricot
                                             }
                                         }
                                     }
+                                    else
+                                    {
+                                        using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                        {
+                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                            xmlDocument.Load(fs);
+                                            xmlDocument.Normalize();
+
+                                            foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
+                                            {
+                                                fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                            }
+                                        }
+                                    }
                                 }
                             });
                         }
@@ -4405,6 +4420,21 @@ namespace Apricot
                                             });
 
                                             using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                            {
+                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                xmlDocument.Load(fs);
+                                                xmlDocument.Normalize();
+
+                                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
+                                                {
+                                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
                                             {
                                                 XmlDocument xmlDocument = new XmlDocument();
 
