@@ -2706,201 +2706,207 @@ namespace Apricot
             }
         }
 
-        protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+        protected override void OnMouseDown(MouseButtonEventArgs e)
         {
-            base.OnMouseLeftButtonDown(e);
+            base.OnMouseDown(e);
 
-            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            if (e.LeftButton == MouseButtonState.Pressed && !SystemParameters.SwapButtons || e.RightButton == MouseButtonState.Pressed && SystemParameters.SwapButtons)
             {
-                this.mouseDownPosition = new Nullable<Point>(PointToScreen(e.GetPosition(this)));
+                if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+                {
+                    this.mouseDownPosition = new Nullable<Point>(PointToScreen(e.GetPosition(this)));
 
-                CaptureMouse();
-            }
-            else
-            {
-                // Begin dragging the window.
-                DragMove();
+                    CaptureMouse();
+                }
+                else
+                {
+                    // Begin dragging the window.
+                    DragMove();
+                }
             }
         }
 
-        protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
+        protected override void OnMouseUp(MouseButtonEventArgs e)
         {
-            base.OnMouseLeftButtonUp(e);
+            base.OnMouseUp(e);
 
-            if (this.mouseDownPosition.HasValue)
+            if (e.LeftButton == MouseButtonState.Released && !SystemParameters.SwapButtons || e.RightButton == MouseButtonState.Released && SystemParameters.SwapButtons)
             {
-                Point point = PointToScreen(e.GetPosition(this));
-
-                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                if (this.mouseDownPosition.HasValue)
                 {
-                    if ((Math.Sign(point.X - this.mouseDownPosition.Value.X) > 0 && !character.Mirror) || (Math.Sign(point.X - this.mouseDownPosition.Value.X) < 0 && character.Mirror))
+                    Point point = PointToScreen(e.GetPosition(this));
+
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                     {
-                        LinearGradientBrush linearGradientBrush = this.Canvas.OpacityMask as LinearGradientBrush;
-                        Storyboard storyboard = new Storyboard();
-                        ColorAnimation colorAnimation1 = new ColorAnimation();
-                        ColorAnimation colorAnimation2 = new ColorAnimation();
-                        SineEase sineEase1 = new SineEase();
-                        SineEase sineEase2 = new SineEase();
-
-                        if (linearGradientBrush == null)
+                        if (Math.Sign(point.X - this.mouseDownPosition.Value.X) > 0 && !character.Mirror || Math.Sign(point.X - this.mouseDownPosition.Value.X) < 0 && character.Mirror)
                         {
-                            GradientStopCollection gradientStopCollection = new GradientStopCollection();
-                            GradientStop gradientStop1 = new GradientStop();
-                            GradientStop gradientStop2 = new GradientStop();
+                            LinearGradientBrush linearGradientBrush = this.Canvas.OpacityMask as LinearGradientBrush;
+                            Storyboard storyboard = new Storyboard();
+                            ColorAnimation colorAnimation1 = new ColorAnimation();
+                            ColorAnimation colorAnimation2 = new ColorAnimation();
+                            SineEase sineEase1 = new SineEase();
+                            SineEase sineEase2 = new SineEase();
 
-                            colorAnimation1.From = gradientStop1.Color = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
-                            gradientStop1.Offset = 0;
-                            colorAnimation2.From = gradientStop2.Color = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
-                            gradientStop2.Offset = 1;
-
-                            gradientStopCollection.Add(gradientStop1);
-                            gradientStopCollection.Add(gradientStop2);
-
-                            this.Canvas.OpacityMask = linearGradientBrush = new LinearGradientBrush(gradientStopCollection, new Point(0, 0.5), new Point(1, 0.5));
-                        }
-                        else
-                        {
-                            colorAnimation1.From = linearGradientBrush.GradientStops[1].Color;
-                            colorAnimation2.From = linearGradientBrush.GradientStops[0].Color;
-                        }
-
-                        sineEase1.EasingMode = sineEase2.EasingMode = EasingMode.EaseOut;
-
-                        colorAnimation1.To = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
-                        colorAnimation1.Duration = TimeSpan.FromMilliseconds(250);
-                        colorAnimation1.EasingFunction = sineEase1;
-                        colorAnimation2.To = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
-                        colorAnimation2.BeginTime = TimeSpan.FromMilliseconds(250);
-                        colorAnimation2.Duration = TimeSpan.FromMilliseconds(250);
-                        colorAnimation2.EasingFunction = sineEase2;
-
-                        if (this.mirrorStoryboard != null)
-                        {
-                            this.mirrorStoryboard.Stop(this.Canvas);
-                        }
-
-                        storyboard.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
-                        {
-                            if (((Clock)s).CurrentState == ClockState.Filling)
+                            if (linearGradientBrush == null)
                             {
-                                this.Canvas.OpacityMask = null;
-                                storyboard.Remove(this.Canvas);
-                                this.mirrorStoryboard = null;
+                                GradientStopCollection gradientStopCollection = new GradientStopCollection();
+                                GradientStop gradientStop1 = new GradientStop();
+                                GradientStop gradientStop2 = new GradientStop();
+
+                                colorAnimation1.From = gradientStop1.Color = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
+                                gradientStop1.Offset = 0;
+                                colorAnimation2.From = gradientStop2.Color = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
+                                gradientStop2.Offset = 1;
+
+                                gradientStopCollection.Add(gradientStop1);
+                                gradientStopCollection.Add(gradientStop2);
+
+                                this.Canvas.OpacityMask = linearGradientBrush = new LinearGradientBrush(gradientStopCollection, new Point(0, 0.5), new Point(1, 0.5));
                             }
-                        });
-                        storyboard.Children.Add(colorAnimation1);
-                        storyboard.Children.Add(colorAnimation2);
-
-                        Storyboard.SetTargetProperty(colorAnimation1, new PropertyPath("(0).(1)[1].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
-                        Storyboard.SetTargetProperty(colorAnimation2, new PropertyPath("(0).(1)[0].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
-
-                        this.mirrorStoryboard = storyboard;
-                        this.Canvas.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
-                    }
-                    else if ((Math.Sign(point.X - this.mouseDownPosition.Value.X) > 0 && character.Mirror) || (Math.Sign(point.X - this.mouseDownPosition.Value.X) < 0 && !character.Mirror))
-                    {
-                        LinearGradientBrush linearGradientBrush = this.Canvas.OpacityMask as LinearGradientBrush;
-                        Storyboard storyboard = new Storyboard();
-                        ColorAnimation colorAnimation1 = new ColorAnimation();
-                        ColorAnimation colorAnimation2 = new ColorAnimation();
-                        ColorAnimation colorAnimation3 = new ColorAnimation(Color.FromArgb(0, 0, 0, 0), Color.FromArgb(Byte.MaxValue, 0, 0, 0), TimeSpan.FromMilliseconds(250));
-                        ColorAnimation colorAnimation4 = new ColorAnimation(Color.FromArgb(0, 0, 0, 0), Color.FromArgb(Byte.MaxValue, 0, 0, 0), TimeSpan.FromMilliseconds(250));
-                        SineEase sineEase1 = new SineEase();
-                        SineEase sineEase2 = new SineEase();
-                        SineEase sineEase3 = new SineEase();
-                        SineEase sineEase4 = new SineEase();
-
-                        if (linearGradientBrush == null)
-                        {
-                            GradientStopCollection gradientStopCollection = new GradientStopCollection();
-                            GradientStop gradientStop1 = new GradientStop();
-                            GradientStop gradientStop2 = new GradientStop();
-
-                            colorAnimation1.From = gradientStop1.Color = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
-                            gradientStop1.Offset = 0;
-                            colorAnimation2.From = gradientStop2.Color = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
-                            gradientStop2.Offset = 1;
-
-                            gradientStopCollection.Add(gradientStop1);
-                            gradientStopCollection.Add(gradientStop2);
-
-                            this.Canvas.OpacityMask = linearGradientBrush = new LinearGradientBrush(gradientStopCollection, new Point(0, 0.5), new Point(1, 0.5));
-                        }
-                        else
-                        {
-                            colorAnimation1.From = linearGradientBrush.GradientStops[1].Color;
-                            colorAnimation2.From = linearGradientBrush.GradientStops[0].Color;
-                        }
-
-                        sineEase1.EasingMode = sineEase2.EasingMode = EasingMode.EaseIn;
-                        sineEase3.EasingMode = sineEase4.EasingMode = EasingMode.EaseOut;
-
-                        colorAnimation1.To = Color.FromArgb(0, 0, 0, 0);
-                        colorAnimation1.Duration = TimeSpan.FromMilliseconds(250);
-                        colorAnimation1.EasingFunction = sineEase1;
-                        colorAnimation2.To = Color.FromArgb(0, 0, 0, 0);
-                        colorAnimation2.BeginTime = TimeSpan.FromMilliseconds(250);
-                        colorAnimation2.Duration = TimeSpan.FromMilliseconds(250);
-                        colorAnimation2.EasingFunction = sineEase2;
-                        colorAnimation2.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
-                        {
-                            if (((Clock)s).CurrentState == ClockState.Filling)
+                            else
                             {
-                                foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(this.characterName) select c)
-                                {
-                                    c.Mirror = !c.Mirror;
+                                colorAnimation1.From = linearGradientBrush.GradientStops[1].Color;
+                                colorAnimation2.From = linearGradientBrush.GradientStops[0].Color;
+                            }
 
-                                    if (c.Mirror)
+                            sineEase1.EasingMode = sineEase2.EasingMode = EasingMode.EaseOut;
+
+                            colorAnimation1.To = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
+                            colorAnimation1.Duration = TimeSpan.FromMilliseconds(250);
+                            colorAnimation1.EasingFunction = sineEase1;
+                            colorAnimation2.To = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
+                            colorAnimation2.BeginTime = TimeSpan.FromMilliseconds(250);
+                            colorAnimation2.Duration = TimeSpan.FromMilliseconds(250);
+                            colorAnimation2.EasingFunction = sineEase2;
+
+                            if (this.mirrorStoryboard != null)
+                            {
+                                this.mirrorStoryboard.Stop(this.Canvas);
+                            }
+
+                            storyboard.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
+                            {
+                                if (((Clock)s).CurrentState == ClockState.Filling)
+                                {
+                                    this.Canvas.OpacityMask = null;
+                                    storyboard.Remove(this.Canvas);
+                                    this.mirrorStoryboard = null;
+                                }
+                            });
+                            storyboard.Children.Add(colorAnimation1);
+                            storyboard.Children.Add(colorAnimation2);
+
+                            Storyboard.SetTargetProperty(colorAnimation1, new PropertyPath("(0).(1)[1].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
+                            Storyboard.SetTargetProperty(colorAnimation2, new PropertyPath("(0).(1)[0].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
+
+                            this.mirrorStoryboard = storyboard;
+                            this.Canvas.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
+                        }
+                        else if (Math.Sign(point.X - this.mouseDownPosition.Value.X) > 0 && character.Mirror || Math.Sign(point.X - this.mouseDownPosition.Value.X) < 0 && !character.Mirror)
+                        {
+                            LinearGradientBrush linearGradientBrush = this.Canvas.OpacityMask as LinearGradientBrush;
+                            Storyboard storyboard = new Storyboard();
+                            ColorAnimation colorAnimation1 = new ColorAnimation();
+                            ColorAnimation colorAnimation2 = new ColorAnimation();
+                            ColorAnimation colorAnimation3 = new ColorAnimation(Color.FromArgb(0, 0, 0, 0), Color.FromArgb(Byte.MaxValue, 0, 0, 0), TimeSpan.FromMilliseconds(250));
+                            ColorAnimation colorAnimation4 = new ColorAnimation(Color.FromArgb(0, 0, 0, 0), Color.FromArgb(Byte.MaxValue, 0, 0, 0), TimeSpan.FromMilliseconds(250));
+                            SineEase sineEase1 = new SineEase();
+                            SineEase sineEase2 = new SineEase();
+                            SineEase sineEase3 = new SineEase();
+                            SineEase sineEase4 = new SineEase();
+
+                            if (linearGradientBrush == null)
+                            {
+                                GradientStopCollection gradientStopCollection = new GradientStopCollection();
+                                GradientStop gradientStop1 = new GradientStop();
+                                GradientStop gradientStop2 = new GradientStop();
+
+                                colorAnimation1.From = gradientStop1.Color = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
+                                gradientStop1.Offset = 0;
+                                colorAnimation2.From = gradientStop2.Color = Color.FromArgb(Byte.MaxValue, 0, 0, 0);
+                                gradientStop2.Offset = 1;
+
+                                gradientStopCollection.Add(gradientStop1);
+                                gradientStopCollection.Add(gradientStop2);
+
+                                this.Canvas.OpacityMask = linearGradientBrush = new LinearGradientBrush(gradientStopCollection, new Point(0, 0.5), new Point(1, 0.5));
+                            }
+                            else
+                            {
+                                colorAnimation1.From = linearGradientBrush.GradientStops[1].Color;
+                                colorAnimation2.From = linearGradientBrush.GradientStops[0].Color;
+                            }
+
+                            sineEase1.EasingMode = sineEase2.EasingMode = EasingMode.EaseIn;
+                            sineEase3.EasingMode = sineEase4.EasingMode = EasingMode.EaseOut;
+
+                            colorAnimation1.To = Color.FromArgb(0, 0, 0, 0);
+                            colorAnimation1.Duration = TimeSpan.FromMilliseconds(250);
+                            colorAnimation1.EasingFunction = sineEase1;
+                            colorAnimation2.To = Color.FromArgb(0, 0, 0, 0);
+                            colorAnimation2.BeginTime = TimeSpan.FromMilliseconds(250);
+                            colorAnimation2.Duration = TimeSpan.FromMilliseconds(250);
+                            colorAnimation2.EasingFunction = sineEase2;
+                            colorAnimation2.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
+                            {
+                                if (((Clock)s).CurrentState == ClockState.Filling)
+                                {
+                                    foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(this.characterName) select c)
                                     {
-                                        this.FlipScaleTransform.ScaleX = -1;
-                                    }
-                                    else
-                                    {
-                                        this.FlipScaleTransform.ScaleX = 1;
+                                        c.Mirror = !c.Mirror;
+
+                                        if (c.Mirror)
+                                        {
+                                            this.FlipScaleTransform.ScaleX = -1;
+                                        }
+                                        else
+                                        {
+                                            this.FlipScaleTransform.ScaleX = 1;
+                                        }
                                     }
                                 }
-                            }
-                        });
-                        colorAnimation3.BeginTime = TimeSpan.FromMilliseconds(500);
-                        colorAnimation3.EasingFunction = sineEase3;
-                        colorAnimation4.BeginTime = TimeSpan.FromMilliseconds(750);
-                        colorAnimation4.EasingFunction = sineEase4;
+                            });
+                            colorAnimation3.BeginTime = TimeSpan.FromMilliseconds(500);
+                            colorAnimation3.EasingFunction = sineEase3;
+                            colorAnimation4.BeginTime = TimeSpan.FromMilliseconds(750);
+                            colorAnimation4.EasingFunction = sineEase4;
 
-                        if (this.mirrorStoryboard != null)
-                        {
-                            this.mirrorStoryboard.Stop(this.Canvas);
-                        }
-
-                        storyboard.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
-                        {
-                            if (((Clock)s).CurrentState == ClockState.Filling)
+                            if (this.mirrorStoryboard != null)
                             {
-                                this.Canvas.OpacityMask = null;
-                                storyboard.Remove(this.Canvas);
-                                this.mirrorStoryboard = null;
+                                this.mirrorStoryboard.Stop(this.Canvas);
                             }
-                        });
-                        storyboard.Children.Add(colorAnimation1);
-                        storyboard.Children.Add(colorAnimation2);
-                        storyboard.Children.Add(colorAnimation3);
-                        storyboard.Children.Add(colorAnimation4);
 
-                        Storyboard.SetTargetProperty(colorAnimation1, new PropertyPath("(0).(1)[1].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
-                        Storyboard.SetTargetProperty(colorAnimation2, new PropertyPath("(0).(1)[0].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
-                        Storyboard.SetTargetProperty(colorAnimation3, new PropertyPath("(0).(1)[0].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
-                        Storyboard.SetTargetProperty(colorAnimation4, new PropertyPath("(0).(1)[1].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
+                            storyboard.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
+                            {
+                                if (((Clock)s).CurrentState == ClockState.Filling)
+                                {
+                                    this.Canvas.OpacityMask = null;
+                                    storyboard.Remove(this.Canvas);
+                                    this.mirrorStoryboard = null;
+                                }
+                            });
+                            storyboard.Children.Add(colorAnimation1);
+                            storyboard.Children.Add(colorAnimation2);
+                            storyboard.Children.Add(colorAnimation3);
+                            storyboard.Children.Add(colorAnimation4);
 
-                        this.mirrorStoryboard = storyboard;
-                        this.Canvas.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
+                            Storyboard.SetTargetProperty(colorAnimation1, new PropertyPath("(0).(1)[1].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
+                            Storyboard.SetTargetProperty(colorAnimation2, new PropertyPath("(0).(1)[0].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
+                            Storyboard.SetTargetProperty(colorAnimation3, new PropertyPath("(0).(1)[0].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
+                            Storyboard.SetTargetProperty(colorAnimation4, new PropertyPath("(0).(1)[1].(2)", UIElement.OpacityMaskProperty, LinearGradientBrush.GradientStopsProperty, GradientStop.ColorProperty));
+
+                            this.mirrorStoryboard = storyboard;
+                            this.Canvas.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
+                        }
                     }
+
+                    this.mouseDownPosition = null;
                 }
 
-                this.mouseDownPosition = null;
-            }
-
-            if (this.IsMouseCaptured)
-            {
-                ReleaseMouseCapture();
+                if (this.IsMouseCaptured)
+                {
+                    ReleaseMouseCapture();
+                }
             }
         }
 

@@ -788,7 +788,7 @@ namespace Apricot
 
                                     if (match2.Success)
                                     {
-                                        if (match1.Groups[1].Value.Equals(match2.Groups[2].Value))
+                                        if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
                                         {
                                             tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
 
@@ -982,7 +982,7 @@ namespace Apricot
 
                                     if (match2.Success)
                                     {
-                                        if (filename1.Equals(match2.Groups[2].Value))
+                                        if (filename1.Equals(match2.Groups[1].Value))
                                         {
                                             tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
 
@@ -1653,7 +1653,7 @@ namespace Apricot
 
                                     if (match2.Success)
                                     {
-                                        if (match1.Groups[1].Value.Equals(match2.Groups[2].Value))
+                                        if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
                                         {
                                             tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
 
@@ -1865,7 +1865,7 @@ namespace Apricot
 
                                     if (match2.Success)
                                     {
-                                        if (filename1.Equals(match2.Groups[2].Value))
+                                        if (filename1.Equals(match2.Groups[1].Value))
                                         {
                                             tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
 
@@ -2524,7 +2524,7 @@ namespace Apricot
 
                                     if (match2.Success)
                                     {
-                                        if (match1.Groups[1].Value.Equals(match2.Groups[2].Value))
+                                        if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
                                         {
                                             tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
 
@@ -2736,7 +2736,7 @@ namespace Apricot
 
                                     if (match2.Success)
                                     {
-                                        if (filename1.Equals(match2.Groups[2].Value))
+                                        if (filename1.Equals(match2.Groups[1].Value))
                                         {
                                             tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
 
