@@ -191,203 +191,194 @@ namespace Apricot
             {
                 config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                if (config1.AppSettings.Settings["PollingInterval"] != null)
+                if (config1.AppSettings.Settings["PollingInterval"] != null && config1.AppSettings.Settings["PollingInterval"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["PollingInterval"].Value.Length > 0)
+                    this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                    this.pollingTimer.Tick += new EventHandler(delegate
                     {
-                        this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
-                        this.pollingTimer.Tick += new EventHandler(delegate
+                        DateTime nowDateTime = DateTime.Now;
+                        int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
+
+                        if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
                         {
-                            DateTime nowDateTime = DateTime.Now;
-                            int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
+                            TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
+                        }
 
-                            if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
-                            {
-                                TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
-                            }
+                        for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
+                        {
+                            Tick(dateTime);
+                        }
 
-                            for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
-                            {
-                                Tick(dateTime);
-                            }
+                        if (this.sequenceQueue.Count > 0)
+                        {
+                            this.idleTimeSpan = TimeSpan.Zero;
+                        }
+                        else
+                        {
+                            this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
+                        }
 
-                            if (this.sequenceQueue.Count > 0)
-                            {
-                                this.idleTimeSpan = TimeSpan.Zero;
-                            }
-                            else
-                            {
-                                this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
-                            }
+                        if (this.idleTimeSpan.Ticks >= this.activateThreshold)
+                        {
+                            Activate();
+                        }
 
-                            if (this.idleTimeSpan.Ticks >= this.activateThreshold)
-                            {
-                                Activate();
-                            }
+                        if (this.idleTimeSpan.Ticks > 0)
+                        {
+                            Idle();
+                        }
 
-                            if (this.idleTimeSpan.Ticks > 0)
-                            {
-                                Idle();
-                            }
-
-                            this.lastPolledDateTime = nowDateTime;
-                        });
-                        this.pollingTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
-                    }
+                        this.lastPolledDateTime = nowDateTime;
+                    });
+                    this.pollingTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
                 }
 
-                if (config1.AppSettings.Settings["UpdateInterval"] != null)
+                if (config1.AppSettings.Settings["UpdateInterval"] != null && config1.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
+                    this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                    this.updateTimer.Tick += new EventHandler(delegate
                     {
-                        this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
-                        this.updateTimer.Tick += new EventHandler(delegate
-                        {
-                            Update();
-                        });
-                        this.updateTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
-                    }
+                        Update();
+                    });
+                    this.updateTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
                 }
 
-                if (config1.AppSettings.Settings["ActivateThreshold"] != null)
+                if (config1.AppSettings.Settings["ActivateThreshold"] != null && config1.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
-                    {
-                        this.activateThreshold = Int64.Parse(config1.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
-                    }
+                    this.activateThreshold = Int64.Parse(config1.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
                 }
             }
             else
             {
                 System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                if (config1.AppSettings.Settings["PollingInterval"] != null)
+                if (config1.AppSettings.Settings["PollingInterval"] == null)
                 {
-                    if (config1.AppSettings.Settings["PollingInterval"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["PollingInterval"] != null)
                     {
-                        this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
-                        this.pollingTimer.Tick += new EventHandler(delegate
+                        if (config2.AppSettings.Settings["PollingInterval"].Value.Length > 0)
                         {
-                            DateTime nowDateTime = DateTime.Now;
-                            int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
-
-                            if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
+                            this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                            this.pollingTimer.Tick += new EventHandler(delegate
                             {
-                                TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
-                            }
+                                DateTime nowDateTime = DateTime.Now;
+                                int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
 
-                            for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
-                            {
-                                Tick(dateTime);
-                            }
+                                if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
+                                {
+                                    TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
+                                }
 
-                            if (this.sequenceQueue.Count > 0)
-                            {
-                                this.idleTimeSpan = TimeSpan.Zero;
-                            }
-                            else
-                            {
-                                this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
-                            }
+                                for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
+                                {
+                                    Tick(dateTime);
+                                }
 
-                            if (this.idleTimeSpan.Ticks >= this.activateThreshold)
-                            {
-                                Activate();
-                            }
+                                if (this.sequenceQueue.Count > 0)
+                                {
+                                    this.idleTimeSpan = TimeSpan.Zero;
+                                }
+                                else
+                                {
+                                    this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
+                                }
 
-                            if (this.idleTimeSpan.Ticks > 0)
-                            {
-                                Idle();
-                            }
+                                if (this.idleTimeSpan.Ticks >= this.activateThreshold)
+                                {
+                                    Activate();
+                                }
 
-                            this.lastPolledDateTime = nowDateTime;
-                        });
-                        this.pollingTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
+                                if (this.idleTimeSpan.Ticks > 0)
+                                {
+                                    Idle();
+                                }
+
+                                this.lastPolledDateTime = nowDateTime;
+                            });
+                            this.pollingTimer.Interval = TimeSpan.Parse(config2.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
+                        }
                     }
                 }
-                else if (config2.AppSettings.Settings["PollingInterval"] != null)
+                else if (config1.AppSettings.Settings["PollingInterval"].Value.Length > 0)
                 {
-                    if (config2.AppSettings.Settings["PollingInterval"].Value.Length > 0)
+                    this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                    this.pollingTimer.Tick += new EventHandler(delegate
                     {
-                        this.pollingTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
-                        this.pollingTimer.Tick += new EventHandler(delegate
+                        DateTime nowDateTime = DateTime.Now;
+                        int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
+
+                        if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
                         {
-                            DateTime nowDateTime = DateTime.Now;
-                            int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
+                            TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
+                        }
 
-                            if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
-                            {
-                                TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
-                            }
-
-                            for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
-                            {
-                                Tick(dateTime);
-                            }
-                            
-                            if (this.sequenceQueue.Count > 0)
-                            {
-                                this.idleTimeSpan = TimeSpan.Zero;
-                            }
-                            else
-                            {
-                                this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
-                            }
-
-                            if (this.idleTimeSpan.Ticks >= this.activateThreshold)
-                            {
-                                Activate();
-                            }
-
-                            if (this.idleTimeSpan.Ticks > 0)
-                            {
-                                Idle();
-                            }
-                            
-                            this.lastPolledDateTime = nowDateTime;
-                        });
-                        this.pollingTimer.Interval = TimeSpan.Parse(config2.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
-                    }
-                }
-
-                if (config1.AppSettings.Settings["UpdateInterval"] != null)
-                {
-                    if (config1.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
-                    {
-                        this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
-                        this.updateTimer.Tick += new EventHandler(delegate
+                        for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
                         {
-                            Update();
-                        });
-                        this.updateTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
-                    }
-                }
-                else if (config2.AppSettings.Settings["UpdateInterval"] != null)
-                {
-                    if (config2.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
-                    {
-                        this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
-                        this.updateTimer.Tick += new EventHandler(delegate
+                            Tick(dateTime);
+                        }
+
+                        if (this.sequenceQueue.Count > 0)
                         {
-                            Update();
-                        });
-                        this.updateTimer.Interval = TimeSpan.Parse(config2.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
-                    }
+                            this.idleTimeSpan = TimeSpan.Zero;
+                        }
+                        else
+                        {
+                            this.idleTimeSpan += nowDateTime - this.lastPolledDateTime;
+                        }
+
+                        if (this.idleTimeSpan.Ticks >= this.activateThreshold)
+                        {
+                            Activate();
+                        }
+
+                        if (this.idleTimeSpan.Ticks > 0)
+                        {
+                            Idle();
+                        }
+
+                        this.lastPolledDateTime = nowDateTime;
+                    });
+                    this.pollingTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["PollingInterval"].Value, CultureInfo.InvariantCulture);
                 }
 
-                if (config1.AppSettings.Settings["ActivateThreshold"] != null)
+                if (config1.AppSettings.Settings["UpdateInterval"] == null)
                 {
-                    if (config1.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["UpdateInterval"] != null)
                     {
-                        this.activateThreshold = Int64.Parse(config1.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
+                        if (config2.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
+                        {
+                            this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                            this.updateTimer.Tick += new EventHandler(delegate
+                            {
+                                Update();
+                            });
+                            this.updateTimer.Interval = TimeSpan.Parse(config2.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
+                        }
                     }
                 }
-                else if (config2.AppSettings.Settings["ActivateThreshold"] != null)
+                else if (config1.AppSettings.Settings["UpdateInterval"].Value.Length > 0)
                 {
-                    if (config2.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
+                    this.updateTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Normal);
+                    this.updateTimer.Tick += new EventHandler(delegate
                     {
-                        this.activateThreshold = Int64.Parse(config2.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
+                        Update();
+                    });
+                    this.updateTimer.Interval = TimeSpan.Parse(config1.AppSettings.Settings["UpdateInterval"].Value, CultureInfo.InvariantCulture);
+                }
+
+                if (config1.AppSettings.Settings["ActivateThreshold"] == null)
+                {
+                    if (config2.AppSettings.Settings["ActivateThreshold"] != null)
+                    {
+                        if (config2.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
+                        {
+                            this.activateThreshold = Int64.Parse(config2.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
+                        }
                     }
+                }
+                else if (config1.AppSettings.Settings["ActivateThreshold"].Value.Length > 0)
+                {
+                    this.activateThreshold = Int64.Parse(config1.AppSettings.Settings["ActivateThreshold"].Value, CultureInfo.InvariantCulture);
                 }
             }
         }
@@ -4189,12 +4180,9 @@ namespace Apricot
                     {
                         config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                        if (config1.AppSettings.Settings["Timeout"] != null)
+                        if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                         {
-                            if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                            {
-                                fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
-                            }
+                            fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                         }
 
                         if (config1.AppSettings.Settings["UserAgent"] != null)
@@ -4333,19 +4321,16 @@ namespace Apricot
                     {
                         System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                        if (config1.AppSettings.Settings["Timeout"] != null)
+                        if (config1.AppSettings.Settings["Timeout"] == null)
                         {
-                            if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                            {
-                                fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
-                            }
-                        }
-                        else if (config2.AppSettings.Settings["Timeout"] != null)
-                        {
-                            if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                            if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                             {
                                 fetcher.Timeout = new Nullable<int>(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                             }
+                        }
+                        else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                        {
+                            fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                         }
 
                         if (config1.AppSettings.Settings["UserAgent"] != null)

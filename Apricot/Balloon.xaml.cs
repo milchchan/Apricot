@@ -219,76 +219,49 @@ namespace Apricot
             {
                 config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                if (config1.AppSettings.Settings["FrameRate"] != null)
+                if (config1.AppSettings.Settings["FrameRate"] != null && config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
-                    {
-                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, CultureInfo.InvariantCulture);
-                    }
+                    this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, CultureInfo.InvariantCulture);
                 }
 
-                if (config1.AppSettings.Settings["FontFamily"] != null)
+                if (config1.AppSettings.Settings["FontFamily"] != null && config1.AppSettings.Settings["FontFamily"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontFamily"].Value.Length > 0)
-                    {
-                        this.FontFamily = new FontFamily(config1.AppSettings.Settings["FontFamily"].Value);
-                    }
+                    this.FontFamily = new FontFamily(config1.AppSettings.Settings["FontFamily"].Value);
                 }
 
-                if (config1.AppSettings.Settings["FontSize"] != null)
+                if (config1.AppSettings.Settings["FontSize"] != null && config1.AppSettings.Settings["FontSize"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontSize"].Value.Length > 0)
-                    {
-                        this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
-                    }
+                    this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
                 }
 
-                if (config1.AppSettings.Settings["FontStretch"] != null)
+                if (config1.AppSettings.Settings["FontStretch"] != null && config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
-                    {
-                        this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
-                    }
+                    this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
                 }
 
-                if (config1.AppSettings.Settings["FontStyle"] != null)
+                if (config1.AppSettings.Settings["FontStyle"] != null && config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
-                    {
-                        this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
-                    }
+                    this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
                 }
 
-                if (config1.AppSettings.Settings["FontWeight"] != null)
+                if (config1.AppSettings.Settings["FontWeight"] != null && config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
-                    {
-                        this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
-                    }
+                    this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
                 }
 
-                if (config1.AppSettings.Settings["LineLength"] != null)
+                if (config1.AppSettings.Settings["LineLength"] != null && config1.AppSettings.Settings["LineLength"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["LineLength"].Value.Length > 0)
-                    {
-                        this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, CultureInfo.InvariantCulture) + 30;
-                    }
+                    this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, CultureInfo.InvariantCulture) + 30;
                 }
 
-                if (config1.AppSettings.Settings["LineHeight"] != null)
+                if (config1.AppSettings.Settings["LineHeight"] != null && config1.AppSettings.Settings["LineHeight"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["LineHeight"].Value.Length > 0)
-                    {
-                        this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, CultureInfo.InvariantCulture);
-                    }
+                    this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, CultureInfo.InvariantCulture);
                 }
 
-                if (config1.AppSettings.Settings["BackgroundColor"] != null)
+                if (config1.AppSettings.Settings["BackgroundColor"] != null && config1.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
-                    {
-                        this.backgroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["BackgroundColor"].Value);
-                    }
+                    this.backgroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["BackgroundColor"].Value);
                 }
 
                 SolidColorBrush brush1 = new SolidColorBrush(Color.FromArgb((byte)(this.backgroundColor.A * 75 / 100), this.backgroundColor.R, this.backgroundColor.G, this.backgroundColor.B));
@@ -339,21 +312,14 @@ namespace Apricot
                     this.InnerPath.Fill = imageBrush;
                 }
 
-                if (config1.AppSettings.Settings["TextColor"] == null)
+                if (config1.AppSettings.Settings["TextColor"] != null && config1.AppSettings.Settings["TextColor"].Value.Length > 0)
                 {
+                    this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
                     this.textBrush = new SolidColorBrush(this.textColor);
                 }
                 else
                 {
-                    if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
-                    {
-                        this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
-                        this.textBrush = new SolidColorBrush(this.textColor);
-                    }
-                    else
-                    {
-                        this.textBrush = new SolidColorBrush(this.textColor);
-                    }
+                    this.textBrush = new SolidColorBrush(this.textColor);
                 }
 
                 if (this.textBrush.CanFreeze)
@@ -361,21 +327,14 @@ namespace Apricot
                     this.textBrush.Freeze();
                 }
 
-                if (config1.AppSettings.Settings["LinkColor"] == null)
+                if (config1.AppSettings.Settings["LinkColor"] != null && config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
                 {
+                    this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
                     this.linkBrush = new SolidColorBrush(this.linkColor);
                 }
                 else
                 {
-                    if (config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
-                    {
-                        this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
-                        this.linkBrush = new SolidColorBrush(this.linkColor);
-                    }
-                    else
-                    {
-                        this.linkBrush = new SolidColorBrush(this.linkColor);
-                    }
+                    this.linkBrush = new SolidColorBrush(this.linkColor);
                 }
 
                 if (this.linkBrush.CanFreeze)
@@ -387,139 +346,112 @@ namespace Apricot
             {
                 System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                if (config1.AppSettings.Settings["FrameRate"] != null)
+                if (config1.AppSettings.Settings["FrameRate"] == null)
                 {
-                    if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
-                    {
-                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, CultureInfo.InvariantCulture);
-                    }
-                }
-                else if (config2.AppSettings.Settings["FrameRate"] != null)
-                {
-                    if (config2.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["FrameRate"] != null && config2.AppSettings.Settings["FrameRate"].Value.Length > 0)
                     {
                         this.frameRate = Double.Parse(config2.AppSettings.Settings["FrameRate"].Value, CultureInfo.InvariantCulture);
                     }
                 }
-
-                if (config1.AppSettings.Settings["FontFamily"] != null)
+                else if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontFamily"].Value.Length > 0)
-                    {
-                        this.FontFamily = new FontFamily(config1.AppSettings.Settings["FontFamily"].Value);
-                    }
+                    this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, CultureInfo.InvariantCulture);
                 }
-                else if (config2.AppSettings.Settings["FontFamily"] != null)
+
+                if (config1.AppSettings.Settings["FontFamily"] == null)
                 {
-                    if (config2.AppSettings.Settings["FontFamily"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["FontFamily"] != null && config2.AppSettings.Settings["FontFamily"].Value.Length > 0)
                     {
                         this.FontFamily = new FontFamily(config2.AppSettings.Settings["FontFamily"].Value);
                     }
                 }
-
-                if (config1.AppSettings.Settings["FontSize"] != null)
+                else if (config1.AppSettings.Settings["FontFamily"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontSize"].Value.Length > 0)
-                    {
-                        this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
-                    }
+                    this.FontFamily = new FontFamily(config1.AppSettings.Settings["FontFamily"].Value);
                 }
-                else if (config2.AppSettings.Settings["FontSize"] != null)
+
+                if (config1.AppSettings.Settings["FontSize"] == null)
                 {
-                    if (config2.AppSettings.Settings["FontSize"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["FontSize"] != null && config2.AppSettings.Settings["FontSize"].Value.Length > 0)
                     {
                         this.FontSize = (double)new FontSizeConverter().ConvertFromString(config2.AppSettings.Settings["FontSize"].Value);
                     }
                 }
-
-                if (config1.AppSettings.Settings["FontStretch"] != null)
+                else if (config1.AppSettings.Settings["FontSize"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
-                    {
-                        this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
-                    }
+                    this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
                 }
-                else if (config2.AppSettings.Settings["FontStretch"] != null)
+
+                if (config1.AppSettings.Settings["FontStretch"] == null)
                 {
-                    if (config2.AppSettings.Settings["FontStretch"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["FontStretch"] != null && config2.AppSettings.Settings["FontStretch"].Value.Length > 0)
                     {
                         this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config2.AppSettings.Settings["FontStretch"].Value);
                     }
                 }
-
-                if (config1.AppSettings.Settings["FontStyle"] != null)
+                else if (config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
-                    {
-                        this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
-                    }
+                    this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
                 }
-                else if (config2.AppSettings.Settings["FontStyle"] != null)
+
+                if (config1.AppSettings.Settings["FontStyle"] == null)
                 {
-                    if (config2.AppSettings.Settings["FontStyle"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["FontStyle"] != null && config2.AppSettings.Settings["FontStyle"].Value.Length > 0)
                     {
                         this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config2.AppSettings.Settings["FontStyle"].Value);
                     }
                 }
-
-                if (config1.AppSettings.Settings["FontWeight"] != null)
+                else if (config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
-                    {
-                        this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
-                    }
+                    this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
                 }
-                else if (config2.AppSettings.Settings["FontWeight"] != null)
+
+                if (config1.AppSettings.Settings["FontWeight"] == null)
                 {
-                    if (config2.AppSettings.Settings["FontWeight"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["FontWeight"] != null && config2.AppSettings.Settings["FontWeight"].Value.Length > 0)
                     {
                         this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config2.AppSettings.Settings["FontWeight"].Value);
                     }
                 }
-
-                if (config1.AppSettings.Settings["LineLength"] != null)
+                else if (config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["LineLength"].Value.Length > 0)
-                    {
-                        this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, CultureInfo.InvariantCulture) + 30;
-                    }
+                    this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
                 }
-                else if (config2.AppSettings.Settings["LineLength"] != null)
+
+                if (config1.AppSettings.Settings["LineLength"] == null)
                 {
-                    if (config2.AppSettings.Settings["LineLength"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["LineLength"] != null && config2.AppSettings.Settings["LineLength"].Value.Length > 0)
                     {
                         this.baseWidth = Double.Parse(config2.AppSettings.Settings["LineLength"].Value, CultureInfo.InvariantCulture) + 30;
                     }
                 }
-
-                if (config1.AppSettings.Settings["LineHeight"] != null)
+                else if (config1.AppSettings.Settings["LineLength"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["LineHeight"].Value.Length > 0)
-                    {
-                        this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, CultureInfo.InvariantCulture);
-                    }
+                    this.baseWidth = Double.Parse(config1.AppSettings.Settings["LineLength"].Value, CultureInfo.InvariantCulture) + 30;
                 }
-                else if (config2.AppSettings.Settings["LineHeight"] != null)
+
+                if (config1.AppSettings.Settings["LineHeight"] == null)
                 {
-                    if (config2.AppSettings.Settings["LineHeight"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["LineHeight"] != null && config2.AppSettings.Settings["LineHeight"].Value.Length > 0)
                     {
                         this.lineHeight = Double.Parse(config2.AppSettings.Settings["LineHeight"].Value, CultureInfo.InvariantCulture);
                     }
                 }
-
-                if (config1.AppSettings.Settings["BackgroundColor"] != null)
+                else if (config1.AppSettings.Settings["LineHeight"].Value.Length > 0)
                 {
-                    if (config1.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
-                    {
-                        this.backgroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["BackgroundColor"].Value);
-                    }
+                    this.lineHeight = Double.Parse(config1.AppSettings.Settings["LineHeight"].Value, CultureInfo.InvariantCulture);
                 }
-                else if (config2.AppSettings.Settings["BackgroundColor"] != null)
+
+                if (config1.AppSettings.Settings["BackgroundColor"] == null)
                 {
-                    if (config2.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["BackgroundColor"] != null && config2.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
                     {
                         this.backgroundColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["BackgroundColor"].Value);
                     }
+                }
+                else if (config1.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
+                {
+                    this.backgroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["BackgroundColor"].Value);
                 }
 
                 SolidColorBrush brush1 = new SolidColorBrush(Color.FromArgb((byte)(this.backgroundColor.A * 75 / 100), this.backgroundColor.R, this.backgroundColor.G, this.backgroundColor.B));
@@ -634,11 +566,7 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["TextColor"] == null)
                 {
-                    if (config2.AppSettings.Settings["TextColor"] == null)
-                    {
-                        this.textBrush = new SolidColorBrush(this.textColor);
-                    }
-                    else if (config2.AppSettings.Settings["TextColor"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["TextColor"] != null && config2.AppSettings.Settings["TextColor"].Value.Length > 0)
                     {
                         this.textColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["TextColor"].Value);
                         this.textBrush = new SolidColorBrush(this.textColor);
@@ -665,11 +593,7 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["LinkColor"] == null)
                 {
-                    if (config2.AppSettings.Settings["LinkColor"] == null)
-                    {
-                        this.linkBrush = new SolidColorBrush(this.linkColor);
-                    }
-                    else if (config2.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["LinkColor"] != null && config2.AppSettings.Settings["LinkColor"].Value.Length > 0)
                     {
                         this.linkColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["LinkColor"].Value);
                         this.linkBrush = new SolidColorBrush(this.linkColor);
@@ -9579,12 +9503,9 @@ namespace Apricot
                         {
                             WebRequest webRequest = WebRequest.Create(uri);
 
-                            if (config1.AppSettings.Settings["Timeout"] != null)
+                            if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                             {
-                                if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                {
-                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                                }
+                                webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                             }
 
                             if (config1.AppSettings.Settings["UserAgent"] != null)
@@ -9889,12 +9810,9 @@ namespace Apricot
                             {
                                 WebRequest webRequest = WebRequest.Create(uri);
 
-                                if (config1.AppSettings.Settings["Timeout"] != null)
+                                if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
-                                    if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                    {
-                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                                    }
+                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                 }
 
                                 if (config1.AppSettings.Settings["UserAgent"] != null)
@@ -10074,12 +9992,9 @@ namespace Apricot
                         {
                             WebRequest webRequest = WebRequest.Create(uri);
 
-                            if (config1.AppSettings.Settings["Timeout"] != null)
+                            if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                             {
-                                if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                {
-                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                                }
+                                webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                             }
 
                             if (config1.AppSettings.Settings["UserAgent"] != null)
@@ -10244,12 +10159,9 @@ namespace Apricot
                             {
                                 WebRequest webRequest = WebRequest.Create(uri);
 
-                                if (config1.AppSettings.Settings["Timeout"] != null)
+                                if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
-                                    if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                    {
-                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                                    }
+                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                 }
 
                                 if (config1.AppSettings.Settings["UserAgent"] != null)
@@ -10560,35 +10472,37 @@ namespace Apricot
                                 {
                                     WebRequest webRequest = WebRequest.Create(uri);
 
-                                    if (config1.AppSettings.Settings["Timeout"] != null)
+                                    if (config1.AppSettings.Settings["Timeout"] == null)
                                     {
-                                        if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                        {
-                                            webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                                        }
-                                    }
-                                    else if (config2.AppSettings.Settings["Timeout"] != null)
-                                    {
-                                        if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                        if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                                         {
                                             webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                         }
                                     }
+                                    else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    {
+                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    }
 
-                                    if (config1.AppSettings.Settings["UserAgent"] != null)
+                                    if (config1.AppSettings.Settings["UserAgent"] == null)
+                                    {
+                                        if (config2.AppSettings.Settings["UserAgent"] != null)
+                                        {
+                                            HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                            if (httpWebRequest != null)
+                                            {
+                                                httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                                            }
+                                        }
+                                    }
+                                    else
                                     {
                                         HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
 
                                         if (httpWebRequest != null)
                                         {
                                             httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                        }
-                                    }
-                                    else if (config2.AppSettings.Settings["Timeout"] != null)
-                                    {
-                                        if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                        {
-                                            webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                         }
                                     }
 
@@ -10759,37 +10673,37 @@ namespace Apricot
                             {
                                 WebRequest webRequest = WebRequest.Create(uri);
 
-                                if (config1.AppSettings.Settings["Timeout"] != null)
+                                if (config1.AppSettings.Settings["Timeout"] == null)
                                 {
-                                    if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                    {
-                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                                    }
-                                }
-                                else if (config2.AppSettings.Settings["Timeout"] != null)
-                                {
-                                    if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                                     {
                                         webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                     }
                                 }
+                                else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                {
+                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                }
 
                                 if (config1.AppSettings.Settings["UserAgent"] != null)
+                                {
+                                    if (config2.AppSettings.Settings["UserAgent"] != null)
+                                    {
+                                        HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                        if (httpWebRequest != null)
+                                        {
+                                            httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                                        }
+                                    }
+                                }
+                                else
                                 {
                                     HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
 
                                     if (httpWebRequest != null)
                                     {
                                         httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                    }
-                                }
-                                else if (config2.AppSettings.Settings["UserAgent"] != null)
-                                {
-                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                    if (httpWebRequest != null)
-                                    {
-                                        httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
                                     }
                                 }
 
@@ -11092,35 +11006,37 @@ namespace Apricot
                             {
                                 WebRequest webRequest = WebRequest.Create(uri);
 
-                                if (config1.AppSettings.Settings["Timeout"] != null)
+                                if (config1.AppSettings.Settings["Timeout"] == null)
                                 {
-                                    if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                    {
-                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                                    }
-                                }
-                                else if (config2.AppSettings.Settings["Timeout"] != null)
-                                {
-                                    if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                    if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                                     {
                                         webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                     }
                                 }
+                                else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                {
+                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                }
 
-                                if (config1.AppSettings.Settings["UserAgent"] != null)
+                                if (config1.AppSettings.Settings["UserAgent"] == null)
+                                {
+                                    if (config2.AppSettings.Settings["UserAgent"] != null)
+                                    {
+                                        HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                        if (httpWebRequest != null)
+                                        {
+                                            httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                                        }
+                                    }
+                                }
+                                else
                                 {
                                     HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
 
                                     if (httpWebRequest != null)
                                     {
                                         httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                    }
-                                }
-                                else if (config2.AppSettings.Settings["Timeout"] != null)
-                                {
-                                    if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                    {
-                                        webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                     }
                                 }
 
@@ -11291,37 +11207,37 @@ namespace Apricot
                         {
                             WebRequest webRequest = WebRequest.Create(uri);
 
-                            if (config1.AppSettings.Settings["Timeout"] != null)
+                            if (config1.AppSettings.Settings["Timeout"] == null)
                             {
-                                if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                                {
-                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                                }
-                            }
-                            else if (config2.AppSettings.Settings["Timeout"] != null)
-                            {
-                                if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                                if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
                                     webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
                                 }
                             }
+                            else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                            {
+                                webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                            }
 
-                            if (config1.AppSettings.Settings["UserAgent"] != null)
+                            if (config1.AppSettings.Settings["UserAgent"] == null)
+                            {
+                                if (config2.AppSettings.Settings["UserAgent"] != null)
+                                {
+                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
+
+                                    if (httpWebRequest != null)
+                                    {
+                                        httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                                    }
+                                }
+                            }
+                            else
                             {
                                 HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
 
                                 if (httpWebRequest != null)
                                 {
                                     httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                }
-                            }
-                            else if (config2.AppSettings.Settings["UserAgent"] != null)
-                            {
-                                HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                if (httpWebRequest != null)
-                                {
-                                    httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
                                 }
                             }
 

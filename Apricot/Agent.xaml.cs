@@ -1438,100 +1438,73 @@ namespace Apricot
                 {
                     config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                    if (config1.AppSettings.Settings["Left"] != null && config1.AppSettings.Settings["Top"] != null)
+                    if (config1.AppSettings.Settings["Left"] != null && config1.AppSettings.Settings["Top"] != null && config1.AppSettings.Settings["Left"].Value.Length > 0 && config1.AppSettings.Settings["Top"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["Left"].Value.Length > 0 && config1.AppSettings.Settings["Top"].Value.Length > 0)
-                        {
-                            double left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                            double top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        double left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        double top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
 
-                            if (left <= SystemParameters.VirtualScreenWidth && top <= SystemParameters.VirtualScreenHeight)
-                            {
-                                this.Left = left;
-                                this.Top = top;
-                            }
+                        if (left <= SystemParameters.VirtualScreenWidth && top <= SystemParameters.VirtualScreenHeight)
+                        {
+                            this.Left = left;
+                            this.Top = top;
                         }
                     }
 
-                    if (config1.AppSettings.Settings["Opacity"] != null)
+                    if (config1.AppSettings.Settings["Opacity"] != null && config1.AppSettings.Settings["Opacity"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["Opacity"].Value.Length > 0)
-                        {
-                            this.opacity = Double.Parse(config1.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                        }
+                        this.opacity = Double.Parse(config1.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
                     }
 
-                    if (config1.AppSettings.Settings["Scale"] != null)
+                    if (config1.AppSettings.Settings["Scale"] != null && config1.AppSettings.Settings["Scale"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["Scale"].Value.Length > 0)
-                        {
-                            this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config1.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                        }
+                        this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config1.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
                     }
 
-                    if (config1.AppSettings.Settings["Topmost"] != null)
+                    if (config1.AppSettings.Settings["Topmost"] != null && config1.AppSettings.Settings["Topmost"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["Topmost"].Value.Length > 0)
-                        {
-                            this.Topmost = Boolean.Parse(config1.AppSettings.Settings["Topmost"].Value);
-                        }
+                        this.Topmost = Boolean.Parse(config1.AppSettings.Settings["Topmost"].Value);
                     }
 
-                    if (config1.AppSettings.Settings["ShowInTaskbar"] != null)
+                    if (config1.AppSettings.Settings["ShowInTaskbar"] != null && config1.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
-                        {
-                            this.ShowInTaskbar = Boolean.Parse(config1.AppSettings.Settings["ShowInTaskbar"].Value);
-                        }
+                        this.ShowInTaskbar = Boolean.Parse(config1.AppSettings.Settings["ShowInTaskbar"].Value);
                     }
 
-                    if (config1.AppSettings.Settings["DropShadow"] != null)
+                    if (config1.AppSettings.Settings["DropShadow"] != null && config1.AppSettings.Settings["DropShadow"].Value.Length > 0 && Boolean.Parse(config1.AppSettings.Settings["DropShadow"].Value))
                     {
-                        if (config1.AppSettings.Settings["DropShadow"].Value.Length > 0)
+                        DropShadowEffect dropShadowEffect = new DropShadowEffect();
+
+                        dropShadowEffect.Color = Colors.Black;
+                        dropShadowEffect.BlurRadius = 10;
+                        dropShadowEffect.Direction = 270;
+                        dropShadowEffect.ShadowDepth = 0;
+                        dropShadowEffect.Opacity = 0.5;
+
+                        if (dropShadowEffect.CanFreeze)
                         {
-                            if (Boolean.Parse(config1.AppSettings.Settings["DropShadow"].Value))
-                            {
-                                DropShadowEffect dropShadowEffect = new DropShadowEffect();
-
-                                dropShadowEffect.Color = Colors.Black;
-                                dropShadowEffect.BlurRadius = 10;
-                                dropShadowEffect.Direction = 270;
-                                dropShadowEffect.ShadowDepth = 0;
-                                dropShadowEffect.Opacity = 0.5;
-
-                                if (dropShadowEffect.CanFreeze)
-                                {
-                                    dropShadowEffect.Freeze();
-                                }
-
-                                this.Canvas.Effect = dropShadowEffect;
-                            }
+                            dropShadowEffect.Freeze();
                         }
+
+                        this.Canvas.Effect = dropShadowEffect;
                     }
 
-                    if (config1.AppSettings.Settings["Mute"] != null)
+                    if (config1.AppSettings.Settings["Mute"] != null && config1.AppSettings.Settings["Mute"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["Mute"].Value.Length > 0)
-                        {
-                            this.isMute = Boolean.Parse(config1.AppSettings.Settings["Mute"].Value);
-                        }
+                        this.isMute = Boolean.Parse(config1.AppSettings.Settings["Mute"].Value);
                     }
 
-                    if (config1.AppSettings.Settings["FrameRate"] != null)
+                    if (config1.AppSettings.Settings["FrameRate"] != null && config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
-                        {
-                            this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                        }
+                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
                     }
                 }
                 else
                 {
                     System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                    if (config1.AppSettings.Settings["Left"] != null && config1.AppSettings.Settings["Top"] != null)
+                    if (config1.AppSettings.Settings["Left"] == null || config1.AppSettings.Settings["Top"] == null)
                     {
-                        if (config1.AppSettings.Settings["Left"].Value.Length > 0 && config1.AppSettings.Settings["Top"].Value.Length > 0)
+                        if (config2.AppSettings.Settings["Left"] != null && config2.AppSettings.Settings["Top"] != null && config2.AppSettings.Settings["Left"].Value.Length > 0 && config2.AppSettings.Settings["Top"].Value.Length > 0)
                         {
                             double left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
                             double top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
@@ -1543,156 +1516,129 @@ namespace Apricot
                             }
                         }
                     }
-                    else if (config2.AppSettings.Settings["Left"] != null && config2.AppSettings.Settings["Top"] != null)
+                    else if (config1.AppSettings.Settings["Left"].Value.Length > 0 && config1.AppSettings.Settings["Top"].Value.Length > 0)
                     {
-                        if (config2.AppSettings.Settings["Left"].Value.Length > 0 && config2.AppSettings.Settings["Top"].Value.Length > 0)
-                        {
-                            double left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                            double top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        double left = Double.Parse(config1.AppSettings.Settings["Left"].Value, System.Globalization.CultureInfo.InvariantCulture);
+                        double top = Double.Parse(config1.AppSettings.Settings["Top"].Value, System.Globalization.CultureInfo.InvariantCulture);
 
-                            if (left <= SystemParameters.VirtualScreenWidth && top <= SystemParameters.VirtualScreenHeight)
-                            {
-                                this.Left = left;
-                                this.Top = top;
-                            }
+                        if (left <= SystemParameters.VirtualScreenWidth && top <= SystemParameters.VirtualScreenHeight)
+                        {
+                            this.Left = left;
+                            this.Top = top;
                         }
                     }
 
-                    if (config1.AppSettings.Settings["Opacity"] != null)
+                    if (config1.AppSettings.Settings["Opacity"] == null)
                     {
-                        if (config1.AppSettings.Settings["Opacity"].Value.Length > 0)
-                        {
-                            this.opacity = Double.Parse(config1.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                        }
-                    }
-                    else if (config2.AppSettings.Settings["Opacity"] != null)
-                    {
-                        if (config2.AppSettings.Settings["Opacity"].Value.Length > 0)
+                        if (config2.AppSettings.Settings["Opacity"] != null && config2.AppSettings.Settings["Opacity"].Value.Length > 0)
                         {
                             this.opacity = Double.Parse(config2.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
                         }
                     }
-
-                    if (config1.AppSettings.Settings["Scale"] != null)
+                    else if (config1.AppSettings.Settings["Opacity"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["Scale"].Value.Length > 0)
-                        {
-                            this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config1.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                        }
+                        this.opacity = Double.Parse(config1.AppSettings.Settings["Opacity"].Value, System.Globalization.CultureInfo.InvariantCulture);
                     }
-                    else if (config2.AppSettings.Settings["Scale"] != null)
+
+                    if (config1.AppSettings.Settings["Scale"] == null)
                     {
-                        if (config2.AppSettings.Settings["Scale"].Value.Length > 0)
+                        if (config2.AppSettings.Settings["Scale"] != null && config2.AppSettings.Settings["Scale"].Value.Length > 0)
                         {
                             this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config2.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
                         }
                     }
-
-                    if (config1.AppSettings.Settings["Topmost"] != null)
+                    else if (config1.AppSettings.Settings["Scale"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["Topmost"].Value.Length > 0)
-                        {
-                            this.Topmost = Boolean.Parse(config1.AppSettings.Settings["Topmost"].Value);
-                        }
+                        this.scale = this.ZoomScaleTransform.ScaleX = this.ZoomScaleTransform.ScaleY = Double.Parse(config1.AppSettings.Settings["Scale"].Value, System.Globalization.CultureInfo.InvariantCulture);
                     }
-                    else if (config2.AppSettings.Settings["Topmost"] != null)
+
+                    if (config1.AppSettings.Settings["Topmost"] == null)
                     {
-                        if (config2.AppSettings.Settings["Topmost"].Value.Length > 0)
+                        if (config2.AppSettings.Settings["Topmost"] != null && config2.AppSettings.Settings["Topmost"].Value.Length > 0)
                         {
                             this.Topmost = Boolean.Parse(config2.AppSettings.Settings["Topmost"].Value);
                         }
                     }
-
-                    if (config1.AppSettings.Settings["ShowInTaskbar"] != null)
+                    else if (config1.AppSettings.Settings["Topmost"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
-                        {
-                            this.ShowInTaskbar = Boolean.Parse(config1.AppSettings.Settings["ShowInTaskbar"].Value);
-                        }
+                        this.Topmost = Boolean.Parse(config1.AppSettings.Settings["Topmost"].Value);
                     }
-                    else if (config2.AppSettings.Settings["ShowInTaskbar"] != null)
+
+                    if (config1.AppSettings.Settings["ShowInTaskbar"] == null)
                     {
-                        if (config2.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
+                        if (config2.AppSettings.Settings["ShowInTaskbar"] != null && config2.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
                         {
                             this.ShowInTaskbar = Boolean.Parse(config2.AppSettings.Settings["ShowInTaskbar"].Value);
                         }
                     }
-
-                    if (config1.AppSettings.Settings["DropShadow"] != null)
+                    else if (config1.AppSettings.Settings["ShowInTaskbar"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["DropShadow"].Value.Length > 0)
+                        this.ShowInTaskbar = Boolean.Parse(config1.AppSettings.Settings["ShowInTaskbar"].Value);
+                    }
+
+                    if (config1.AppSettings.Settings["DropShadow"] == null)
+                    {
+                        if (config2.AppSettings.Settings["DropShadow"] != null && config2.AppSettings.Settings["DropShadow"].Value.Length > 0 && Boolean.Parse(config2.AppSettings.Settings["DropShadow"].Value))
                         {
-                            if (Boolean.Parse(config1.AppSettings.Settings["DropShadow"].Value))
+                            DropShadowEffect dropShadowEffect = new DropShadowEffect();
+
+                            dropShadowEffect.Color = Colors.Black;
+                            dropShadowEffect.BlurRadius = 10;
+                            dropShadowEffect.Direction = 270;
+                            dropShadowEffect.ShadowDepth = 0;
+                            dropShadowEffect.Opacity = 0.5;
+
+                            if (dropShadowEffect.CanFreeze)
                             {
-                                DropShadowEffect dropShadowEffect = new DropShadowEffect();
-
-                                dropShadowEffect.Color = Colors.Black;
-                                dropShadowEffect.BlurRadius = 10;
-                                dropShadowEffect.Direction = 270;
-                                dropShadowEffect.ShadowDepth = 0;
-                                dropShadowEffect.Opacity = 0.5;
-
-                                if (dropShadowEffect.CanFreeze)
-                                {
-                                    dropShadowEffect.Freeze();
-                                }
-
-                                this.Canvas.Effect = dropShadowEffect;
+                                dropShadowEffect.Freeze();
                             }
+
+                            this.Canvas.Effect = dropShadowEffect;
                         }
                     }
-                    else if (config2.AppSettings.Settings["DropShadow"] != null)
+                    else if (config1.AppSettings.Settings["DropShadow"].Value.Length > 0)
                     {
-                        if (config2.AppSettings.Settings["DropShadow"].Value.Length > 0)
+                        if (Boolean.Parse(config1.AppSettings.Settings["DropShadow"].Value))
                         {
-                            if (Boolean.Parse(config2.AppSettings.Settings["DropShadow"].Value))
+                            DropShadowEffect dropShadowEffect = new DropShadowEffect();
+
+                            dropShadowEffect.Color = Colors.Black;
+                            dropShadowEffect.BlurRadius = 10;
+                            dropShadowEffect.Direction = 270;
+                            dropShadowEffect.ShadowDepth = 0;
+                            dropShadowEffect.Opacity = 0.5;
+
+                            if (dropShadowEffect.CanFreeze)
                             {
-                                DropShadowEffect dropShadowEffect = new DropShadowEffect();
-
-                                dropShadowEffect.Color = Colors.Black;
-                                dropShadowEffect.BlurRadius = 10;
-                                dropShadowEffect.Direction = 270;
-                                dropShadowEffect.ShadowDepth = 0;
-                                dropShadowEffect.Opacity = 0.5;
-
-                                if (dropShadowEffect.CanFreeze)
-                                {
-                                    dropShadowEffect.Freeze();
-                                }
-
-                                this.Canvas.Effect = dropShadowEffect;
+                                dropShadowEffect.Freeze();
                             }
+
+                            this.Canvas.Effect = dropShadowEffect;
                         }
                     }
 
-                    if (config1.AppSettings.Settings["Mute"] != null)
+                    if (config1.AppSettings.Settings["Mute"] == null)
                     {
-                        if (config1.AppSettings.Settings["Mute"].Value.Length > 0)
-                        {
-                            this.isMute = Boolean.Parse(config1.AppSettings.Settings["Mute"].Value);
-                        }
-                    }
-                    else if (config2.AppSettings.Settings["Mute"] != null)
-                    {
-                        if (config2.AppSettings.Settings["Mute"].Value.Length > 0)
+                        if (config2.AppSettings.Settings["Mute"] != null && config2.AppSettings.Settings["Mute"].Value.Length > 0)
                         {
                             this.isMute = Boolean.Parse(config2.AppSettings.Settings["Mute"].Value);
                         }
                     }
-
-                    if (config1.AppSettings.Settings["FrameRate"] != null)
+                    else if (config1.AppSettings.Settings["Mute"].Value.Length > 0)
                     {
-                        if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
-                        {
-                            this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                        }
+                        this.isMute = Boolean.Parse(config1.AppSettings.Settings["Mute"].Value);
                     }
-                    else if (config2.AppSettings.Settings["FrameRate"] != null)
+
+                    if (config1.AppSettings.Settings["FrameRate"] == null)
                     {
-                        if (config2.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                        if (config2.AppSettings.Settings["FrameRate"] != null && config2.AppSettings.Settings["FrameRate"].Value.Length > 0)
                         {
                             this.frameRate = Double.Parse(config2.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
                         }
+                    }
+                    else if (config1.AppSettings.Settings["FrameRate"].Value.Length > 0)
+                    {
+                        this.frameRate = Double.Parse(config1.AppSettings.Settings["FrameRate"].Value, System.Globalization.CultureInfo.InvariantCulture);
                     }
                 }
             }
