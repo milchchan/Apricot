@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
 
 namespace Apricot
 {
@@ -14,6 +17,105 @@ namespace Apricot
     public partial class App : Application
     {
         private bool sessionEnding = false;
+
+        public App()
+        {
+            Configuration config1 = null;
+            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+
+            if (Directory.Exists(directory))
+            {
+                string filename = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly) where filename.Equals(Path.GetFileNameWithoutExtension(s)) select s)
+                {
+                    ExeConfigurationFileMap exeConfigurationFileMap = new ExeConfigurationFileMap();
+
+                    exeConfigurationFileMap.ExeConfigFilename = s;
+                    config1 = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None);
+                }
+            }
+
+            if (config1 == null)
+            {
+                config1 = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+
+                if (config1.AppSettings.Settings["Scripts"] != null)
+                {
+                    directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    ScriptOptions scriptOptions = ScriptOptions.Default.WithReferences(System.Reflection.Assembly.GetExecutingAssembly());
+                    List<Task<ScriptState<object>>> taskList = new List<Task<ScriptState<object>>>();
+
+                    foreach (string filename in Directory.EnumerateFiles(Path.IsPathRooted(config1.AppSettings.Settings["Scripts"].Value) ? config1.AppSettings.Settings["Scripts"].Value : Path.Combine(directory, config1.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
+                    {
+                        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (StreamReader sr = new StreamReader(fs))
+                        {
+                            taskList.Add(CSharpScript.RunAsync(sr.ReadToEnd(), scriptOptions));
+                        }
+                    }
+
+                    Task<ScriptState<object>>.WaitAll(taskList.ToArray());
+                }
+            }
+            else
+            {
+                Configuration config2 = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+
+                if (config1.AppSettings.Settings["Scripts"] != null)
+                {
+                    ScriptOptions scriptOptions = ScriptOptions.Default.WithReferences(System.Reflection.Assembly.GetExecutingAssembly());
+                    List<Task<ScriptState<object>>> taskList = new List<Task<ScriptState<object>>>();
+
+                    foreach (string filename in Directory.EnumerateFiles(Path.IsPathRooted(config1.AppSettings.Settings["Scripts"].Value) ? config1.AppSettings.Settings["Scripts"].Value : Path.Combine(directory, config1.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
+                    {
+                        using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (StreamReader sr = new StreamReader(fs))
+                        {
+                            taskList.Add(CSharpScript.RunAsync(sr.ReadToEnd(), scriptOptions));
+                        }
+                    }
+
+                    Task<ScriptState<object>>.WaitAll(taskList.ToArray());
+                }
+                else if (config2.AppSettings.Settings["Scripts"] != null)
+                {
+                    if (Path.IsPathRooted(config2.AppSettings.Settings["Scripts"].Value))
+                    {
+                        ScriptOptions scriptOptions = ScriptOptions.Default.WithReferences(System.Reflection.Assembly.GetExecutingAssembly());
+                        List<Task<ScriptState<object>>> taskList = new List<Task<ScriptState<object>>>();
+
+                        foreach (string filename in Directory.EnumerateFiles(config2.AppSettings.Settings["Scripts"].Value, "*.csx", SearchOption.TopDirectoryOnly))
+                        {
+                            using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (StreamReader sr = new StreamReader(fs))
+                            {
+                                taskList.Add(CSharpScript.RunAsync(sr.ReadToEnd(), scriptOptions));
+                            }
+                        }
+
+                        Task<ScriptState<object>>.WaitAll(taskList.ToArray());
+                    }
+                    else
+                    {
+                        string path = Path.Combine(directory, config2.AppSettings.Settings["Scripts"].Value);
+                        ScriptOptions scriptOptions = ScriptOptions.Default.WithReferences(System.Reflection.Assembly.GetExecutingAssembly());
+                        List<Task<ScriptState<object>>> taskList = new List<Task<ScriptState<object>>>();
+
+                        foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
+                        {
+                            using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (StreamReader sr = new StreamReader(fs))
+                            {
+                                taskList.Add(CSharpScript.RunAsync(sr.ReadToEnd(), scriptOptions));
+                            }
+                        }
+
+                        Task<ScriptState<object>>.WaitAll(taskList.ToArray());
+                    }
+                }
+            }
+        }
 
         protected override void OnStartup(StartupEventArgs e)
         {
