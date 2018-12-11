@@ -13,6 +13,7 @@ namespace Apricot
         private Size size = new Size(0, 0);
         private bool mirror = false;
         private Collection<string> typeCollection = null;
+        private int likes = 0;
         private string script = null;
 
         public string Name
@@ -107,6 +108,18 @@ namespace Apricot
             set
             {
                 this.typeCollection = value;
+            }
+        }
+
+        public int Likes
+        {
+            get
+            {
+                return this.likes;
+            }
+            set
+            {
+                this.likes = value;
             }
         }
 

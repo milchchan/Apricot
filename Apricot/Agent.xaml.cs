@@ -45,6 +45,7 @@ namespace Apricot
         private Queue<Motion> motionQueue = null;
         private bool isFirst = true;
         private bool isLast = false;
+        private DateTime baseDateTime;
 
         public Balloon Balloon
         {
@@ -65,6 +66,7 @@ namespace Apricot
             this.imageStoryboardDictionary = new Dictionary<Image, Storyboard>();
             this.queue = new System.Collections.Queue();
             this.motionQueue = new Queue<Motion>();
+            this.baseDateTime = DateTime.Now;
             this.ContextMenu = new ContextMenu();
 
             MenuItem opacityMenuItem = new MenuItem();
@@ -408,6 +410,7 @@ namespace Apricot
                     string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
                     Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                     List<Tuple<string, string, string>> namePathList = new List<Tuple<string, string, string>>();
+                    bool likeRequired = (DateTime.Now - this.baseDateTime).TotalMinutes / 30 >= 1 ? true : false;
 
                     foreach (Character character in Script.Instance.Characters)
                     {
@@ -1254,9 +1257,275 @@ namespace Apricot
 
                                 selectedMenuItem.Items.Clear();
 
-                                if (childMenuItemList.Count > 0)
+                                if (likeRequired)
+                                {
+                                    MenuItem menuItem = new MenuItem();
+
+                                    menuItem.Header = Properties.Resources.Like;
+                                    menuItem.Click += new RoutedEventHandler(delegate
+                                    {
+                                        this.baseDateTime += TimeSpan.FromMinutes(30);
+
+                                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                                        {
+                                            System.Configuration.Configuration config1 = null;
+                                            string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                                            FontFamily fontFamily;
+                                            double fontSize;
+                                            FontStretch fontStretch;
+                                            FontStyle fontStyle;
+                                            FontWeight fontWeight;
+                                            Color foregroundColor;
+                                            SolidColorBrush backgroundBrush;
+                                            Geometry starGeometry = CreateStarGeometry(new Rect(0, 0, 8, 8));
+
+                                            if (Directory.Exists(directory))
+                                            {
+                                                string filename = System.IO.Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                                                foreach (string s in from s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly) where filename.Equals(System.IO.Path.GetFileNameWithoutExtension(s)) select s)
+                                                {
+                                                    System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
+
+                                                    exeConfigurationFileMap.ExeConfigFilename = s;
+                                                    config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                                                }
+                                            }
+
+                                            if (config1 == null)
+                                            {
+                                                config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                                                if (config1.AppSettings.Settings["FontFamily"] != null && config1.AppSettings.Settings["FontFamily"].Value.Length > 0)
+                                                {
+                                                    fontFamily = new FontFamily(config1.AppSettings.Settings["FontFamily"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontFamily = this.FontFamily;
+                                                }
+
+                                                if (config1.AppSettings.Settings["FontSize"] != null && config1.AppSettings.Settings["FontSize"].Value.Length > 0)
+                                                {
+                                                    fontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontSize = this.FontSize;
+                                                }
+
+                                                if (config1.AppSettings.Settings["FontStretch"] != null && config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
+                                                {
+                                                    fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontStretch = this.FontStretch;
+                                                }
+
+                                                if (config1.AppSettings.Settings["FontStyle"] != null && config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
+                                                {
+                                                    fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontStyle = this.FontStyle;
+                                                }
+
+                                                if (config1.AppSettings.Settings["FontWeight"] != null && config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
+                                                {
+                                                    fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontWeight = this.FontWeight;
+                                                }
+
+                                                if (config1.AppSettings.Settings["TextColor"] != null && config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                                                {
+                                                    foregroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
+                                                }
+                                                else
+                                                {
+                                                    foregroundColor = Colors.White;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                                                if (config1.AppSettings.Settings["FontFamily"] == null)
+                                                {
+                                                    if (config2.AppSettings.Settings["FontFamily"] != null && config2.AppSettings.Settings["FontFamily"].Value.Length > 0)
+                                                    {
+                                                        fontFamily = new FontFamily(config2.AppSettings.Settings["FontFamily"].Value);
+                                                    }
+                                                    else
+                                                    {
+                                                        fontFamily = this.FontFamily;
+                                                    }
+                                                }
+                                                else if (config1.AppSettings.Settings["FontFamily"].Value.Length > 0)
+                                                {
+                                                    fontFamily = new FontFamily(config1.AppSettings.Settings["FontFamily"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontFamily = this.FontFamily;
+                                                }
+
+                                                if (config1.AppSettings.Settings["FontSize"] == null)
+                                                {
+                                                    if (config2.AppSettings.Settings["FontSize"] != null && config2.AppSettings.Settings["FontSize"].Value.Length > 0)
+                                                    {
+                                                        fontSize = (double)new FontSizeConverter().ConvertFromString(config2.AppSettings.Settings["FontSize"].Value);
+                                                    }
+                                                    else
+                                                    {
+                                                        fontSize = this.FontSize;
+                                                    }
+                                                }
+                                                else if (config1.AppSettings.Settings["FontSize"].Value.Length > 0)
+                                                {
+                                                    fontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontSize = this.FontSize;
+                                                }
+
+                                                if (config1.AppSettings.Settings["FontStretch"] == null)
+                                                {
+                                                    if (config2.AppSettings.Settings["FontStretch"] != null && config2.AppSettings.Settings["FontStretch"].Value.Length > 0)
+                                                    {
+                                                        fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config2.AppSettings.Settings["FontStretch"].Value);
+                                                    }
+                                                    else
+                                                    {
+                                                        fontStretch = this.FontStretch;
+                                                    }
+                                                }
+                                                else if (config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
+                                                {
+                                                    fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontStretch = this.FontStretch;
+                                                }
+
+                                                if (config1.AppSettings.Settings["FontStyle"] == null)
+                                                {
+                                                    if (config2.AppSettings.Settings["FontStyle"] != null && config2.AppSettings.Settings["FontStyle"].Value.Length > 0)
+                                                    {
+                                                        fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config2.AppSettings.Settings["FontStyle"].Value);
+                                                    }
+                                                    else
+                                                    {
+                                                        fontStyle = this.FontStyle;
+                                                    }
+                                                }
+                                                else if (config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
+                                                {
+                                                    fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontStyle = this.FontStyle;
+                                                }
+
+                                                if (config1.AppSettings.Settings["FontWeight"] == null)
+                                                {
+                                                    if (config2.AppSettings.Settings["FontWeight"] != null && config2.AppSettings.Settings["FontWeight"].Value.Length > 0)
+                                                    {
+                                                        fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config2.AppSettings.Settings["FontWeight"].Value);
+                                                    }
+                                                    else
+                                                    {
+                                                        fontWeight = this.FontWeight;
+                                                    }
+                                                }
+                                                else if (config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
+                                                {
+                                                    fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
+                                                }
+                                                else
+                                                {
+                                                    fontWeight = this.FontWeight;
+                                                }
+
+                                                if (config1.AppSettings.Settings["TextColor"] == null)
+                                                {
+                                                    if (config2.AppSettings.Settings["TextColor"] != null && config2.AppSettings.Settings["TextColor"].Value.Length > 0)
+                                                    {
+                                                        foregroundColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["TextColor"].Value);
+                                                    }
+                                                    else
+                                                    {
+                                                        foregroundColor = Colors.White;
+                                                    }
+                                                }
+                                                else if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                                                {
+                                                    foregroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
+                                                }
+                                                else
+                                                {
+                                                    foregroundColor = Colors.White;
+                                                }
+                                            }
+
+                                            character.Likes += 1;
+
+                                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("Like") && sequence.Owner.Equals(this.characterName) select sequence, character.Likes.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("Charge") && sequence.Owner.Equals(this.characterName) select sequence, ((int)((DateTime.Now - this.baseDateTime).TotalMinutes / 30)).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+                                            if (Math.Max(Math.Max(foregroundColor.R, foregroundColor.G), foregroundColor.B) > Byte.MaxValue / 2)
+                                            {
+                                                backgroundBrush = new SolidColorBrush(Colors.Black);
+                                            }
+                                            else
+                                            {
+                                                backgroundBrush = new SolidColorBrush(Colors.White);
+                                            }
+
+                                            backgroundBrush.Opacity = 0.75;
+
+                                            if (backgroundBrush.CanFreeze)
+                                            {
+                                                backgroundBrush.Freeze();
+                                            }
+
+                                            if (starGeometry.CanFreeze)
+                                            {
+                                                starGeometry.Freeze();
+                                            }
+
+                                            CreateHudWindow(backgroundBrush, foregroundColor, starGeometry, fontFamily, fontSize, fontStretch, fontStyle, fontWeight, character.Likes.ToString(System.Globalization.CultureInfo.CurrentCulture)).Show();
+                                        }
+                                    });
+
+                                    selectedMenuItem.IsChecked = false;
+
+                                    if (childMenuItemList.Count > 0)
+                                    {
+                                        selectedMenuItem.Items.Add(menuItem);
+                                        selectedMenuItem.Items.Add(new Separator());
+
+                                        childMenuItemList.ForEach(delegate (MenuItem mi)
+                                        {
+                                            selectedMenuItem.Items.Add(mi);
+                                        });
+                                    }
+                                    else
+                                    {
+                                        selectedMenuItem.Items.Add(menuItem);
+                                    }
+                                }
+                                else if (childMenuItemList.Count > 0)
                                 {
                                     selectedMenuItem.IsChecked = false;
+
                                     childMenuItemList.ForEach(delegate (MenuItem mi)
                                     {
                                         selectedMenuItem.Items.Add(mi);
@@ -2103,6 +2372,7 @@ namespace Apricot
                                 {
                                     a.Owner = null;
                                     a.LayoutRoot.Width = a.LayoutRoot.Height = a.Canvas.Width = a.Canvas.Height = 0;
+                                    a.balloon.Hide();
                                     a.Close();
                                 }
                             }
@@ -2293,6 +2563,20 @@ namespace Apricot
                             Storyboard.SetTargetProperty(da1, new PropertyPath(Window.OpacityProperty));
                             Storyboard.SetTargetProperty(da2, new PropertyPath(Window.OpacityProperty));
                         }
+                        else if (window as Balloon == null && window.Owner != null)
+                        {
+                            DoubleAnimation da = new DoubleAnimation(window.Opacity, 0, TimeSpan.FromMilliseconds(500));
+                            SineEase se = new SineEase();
+
+                            se.EasingMode = EasingMode.EaseIn;
+
+                            da.EasingFunction = se;
+
+                            storyboard.Children.Add(da);
+
+                            Storyboard.SetTarget(da, window);
+                            Storyboard.SetTargetProperty(da, new PropertyPath(Window.OpacityProperty));
+                        }
                     }
                 }
 
@@ -2314,21 +2598,24 @@ namespace Apricot
                     this.balloon.Left = this.Left + (this.Width - this.balloon.Width) / 2;
                     this.balloon.Top = this.Top - this.balloon.Height + character.Origin.Y * this.ZoomScaleTransform.ScaleY;
 
-                    if (this == Application.Current.MainWindow)
+                    foreach (Window window in Application.Current.Windows)
                     {
-                        foreach (Window window in Application.Current.Windows)
+                        if (this != window)
                         {
-                            if (window != Application.Current.MainWindow)
-                            {
-                                Agent agent = window as Agent;
+                            Agent agent = window as Agent;
 
-                                if (agent != null)
+                            if (agent != null)
+                            {
+                                foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
                                 {
-                                    foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
-                                    {
-                                        c.Location = new Point(agent.Left - this.Left - c.BaseLocation.X, agent.Top - this.Top - c.BaseLocation.Y);
-                                    }
+                                    c.Location = new Point(agent.Left - this.Left - c.BaseLocation.X, agent.Top - this.Top - c.BaseLocation.Y);
                                 }
+                            }
+
+                            if (this == window.Owner && window.WindowStartupLocation == WindowStartupLocation.CenterOwner)
+                            {
+                                window.Left = this.Left + (this.Width - window.Width) / 2;
+                                window.Top = this.Top + (this.Height - window.Height) / 2;
                             }
                         }
                     }
@@ -2345,6 +2632,15 @@ namespace Apricot
 
                             this.balloon.Left = this.Left + (this.Width - this.balloon.Width) / 2;
                             this.balloon.Top = this.Top - this.balloon.Height + character.Origin.Y * this.ZoomScaleTransform.ScaleY;
+                        }
+
+                        foreach (Window window in Application.Current.Windows)
+                        {
+                            if (agent != window && this == window.Owner && window.WindowStartupLocation == WindowStartupLocation.CenterOwner)
+                            {
+                                window.Left = this.Left + (this.Width - window.Width) / 2;
+                                window.Top = this.Top + (this.Height - window.Height) / 2;
+                            }
                         }
                     }
                 }
@@ -5260,7 +5556,7 @@ namespace Apricot
                                 {
                                     Agent agent = window as Agent;
 
-                                    if (agent != null && agent.Opacity > 0)
+                                    if (agent != null && agent.Opacity > 0 || window as Balloon == null && window.Owner != null)
                                     {
                                         Task.Factory.StartNew(delegate
                                         {
@@ -5342,7 +5638,7 @@ namespace Apricot
                     {
                         Agent agent = window as Agent;
 
-                        if (agent != null && agent.Opacity > 0)
+                        if (agent != null && agent.Opacity > 0 || window as Balloon == null && window.Owner != null)
                         {
                             Task.Factory.StartNew(delegate
                             {
@@ -5525,6 +5821,208 @@ namespace Apricot
                     return null;
                 }), null);
             }
+        }
+
+        private Window CreateHudWindow(Brush backgroundBrush, Color foregroundColor, Geometry geometry, FontFamily fontFamily, double fontSize, FontStretch fontStretch, FontStyle fontStyle, FontWeight fontWeight, string text)
+        {
+            Window window = new Window();
+            ContentControl contentControl = new ContentControl();
+            Border border1 = new Border();
+            StackPanel stackPanel = new StackPanel();
+            System.Windows.Shapes.Path path = new System.Windows.Shapes.Path();
+            Border border2 = new Border();
+            Label label = new Label();
+            SolidColorBrush foregroundBrush = new SolidColorBrush(foregroundColor);
+            DropShadowEffect dropShadowEffect = new DropShadowEffect();
+
+            if (foregroundBrush.CanFreeze)
+            {
+                foregroundBrush.Freeze();
+            }
+
+            window.Owner = this;
+            window.Title = this.Title;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            window.AllowsTransparency = true;
+            window.WindowStyle = WindowStyle.None;
+            window.ResizeMode = ResizeMode.NoResize;
+            window.ShowActivated = false;
+            window.ShowInTaskbar = false;
+            window.Topmost = true;
+            window.SizeToContent = SizeToContent.WidthAndHeight;
+            window.Background = Brushes.Transparent;
+            window.Loaded += new RoutedEventHandler(delegate
+            {
+                ScaleTransform scaleTransform = contentControl.RenderTransform as ScaleTransform;
+                Storyboard storyboard = new Storyboard();
+                DoubleAnimation doubleAnimation1 = new DoubleAnimation(contentControl.Opacity, 1, TimeSpan.FromMilliseconds(500));
+                DoubleAnimation doubleAnimation2 = new DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500));
+                DoubleAnimation doubleAnimation3 = new DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500));
+                DoubleAnimation doubleAnimation4 = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(500));
+                DoubleAnimation doubleAnimation5 = new DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500));
+                DoubleAnimation doubleAnimation6 = new DoubleAnimation(1, 1.5, TimeSpan.FromMilliseconds(500));
+                SineEase sineEase1 = new SineEase();
+                SineEase sineEase2 = new SineEase();
+                SineEase sineEase3 = new SineEase();
+                SineEase sineEase4 = new SineEase();
+                SineEase sineEase5 = new SineEase();
+                SineEase sineEase6 = new SineEase();
+
+                if (contentControl.ActualWidth > contentControl.ActualHeight)
+                {
+                    border1.Width = border1.Height = contentControl.ActualWidth;
+                    contentControl.Width = contentControl.Height = contentControl.ActualWidth * 1.5;
+
+                    if (scaleTransform != null)
+                    {
+                        scaleTransform.CenterX = scaleTransform.CenterY = contentControl.Height / 2;
+                    }
+                }
+                else
+                {
+                    border1.Width = border1.Height = contentControl.ActualHeight;
+                    contentControl.Width = contentControl.Height = contentControl.ActualHeight * 1.5;
+
+                    if (scaleTransform != null)
+                    {
+                        scaleTransform.CenterX = scaleTransform.CenterY = contentControl.Width / 2;
+                    }
+                }
+
+                sineEase1.EasingMode = sineEase2.EasingMode = sineEase3.EasingMode = EasingMode.EaseOut;
+                sineEase4.EasingMode = sineEase5.EasingMode = sineEase6.EasingMode = EasingMode.EaseIn;
+                doubleAnimation1.EasingFunction = sineEase1;
+                doubleAnimation2.EasingFunction = sineEase2;
+                doubleAnimation3.EasingFunction = sineEase3;
+                doubleAnimation4.BeginTime = TimeSpan.FromMilliseconds(1000);
+                doubleAnimation4.EasingFunction = sineEase4;
+                doubleAnimation5.BeginTime = TimeSpan.FromMilliseconds(1000);
+                doubleAnimation5.EasingFunction = sineEase5;
+                doubleAnimation6.BeginTime = TimeSpan.FromMilliseconds(1000);
+                doubleAnimation6.EasingFunction = sineEase6;
+
+                storyboard.Children.Add(doubleAnimation1);
+                storyboard.Children.Add(doubleAnimation2);
+                storyboard.Children.Add(doubleAnimation3);
+                storyboard.Children.Add(doubleAnimation4);
+                storyboard.Children.Add(doubleAnimation5);
+                storyboard.Children.Add(doubleAnimation6);
+                storyboard.CurrentStateInvalidated += new EventHandler(delegate (object sender, EventArgs e)
+                {
+                    if (((Clock)sender).CurrentState == ClockState.Filling)
+                    {
+                        window.Close();
+                    }
+                });
+
+                Storyboard.SetTarget(doubleAnimation1, contentControl);
+                Storyboard.SetTarget(doubleAnimation2, contentControl);
+                Storyboard.SetTarget(doubleAnimation3, contentControl);
+                Storyboard.SetTarget(doubleAnimation4, contentControl);
+                Storyboard.SetTarget(doubleAnimation5, contentControl);
+                Storyboard.SetTarget(doubleAnimation6, contentControl);
+                Storyboard.SetTargetProperty(doubleAnimation1, new PropertyPath(ContentControl.OpacityProperty));
+                Storyboard.SetTargetProperty(doubleAnimation2, new PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty));
+                Storyboard.SetTargetProperty(doubleAnimation3, new PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty));
+                Storyboard.SetTargetProperty(doubleAnimation4, new PropertyPath(ContentControl.OpacityProperty));
+                Storyboard.SetTargetProperty(doubleAnimation5, new PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleXProperty));
+                Storyboard.SetTargetProperty(doubleAnimation6, new PropertyPath("(0).(1)", ContentControl.RenderTransformProperty, ScaleTransform.ScaleYProperty));
+
+                storyboard.Begin();
+            });
+
+            contentControl.UseLayoutRounding = true;
+            contentControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+            contentControl.VerticalAlignment = VerticalAlignment.Stretch;
+            contentControl.Opacity = 0;
+            contentControl.RenderTransform = new ScaleTransform(1, 1);
+
+            window.Content = contentControl;
+
+            border1.HorizontalAlignment = HorizontalAlignment.Center;
+            border1.VerticalAlignment = VerticalAlignment.Center;
+            border1.Margin = new Thickness(0);
+            border1.Padding = new Thickness(16);
+            border1.CornerRadius = new CornerRadius(4);
+            border1.Background = backgroundBrush;
+
+            contentControl.Content = border1;
+
+            stackPanel.HorizontalAlignment = HorizontalAlignment.Center;
+            stackPanel.VerticalAlignment = VerticalAlignment.Center;
+            stackPanel.Orientation = Orientation.Horizontal;
+            stackPanel.Background = Brushes.Transparent;
+
+            border1.Child = stackPanel;
+
+            path.HorizontalAlignment = HorizontalAlignment.Stretch;
+            path.VerticalAlignment = VerticalAlignment.Center;
+            path.Fill = foregroundBrush;
+            path.Data = geometry;
+
+            stackPanel.Children.Add(path);
+
+            border2.HorizontalAlignment = HorizontalAlignment.Stretch;
+            border2.VerticalAlignment = VerticalAlignment.Stretch;
+            border2.Margin = new Thickness(0);
+            border2.Padding = new Thickness(0);
+            border2.CornerRadius = new CornerRadius(0);
+            border2.Background = Brushes.Transparent;
+
+            dropShadowEffect.BlurRadius = 1;
+            dropShadowEffect.Color = Math.Max(Math.Max(foregroundColor.R, foregroundColor.G), foregroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+            dropShadowEffect.Direction = 270;
+            dropShadowEffect.Opacity = 0.5;
+            dropShadowEffect.ShadowDepth = 1;
+
+            if (dropShadowEffect.CanFreeze)
+            {
+                dropShadowEffect.Freeze();
+            }
+
+            border2.Effect = dropShadowEffect;
+
+            stackPanel.Children.Add(border2);
+
+            label.HorizontalAlignment = HorizontalAlignment.Stretch;
+            label.VerticalAlignment = VerticalAlignment.Stretch;
+            label.FontFamily = FontFamily;
+            label.FontSize = fontSize;
+            label.FontStretch = fontStretch;
+            label.FontStyle = fontStyle;
+            label.FontWeight = fontWeight;
+            label.Foreground = foregroundBrush;
+            label.FontWeight = fontWeight;
+            label.Content = text;
+
+            RenderOptions.SetClearTypeHint(label, ClearTypeHint.Enabled);
+
+            border2.Child = label;
+
+            return window;
+        }
+
+        private Geometry CreateStarGeometry(Rect rect)
+        {
+            StreamGeometry streamGeometry = new StreamGeometry();
+
+            streamGeometry.FillRule = FillRule.Nonzero;
+
+            using (StreamGeometryContext context = streamGeometry.Open())
+            {
+                context.BeginFigure(new Point(rect.X, rect.Y + rect.Height * 3 / 8), true, true);
+                context.LineTo(new Point(rect.X + rect.Width * 7 / 20, rect.Y + rect.Height * 13 / 40), true, false);
+                context.LineTo(new Point(rect.X + rect.Width / 2, rect.Y), true, false);
+                context.LineTo(new Point(rect.X + rect.Width * 13 / 20, rect.Y + rect.Height * 13 / 40), true, false);
+                context.LineTo(new Point(rect.X + rect.Width, rect.Y + rect.Height * 3 / 8), true, false);
+                context.LineTo(new Point(rect.X + rect.Width * 3 / 4, rect.Y + rect.Height * 5 / 8), true, false);
+                context.LineTo(new Point(rect.X + rect.Width * 4 / 5, rect.Y + rect.Height), true, false);
+                context.LineTo(new Point(rect.X + rect.Width / 2, rect.Y + rect.Height * 33 / 40), true, false);
+                context.LineTo(new Point(rect.X + rect.Width / 5, rect.Y + rect.Height), true, false);
+                context.LineTo(new Point(rect.X + rect.Width / 4, rect.Y + rect.Height * 5 / 8), true, false);
+            }
+
+            return streamGeometry;
         }
     }
 }

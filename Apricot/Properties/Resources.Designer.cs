@@ -79,6 +79,15 @@ namespace Apricot.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Like.
+        /// </summary>
+        internal static string Like {
+            get {
+                return ResourceManager.GetString("Like", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Mute.
         /// </summary>
         internal static string Mute {

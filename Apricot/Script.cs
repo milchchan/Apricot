@@ -31,8 +31,7 @@ namespace Apricot
         private Queue<Sequence> sequenceQueue = null;
         private Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> cacheDictionary = null;
         private Queue<Entry> activateEntryQueue = null;
-        private Dictionary<string, Dictionary<string, int>> chargesDictionary = null;
-        private DateTime startupDateTime;
+        private HashSet<string> recentTermHashSet = null;
         private DateTime lastPolledDateTime;
         private DateTime lastUpdatedDateTime;
         private TimeSpan idleTimeSpan = TimeSpan.Zero;
@@ -86,9 +85,9 @@ namespace Apricot
                     this.sequenceStateDictionary.Clear();
                     this.cacheDictionary.Clear();
                     this.activateEntryQueue.Clear();
-                    this.chargesDictionary.Clear();
+                    this.recentTermHashSet.Clear();
                     this.idleTimeSpan = TimeSpan.Zero;
-                    this.startupDateTime = this.lastPolledDateTime = this.lastUpdatedDateTime = DateTime.Now;
+                    this.lastPolledDateTime = this.lastUpdatedDateTime = DateTime.Now;
 
                     if (this.pollingTimer != null)
                     {
@@ -117,6 +116,11 @@ namespace Apricot
                     if (this.Start != null)
                     {
                         this.Start(this, new EventArgs());
+                    }
+
+                    foreach (Character character in this.characterCollection)
+                    {
+                        TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") && sequence.Owner.Equals(character.Name) select sequence, character.Likes.ToString(CultureInfo.InvariantCulture)));
                     }
                 }
                 else
@@ -166,10 +170,7 @@ namespace Apricot
             this.sequenceQueue = new Queue<Sequence>();
             this.cacheDictionary = new Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>();
             this.activateEntryQueue = new Queue<Entry>();
-            this.chargesDictionary = new Dictionary<string, Dictionary<string, int>>();
-            this.startupDateTime = DateTime.Now;
-            this.lastPolledDateTime = DateTime.Now;
-            this.lastUpdatedDateTime = DateTime.Now;
+            this.recentTermHashSet = new HashSet<string>();
 
             System.Configuration.Configuration config1 = null;
             string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
@@ -197,14 +198,9 @@ namespace Apricot
                     this.pollingTimer.Tick += new EventHandler(delegate
                     {
                         DateTime nowDateTime = DateTime.Now;
-                        int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
+                        TimeSpan thresholdTimeSpan = TimeSpan.FromMinutes(1);
 
-                        if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
-                        {
-                            TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
-                        }
-
-                        for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
+                        for (DateTime dateTime = nowDateTime - this.lastPolledDateTime > thresholdTimeSpan ? nowDateTime - thresholdTimeSpan : this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
                         {
                             Tick(dateTime);
                         }
@@ -262,14 +258,9 @@ namespace Apricot
                             this.pollingTimer.Tick += new EventHandler(delegate
                             {
                                 DateTime nowDateTime = DateTime.Now;
-                                int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
+                                TimeSpan thresholdTimeSpan = TimeSpan.FromMinutes(1);
 
-                                if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
-                                {
-                                    TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
-                                }
-
-                                for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
+                                for (DateTime dateTime = nowDateTime - this.lastPolledDateTime > thresholdTimeSpan ? nowDateTime - thresholdTimeSpan : this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
                                 {
                                     Tick(dateTime);
                                 }
@@ -305,14 +296,9 @@ namespace Apricot
                     this.pollingTimer.Tick += new EventHandler(delegate
                     {
                         DateTime nowDateTime = DateTime.Now;
-                        int likes = (int)(nowDateTime - this.startupDateTime).TotalMinutes / 30;
+                        TimeSpan thresholdTimeSpan = TimeSpan.FromMinutes(1);
 
-                        if ((int)(this.lastPolledDateTime - this.startupDateTime).TotalMinutes / 30 != likes)
-                        {
-                            TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") select sequence, likes.ToString(CultureInfo.InvariantCulture)));
-                        }
-
-                        for (DateTime dateTime = this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
+                        for (DateTime dateTime = nowDateTime - this.lastPolledDateTime > thresholdTimeSpan ? nowDateTime - thresholdTimeSpan : this.lastPolledDateTime.AddSeconds(1); dateTime <= nowDateTime; dateTime = dateTime.AddSeconds(1))
                         {
                             Tick(dateTime);
                         }
@@ -6988,93 +6974,34 @@ namespace Apricot
                 }
             }
 
-            List<Tuple<string, List<string>>> tupleList = Activate(from sequence in this.sequenceCollection where sequence.Name.Equals("Activate") select sequence, mergedTermList.FindAll(delegate (string term)
+            List<string> usedTermList = Activate(from sequence in this.sequenceCollection where sequence.Name.Equals("Activate") select sequence, mergedTermList.FindAll(delegate (string term)
             {
-                return !this.chargesDictionary.ContainsKey(term);
+                return !this.recentTermHashSet.Contains(term);
             }));
 
-            if (tupleList.Count > 0)
+            if (usedTermList.Count > 0)
             {
-                tupleList.Aggregate<Tuple<string, List<string>>, List<Tuple<string, List<string>>>>(new List<Tuple<string, List<string>>>(), delegate(List<Tuple<string, List<string>>> list, Tuple<string, List<string>> tuple1)
+                usedTermList.ForEach(delegate (string s)
                 {
-                    Tuple<string, List<string>> tuple2 = list.Find(delegate (Tuple<string, List<string>> tuple3)
+                    if (!this.recentTermHashSet.Contains(s))
                     {
-                        return tuple3.Item1.Equals(tuple1.Item1);
-                    });
-
-                    if (tuple2 == null)
-                    {
-                        list.Add(tuple1);
+                        this.recentTermHashSet.Add(s);
                     }
-                    else
-                    {
-                        tuple2.Item2.AddRange(tuple1.Item2);
-                    }
-
-                    return list;
-                }).ForEach(delegate (Tuple<string, List<string>> tuple)
-                {
-                    Dictionary<string, int> dictionary;
-
-                    if (this.chargesDictionary.TryGetValue(tuple.Item1, out dictionary))
-                    {
-                        tuple.Item2.ForEach(delegate (string s)
-                        {
-                            int i;
-
-                            if (dictionary.TryGetValue(s, out i))
-                            {
-                                i++;
-                                dictionary[s] = i;
-                            }
-                            else
-                            {
-                                dictionary.Add(s, 1);
-                            }
-                        });
-                    }
-                    else
-                    {
-                        dictionary = new Dictionary<string, int>();
-
-                        tuple.Item2.ForEach(delegate (string s)
-                        {
-                            int i;
-
-                            if (dictionary.TryGetValue(s, out i))
-                            {
-                                i++;
-                                dictionary[s] = i;
-                            }
-                            else
-                            {
-                                dictionary.Add(s, 1);
-                            }
-                        });
-
-                        this.chargesDictionary.Add(tuple.Item1, dictionary);
-                    }
-
-                    TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Charge") && sequence.Owner.Equals(tuple.Item1) select sequence, dictionary.Values.Max<int>().ToString(CultureInfo.InvariantCulture)));
                 });
             }
             else
             {
-                TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Charge") && this.chargesDictionary.ContainsKey(sequence.Owner) select sequence, 0.ToString(CultureInfo.InvariantCulture)));
-
-                this.chargesDictionary.Clear();
+                this.recentTermHashSet.Clear();
             }
         }
 
-        private List<Tuple<string, List<string>>> Activate(IEnumerable<Sequence> sequences, List<string> termList)
+        private List<string> Activate(IEnumerable<Sequence> sequences, List<string> termList)
         {
             IEnumerable<Sequence> preparedSequences = Prepare(sequences, null, termList);
-            List<Tuple<string, List<string>>> tupleList = new List<Tuple<string, List<string>>>();
+            List<string> usedTermList = new List<string>();
 
             foreach (Sequence sequence in preparedSequences)
             {
-                List<string> usedTermList = new List<string>();
-
                 foreach (object obj in sequence)
                 {
                     Message message = obj as Message;
@@ -7102,11 +7029,6 @@ namespace Apricot
                         }
                     }
                 }
-
-                if (usedTermList.Count > 0)
-                {
-                    tupleList.Add(Tuple.Create<string, List<string>>(sequence.Owner, usedTermList));
-                }
             }
 
             if (!TryEnqueue(preparedSequences) && termList.Count > 0)
@@ -7116,7 +7038,7 @@ namespace Apricot
                 return Activate(sequences, termList);
             }
 
-            return tupleList;
+            return usedTermList;
         }
 
         private Dictionary<string, double> GetTermFrequency(Dictionary<char, List<string>> dictionary, Entry entry)

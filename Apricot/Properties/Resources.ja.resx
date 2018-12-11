@@ -118,36 +118,36 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Characters" xml:space="preserve">
-    <value>Characters</value>
+    <value>キャラクター</value>
   </data>
   <data name="Exit" xml:space="preserve">
-    <value>Exit</value>
+    <value>終了</value>
   </data>
   <data name="Like" xml:space="preserve">
-    <value>Like</value>
+    <value>いいね</value>
   </data>
   <data name="Mute" xml:space="preserve">
-    <value>Mute</value>
+    <value>ミュート</value>
   </data>
   <data name="Opacity" xml:space="preserve">
-    <value>Opacity</value>
+    <value>不透明度</value>
   </data>
   <data name="Percent" xml:space="preserve">
     <value>%</value>
   </data>
   <data name="Refresh" xml:space="preserve">
-    <value>Refresh</value>
+    <value>最新の情報に更新</value>
   </data>
   <data name="Scaling" xml:space="preserve">
-    <value>Scaling</value>
+    <value>倍率</value>
   </data>
   <data name="ShowInTaskbar" xml:space="preserve">
-    <value>Show in Taskbar</value>
+    <value>タスクバーに表示</value>
   </data>
   <data name="Topmost" xml:space="preserve">
-    <value>Always on Top</value>
+    <value>常に手前に表示</value>
   </data>
   <data name="Update" xml:space="preserve">
-    <value>Update</value>
+    <value>新しい情報を取得</value>
   </data>
 </root>
