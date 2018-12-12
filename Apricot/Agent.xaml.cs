@@ -1264,7 +1264,7 @@ namespace Apricot
                                     menuItem.Header = Properties.Resources.Like;
                                     menuItem.Click += new RoutedEventHandler(delegate
                                     {
-                                        this.baseDateTime += TimeSpan.FromMinutes(30);
+                                        this.baseDateTime = this.baseDateTime.AddMinutes(30);
 
                                         foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                                         {
