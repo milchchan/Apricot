@@ -6471,19 +6471,12 @@ namespace Apricot
 
                                         foreach (Tuple<Entry, double[]> kvp in vectorDictionary.Values)
                                         {
-                                            double distance = 0;
+                                            double similarity = CosineSimilarity(vectorList, kvp.Item2);
 
-                                            for (int j = 0; j < idfDictionary.Count; j++)
-                                            {
-                                                distance += (vectorList[j] - kvp.Item2[j]) * (vectorList[j] - kvp.Item2[j]);
-                                            }
-
-                                            distance = Math.Sqrt(distance);
-
-                                            if (lowestDistance > distance)
+                                            if (lowestDistance > similarity)
                                             {
                                                 e = kvp.Item1;
-                                                lowestDistance = distance;
+                                                lowestDistance = similarity;
                                             }
                                         }
 
@@ -6926,19 +6919,12 @@ namespace Apricot
                     i++;
                 }
 
-                List<Tuple<Entry, double>> entryList = new List<Tuple<Entry, double>>();
-
-                foreach (Tuple<Entry, double[]> tuple in vectorDictionary.Values)
+                List<Tuple<Entry, double>> entryList = vectorDictionary.Values.Aggregate<Tuple<Entry, double[]>, List<Tuple<Entry, double>>>(new List<Tuple<Entry, double>>(), delegate (List<Tuple<Entry, double>> list, Tuple<Entry, double[]> tuple)
                 {
-                    double distance = 0;
+                    list.Add(Tuple.Create<Entry, double>(tuple.Item1, CosineSimilarity(vector1, tuple.Item2)));
 
-                    for (int j = 0; j < this.cacheDictionary.Count; j++)
-                    {
-                        distance += (vector1[j] - tuple.Item2[j]) * (vector1[j] - tuple.Item2[j]);
-                    }
-
-                    entryList.Add(Tuple.Create<Entry, double>(tuple.Item1, Math.Sqrt(distance)));
-                }
+                    return list;
+                });
 
                 entryList.Sort(delegate (Tuple<Entry, double> tuple1, Tuple<Entry, double> tuple2)
                 {
@@ -7470,6 +7456,23 @@ namespace Apricot
             }
 
             return selectedTermList;
+        }
+
+        private double CosineSimilarity(IEnumerable<double> x, IEnumerable<double> y)
+        {
+            double epsilon = Math.Pow(10, -8);
+            double sum = 0;
+            double normX = 0;
+            double normY = 0;
+
+            for (int i = 0; i < x.Count(); i++)
+            {
+                sum += x.ElementAt(i) * y.ElementAt(i);
+                normX += x.ElementAt(i) * x.ElementAt(i);
+                normY += y.ElementAt(i) * y.ElementAt(i);
+            }
+
+            return (sum + epsilon) / (Math.Sqrt(normX) * Math.Sqrt(normY) + epsilon);
         }
 
         private IEnumerable<T> Shuffle<T>(IEnumerable<T> collection)
