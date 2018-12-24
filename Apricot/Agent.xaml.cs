@@ -414,21 +414,7 @@ namespace Apricot
 
                     foreach (Character character in Script.Instance.Characters)
                     {
-                        string path;
-
-                        if (Path.IsPathRooted(character.Script))
-                        {
-                            path = character.Script;
-                        }
-                        else
-                        {
-                            path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), character.Script);
-
-                            if (!File.Exists(path))
-                            {
-                                path = Path.GetFullPath(character.Script);
-                            }
-                        }
+                        string path = Path.IsPathRooted(character.Script) ? character.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), character.Script);
 
                         if (!pathHashSet.Contains(path))
                         {
@@ -2330,8 +2316,7 @@ namespace Apricot
                         bool isCleared;
                         bool isOwner = true;
                         Nullable<Point> point = null;
-                        string directory1 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
-                        string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                        string directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
                         
                         foreach (Nullable<Point> p in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select new Nullable<Point>(new Point(agent.Left - character.Location.X - character.BaseLocation.X, agent.Top - character.Location.Y - character.BaseLocation.Y)))
                         {
@@ -2398,76 +2383,42 @@ namespace Apricot
                             });
                         } while (!isCleared);
 
-                        if (Directory.Exists(directory1))
+                        foreach (Character character in characters)
                         {
-                            foreach (Character character in characters)
+                            if (Path.IsPathRooted(character.Script))
                             {
                                 if (!pathList.Exists(delegate (string path)
                                 {
-                                    if (Path.IsPathRooted(path) && !Path.IsPathRooted(character.Script))
+                                    if (!Path.IsPathRooted(path))
                                     {
-                                        return Path.GetFullPath(character.Script).Equals(path);
-                                    }
-                                    else if (!Path.IsPathRooted(path) && Path.IsPathRooted(character.Script))
-                                    {
-                                        return character.Script.Equals(Path.GetFullPath(path));
+                                        return character.Script.Equals(Path.Combine(directory, path));
                                     }
 
                                     return character.Script.Equals(path);
                                 }))
                                 {
-                                    if (Path.IsPathRooted(character.Script))
-                                    {
-                                        pathList.Add(character.Script);
-                                    }
-                                    else
-                                    {
-                                        string p = Path.Combine(directory1, character.Script);
-
-                                        if (File.Exists(p))
-                                        {
-                                            pathList.Add(p);
-                                        }
-                                        else
-                                        {
-                                            pathList.Add(Path.Combine(directory2, character.Script));
-                                        }
-                                    }
+                                    pathList.Add(character.Script);
                                 }
-
-                                Script.Instance.Characters.Add(character);
                             }
-                        }
-                        else
-                        {
-                            foreach (Character character in characters)
+                            else
                             {
-                                if (!pathList.Exists(delegate (string path)
+                                string path1 = Path.Combine(directory, character.Script);
+
+                                if (!pathList.Exists(delegate (string path2)
                                 {
-                                    if (Path.IsPathRooted(path) && !Path.IsPathRooted(character.Script))
+                                    if (Path.IsPathRooted(path2))
                                     {
-                                        return Path.GetFullPath(character.Script).Equals(path);
-                                    }
-                                    else if (!Path.IsPathRooted(path) && Path.IsPathRooted(character.Script))
-                                    {
-                                        return character.Script.Equals(Path.GetFullPath(path));
+                                        return path1.Equals(path2);
                                     }
 
-                                    return character.Script.Equals(path);
+                                    return character.Script.Equals(path2);
                                 }))
                                 {
-                                    if (Path.IsPathRooted(character.Script))
-                                    {
-                                        pathList.Add(character.Script);
-                                    }
-                                    else
-                                    {
-                                        pathList.Add(Path.Combine(directory2, character.Script));
-                                    }
+                                    pathList.Add(path1);
                                 }
-
-                                Script.Instance.Characters.Add(character);
                             }
+
+                            Script.Instance.Characters.Add(character);
                         }
 
                         pathList.ForEach(delegate (string path)
@@ -4785,27 +4736,12 @@ namespace Apricot
                             {
                                 Task.Factory.StartNew(delegate
                                 {
-                                    string path;
                                     FileStream fs = null;
                                     Stream s = null;
                                     
-                                    if (Path.IsPathRooted(v.Script))
-                                    {
-                                        path = v.Script;
-                                    }
-                                    else
-                                    {
-                                        path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), v.Script);
-
-                                        if (!File.Exists(path))
-                                        {
-                                            path = v.Script;
-                                        }
-                                    }
-
                                     try
                                     {
-                                        fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                        fs = new FileStream(Path.IsPathRooted(v.Script) ? v.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), v.Script), FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                         using (ZipArchive zipArchive = new ZipArchive(fs))
                                         {
@@ -4840,17 +4776,7 @@ namespace Apricot
                                 {
                                     string path = (string)state;
 
-                                    if (!Path.IsPathRooted(path))
-                                    {
-                                        string p = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), path);
-
-                                        if (File.Exists(p))
-                                        {
-                                            path = p;
-                                        }
-                                    }
-
-                                    using (System.Media.SoundPlayer soundPlayer = new System.Media.SoundPlayer(path))
+                                    using (System.Media.SoundPlayer soundPlayer = new System.Media.SoundPlayer(Path.IsPathRooted(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), path)))
                                     {
                                         soundPlayer.Load();
                                         soundPlayer.PlaySync();
@@ -4956,21 +4882,7 @@ namespace Apricot
                     {
                         contentList.ForEach(delegate (Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>> tuple1)
                         {
-                            string path;
-
-                            if (Path.IsPathRooted(tuple1.Item1))
-                            {
-                                path = tuple1.Item1;
-                            }
-                            else
-                            {
-                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), tuple1.Item1);
-
-                                if (!File.Exists(path))
-                                {
-                                    path = tuple1.Item1;
-                                }
-                            }
+                            string path = Path.IsPathRooted(tuple1.Item1) ? tuple1.Item1 : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), tuple1.Item1);
 
                             if (Path.GetExtension(tuple1.Item1).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                             {
@@ -5245,21 +5157,7 @@ namespace Apricot
                     {
                         contentList.ForEach(delegate (Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>> tuple1)
                         {
-                            string path;
-
-                            if (Path.IsPathRooted(tuple1.Item1))
-                            {
-                                path = tuple1.Item1;
-                            }
-                            else
-                            {
-                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), tuple1.Item1);
-
-                                if (!File.Exists(path))
-                                {
-                                    path = tuple1.Item1;
-                                }
-                            }
+                            string path = Path.IsPathRooted(tuple1.Item1) ? tuple1.Item1 : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), tuple1.Item1);
 
                             if (Path.GetExtension(tuple1.Item1).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                             {
