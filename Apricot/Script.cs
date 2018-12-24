@@ -417,27 +417,36 @@ namespace Apricot
 
                             foreach (Character character in (Character[])serializer.Deserialize(fs))
                             {
-                                if (!pathList1.Exists(delegate (string path1)
+                                if (Path.IsPathRooted(character.Script))
                                 {
-                                    if (Path.IsPathRooted(path1) && !Path.IsPathRooted(character.Script))
+                                    if (!pathList1.Exists(delegate (string path1)
                                     {
-                                        return Path.GetFullPath(character.Script).Equals(path1);
-                                    }
-                                    else if (!Path.IsPathRooted(path1) && Path.IsPathRooted(character.Script))
-                                    {
-                                        return character.Script.Equals(Path.GetFullPath(path1));
-                                    }
+                                        if (!Path.IsPathRooted(path1))
+                                        {
+                                            return character.Script.Equals(Path.Combine(directory1, path1));
+                                        }
 
-                                    return character.Script.Equals(path1);
-                                }))
-                                {
-                                    if (Path.IsPathRooted(character.Script))
+                                        return character.Script.Equals(path1);
+                                    }))
                                     {
                                         pathList1.Add(character.Script);
                                     }
-                                    else
+                                }
+                                else
+                                {
+                                    string path1 = Path.Combine(directory1, character.Script);
+
+                                    if (!pathList1.Exists(delegate (string path2)
                                     {
-                                        pathList1.Add(Path.Combine(directory1, character.Script));
+                                        if (Path.IsPathRooted(path2))
+                                        {
+                                            return path1.Equals(path2);
+                                        }
+
+                                        return character.Script.Equals(path2);
+                                    }))
+                                    {
+                                        pathList1.Add(path1);
                                     }
                                 }
 
@@ -466,27 +475,36 @@ namespace Apricot
 
                                 foreach (Character character in (Character[])serializer.Deserialize(fs))
                                 {
-                                    if (!pathList1.Exists(delegate (string path2)
+                                    if (Path.IsPathRooted(character.Script))
                                     {
-                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
+                                        if (!pathList1.Exists(delegate (string path2)
                                         {
-                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                        }
-                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                        {
-                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                        }
+                                            if (!Path.IsPathRooted(path2))
+                                            {
+                                                return character.Script.Equals(Path.Combine(directory1, path2));
+                                            }
 
-                                        return character.Script.Equals(path2);
-                                    }))
-                                    {
-                                        if (Path.IsPathRooted(character.Script))
+                                            return character.Script.Equals(path2);
+                                        }))
                                         {
                                             pathList1.Add(character.Script);
                                         }
-                                        else
+                                    }
+                                    else
+                                    {
+                                        string path2 = Path.Combine(directory1, character.Script);
+
+                                        if (!pathList1.Exists(delegate (string path3)
                                         {
-                                            pathList1.Add(Path.Combine(directory1, character.Script));
+                                            if (Path.IsPathRooted(path3))
+                                            {
+                                                return path2.Equals(path3);
+                                            }
+
+                                            return character.Script.Equals(path3);
+                                        }))
+                                        {
+                                            pathList1.Add(path2);
                                         }
                                     }
 
@@ -505,8 +523,7 @@ namespace Apricot
 
                     List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories) let extension = Path.GetExtension(filename) let attributes = File.GetAttributes(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
                     Random random = new Random(Environment.TickCount);
-                    List<string> pathList3 = new List<string>();
-
+                    
                     while (pathList2.Count > 0)
                     {
                         int i = random.Next(pathList2.Count);
@@ -581,8 +598,15 @@ namespace Apricot
 
                                             if (tuple2 != null)
                                             {
+                                                StringBuilder stringBuilder = new StringBuilder(directory1);
                                                 Stream stream = null;
-                                                List<Character> characterList = new List<Character>();
+
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                {
+                                                    stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                }
+
+                                                string path = tuple1.Item2.Remove(0, stringBuilder.Length);
 
                                                 try
                                                 {
@@ -601,9 +625,9 @@ namespace Apricot
                                                             {
                                                                 Character character = ParseCharacter(xmlNode);
 
-                                                                character.Script = tuple1.Item2;
+                                                                character.Script = path;
 
-                                                                characterList.Add(character);
+                                                                this.characterCollection.Add(character);
                                                             }
                                                         }
                                                     }
@@ -621,41 +645,19 @@ namespace Apricot
                                                         stream.Close();
                                                     }
                                                 }
-
-                                                characterList.ForEach(delegate (Character character)
-                                                {
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            pathList3.Add(Path.Combine(directory1, character.Script));
-                                                        }
-                                                    }
-
-                                                    this.characterCollection.Add(character);
-                                                });
                                             }
                                         }
                                         else
                                         {
+                                            StringBuilder stringBuilder = new StringBuilder(directory1);
                                             Stream stream = null;
-                                            List<Character> characterList = new List<Character>();
+
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            {
+                                                stringBuilder.Append(Path.DirectorySeparatorChar);
+                                            }
+
+                                            string path = tuple1.Item2.Remove(0, stringBuilder.Length);
 
                                             try
                                             {
@@ -674,9 +676,9 @@ namespace Apricot
                                                         {
                                                             Character character = ParseCharacter(xmlNode);
 
-                                                            character.Script = tuple1.Item2;
+                                                            character.Script = path;
 
-                                                            characterList.Add(character);
+                                                            this.characterCollection.Add(character);
                                                         }
                                                     }
                                                 }
@@ -694,35 +696,6 @@ namespace Apricot
                                                     stream.Close();
                                                 }
                                             }
-
-                                            characterList.ForEach(delegate (Character character)
-                                            {
-                                                if (!pathList3.Exists(delegate (string path2)
-                                                {
-                                                    if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                    {
-                                                        return Path.GetFullPath(character.Script).Equals(path2);
-                                                    }
-                                                    else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                    {
-                                                        return character.Script.Equals(Path.GetFullPath(path2));
-                                                    }
-
-                                                    return character.Script.Equals(path2);
-                                                }))
-                                                {
-                                                    if (Path.IsPathRooted(character.Script))
-                                                    {
-                                                        pathList3.Add(character.Script);
-                                                    }
-                                                    else
-                                                    {
-                                                        pathList3.Add(Path.Combine(directory1, character.Script));
-                                                    }
-                                                }
-
-                                                this.characterCollection.Add(character);
-                                            });
                                         }
                                     }
                                 }
@@ -737,6 +710,8 @@ namespace Apricot
 
                             if (this.characterCollection.Count > 0)
                             {
+                                Parse(tuple1.Item2);
+
                                 break;
                             }
                         }
@@ -793,7 +768,15 @@ namespace Apricot
 
                                     if (tuple3 != null)
                                     {
+                                        StringBuilder stringBuilder = new StringBuilder(directory1);
                                         FileStream fs = null;
+
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        {
+                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        }
+
+                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                         try
                                         {
@@ -812,31 +795,7 @@ namespace Apricot
                                                     {
                                                         Character character = ParseCharacter(xmlNode);
 
-                                                        character.Script = tuple3.Item1;
-
-                                                        if (!pathList3.Exists(delegate (string path2)
-                                                        {
-                                                            if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return Path.GetFullPath(character.Script).Equals(path2);
-                                                            }
-                                                            else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return character.Script.Equals(Path.GetFullPath(path2));
-                                                            }
-
-                                                            return character.Script.Equals(path2);
-                                                        }))
-                                                        {
-                                                            if (Path.IsPathRooted(character.Script))
-                                                            {
-                                                                pathList3.Add(character.Script);
-                                                            }
-                                                            else
-                                                            {
-                                                                pathList3.Add(Path.Combine(directory1, character.Script));
-                                                            }
-                                                        }
+                                                        character.Script = path;
 
                                                         this.characterCollection.Add(character);
                                                     }
@@ -845,7 +804,6 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList3.Clear();
                                             this.characterCollection.Clear();
                                             pathList2 = tempPathList;
 
@@ -861,13 +819,23 @@ namespace Apricot
 
                                         if (this.characterCollection.Count > 0)
                                         {
+                                            Parse(tuple3.Item1);
+
                                             break;
                                         }
                                     }
                                 }
                                 else
                                 {
+                                    StringBuilder stringBuilder = new StringBuilder(directory1);
                                     FileStream fs = null;
+
+                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                    {
+                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                    }
+
+                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                     try
                                     {
@@ -886,31 +854,7 @@ namespace Apricot
                                                 {
                                                     Character character = ParseCharacter(xmlNode);
 
-                                                    character.Script = tuple3.Item1;
-
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            pathList3.Add(Path.Combine(directory1, character.Script));
-                                                        }
-                                                    }
+                                                    character.Script = path;
 
                                                     this.characterCollection.Add(character);
                                                 }
@@ -919,7 +863,6 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList3.Clear();
                                         this.characterCollection.Clear();
                                         pathList2 = tempPathList;
 
@@ -935,6 +878,8 @@ namespace Apricot
 
                                     if (this.characterCollection.Count > 0)
                                     {
+                                        Parse(tuple3.Item1);
+
                                         break;
                                     }
                                 }
@@ -987,7 +932,15 @@ namespace Apricot
 
                                     if (tuple3 != null)
                                     {
+                                        StringBuilder stringBuilder = new StringBuilder(directory1);
                                         FileStream fs = null;
+
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        {
+                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        }
+
+                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                         try
                                         {
@@ -1006,31 +959,7 @@ namespace Apricot
                                                     {
                                                         Character character = ParseCharacter(xmlNode);
 
-                                                        character.Script = tuple3.Item1;
-
-                                                        if (!pathList3.Exists(delegate (string path2)
-                                                        {
-                                                            if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return Path.GetFullPath(character.Script).Equals(path2);
-                                                            }
-                                                            else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return character.Script.Equals(Path.GetFullPath(path2));
-                                                            }
-
-                                                            return character.Script.Equals(path2);
-                                                        }))
-                                                        {
-                                                            if (Path.IsPathRooted(character.Script))
-                                                            {
-                                                                pathList3.Add(character.Script);
-                                                            }
-                                                            else
-                                                            {
-                                                                pathList3.Add(Path.Combine(directory1, character.Script));
-                                                            }
-                                                        }
+                                                        character.Script = path;
 
                                                         this.characterCollection.Add(character);
                                                     }
@@ -1039,7 +968,6 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList3.Clear();
                                             this.characterCollection.Clear();
                                             pathList2 = tempPathList;
 
@@ -1055,13 +983,23 @@ namespace Apricot
 
                                         if (this.characterCollection.Count > 0)
                                         {
+                                            Parse(tuple3.Item1);
+
                                             break;
                                         }
                                     }
                                 }
                                 else
                                 {
+                                    StringBuilder stringBuilder = new StringBuilder(directory1);
                                     FileStream fs = null;
+
+                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                    {
+                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                    }
+
+                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                     try
                                     {
@@ -1080,31 +1018,7 @@ namespace Apricot
                                                 {
                                                     Character character = ParseCharacter(xmlNode);
 
-                                                    character.Script = tuple3.Item1;
-
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            pathList3.Add(Path.Combine(directory1, character.Script));
-                                                        }
-                                                    }
+                                                    character.Script = path;
 
                                                     this.characterCollection.Add(character);
                                                 }
@@ -1113,7 +1027,6 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList3.Clear();
                                         this.characterCollection.Clear();
                                         pathList2 = tempPathList;
 
@@ -1129,6 +1042,8 @@ namespace Apricot
 
                                     if (this.characterCollection.Count > 0)
                                     {
+                                        Parse(tuple3.Item1);
+
                                         break;
                                     }
                                 }
@@ -1137,18 +1052,45 @@ namespace Apricot
                             }
                         }
                     }
-
-                    pathList3.ForEach(delegate (string path2)
-                    {
-                        Parse(path2);
-                    });
                 }
             }
             else
             {
                 System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
-                if (config1.AppSettings.Settings["Words"] != null)
+                if (config1.AppSettings.Settings["Words"] == null)
+                {
+                    if (config2.AppSettings.Settings["Words"] != null)
+                    {
+                        if (Path.IsPathRooted(config2.AppSettings.Settings["Words"].Value))
+                        {
+                            using (FileStream fs = new FileStream(config2.AppSettings.Settings["Words"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+
+                                foreach (Word word in (Word[])serializer.Deserialize(fs))
+                                {
+                                    this.wordCollection.Add(word);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            string path = Path.Combine(directory1, config2.AppSettings.Settings["Words"].Value);
+
+                            using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            {
+                                XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+
+                                foreach (Word word in (Word[])serializer.Deserialize(fs))
+                                {
+                                    this.wordCollection.Add(word);
+                                }
+                            }
+                        }
+                    }
+                }
+                else
                 {
                     using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value) ? config1.AppSettings.Settings["Words"].Value : Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
@@ -1160,37 +1102,723 @@ namespace Apricot
                         }
                     }
                 }
-                else if (config2.AppSettings.Settings["Words"] != null)
-                {
-                    if (Path.IsPathRooted(config2.AppSettings.Settings["Words"].Value))
-                    {
-                        using (FileStream fs = new FileStream(config2.AppSettings.Settings["Words"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        {
-                            XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
 
-                            foreach (Word word in (Word[])serializer.Deserialize(fs))
+                if (config1.AppSettings.Settings["Characters"] == null)
+                {
+                    if (config2.AppSettings.Settings["Characters"] != null)
+                    {
+                        if (Path.IsPathRooted(config2.AppSettings.Settings["Characters"].Value))
+                        {
+                            List<string> pathList1 = new List<string>();
+
+                            using (FileStream fs = new FileStream(config2.AppSettings.Settings["Characters"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
-                                this.wordCollection.Add(word);
+                                XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                                foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                {
+                                    if (Path.IsPathRooted(character.Script))
+                                    {
+                                        if (!pathList1.Exists(delegate (string path2)
+                                        {
+                                            if (!Path.IsPathRooted(path2))
+                                            {
+                                                return character.Script.Equals(Path.Combine(directory2, path2));
+                                            }
+
+                                            return character.Script.Equals(path2);
+                                        }))
+                                        {
+                                            pathList1.Add(character.Script);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        string path2 = Path.Combine(directory2, character.Script);
+
+                                        if (!pathList1.Exists(delegate (string path3)
+                                        {
+                                            if (Path.IsPathRooted(path3))
+                                            {
+                                                return path2.Equals(path3);
+                                            }
+
+                                            return character.Script.Equals(path3);
+                                        }))
+                                        {
+                                            pathList1.Add(path2);
+                                        }
+                                    }
+
+                                    this.characterCollection.Add(character);
+                                }
+                            }
+
+                            pathList1.ForEach(delegate (string path2)
+                            {
+                                Parse(path2);
+                            });
+
+                            return;
+                        }
+                        else
+                        {
+                            string path1 = Path.Combine(directory1, config2.AppSettings.Settings["Characters"].Value);
+
+                            if (File.Exists(path1))
+                            {
+                                List<string> pathList1 = new List<string>();
+
+                                using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+                                    XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+                                    string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                                    foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                    {
+                                        if (Path.IsPathRooted(character.Script))
+                                        {
+                                            if (!pathList1.Exists(delegate (string path2)
+                                            {
+                                                if (!Path.IsPathRooted(path2))
+                                                {
+                                                    return character.Script.Equals(Path.Combine(directory2, path2));
+                                                }
+
+                                                return character.Script.Equals(path2);
+                                            }))
+                                            {
+                                                pathList1.Add(character.Script);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            string path2 = Path.Combine(directory2, character.Script);
+
+                                            if (!pathList1.Exists(delegate (string path3)
+                                            {
+                                                if (Path.IsPathRooted(path3))
+                                                {
+                                                    return path2.Equals(path3);
+                                                }
+
+                                                return character.Script.Equals(path3);
+                                            }))
+                                            {
+                                                pathList1.Add(path2);
+                                            }
+                                        }
+
+                                        this.characterCollection.Add(character);
+                                    }
+                                }
+
+                                pathList1.ForEach(delegate (string path2)
+                                {
+                                    Parse(path2);
+                                });
+
+                                return;
+                            }
+                            else
+                            {
+                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                                path1 = Path.Combine(directory2, config2.AppSettings.Settings["Characters"].Value);
+
+                                if (File.Exists(path1))
+                                {
+                                    List<string> pathList1 = new List<string>();
+
+                                    using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
+                                        XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+
+                                        foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                        {
+                                            if (Path.IsPathRooted(character.Script))
+                                            {
+                                                if (!pathList1.Exists(delegate (string path2)
+                                                {
+                                                    if (!Path.IsPathRooted(path2))
+                                                    {
+                                                        return character.Script.Equals(Path.Combine(directory2, path2));
+                                                    }
+
+                                                    return character.Script.Equals(path2);
+                                                }))
+                                                {
+                                                    pathList1.Add(character.Script);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                string path2 = Path.Combine(directory2, character.Script);
+
+                                                if (!pathList1.Exists(delegate (string path3)
+                                                {
+                                                    if (Path.IsPathRooted(path3))
+                                                    {
+                                                        return path2.Equals(path3);
+                                                    }
+
+                                                    return character.Script.Equals(path3);
+                                                }))
+                                                {
+                                                    pathList1.Add(path2);
+                                                }
+                                            }
+
+                                            this.characterCollection.Add(character);
+                                        }
+                                    }
+
+                                    pathList1.ForEach(delegate (string path2)
+                                    {
+                                        Parse(path2);
+                                    });
+
+                                    return;
+                                }
                             }
                         }
-                    }
-                    else
-                    {
-                        string path = Path.Combine(directory1, config2.AppSettings.Settings["Words"].Value);
 
-                        using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                        string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                        List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
+                        Random random = new Random(Environment.TickCount);
+
+                        while (pathList2.Count > 0)
                         {
-                            XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+                            int i = random.Next(pathList2.Count);
+                            Tuple<bool, string> tuple1 = pathList2[i];
 
-                            foreach (Word word in (Word[])serializer.Deserialize(fs))
+                            pathList2.RemoveAt(i);
+
+                            if (tuple1.Item1)
                             {
-                                this.wordCollection.Add(word);
+                                FileStream fs = null;
+
+                                try
+                                {
+                                    fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                    using (ZipArchive zipArchive = new ZipArchive(fs))
+                                    {
+                                        fs = null;
+
+                                        foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
+                                        {
+                                            string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
+                                            Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                            string key;
+                                            List<Tuple<ZipArchiveEntry, string>> tupleList;
+
+                                            if (match.Success)
+                                            {
+                                                key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+
+                                                if (dictionary.TryGetValue(key, out tupleList))
+                                                {
+                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                }
+                                                else
+                                                {
+                                                    tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                    dictionary.Add(key, tupleList);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+
+                                                if (dictionary.TryGetValue(key, out tupleList))
+                                                {
+                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                }
+                                                else
+                                                {
+                                                    tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                    dictionary.Add(key, tupleList);
+                                                }
+                                            }
+
+                                            return dictionary;
+                                        }).Values)
+                                        {
+                                            Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                            {
+                                                return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                            });
+
+                                            if (tuple2 == null)
+                                            {
+                                                tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                {
+                                                    return tuple3.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                });
+
+                                                if (tuple2 != null)
+                                                {
+                                                    StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                    Stream stream = null;
+                                                    
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    {
+                                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                    }
+
+                                                    string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+
+                                                    try
+                                                    {
+                                                        stream = tuple2.Item1.Open();
+
+                                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                                        xmlDocument.Load(stream);
+                                                        xmlDocument.Normalize();
+
+                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        {
+                                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                            {
+                                                                if (xmlNode.Name.Equals("character"))
+                                                                {
+                                                                    Character character = ParseCharacter(xmlNode);
+
+                                                                    character.Script = path;
+
+                                                                    this.characterCollection.Add(character);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        this.characterCollection.Clear();
+
+                                                        break;
+                                                    }
+                                                    finally
+                                                    {
+                                                        if (stream != null)
+                                                        {
+                                                            stream.Close();
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                Stream stream = null;
+
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                {
+                                                    stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                }
+
+                                                string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+
+                                                try
+                                                {
+                                                    stream = tuple2.Item1.Open();
+
+                                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                                    xmlDocument.Load(stream);
+                                                    xmlDocument.Normalize();
+
+                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                    {
+                                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                        {
+                                                            if (xmlNode.Name.Equals("character"))
+                                                            {
+                                                                Character character = ParseCharacter(xmlNode);
+
+                                                                character.Script = path;
+
+                                                                this.characterCollection.Add(character);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                catch
+                                                {
+                                                    this.characterCollection.Clear();
+
+                                                    break;
+                                                }
+                                                finally
+                                                {
+                                                    if (stream != null)
+                                                    {
+                                                        stream.Close();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                finally
+                                {
+                                    if (fs != null)
+                                    {
+                                        fs.Close();
+                                    }
+                                }
+
+                                if (this.characterCollection.Count > 0)
+                                {
+                                    Parse(tuple1.Item2);
+
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
+                                Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
+                                List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
+
+                                if (match1.Success)
+                                {
+                                    tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
+
+                                    while (pathList2.Count > 0)
+                                    {
+                                        int j = random.Next(pathList2.Count);
+                                        Tuple<bool, string> tuple2 = pathList2[j];
+                                        string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
+                                        Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                        pathList2.RemoveAt(j);
+
+                                        if (match2.Success)
+                                        {
+                                            if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
+                                            {
+                                                tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+
+                                                continue;
+                                            }
+                                        }
+                                        else if (match1.Groups[1].Value.Equals(filename2))
+                                        {
+                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                            continue;
+                                        }
+
+                                        tempPathList.Add(tuple2);
+                                    }
+
+                                    Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                    {
+                                        return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                    });
+
+                                    if (tuple3 == null)
+                                    {
+                                        tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                        {
+                                            return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                        });
+
+                                        if (tuple3 != null)
+                                        {
+                                            StringBuilder stringBuilder = new StringBuilder(directory3);
+                                            FileStream fs = null;
+
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            {
+                                                stringBuilder.Append(Path.DirectorySeparatorChar);
+                                            }
+
+                                            string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                            try
+                                            {
+                                                fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                xmlDocument.Load(fs);
+                                                xmlDocument.Normalize();
+
+                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                {
+                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                    {
+                                                        if (xmlNode.Name.Equals("character"))
+                                                        {
+                                                            Character character = ParseCharacter(xmlNode);
+
+                                                            character.Script = path;
+
+                                                            this.characterCollection.Add(character);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                this.characterCollection.Clear();
+                                                pathList2 = tempPathList;
+
+                                                continue;
+                                            }
+                                            finally
+                                            {
+                                                if (fs != null)
+                                                {
+                                                    fs.Close();
+                                                }
+                                            }
+
+                                            if (this.characterCollection.Count > 0)
+                                            {
+                                                Parse(tuple3.Item1);
+
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        StringBuilder stringBuilder = new StringBuilder(directory3);
+                                        FileStream fs = null;
+
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        {
+                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        }
+
+                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                        try
+                                        {
+                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                            xmlDocument.Load(fs);
+                                            xmlDocument.Normalize();
+
+                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                            {
+                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                {
+                                                    if (xmlNode.Name.Equals("character"))
+                                                    {
+                                                        Character character = ParseCharacter(xmlNode);
+
+                                                        character.Script = path;
+
+                                                        this.characterCollection.Add(character);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            this.characterCollection.Clear();
+                                            pathList2 = tempPathList;
+
+                                            continue;
+                                        }
+                                        finally
+                                        {
+                                            if (fs != null)
+                                            {
+                                                fs.Close();
+                                            }
+                                        }
+
+                                        if (this.characterCollection.Count > 0)
+                                        {
+                                            Parse(tuple3.Item1);
+
+                                            break;
+                                        }
+                                    }
+
+                                    pathList2 = tempPathList;
+                                }
+                                else
+                                {
+                                    tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                    while (pathList2.Count > 0)
+                                    {
+                                        int j = random.Next(pathList2.Count);
+                                        Tuple<bool, string> tuple2 = pathList2[j];
+                                        string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
+                                        Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                        pathList2.RemoveAt(j);
+
+                                        if (match2.Success)
+                                        {
+                                            if (filename1.Equals(match2.Groups[1].Value))
+                                            {
+                                                tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+
+                                                continue;
+                                            }
+                                        }
+                                        else if (filename1.Equals(filename2))
+                                        {
+                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                            continue;
+                                        }
+
+                                        tempPathList.Add(tuple2);
+                                    }
+
+                                    Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                    {
+                                        return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                    });
+
+                                    if (tuple3 == null)
+                                    {
+                                        tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                        {
+                                            return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                        });
+
+                                        if (tuple3 != null)
+                                        {
+                                            StringBuilder stringBuilder = new StringBuilder(directory3);
+                                            FileStream fs = null;
+
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            {
+                                                stringBuilder.Append(Path.DirectorySeparatorChar);
+                                            }
+
+                                            string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                            try
+                                            {
+                                                fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                xmlDocument.Load(fs);
+                                                xmlDocument.Normalize();
+
+                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                {
+                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                    {
+                                                        if (xmlNode.Name.Equals("character"))
+                                                        {
+                                                            Character character = ParseCharacter(xmlNode);
+
+                                                            character.Script = path;
+
+                                                            this.characterCollection.Add(character);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                this.characterCollection.Clear();
+                                                pathList2 = tempPathList;
+
+                                                continue;
+                                            }
+                                            finally
+                                            {
+                                                if (fs != null)
+                                                {
+                                                    fs.Close();
+                                                }
+                                            }
+
+                                            if (this.characterCollection.Count > 0)
+                                            {
+                                                Parse(tuple3.Item1);
+
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        StringBuilder stringBuilder = new StringBuilder(directory3);
+                                        FileStream fs = null;
+
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        {
+                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        }
+
+                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                        try
+                                        {
+                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                            xmlDocument.Load(fs);
+                                            xmlDocument.Normalize();
+
+                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                            {
+                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                {
+                                                    if (xmlNode.Name.Equals("character"))
+                                                    {
+                                                        Character character = ParseCharacter(xmlNode);
+
+                                                        character.Script = path;
+
+                                                        this.characterCollection.Add(character);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            this.characterCollection.Clear();
+                                            pathList2 = tempPathList;
+
+                                            continue;
+                                        }
+                                        finally
+                                        {
+                                            if (fs != null)
+                                            {
+                                                fs.Close();
+                                            }
+                                        }
+
+                                        if (this.characterCollection.Count > 0)
+                                        {
+                                            Parse(tuple3.Item1);
+
+                                            break;
+                                        }
+                                    }
+
+                                    pathList2 = tempPathList;
+                                }
                             }
                         }
                     }
                 }
-
-                if (config1.AppSettings.Settings["Characters"] != null)
+                else
                 {
                     if (Path.IsPathRooted(config1.AppSettings.Settings["Characters"].Value))
                     {
@@ -1203,36 +1831,36 @@ namespace Apricot
 
                             foreach (Character character in (Character[])serializer.Deserialize(fs))
                             {
-                                if (!pathList1.Exists(delegate (string path2)
+                                if (Path.IsPathRooted(character.Script))
                                 {
-                                    if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
+                                    if (!pathList1.Exists(delegate (string path2)
                                     {
-                                        return Path.GetFullPath(character.Script).Equals(path2);
-                                    }
-                                    else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                    {
-                                        return character.Script.Equals(Path.GetFullPath(path2));
-                                    }
+                                        if (!Path.IsPathRooted(path2))
+                                        {
+                                            return character.Script.Equals(Path.Combine(directory2, path2));
+                                        }
 
-                                    return character.Script.Equals(path2);
-                                }))
-                                {
-                                    if (Path.IsPathRooted(character.Script))
+                                        return character.Script.Equals(path2);
+                                    }))
                                     {
                                         pathList1.Add(character.Script);
                                     }
-                                    else
-                                    {
-                                        string p = Path.Combine(directory1, character.Script);
+                                }
+                                else
+                                {
+                                    string path2 = Path.Combine(directory2, character.Script);
 
-                                        if (File.Exists(p))
+                                    if (!pathList1.Exists(delegate (string path3)
+                                    {
+                                        if (Path.IsPathRooted(path3))
                                         {
-                                            pathList1.Add(p);
+                                            return path2.Equals(path3);
                                         }
-                                        else
-                                        {
-                                            pathList1.Add(Path.Combine(directory2, character.Script));
-                                        }
+
+                                        return character.Script.Equals(path3);
+                                    }))
+                                    {
+                                        pathList1.Add(path2);
                                     }
                                 }
 
@@ -1262,36 +1890,36 @@ namespace Apricot
 
                                 foreach (Character character in (Character[])serializer.Deserialize(fs))
                                 {
-                                    if (!pathList1.Exists(delegate (string path2)
+                                    if (Path.IsPathRooted(character.Script))
                                     {
-                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
+                                        if (!pathList1.Exists(delegate (string path2)
                                         {
-                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                        }
-                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                        {
-                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                        }
+                                            if (!Path.IsPathRooted(path2))
+                                            {
+                                                return character.Script.Equals(Path.Combine(directory2, path2));
+                                            }
 
-                                        return character.Script.Equals(path2);
-                                    }))
-                                    {
-                                        if (Path.IsPathRooted(character.Script))
+                                            return character.Script.Equals(path2);
+                                        }))
                                         {
                                             pathList1.Add(character.Script);
                                         }
-                                        else
-                                        {
-                                            string p = Path.Combine(directory1, character.Script);
+                                    }
+                                    else
+                                    {
+                                        string path2 = Path.Combine(directory2, character.Script);
 
-                                            if (File.Exists(p))
+                                        if (!pathList1.Exists(delegate (string path3)
+                                        {
+                                            if (Path.IsPathRooted(path3))
                                             {
-                                                pathList1.Add(p);
+                                                return path2.Equals(path3);
                                             }
-                                            else
-                                            {
-                                                pathList1.Add(Path.Combine(directory2, character.Script));
-                                            }
+
+                                            return character.Script.Equals(path3);
+                                        }))
+                                        {
+                                            pathList1.Add(path2);
                                         }
                                     }
 
@@ -1322,36 +1950,36 @@ namespace Apricot
 
                                     foreach (Character character in (Character[])serializer.Deserialize(fs))
                                     {
-                                        if (!pathList1.Exists(delegate (string path2)
+                                        if (Path.IsPathRooted(character.Script))
                                         {
-                                            if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
+                                            if (!pathList1.Exists(delegate (string path2)
                                             {
-                                                return Path.GetFullPath(character.Script).Equals(path2);
-                                            }
-                                            else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                            {
-                                                return character.Script.Equals(Path.GetFullPath(path2));
-                                            }
+                                                if (!Path.IsPathRooted(path2))
+                                                {
+                                                    return character.Script.Equals(Path.Combine(directory2, path2));
+                                                }
 
-                                            return character.Script.Equals(path2);
-                                        }))
-                                        {
-                                            if (Path.IsPathRooted(character.Script))
+                                                return character.Script.Equals(path2);
+                                            }))
                                             {
                                                 pathList1.Add(character.Script);
                                             }
-                                            else
-                                            {
-                                                string p = Path.Combine(directory1, character.Script);
+                                        }
+                                        else
+                                        {
+                                            string path2 = Path.Combine(directory2, character.Script);
 
-                                                if (File.Exists(p))
+                                            if (!pathList1.Exists(delegate (string path3)
+                                            {
+                                                if (Path.IsPathRooted(path3))
                                                 {
-                                                    pathList1.Add(p);
+                                                    return path2.Equals(path3);
                                                 }
-                                                else
-                                                {
-                                                    pathList1.Add(Path.Combine(directory2, character.Script));
-                                                }
+
+                                                return character.Script.Equals(path3);
+                                            }))
+                                            {
+                                                pathList1.Add(path2);
                                             }
                                         }
 
@@ -1372,8 +2000,7 @@ namespace Apricot
                     string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
                     List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
                     Random random = new Random(Environment.TickCount);
-                    List<string> pathList3 = new List<string>();
-
+                    
                     while (pathList2.Count > 0)
                     {
                         int i = random.Next(pathList2.Count);
@@ -1448,8 +2075,15 @@ namespace Apricot
 
                                             if (tuple2 != null)
                                             {
+                                                StringBuilder stringBuilder = new StringBuilder(directory3);
                                                 Stream stream = null;
-                                                List<Character> characterList = new List<Character>();
+
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                {
+                                                    stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                }
+
+                                                string path = tuple1.Item2.Remove(0, stringBuilder.Length);
 
                                                 try
                                                 {
@@ -1468,9 +2102,9 @@ namespace Apricot
                                                             {
                                                                 Character character = ParseCharacter(xmlNode);
 
-                                                                character.Script = tuple1.Item2;
+                                                                character.Script = path;
 
-                                                                characterList.Add(character);
+                                                                this.characterCollection.Add(character);
                                                             }
                                                         }
                                                     }
@@ -1488,50 +2122,19 @@ namespace Apricot
                                                         stream.Close();
                                                     }
                                                 }
-
-                                                characterList.ForEach(delegate (Character character)
-                                                {
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            string p = Path.Combine(directory1, character.Script);
-
-                                                            if (File.Exists(p))
-                                                            {
-                                                                pathList3.Add(p);
-                                                            }
-                                                            else
-                                                            {
-                                                                pathList3.Add(Path.Combine(directory3, character.Script));
-                                                            }
-                                                        }
-                                                    }
-
-                                                    this.characterCollection.Add(character);
-                                                });
                                             }
                                         }
                                         else
                                         {
+                                            StringBuilder stringBuilder = new StringBuilder(directory3);
                                             Stream stream = null;
-                                            List<Character> characterList = new List<Character>();
+
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            {
+                                                stringBuilder.Append(Path.DirectorySeparatorChar);
+                                            }
+
+                                            string path = tuple1.Item2.Remove(0, stringBuilder.Length);
 
                                             try
                                             {
@@ -1550,9 +2153,9 @@ namespace Apricot
                                                         {
                                                             Character character = ParseCharacter(xmlNode);
 
-                                                            character.Script = tuple1.Item2;
+                                                            character.Script = path;
 
-                                                            characterList.Add(character);
+                                                            this.characterCollection.Add(character);
                                                         }
                                                     }
                                                 }
@@ -1570,44 +2173,6 @@ namespace Apricot
                                                     stream.Close();
                                                 }
                                             }
-
-                                            characterList.ForEach(delegate (Character character)
-                                            {
-                                                if (!pathList3.Exists(delegate (string path2)
-                                                {
-                                                    if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                    {
-                                                        return Path.GetFullPath(character.Script).Equals(path2);
-                                                    }
-                                                    else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                    {
-                                                        return character.Script.Equals(Path.GetFullPath(path2));
-                                                    }
-
-                                                    return character.Script.Equals(path2);
-                                                }))
-                                                {
-                                                    if (Path.IsPathRooted(character.Script))
-                                                    {
-                                                        pathList3.Add(character.Script);
-                                                    }
-                                                    else
-                                                    {
-                                                        string p = Path.Combine(directory1, character.Script);
-
-                                                        if (File.Exists(p))
-                                                        {
-                                                            pathList3.Add(p);
-                                                        }
-                                                        else
-                                                        {
-                                                            pathList3.Add(Path.Combine(directory3, character.Script));
-                                                        }
-                                                    }
-                                                }
-
-                                                this.characterCollection.Add(character);
-                                            });
                                         }
                                     }
                                 }
@@ -1622,6 +2187,8 @@ namespace Apricot
 
                             if (this.characterCollection.Count > 0)
                             {
+                                Parse(tuple1.Item2);
+
                                 break;
                             }
                         }
@@ -1678,7 +2245,15 @@ namespace Apricot
 
                                     if (tuple3 != null)
                                     {
+                                        StringBuilder stringBuilder = new StringBuilder(directory3);
                                         FileStream fs = null;
+
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        {
+                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        }
+
+                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                         try
                                         {
@@ -1697,40 +2272,7 @@ namespace Apricot
                                                     {
                                                         Character character = ParseCharacter(xmlNode);
 
-                                                        character.Script = tuple3.Item1;
-
-                                                        if (!pathList3.Exists(delegate (string path2)
-                                                        {
-                                                            if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return Path.GetFullPath(character.Script).Equals(path2);
-                                                            }
-                                                            else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return character.Script.Equals(Path.GetFullPath(path2));
-                                                            }
-
-                                                            return character.Script.Equals(path2);
-                                                        }))
-                                                        {
-                                                            if (Path.IsPathRooted(character.Script))
-                                                            {
-                                                                pathList3.Add(character.Script);
-                                                            }
-                                                            else
-                                                            {
-                                                                string p = Path.Combine(directory1, character.Script);
-
-                                                                if (File.Exists(p))
-                                                                {
-                                                                    pathList3.Add(p);
-                                                                }
-                                                                else
-                                                                {
-                                                                    pathList3.Add(Path.Combine(directory3, character.Script));
-                                                                }
-                                                            }
-                                                        }
+                                                        character.Script = path;
 
                                                         this.characterCollection.Add(character);
                                                     }
@@ -1739,7 +2281,6 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList3.Clear();
                                             this.characterCollection.Clear();
                                             pathList2 = tempPathList;
 
@@ -1755,13 +2296,23 @@ namespace Apricot
 
                                         if (this.characterCollection.Count > 0)
                                         {
+                                            Parse(tuple3.Item1);
+
                                             break;
                                         }
                                     }
                                 }
                                 else
                                 {
+                                    StringBuilder stringBuilder = new StringBuilder(directory3);
                                     FileStream fs = null;
+
+                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                    {
+                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                    }
+
+                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                     try
                                     {
@@ -1780,40 +2331,7 @@ namespace Apricot
                                                 {
                                                     Character character = ParseCharacter(xmlNode);
 
-                                                    character.Script = tuple3.Item1;
-
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            string p = Path.Combine(directory1, character.Script);
-
-                                                            if (File.Exists(p))
-                                                            {
-                                                                pathList3.Add(p);
-                                                            }
-                                                            else
-                                                            {
-                                                                pathList3.Add(Path.Combine(directory3, character.Script));
-                                                            }
-                                                        }
-                                                    }
+                                                    character.Script = path;
 
                                                     this.characterCollection.Add(character);
                                                 }
@@ -1822,7 +2340,6 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList3.Clear();
                                         this.characterCollection.Clear();
                                         pathList2 = tempPathList;
 
@@ -1838,6 +2355,8 @@ namespace Apricot
 
                                     if (this.characterCollection.Count > 0)
                                     {
+                                        Parse(tuple3.Item1);
+
                                         break;
                                     }
                                 }
@@ -1890,7 +2409,15 @@ namespace Apricot
 
                                     if (tuple3 != null)
                                     {
+                                        StringBuilder stringBuilder = new StringBuilder(directory3);
                                         FileStream fs = null;
+
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        {
+                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        }
+
+                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                         try
                                         {
@@ -1909,40 +2436,7 @@ namespace Apricot
                                                     {
                                                         Character character = ParseCharacter(xmlNode);
 
-                                                        character.Script = tuple3.Item1;
-
-                                                        if (!pathList3.Exists(delegate (string path2)
-                                                        {
-                                                            if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return Path.GetFullPath(character.Script).Equals(path2);
-                                                            }
-                                                            else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return character.Script.Equals(Path.GetFullPath(path2));
-                                                            }
-
-                                                            return character.Script.Equals(path2);
-                                                        }))
-                                                        {
-                                                            if (Path.IsPathRooted(character.Script))
-                                                            {
-                                                                pathList3.Add(character.Script);
-                                                            }
-                                                            else
-                                                            {
-                                                                string p = Path.Combine(directory1, character.Script);
-
-                                                                if (File.Exists(p))
-                                                                {
-                                                                    pathList3.Add(p);
-                                                                }
-                                                                else
-                                                                {
-                                                                    pathList3.Add(Path.Combine(directory3, character.Script));
-                                                                }
-                                                            }
-                                                        }
+                                                        character.Script = path;
 
                                                         this.characterCollection.Add(character);
                                                     }
@@ -1951,7 +2445,6 @@ namespace Apricot
                                         }
                                         catch
                                         {
-                                            pathList3.Clear();
                                             this.characterCollection.Clear();
                                             pathList2 = tempPathList;
 
@@ -1967,13 +2460,23 @@ namespace Apricot
 
                                         if (this.characterCollection.Count > 0)
                                         {
+                                            Parse(tuple3.Item1);
+
                                             break;
                                         }
                                     }
                                 }
                                 else
                                 {
+                                    StringBuilder stringBuilder = new StringBuilder(directory3);
                                     FileStream fs = null;
+
+                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                    {
+                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                    }
+
+                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                     try
                                     {
@@ -1992,40 +2495,7 @@ namespace Apricot
                                                 {
                                                     Character character = ParseCharacter(xmlNode);
 
-                                                    character.Script = tuple3.Item1;
-
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            string p = Path.Combine(directory1, character.Script);
-
-                                                            if (File.Exists(p))
-                                                            {
-                                                                pathList3.Add(p);
-                                                            }
-                                                            else
-                                                            {
-                                                                pathList3.Add(Path.Combine(directory3, character.Script));
-                                                            }
-                                                        }
-                                                    }
+                                                    character.Script = path;
 
                                                     this.characterCollection.Add(character);
                                                 }
@@ -2034,7 +2504,6 @@ namespace Apricot
                                     }
                                     catch
                                     {
-                                        pathList3.Clear();
                                         this.characterCollection.Clear();
                                         pathList2 = tempPathList;
 
@@ -2050,6 +2519,8 @@ namespace Apricot
 
                                     if (this.characterCollection.Count > 0)
                                     {
+                                        Parse(tuple3.Item1);
+
                                         break;
                                     }
                                 }
@@ -2058,885 +2529,6 @@ namespace Apricot
                             }
                         }
                     }
-
-                    pathList3.ForEach(delegate (string path2)
-                    {
-                        Parse(path2);
-                    });
-                }
-                else if (config2.AppSettings.Settings["Characters"] != null)
-                {
-                    if (Path.IsPathRooted(config2.AppSettings.Settings["Characters"].Value))
-                    {
-                        List<string> pathList1 = new List<string>();
-
-                        using (FileStream fs = new FileStream(config2.AppSettings.Settings["Characters"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        {
-                            XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
-                            string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-                            foreach (Character character in (Character[])serializer.Deserialize(fs))
-                            {
-                                if (!pathList1.Exists(delegate (string path2)
-                                {
-                                    if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                    {
-                                        return Path.GetFullPath(character.Script).Equals(path2);
-                                    }
-                                    else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                    {
-                                        return character.Script.Equals(Path.GetFullPath(path2));
-                                    }
-
-                                    return character.Script.Equals(path2);
-                                }))
-                                {
-                                    if (Path.IsPathRooted(character.Script))
-                                    {
-                                        pathList1.Add(character.Script);
-                                    }
-                                    else
-                                    {
-                                        string p = Path.Combine(directory1, character.Script);
-
-                                        if (File.Exists(p))
-                                        {
-                                            pathList1.Add(p);
-                                        }
-                                        else
-                                        {
-                                            pathList1.Add(Path.Combine(directory2, character.Script));
-                                        }
-                                    }
-                                }
-
-                                this.characterCollection.Add(character);
-                            }
-                        }
-
-                        pathList1.ForEach(delegate (string path2)
-                        {
-                            Parse(path2);
-                        });
-
-                        return;
-                    }
-                    else
-                    {
-                        string path1 = Path.Combine(directory1, config2.AppSettings.Settings["Characters"].Value);
-
-                        if (File.Exists(path1))
-                        {
-                            List<string> pathList1 = new List<string>();
-
-                            using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                            {
-                                XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
-                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-                                foreach (Character character in (Character[])serializer.Deserialize(fs))
-                                {
-                                    if (!pathList1.Exists(delegate (string path2)
-                                    {
-                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                        {
-                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                        }
-                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                        {
-                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                        }
-
-                                        return character.Script.Equals(path2);
-                                    }))
-                                    {
-                                        if (Path.IsPathRooted(character.Script))
-                                        {
-                                            pathList1.Add(character.Script);
-                                        }
-                                        else
-                                        {
-                                            string p = Path.Combine(directory1, character.Script);
-
-                                            if (File.Exists(p))
-                                            {
-                                                pathList1.Add(p);
-                                            }
-                                            else
-                                            {
-                                                pathList1.Add(Path.Combine(directory2, character.Script));
-                                            }
-                                        }
-                                    }
-
-                                    this.characterCollection.Add(character);
-                                }
-                            }
-
-                            pathList1.ForEach(delegate (string path2)
-                            {
-                                Parse(path2);
-                            });
-
-                            return;
-                        }
-                        else
-                        {
-                            string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-                            path1 = Path.Combine(directory2, config2.AppSettings.Settings["Characters"].Value);
-
-                            if (File.Exists(path1))
-                            {
-                                List<string> pathList1 = new List<string>();
-
-                                using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                {
-                                    XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
-
-                                    foreach (Character character in (Character[])serializer.Deserialize(fs))
-                                    {
-                                        if (!pathList1.Exists(delegate (string path2)
-                                        {
-                                            if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                            {
-                                                return Path.GetFullPath(character.Script).Equals(path2);
-                                            }
-                                            else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                            {
-                                                return character.Script.Equals(Path.GetFullPath(path2));
-                                            }
-
-                                            return character.Script.Equals(path2);
-                                        }))
-                                        {
-                                            if (Path.IsPathRooted(character.Script))
-                                            {
-                                                pathList1.Add(character.Script);
-                                            }
-                                            else
-                                            {
-                                                string p = Path.Combine(directory1, character.Script);
-
-                                                if (File.Exists(p))
-                                                {
-                                                    pathList1.Add(p);
-                                                }
-                                                else
-                                                {
-                                                    pathList1.Add(Path.Combine(directory2, character.Script));
-                                                }
-                                            }
-                                        }
-
-                                        this.characterCollection.Add(character);
-                                    }
-                                }
-
-                                pathList1.ForEach(delegate (string path2)
-                                {
-                                    Parse(path2);
-                                });
-
-                                return;
-                            }
-                        }
-                    }
-
-                    string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                    List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
-                    Random random = new Random(Environment.TickCount);
-                    List<string> pathList3 = new List<string>();
-
-                    while (pathList2.Count > 0)
-                    {
-                        int i = random.Next(pathList3.Count);
-                        Tuple<bool, string> tuple1 = pathList2[i];
-
-                        pathList3.RemoveAt(i);
-
-                        if (tuple1.Item1)
-                        {
-                            FileStream fs = null;
-
-                            try
-                            {
-                                fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                using (ZipArchive zipArchive = new ZipArchive(fs))
-                                {
-                                    fs = null;
-
-                                    foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
-                                    {
-                                        string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
-                                        Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-                                        string key;
-                                        List<Tuple<ZipArchiveEntry, string>> tupleList;
-
-                                        if (match.Success)
-                                        {
-                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
-
-                                            if (dictionary.TryGetValue(key, out tupleList))
-                                            {
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                            }
-                                            else
-                                            {
-                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                                dictionary.Add(key, tupleList);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
-
-                                            if (dictionary.TryGetValue(key, out tupleList))
-                                            {
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-                                            }
-                                            else
-                                            {
-                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-                                                dictionary.Add(key, tupleList);
-                                            }
-                                        }
-
-                                        return dictionary;
-                                    }).Values)
-                                    {
-                                        Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
-                                        {
-                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                        });
-
-                                        if (tuple2 == null)
-                                        {
-                                            tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
-                                            {
-                                                return tuple3.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                            });
-
-                                            if (tuple2 != null)
-                                            {
-                                                Stream stream = null;
-                                                List<Character> characterList = new List<Character>();
-
-                                                try
-                                                {
-                                                    stream = tuple2.Item1.Open();
-
-                                                    XmlDocument xmlDocument = new XmlDocument();
-
-                                                    xmlDocument.Load(stream);
-                                                    xmlDocument.Normalize();
-
-                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                                    {
-                                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                        {
-                                                            if (xmlNode.Name.Equals("character"))
-                                                            {
-                                                                Character character = ParseCharacter(xmlNode);
-
-                                                                character.Script = tuple1.Item2;
-
-                                                                characterList.Add(character);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                catch
-                                                {
-                                                    this.characterCollection.Clear();
-
-                                                    break;
-                                                }
-                                                finally
-                                                {
-                                                    if (stream != null)
-                                                    {
-                                                        stream.Close();
-                                                    }
-                                                }
-
-                                                characterList.ForEach(delegate (Character character)
-                                                {
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            string p = Path.Combine(directory1, character.Script);
-
-                                                            if (File.Exists(p))
-                                                            {
-                                                                pathList3.Add(p);
-                                                            }
-                                                            else
-                                                            {
-                                                                pathList3.Add(Path.Combine(directory3, character.Script));
-                                                            }
-                                                        }
-                                                    }
-
-                                                    this.characterCollection.Add(character);
-                                                });
-                                            }
-                                        }
-                                        else
-                                        {
-                                            Stream stream = null;
-                                            List<Character> characterList = new List<Character>();
-
-                                            try
-                                            {
-                                                stream = tuple2.Item1.Open();
-
-                                                XmlDocument xmlDocument = new XmlDocument();
-
-                                                xmlDocument.Load(stream);
-                                                xmlDocument.Normalize();
-
-                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                                {
-                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                    {
-                                                        if (xmlNode.Name.Equals("character"))
-                                                        {
-                                                            Character character = ParseCharacter(xmlNode);
-
-                                                            character.Script = tuple1.Item2;
-
-                                                            characterList.Add(character);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            catch
-                                            {
-                                                this.characterCollection.Clear();
-
-                                                break;
-                                            }
-                                            finally
-                                            {
-                                                if (stream != null)
-                                                {
-                                                    stream.Close();
-                                                }
-                                            }
-
-                                            characterList.ForEach(delegate (Character character)
-                                            {
-                                                if (!pathList3.Exists(delegate (string path2)
-                                                {
-                                                    if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                    {
-                                                        return Path.GetFullPath(character.Script).Equals(path2);
-                                                    }
-                                                    else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                    {
-                                                        return character.Script.Equals(Path.GetFullPath(path2));
-                                                    }
-
-                                                    return character.Script.Equals(path2);
-                                                }))
-                                                {
-                                                    if (Path.IsPathRooted(character.Script))
-                                                    {
-                                                        pathList3.Add(character.Script);
-                                                    }
-                                                    else
-                                                    {
-                                                        string p = Path.Combine(directory1, character.Script);
-
-                                                        if (File.Exists(p))
-                                                        {
-                                                            pathList3.Add(p);
-                                                        }
-                                                        else
-                                                        {
-                                                            pathList3.Add(Path.Combine(directory3, character.Script));
-                                                        }
-                                                    }
-                                                }
-
-                                                this.characterCollection.Add(character);
-                                            });
-                                        }
-                                    }
-                                }
-                            }
-                            finally
-                            {
-                                if (fs != null)
-                                {
-                                    fs.Close();
-                                }
-                            }
-
-                            if (this.characterCollection.Count > 0)
-                            {
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
-                            Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-                            List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
-                            List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
-
-                            if (match1.Success)
-                            {
-                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
-
-                                while (pathList2.Count > 0)
-                                {
-                                    int j = random.Next(pathList2.Count);
-                                    Tuple<bool, string> tuple2 = pathList2[j];
-                                    string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
-                                    Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-
-                                    pathList2.RemoveAt(j);
-
-                                    if (match2.Success)
-                                    {
-                                        if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
-                                        {
-                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
-
-                                            continue;
-                                        }
-                                    }
-                                    else if (match1.Groups[1].Value.Equals(filename2))
-                                    {
-                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                        continue;
-                                    }
-
-                                    tempPathList.Add(tuple2);
-                                }
-
-                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                {
-                                    return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                });
-
-                                if (tuple3 == null)
-                                {
-                                    tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                    {
-                                        return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                    });
-
-                                    if (tuple3 != null)
-                                    {
-                                        FileStream fs = null;
-
-                                        try
-                                        {
-                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                            {
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                {
-                                                    if (xmlNode.Name.Equals("character"))
-                                                    {
-                                                        Character character = ParseCharacter(xmlNode);
-
-                                                        character.Script = tuple3.Item1;
-
-                                                        if (!pathList3.Exists(delegate (string path2)
-                                                        {
-                                                            if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return Path.GetFullPath(character.Script).Equals(path2);
-                                                            }
-                                                            else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return character.Script.Equals(Path.GetFullPath(path2));
-                                                            }
-
-                                                            return character.Script.Equals(path2);
-                                                        }))
-                                                        {
-                                                            if (Path.IsPathRooted(character.Script))
-                                                            {
-                                                                pathList3.Add(character.Script);
-                                                            }
-                                                            else
-                                                            {
-                                                                string p = Path.Combine(directory1, character.Script);
-
-                                                                if (File.Exists(p))
-                                                                {
-                                                                    pathList3.Add(p);
-                                                                }
-                                                                else
-                                                                {
-                                                                    pathList3.Add(Path.Combine(directory3, character.Script));
-                                                                }
-                                                            }
-                                                        }
-
-                                                        this.characterCollection.Add(character);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        catch
-                                        {
-                                            pathList3.Clear();
-                                            this.characterCollection.Clear();
-                                            pathList2 = tempPathList;
-
-                                            continue;
-                                        }
-                                        finally
-                                        {
-                                            if (fs != null)
-                                            {
-                                                fs.Close();
-                                            }
-                                        }
-
-                                        if (this.characterCollection.Count > 0)
-                                        {
-                                            break;
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    FileStream fs = null;
-
-                                    try
-                                    {
-                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                        XmlDocument xmlDocument = new XmlDocument();
-
-                                        xmlDocument.Load(fs);
-                                        xmlDocument.Normalize();
-
-                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                        {
-                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                            {
-                                                if (xmlNode.Name.Equals("character"))
-                                                {
-                                                    Character character = ParseCharacter(xmlNode);
-
-                                                    character.Script = tuple3.Item1;
-
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            string p = Path.Combine(directory1, character.Script);
-
-                                                            if (File.Exists(p))
-                                                            {
-                                                                pathList3.Add(p);
-                                                            }
-                                                            else
-                                                            {
-                                                                pathList3.Add(Path.Combine(directory3, character.Script));
-                                                            }
-                                                        }
-                                                    }
-
-                                                    this.characterCollection.Add(character);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    catch
-                                    {
-                                        pathList3.Clear();
-                                        this.characterCollection.Clear();
-                                        pathList2 = tempPathList;
-
-                                        continue;
-                                    }
-                                    finally
-                                    {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-                                    }
-
-                                    if (this.characterCollection.Count > 0)
-                                    {
-                                        break;
-                                    }
-                                }
-
-                                pathList2 = tempPathList;
-                            }
-                            else
-                            {
-                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                while (pathList2.Count > 0)
-                                {
-                                    int j = random.Next(pathList2.Count);
-                                    Tuple<bool, string> tuple2 = pathList2[j];
-                                    string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
-                                    Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-
-                                    pathList2.RemoveAt(j);
-
-                                    if (match2.Success)
-                                    {
-                                        if (filename1.Equals(match2.Groups[1].Value))
-                                        {
-                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
-
-                                            continue;
-                                        }
-                                    }
-                                    else if (filename1.Equals(filename2))
-                                    {
-                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                        continue;
-                                    }
-
-                                    tempPathList.Add(tuple2);
-                                }
-
-                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                {
-                                    return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                });
-
-                                if (tuple3 == null)
-                                {
-                                    tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                    {
-                                        return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                    });
-
-                                    if (tuple3 != null)
-                                    {
-                                        FileStream fs = null;
-
-                                        try
-                                        {
-                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                            {
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                {
-                                                    if (xmlNode.Name.Equals("character"))
-                                                    {
-                                                        Character character = ParseCharacter(xmlNode);
-
-                                                        character.Script = tuple3.Item1;
-
-                                                        if (!pathList3.Exists(delegate (string path2)
-                                                        {
-                                                            if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return Path.GetFullPath(character.Script).Equals(path2);
-                                                            }
-                                                            else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                            {
-                                                                return character.Script.Equals(Path.GetFullPath(path2));
-                                                            }
-
-                                                            return character.Script.Equals(path2);
-                                                        }))
-                                                        {
-                                                            if (Path.IsPathRooted(character.Script))
-                                                            {
-                                                                pathList3.Add(character.Script);
-                                                            }
-                                                            else
-                                                            {
-                                                                string p = Path.Combine(directory1, character.Script);
-
-                                                                if (File.Exists(p))
-                                                                {
-                                                                    pathList3.Add(p);
-                                                                }
-                                                                else
-                                                                {
-                                                                    pathList3.Add(Path.Combine(directory3, character.Script));
-                                                                }
-                                                            }
-                                                        }
-
-                                                        this.characterCollection.Add(character);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        catch
-                                        {
-                                            pathList3.Clear();
-                                            this.characterCollection.Clear();
-                                            pathList2 = tempPathList;
-
-                                            continue;
-                                        }
-                                        finally
-                                        {
-                                            if (fs != null)
-                                            {
-                                                fs.Close();
-                                            }
-                                        }
-
-                                        if (this.characterCollection.Count > 0)
-                                        {
-                                            break;
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    FileStream fs = null;
-
-                                    try
-                                    {
-                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                        XmlDocument xmlDocument = new XmlDocument();
-
-                                        xmlDocument.Load(fs);
-                                        xmlDocument.Normalize();
-
-                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                        {
-                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                            {
-                                                if (xmlNode.Name.Equals("character"))
-                                                {
-                                                    Character character = ParseCharacter(xmlNode);
-
-                                                    character.Script = tuple3.Item1;
-
-                                                    if (!pathList3.Exists(delegate (string path2)
-                                                    {
-                                                        if (Path.IsPathRooted(path2) && !Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return Path.GetFullPath(character.Script).Equals(path2);
-                                                        }
-                                                        else if (!Path.IsPathRooted(path2) && Path.IsPathRooted(character.Script))
-                                                        {
-                                                            return character.Script.Equals(Path.GetFullPath(path2));
-                                                        }
-
-                                                        return character.Script.Equals(path2);
-                                                    }))
-                                                    {
-                                                        if (Path.IsPathRooted(character.Script))
-                                                        {
-                                                            pathList3.Add(character.Script);
-                                                        }
-                                                        else
-                                                        {
-                                                            string p = Path.Combine(directory1, character.Script);
-
-                                                            if (File.Exists(p))
-                                                            {
-                                                                pathList3.Add(p);
-                                                            }
-                                                            else
-                                                            {
-                                                                pathList3.Add(Path.Combine(directory3, character.Script));
-                                                            }
-                                                        }
-                                                    }
-
-                                                    this.characterCollection.Add(character);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    catch
-                                    {
-                                        pathList3.Clear();
-                                        this.characterCollection.Clear();
-                                        pathList2 = tempPathList;
-
-                                        continue;
-                                    }
-                                    finally
-                                    {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-                                    }
-
-                                    if (this.characterCollection.Count > 0)
-                                    {
-                                        break;
-                                    }
-                                }
-
-                                pathList2 = tempPathList;
-                            }
-                        }
-                    }
-
-                    pathList3.ForEach(delegate (string path2)
-                    {
-                        Parse(path2);
-                    });
                 }
             }
         }
@@ -4319,13 +3911,16 @@ namespace Apricot
                             fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                         }
 
-                        if (config1.AppSettings.Settings["UserAgent"] != null)
+                        if (config1.AppSettings.Settings["UserAgent"] == null)
+                        {
+                            if (config2.AppSettings.Settings["UserAgent"] != null)
+                            {
+                                fetcher.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                            }
+                        }
+                        else
                         {
                             fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                        }
-                        else if (config2.AppSettings.Settings["UserAgent"] != null)
-                        {
-                            fetcher.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
                         }
 
                         if (config1.AppSettings.Settings["Subscriptions"] == null)
