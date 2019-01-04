@@ -2544,7 +2544,7 @@ namespace Apricot
             {
                 if (this == Application.Current.MainWindow)
                 {
-                    character.Location = new Point(this.Left - (this.Left - character.Location.X - character.BaseLocation.X) - character.BaseLocation.X, this.Top - (this.Top - character.Location.Y - character.BaseLocation.Y) - character.BaseLocation.Y);
+                    character.Location = new Character.Point<double>(this.Left - (this.Left - character.Location.X - character.BaseLocation.X) - character.BaseLocation.X, this.Top - (this.Top - character.Location.Y - character.BaseLocation.Y) - character.BaseLocation.Y);
 
                     this.balloon.Left = this.Left + (this.Width - this.balloon.Width) / 2;
                     this.balloon.Top = this.Top - this.balloon.Height + character.Origin.Y * this.ZoomScaleTransform.ScaleY;
@@ -2559,7 +2559,7 @@ namespace Apricot
                             {
                                 foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
                                 {
-                                    c.Location = new Point(agent.Left - this.Left - c.BaseLocation.X, agent.Top - this.Top - c.BaseLocation.Y);
+                                    c.Location = new Character.Point<double>(agent.Left - this.Left - c.BaseLocation.X, agent.Top - this.Top - c.BaseLocation.Y);
                                 }
                             }
 
@@ -2579,7 +2579,7 @@ namespace Apricot
                     {
                         foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
                         {
-                            character.Location = new Point(this.Left - (agent.Left - c.Location.X - c.BaseLocation.X) - character.BaseLocation.X, this.Top - (agent.Top - c.Location.Y - c.BaseLocation.Y) - character.BaseLocation.Y);
+                            character.Location = new Character.Point<double>(this.Left - (agent.Left - c.Location.X - c.BaseLocation.X) - character.BaseLocation.X, this.Top - (agent.Top - c.Location.Y - c.BaseLocation.Y) - character.BaseLocation.Y);
 
                             this.balloon.Left = this.Left + (this.Width - this.balloon.Width) / 2;
                             this.balloon.Top = this.Top - this.balloon.Height + character.Origin.Y * this.ZoomScaleTransform.ScaleY;

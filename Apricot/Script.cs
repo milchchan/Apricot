@@ -7,11 +7,11 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using System.Xml.Serialization;
 
 namespace Apricot
 {
@@ -395,10 +395,11 @@ namespace Apricot
                 if (config1.AppSettings.Settings["Words"] != null)
                 {
                     using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value) ? config1.AppSettings.Settings["Words"].Value : Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (XmlReader xr = XmlReader.Create(fs))
                     {
-                        XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                        foreach (Word word in (Word[])serializer.Deserialize(fs))
+                        foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
                         {
                             this.wordCollection.Add(word);
                         }
@@ -412,10 +413,11 @@ namespace Apricot
                         List<string> pathList1 = new List<string>();
 
                         using (FileStream fs = new FileStream(config1.AppSettings.Settings["Characters"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (XmlReader xr = XmlReader.Create(fs))
                         {
-                            XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+                            DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
 
-                            foreach (Character character in (Character[])serializer.Deserialize(fs))
+                            foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
                             {
                                 if (Path.IsPathRooted(character.Script))
                                 {
@@ -470,10 +472,11 @@ namespace Apricot
                             List<string> pathList1 = new List<string>();
 
                             using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (XmlReader xr = XmlReader.Create(fs))
                             {
-                                XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+                                DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
 
-                                foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
                                 {
                                     if (Path.IsPathRooted(character.Script))
                                     {
@@ -1065,10 +1068,11 @@ namespace Apricot
                         if (Path.IsPathRooted(config2.AppSettings.Settings["Words"].Value))
                         {
                             using (FileStream fs = new FileStream(config2.AppSettings.Settings["Words"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (XmlReader xr = XmlReader.Create(fs))
                             {
-                                XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+                                DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                                foreach (Word word in (Word[])serializer.Deserialize(fs))
+                                foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
                                 {
                                     this.wordCollection.Add(word);
                                 }
@@ -1079,10 +1083,11 @@ namespace Apricot
                             string path = Path.Combine(directory1, config2.AppSettings.Settings["Words"].Value);
 
                             using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (XmlReader xr = XmlReader.Create(fs))
                             {
-                                XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+                                DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                                foreach (Word word in (Word[])serializer.Deserialize(fs))
+                                foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
                                 {
                                     this.wordCollection.Add(word);
                                 }
@@ -1093,10 +1098,11 @@ namespace Apricot
                 else
                 {
                     using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value) ? config1.AppSettings.Settings["Words"].Value : Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (XmlReader xr = XmlReader.Create(fs))
                     {
-                        XmlSerializer serializer = new XmlSerializer(typeof(Word[]));
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                        foreach (Word word in (Word[])serializer.Deserialize(fs))
+                        foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
                         {
                             this.wordCollection.Add(word);
                         }
@@ -1110,13 +1116,14 @@ namespace Apricot
                         if (Path.IsPathRooted(config2.AppSettings.Settings["Characters"].Value))
                         {
                             List<string> pathList1 = new List<string>();
-
+                            
                             using (FileStream fs = new FileStream(config2.AppSettings.Settings["Characters"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (XmlReader xr = XmlReader.Create(fs))
                             {
-                                XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+                                DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
                                 string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                                foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
                                 {
                                     if (Path.IsPathRooted(character.Script))
                                     {
@@ -1171,11 +1178,12 @@ namespace Apricot
                                 List<string> pathList1 = new List<string>();
 
                                 using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                using (XmlReader xr = XmlReader.Create(fs))
                                 {
-                                    XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+                                    DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
                                     string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                                    foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                    foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
                                     {
                                         if (Path.IsPathRooted(character.Script))
                                         {
@@ -1232,10 +1240,11 @@ namespace Apricot
                                     List<string> pathList1 = new List<string>();
 
                                     using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (XmlReader xr = XmlReader.Create(fs))
                                     {
-                                        XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
-
-                                        foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
+                                        
+                                        foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
                                         {
                                             if (Path.IsPathRooted(character.Script))
                                             {
@@ -1825,11 +1834,12 @@ namespace Apricot
                         List<string> pathList1 = new List<string>();
 
                         using (FileStream fs = new FileStream(config1.AppSettings.Settings["Characters"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (XmlReader xr = XmlReader.Create(fs))
                         {
-                            XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+                            DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
                             string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                            foreach (Character character in (Character[])serializer.Deserialize(fs))
+                            foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
                             {
                                 if (Path.IsPathRooted(character.Script))
                                 {
@@ -1884,11 +1894,12 @@ namespace Apricot
                             List<string> pathList1 = new List<string>();
 
                             using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (XmlReader xr = XmlReader.Create(fs))
                             {
-                                XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
+                                DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
                                 string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-                                foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
                                 {
                                     if (Path.IsPathRooted(character.Script))
                                     {
@@ -1945,10 +1956,11 @@ namespace Apricot
                                 List<string> pathList1 = new List<string>();
 
                                 using (FileStream fs = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                using (XmlReader xr = XmlReader.Create(fs))
                                 {
-                                    XmlSerializer serializer = new XmlSerializer(typeof(Character[]));
-
-                                    foreach (Character character in (Character[])serializer.Deserialize(fs))
+                                    DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
+                                    
+                                    foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
                                     {
                                         if (Path.IsPathRooted(character.Script))
                                         {
@@ -2558,6 +2570,11 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["Characters"] != null)
                 {
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
+
                     foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
                     {
                         List<string> typeList = character.Types.ToList();
@@ -2574,13 +2591,14 @@ namespace Apricot
                     }
 
                     using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
                     {
-                        Character[] characters = this.characterCollection.ToArray();
-                        XmlSerializer serializer = new XmlSerializer(characters.GetType());
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
 
-                        serializer.Serialize(ms, characters);
+                        serializer.WriteObject(xw, this.characterCollection);
+                        xw.Flush();
                         ms.Seek(0, SeekOrigin.Begin);
-                        
+
                         using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Characters"].Value) ? config1.AppSettings.Settings["Characters"].Value : Path.Combine(directory, config1.AppSettings.Settings["Characters"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
                         {
                             byte[] buffer = ms.ToArray();
@@ -2594,6 +2612,10 @@ namespace Apricot
                 if (config1.AppSettings.Settings["Words"] != null)
                 {
                     List<Word> wordList = this.wordCollection.ToList();
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
 
                     wordList.ForEach(delegate (Word word)
                     {
@@ -2618,11 +2640,12 @@ namespace Apricot
                     });
 
                     using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
                     {
-                        Word[] words = wordList.ToArray();
-                        XmlSerializer serializer = new XmlSerializer(words.GetType());
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                        serializer.Serialize(ms, words);
+                        serializer.WriteObject(xw, wordList);
+                        xw.Flush();
                         ms.Seek(0, SeekOrigin.Begin);
 
                         using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value) ? config1.AppSettings.Settings["Words"].Value : Path.Combine(directory, config1.AppSettings.Settings["Words"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
@@ -2641,6 +2664,11 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["Characters"] != null)
                 {
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
+
                     foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
                     {
                         List<string> typeList = character.Types.ToList();
@@ -2657,11 +2685,12 @@ namespace Apricot
                     }
 
                     using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
                     {
-                        Character[] characters = this.characterCollection.ToArray();
-                        XmlSerializer serializer = new XmlSerializer(characters.GetType());
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
 
-                        serializer.Serialize(ms, characters);
+                        serializer.WriteObject(xw, this.characterCollection);
+                        xw.Flush();
                         ms.Seek(0, SeekOrigin.Begin);
 
                         using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Characters"].Value) ? config1.AppSettings.Settings["Characters"].Value : Path.Combine(directory, config1.AppSettings.Settings["Characters"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
@@ -2675,6 +2704,11 @@ namespace Apricot
                 }
                 else if (config2.AppSettings.Settings["Characters"] != null)
                 {
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
+
                     foreach (Character character in from character in this.characterCollection where character.HasTypes select character)
                     {
                         List<string> typeList = character.Types.ToList();
@@ -2691,11 +2725,12 @@ namespace Apricot
                     }
 
                     using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
                     {
-                        Character[] characters = this.characterCollection.ToArray();
-                        XmlSerializer serializer = new XmlSerializer(characters.GetType());
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
 
-                        serializer.Serialize(ms, characters);
+                        serializer.WriteObject(xw, this.characterCollection);
+                        xw.Flush();
                         ms.Seek(0, SeekOrigin.Begin);
 
                         using (FileStream fs = new FileStream(Path.IsPathRooted(config2.AppSettings.Settings["Characters"].Value) ? config2.AppSettings.Settings["Characters"].Value : Path.Combine(directory, config2.AppSettings.Settings["Characters"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
@@ -2711,6 +2746,10 @@ namespace Apricot
                 if (config1.AppSettings.Settings["Words"] != null)
                 {
                     List<Word> wordList = this.wordCollection.ToList();
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
 
                     wordList.ForEach(delegate (Word word)
                     {
@@ -2735,11 +2774,12 @@ namespace Apricot
                     });
 
                     using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
                     {
-                        Word[] words = wordList.ToArray();
-                        XmlSerializer serializer = new XmlSerializer(words.GetType());
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                        serializer.Serialize(ms, words);
+                        serializer.WriteObject(xw, wordList);
+                        xw.Flush();
                         ms.Seek(0, SeekOrigin.Begin);
 
                         using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value) ? config1.AppSettings.Settings["Words"].Value : Path.Combine(directory, config1.AppSettings.Settings["Words"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
@@ -2754,6 +2794,10 @@ namespace Apricot
                 else if (config2.AppSettings.Settings["Words"] != null)
                 {
                     List<Word> wordList = this.wordCollection.ToList();
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
 
                     wordList.ForEach(delegate (Word word)
                     {
@@ -2778,11 +2822,12 @@ namespace Apricot
                     });
 
                     using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
                     {
-                        Word[] words = wordList.ToArray();
-                        XmlSerializer serializer = new XmlSerializer(words.GetType());
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                        serializer.Serialize(ms, words);
+                        serializer.WriteObject(xw, wordList);
+                        xw.Flush();
                         ms.Seek(0, SeekOrigin.Begin);
 
                         using (FileStream fs = new FileStream(Path.IsPathRooted(config2.AppSettings.Settings["Words"].Value) ? config2.AppSettings.Settings["Words"].Value : Path.Combine(directory, config2.AppSettings.Settings["Words"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
