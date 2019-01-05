@@ -45,7 +45,7 @@ namespace Apricot
             }
         }
 
-        public Collection<Uri> Subscriptions
+        public Collection<Uri> Sources
         {
             get
             {

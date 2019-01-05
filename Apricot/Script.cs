@@ -3813,7 +3813,7 @@ namespace Apricot
                             fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
                         }
 
-                        if (config1.AppSettings.Settings["Subscriptions"] == null)
+                        if (config1.AppSettings.Settings["Sources"] == null)
                         {
                             Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                             HashSet<string> pathHashSet = new HashSet<string>();
@@ -3875,7 +3875,7 @@ namespace Apricot
 
                                                     foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                                     {
-                                                        fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                        fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                                     }
                                                 }
                                             }
@@ -3902,7 +3902,7 @@ namespace Apricot
 
                                             foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                             {
-                                                fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                             }
                                         }
                                     }
@@ -3917,7 +3917,7 @@ namespace Apricot
 
                                             foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                             {
-                                                fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                             }
                                         }
                                     }
@@ -3926,7 +3926,7 @@ namespace Apricot
                         }
                         else
                         {
-                            using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Subscriptions"].Value) ? config1.AppSettings.Settings["Subscriptions"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Sources"].Value) ? config1.AppSettings.Settings["Sources"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Sources"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
                                 XmlDocument xmlDocument = new XmlDocument();
 
@@ -3935,7 +3935,7 @@ namespace Apricot
 
                                 foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                 {
-                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                 }
                             }
                         }
@@ -3968,9 +3968,9 @@ namespace Apricot
                             fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
                         }
 
-                        if (config1.AppSettings.Settings["Subscriptions"] == null)
+                        if (config1.AppSettings.Settings["Sources"] == null)
                         {
-                            if (config2.AppSettings.Settings["Subscriptions"] == null)
+                            if (config2.AppSettings.Settings["Sources"] == null)
                             {
                                 Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                                 HashSet<string> pathHashSet = new HashSet<string>();
@@ -4032,7 +4032,7 @@ namespace Apricot
 
                                                         foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                                         {
-                                                            fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                            fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                                         }
                                                     }
                                                 }
@@ -4059,7 +4059,7 @@ namespace Apricot
 
                                                 foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                                 {
-                                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                                 }
                                             }
                                         }
@@ -4074,7 +4074,7 @@ namespace Apricot
 
                                                 foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                                 {
-                                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                                 }
                                             }
                                         }
@@ -4083,9 +4083,9 @@ namespace Apricot
                             }
                             else
                             {
-                                if (Path.IsPathRooted(config2.AppSettings.Settings["Subscriptions"].Value))
+                                if (Path.IsPathRooted(config2.AppSettings.Settings["Sources"].Value))
                                 {
-                                    using (FileStream fs = new FileStream(config2.AppSettings.Settings["Subscriptions"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (FileStream fs = new FileStream(config2.AppSettings.Settings["Sources"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                                     {
                                         XmlDocument xmlDocument = new XmlDocument();
 
@@ -4094,15 +4094,15 @@ namespace Apricot
 
                                         foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                         {
-                                            fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                            fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                         }
                                     }
                                 }
                                 else
                                 {
-                                    string path = Path.Combine(directory, config2.AppSettings.Settings["Subscriptions"].Value);
+                                    string path = Path.Combine(directory, config2.AppSettings.Settings["Sources"].Value);
 
-                                    using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Sources"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                                     {
                                         XmlDocument xmlDocument = new XmlDocument();
 
@@ -4111,15 +4111,15 @@ namespace Apricot
 
                                         foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                         {
-                                            fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                            fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                         }
                                     }
                                 }
                             }
                         }
-                        else if (Path.IsPathRooted(config1.AppSettings.Settings["Subscriptions"].Value))
+                        else if (Path.IsPathRooted(config1.AppSettings.Settings["Sources"].Value))
                         {
-                            using (FileStream fs = new FileStream(config1.AppSettings.Settings["Subscriptions"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (FileStream fs = new FileStream(config1.AppSettings.Settings["Sources"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
                                 XmlDocument xmlDocument = new XmlDocument();
 
@@ -4128,15 +4128,15 @@ namespace Apricot
 
                                 foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                 {
-                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                 }
                             }
                         }
                         else
                         {
-                            string path = Path.Combine(directory, config1.AppSettings.Settings["Subscriptions"].Value);
+                            string path = Path.Combine(directory, config1.AppSettings.Settings["Sources"].Value);
 
-                            using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Subscriptions"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Sources"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
                                 XmlDocument xmlDocument = new XmlDocument();
 
@@ -4145,7 +4145,7 @@ namespace Apricot
 
                                 foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
                                 {
-                                    fetcher.Subscriptions.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
+                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
                                 }
                             }
                         }
