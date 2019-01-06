@@ -76,6 +76,7 @@ namespace Apricot
             MenuItem showInTaskbarMenuItem = new MenuItem();
             MenuItem muteMenuItem = new MenuItem();
             MenuItem charactersMenuItem = new MenuItem();
+            MenuItem sourcesMenuItem = new MenuItem();
             MenuItem updateMenuItem = new MenuItem();
             MenuItem exitMenuItem = new MenuItem();
             double opacity = 1;
@@ -356,6 +357,7 @@ namespace Apricot
                 }
             });
             charactersMenuItem.Header = Properties.Resources.Characters;
+            sourcesMenuItem.Header = Properties.Resources.Sources;
             updateMenuItem.Header = Properties.Resources.Update;
             updateMenuItem.Click += new RoutedEventHandler(delegate
             {
@@ -381,6 +383,7 @@ namespace Apricot
             this.ContextMenu.Items.Add(new Separator());
             this.ContextMenu.Items.Add(charactersMenuItem);
             this.ContextMenu.Items.Add(new Separator());
+            this.ContextMenu.Items.Add(sourcesMenuItem);
             this.ContextMenu.Items.Add(updateMenuItem);
             this.ContextMenu.Items.Add(new Separator());
             this.ContextMenu.Items.Add(exitMenuItem);
@@ -390,6 +393,8 @@ namespace Apricot
 
                 if (agent != null)
                 {
+                    const uint CF_UNICODETEXT = 13;
+
                     foreach (MenuItem menuItem in opacityMenuItem.Items)
                     {
                         menuItem.IsChecked = Math.Floor((double)menuItem.Tag * 100) == Math.Floor(agent.Opacity * 100);
@@ -404,7 +409,7 @@ namespace Apricot
                     showInTaskbarMenuItem.IsChecked = agent.ShowInTaskbar;
                     muteMenuItem.IsChecked = agent.isMute;
 
-                    List<MenuItem> menuItemList = new List<MenuItem>(charactersMenuItem.Items.Cast<MenuItem>());
+                    List<MenuItem> characterMenuItemList = new List<MenuItem>(charactersMenuItem.Items.Cast<MenuItem>());
                     HashSet<string> pathHashSet = new HashSet<string>();
                     LinkedList<Tuple<Character, string>> characterLinkedList = new LinkedList<Tuple<Character, string>>();
                     string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
@@ -933,7 +938,7 @@ namespace Apricot
                         {
                             if (nextLinkedListNode.Value.Item1.Name.Equals(tuple1.Item1) && nextLinkedListNode.Value.Item2.Equals(tuple1.Item2))
                             {
-                                MenuItem selectedMenuItem = menuItemList.Find(delegate (MenuItem menuItem)
+                                MenuItem selectedMenuItem = characterMenuItemList.Find(delegate (MenuItem menuItem)
                                 {
                                     if (tuple1.Item1.Equals(menuItem.Header as string) && (menuItem.IsChecked || menuItem.HasItems))
                                     {
@@ -954,7 +959,7 @@ namespace Apricot
                                 else
                                 {
                                     selectedMenuItem.Items.Clear();
-                                    menuItemList.Remove(selectedMenuItem);
+                                    characterMenuItemList.Remove(selectedMenuItem);
                                 }
 
                                 charactersMenuItem.Items.Add(selectedMenuItem);
@@ -1528,7 +1533,7 @@ namespace Apricot
                             }
                         }
 
-                        MenuItem unselectedMenuItem = menuItemList.Find(delegate (MenuItem menuItem)
+                        MenuItem unselectedMenuItem = characterMenuItemList.Find(delegate (MenuItem menuItem)
                         {
                             if (tuple1.Item1.Equals(menuItem.Header as string) && !menuItem.IsChecked && !menuItem.HasItems)
                             {
@@ -1663,11 +1668,172 @@ namespace Apricot
                         }
                         else
                         {
-                            menuItemList.Remove(unselectedMenuItem);
+                            characterMenuItemList.Remove(unselectedMenuItem);
                         }
 
                         charactersMenuItem.Items.Add(unselectedMenuItem);
                     });
+
+                    if (Script.Instance.Sources.Count > 0)
+                    {
+                        List<Source> sourceList = Script.Instance.Sources.ToList();
+                        List<MenuItem> sourceMenuItemList = new List<MenuItem>();
+
+                        foreach (Control control in sourcesMenuItem.Items)
+                        {
+                            MenuItem menuItem = control as MenuItem;
+
+                            if (menuItem != null)
+                            {
+                                sourceMenuItemList.Add(menuItem);
+                            }
+                        }
+
+                        sourcesMenuItem.Items.Clear();
+                        sourcesMenuItem.IsEnabled = true;
+
+                        if (NativeMethods.IsClipboardFormatAvailable(CF_UNICODETEXT) && NativeMethods.OpenClipboard(IntPtr.Zero))
+                        {
+                            IntPtr handle = NativeMethods.GetClipboardData(CF_UNICODETEXT);
+
+                            if (handle != IntPtr.Zero)
+                            {
+                                IntPtr lpwstr = NativeMethods.GlobalLock(handle);
+
+                                if (lpwstr != IntPtr.Zero)
+                                {
+                                    Uri uri;
+
+                                    if (Uri.TryCreate(System.Runtime.InteropServices.Marshal.PtrToStringUni(lpwstr).Trim(), UriKind.Absolute, out uri))
+                                    {
+                                        MenuItem sourceMenuItem = new MenuItem();
+                                        MenuItem addMenuItem = new MenuItem();
+
+                                        sourceMenuItem.Header = uri.ToString();
+                                        sourceMenuItem.Tag = uri;
+
+                                        sourcesMenuItem.Items.Add(sourceMenuItem);
+                                        sourcesMenuItem.Items.Add(new Separator());
+
+                                        addMenuItem.Header = Properties.Resources.Add;
+                                        addMenuItem.Click += new RoutedEventHandler(delegate
+                                        {
+                                            Uri u = sourceMenuItem.Tag as Uri;
+
+                                            if (u != null)
+                                            {
+                                                Script.Instance.Sources.Add(new Source(u));
+                                            }
+                                        });
+
+                                        sourceMenuItem.Items.Add(addMenuItem);
+                                    }
+                                }
+
+                                NativeMethods.GlobalUnlock(handle);
+                            }
+
+                            NativeMethods.CloseClipboard();
+                        }
+
+                        sourceList.Sort(delegate (Source source1, Source source2)
+                        {
+                            return String.Compare(source1.Name, source2.Name, StringComparison.CurrentCulture);
+                        });
+                        sourceList.ForEach(delegate (Source source)
+                        {
+                            MenuItem sourceMenuItem = sourceMenuItemList.Find(delegate (MenuItem menuItem)
+                            {
+                                return source == menuItem.Tag;
+                            });
+
+                            if (sourceMenuItem == null)
+                            {
+                                MenuItem removeMenuItem = new MenuItem();
+
+                                sourceMenuItem = new MenuItem();
+                                sourceMenuItem.Header = String.IsNullOrEmpty(source.Name) ? source.Location.ToString() : source.Name;
+                                sourceMenuItem.Tag = source;
+
+                                removeMenuItem.Header = Properties.Resources.Remove;
+                                removeMenuItem.Click += new RoutedEventHandler(delegate
+                                {
+                                    Source s = sourceMenuItem.Tag as Source;
+
+                                    if (s != null)
+                                    {
+                                        Script.Instance.Sources.Remove(s);
+                                    }
+                                });
+
+                                sourceMenuItem.Items.Add(removeMenuItem);
+                            }
+                            else
+                            {
+                                sourceMenuItem.Header = String.IsNullOrEmpty(source.Name) ? source.Location.ToString() : source.Name;
+                                sourceMenuItemList.Remove(sourceMenuItem);
+                            }
+
+                            sourcesMenuItem.Items.Add(sourceMenuItem);
+                        });
+                    }
+                    else
+                    {
+                        MenuItem sourceMenuItem = null;
+
+                        sourcesMenuItem.Items.Clear();
+
+                        if (NativeMethods.IsClipboardFormatAvailable(CF_UNICODETEXT) && NativeMethods.OpenClipboard(IntPtr.Zero))
+                        {
+                            IntPtr handle = NativeMethods.GetClipboardData(CF_UNICODETEXT);
+
+                            if (handle != IntPtr.Zero)
+                            {
+                                IntPtr lpwstr = NativeMethods.GlobalLock(handle);
+
+                                if (lpwstr != IntPtr.Zero)
+                                {
+                                    Uri uri;
+
+                                    if (Uri.TryCreate(System.Runtime.InteropServices.Marshal.PtrToStringUni(lpwstr).Trim(), UriKind.Absolute, out uri))
+                                    {
+                                        sourceMenuItem = new MenuItem();
+                                        sourceMenuItem.Header = uri.ToString();
+                                        sourceMenuItem.Tag = uri;
+                                    }
+                                }
+
+                                NativeMethods.GlobalUnlock(handle);
+                            }
+
+                            NativeMethods.CloseClipboard();
+                        }
+
+                        if (sourceMenuItem == null)
+                        {
+                            sourcesMenuItem.IsEnabled = false;
+                        }
+                        else
+                        {
+                            MenuItem addMenuItem = new MenuItem();
+
+                            sourcesMenuItem.IsEnabled = true;
+                            sourcesMenuItem.Items.Add(sourceMenuItem);
+
+                            addMenuItem.Header = Properties.Resources.Add;
+                            addMenuItem.Click += new RoutedEventHandler(delegate
+                            {
+                                Uri u = sourceMenuItem.Tag as Uri;
+
+                                if (u != null)
+                                {
+                                    Script.Instance.Sources.Add(new Source(u));
+                                }
+                            });
+
+                            sourceMenuItem.Items.Add(addMenuItem);
+                        }
+                    }
                 }
             });
 

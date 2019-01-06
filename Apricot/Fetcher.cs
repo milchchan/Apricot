@@ -5,7 +5,6 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -18,8 +17,8 @@ namespace Apricot
     {
         private Nullable<int> timeout = null;
         private string userAgent = null;
-        private Collection<Uri> subscriptionList = null;
-        private List<Entry> entryList = null;
+        private Collection<Uri> locationList = null;
+        private List<Tuple<string, Uri, IEnumerable<Entry>>> feedList = null;
 
         public Nullable<int> Timeout
         {
@@ -45,43 +44,43 @@ namespace Apricot
             }
         }
 
-        public Collection<Uri> Sources
+        public Collection<Uri> Locations
         {
             get
             {
-                return this.subscriptionList;
+                return this.locationList;
             }
         }
 
-        public IEnumerable<Entry> Entries
+        public IEnumerable<Tuple<string, Uri, IEnumerable<Entry>>> Feeds
         {
             get
             {
-                return this.entryList;
+                return this.feedList;
             }
         }
 
         public Fetcher()
         {
-            this.subscriptionList = new Collection<Uri>();
-            this.entryList = new List<Entry>();
+            this.locationList = new Collection<Uri>();
+            this.feedList = new List<Tuple<string, Uri, IEnumerable<Entry>>>();
         }
 
         public int Collect()
         {
-            Queue<Uri> uriQueue = new Queue<Uri>(this.subscriptionList);
-            Queue<Task<IEnumerable<Entry>>> taskQueue = new Queue<Task<IEnumerable<Entry>>>();
-            List<Entry> entryList = new List<Entry>();
+            Queue<Uri> uriQueue = new Queue<Uri>(this.locationList);
+            Queue<Task<Tuple<Uri, Tuple<string, List<Entry>>>>> taskQueue = new Queue<Task<Tuple<Uri, Tuple<string, List<Entry>>>>>();
+            List<Tuple<string, List<Entry>>> feedList = new List<Tuple<string, List<Entry>>>();
             int successfulRow = 0;
 
-            this.entryList.Clear();
+            this.feedList.Clear();
             
             while (uriQueue.Count > 0 || taskQueue.Count > 0)
             {
                 while (uriQueue.Count > 0 && taskQueue.Count < 2 * Environment.ProcessorCount)
                 {
                     WebRequest webRequest = WebRequest.Create(uriQueue.Dequeue());
-                    Task<IEnumerable<Entry>> task = new Task<IEnumerable<Entry>>(delegate (object state)
+                    Task<Tuple<Uri, Tuple<string, List<Entry>>>> task = new Task<Tuple<Uri, Tuple<string, List<Entry>>>>(delegate (object state)
                     {
                         WebRequest request = (WebRequest)state;
                         WebResponse response = null;
@@ -102,7 +101,7 @@ namespace Apricot
 
                             if (xmlDocument.DocumentElement.NamespaceURI.Equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#") && xmlDocument.DocumentElement.LocalName.Equals("RDF"))
                             {
-                                return ParseRss10(xmlDocument.DocumentElement);
+                                return Tuple.Create<Uri, Tuple<string, List<Entry>>>(request.RequestUri, ParseRss10(xmlDocument.DocumentElement));
                             }
                             else if (xmlDocument.DocumentElement.Name.Equals("rss"))
                             {
@@ -112,7 +111,7 @@ namespace Apricot
                                     {
                                         if (xmlAttribute.Value.Equals("2.0"))
                                         {
-                                            return ParseRss20(xmlDocument.DocumentElement);
+                                            return Tuple.Create<Uri, Tuple<string, List<Entry>>>(request.RequestUri, ParseRss20(xmlDocument.DocumentElement));
                                         }
 
                                         break;
@@ -121,7 +120,7 @@ namespace Apricot
                             }
                             else if (xmlDocument.DocumentElement.NamespaceURI.Equals("http://www.w3.org/2005/Atom") && xmlDocument.DocumentElement.LocalName.Equals("feed"))
                             {
-                                return ParseAtom10(xmlDocument.DocumentElement);
+                                return Tuple.Create<Uri, Tuple<string, List<Entry>>>(request.RequestUri, ParseAtom10(xmlDocument.DocumentElement));
                             }
                         }
                         finally
@@ -142,7 +141,7 @@ namespace Apricot
                             }
                         }
 
-                        return Enumerable.Empty<Entry>();
+                        return null;
                     }, webRequest, TaskCreationOptions.LongRunning);
 
                     if (this.timeout.HasValue)
@@ -164,7 +163,7 @@ namespace Apricot
                     task.Start();
                 }
 
-                Task<IEnumerable<Entry>>[] tasks = taskQueue.ToArray();
+                Task<Tuple<Uri, Tuple<string, List<Entry>>>>[] tasks = taskQueue.ToArray();
                 int index = Task<IEnumerable<Entry>>.WaitAny(tasks);
 
                 taskQueue.Clear();
@@ -173,9 +172,9 @@ namespace Apricot
                 {
                     if (index == i)
                     {
-                        if (tasks[i].Exception == null)
+                        if (tasks[i].Exception == null && tasks[i].Result != null)
                         {
-                            this.entryList.AddRange(tasks[i].Result);
+                            this.feedList.Add(Tuple.Create<string, Uri, IEnumerable<Entry>>(tasks[i].Result.Item2.Item1, tasks[i].Result.Item1, tasks[i].Result.Item2.Item2));
                         }
                     }
                     else
@@ -194,47 +193,50 @@ namespace Apricot
                     connection.ConnectionString = settings.ConnectionString;
                     connection.Open();
 
-                    this.entryList.ForEach(delegate (Entry entry)
+                    this.feedList.ForEach(delegate (Tuple<string, Uri, IEnumerable<Entry>> feed)
                     {
-                        if (entry.Resource != null)
+                        foreach (Entry entry in feed.Item3)
                         {
-                            string sql = null;
-
-                            using (IDbCommand command = factory.CreateCommand())
+                            if (entry.Resource != null)
                             {
-                                command.Connection = connection;
-                                command.CommandText = BuildSelectStatement(entry.Resource);
+                                string sql = null;
 
-                                if ((int)command.ExecuteScalar() == 0)
+                                using (IDbCommand command = factory.CreateCommand())
                                 {
-                                    sql = BuildInsertStatement(entry);
-                                }
-                                else if (entry.Created < entry.Modified)
-                                {
-                                    sql = BuildUpdateStatement(entry);
-                                }
-                            }
+                                    command.Connection = connection;
+                                    command.CommandText = BuildSelectStatement(entry.Resource);
 
-                            if (sql != null)
-                            {
-                                using (IDbCommand c = factory.CreateCommand())
-                                {
-                                    c.Connection = connection;
-                                    c.CommandText = sql;
-
-                                    IDbTransaction transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted);
-
-                                    c.Transaction = transaction;
-
-                                    try
+                                    if ((int)command.ExecuteScalar() == 0)
                                     {
-                                        successfulRow += c.ExecuteNonQuery();
-
-                                        transaction.Commit();
+                                        sql = BuildInsertStatement(entry);
                                     }
-                                    catch
+                                    else if (entry.Created < entry.Modified)
                                     {
-                                        transaction.Rollback();
+                                        sql = BuildUpdateStatement(entry);
+                                    }
+                                }
+
+                                if (sql != null)
+                                {
+                                    using (IDbCommand c = factory.CreateCommand())
+                                    {
+                                        c.Connection = connection;
+                                        c.CommandText = sql;
+
+                                        IDbTransaction transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted);
+
+                                        c.Transaction = transaction;
+
+                                        try
+                                        {
+                                            successfulRow += c.ExecuteNonQuery();
+
+                                            transaction.Commit();
+                                        }
+                                        catch
+                                        {
+                                            transaction.Rollback();
+                                        }
                                     }
                                 }
                             }
@@ -320,10 +322,11 @@ namespace Apricot
             return updateSqlBuilder.ToString();
         }
 
-        private List<Entry> ParseRss10(XmlNode xmlRootNode)
+        private Tuple<string, List<Entry>> ParseRss10(XmlNode xmlRootNode)
         {
             const string namespaceURI = "http://purl.org/rss/1.0/";
             List<Entry> entryList = new List<Entry>();
+            string title = null;
             string dcCreator = null;
             DateTime dcDate = new DateTime(0);
             Uri imageUri = null;
@@ -336,7 +339,11 @@ namespace Apricot
                     {
                         foreach (XmlNode xmlNode in childNode.ChildNodes)
                         {
-                            if (xmlNode.NamespaceURI.Equals("http://purl.org/dc/elements/1.1/") && xmlNode.LocalName.Equals("creator"))
+                            if (xmlNode.NamespaceURI.Equals(namespaceURI) && xmlNode.LocalName.Equals("title"))
+                            {
+                                title = xmlNode.InnerText;
+                            }
+                            else if (xmlNode.NamespaceURI.Equals("http://purl.org/dc/elements/1.1/") && xmlNode.LocalName.Equals("creator"))
                             {
                                 dcCreator = xmlNode.InnerText;
                             }
@@ -449,12 +456,13 @@ namespace Apricot
                 }
             }
 
-            return entryList;
+            return Tuple.Create<string, List<Entry>>(title, entryList);
         }
 
-        private List<Entry> ParseRss20(XmlNode xmlRootNode)
+        private Tuple<string, List<Entry>> ParseRss20(XmlNode xmlRootNode)
         {
             List<Entry> entryList = new List<Entry>();
+            string title = null;
             string webMaster = null;
             DateTime pubDate = new DateTime(0);
             Uri imageUri = null;
@@ -465,7 +473,11 @@ namespace Apricot
                 {
                     foreach (XmlNode xmlNode in childNode.ChildNodes)
                     {
-                        if (xmlNode.Name.Equals("webMaster") || xmlNode.NamespaceURI.Equals("http://purl.org/dc/elements/1.1/") && xmlNode.LocalName.Equals("creator"))
+                        if (xmlNode.Name.Equals("title"))
+                        {
+                            title = xmlNode.InnerText;
+                        }
+                        else if (xmlNode.Name.Equals("webMaster") || xmlNode.NamespaceURI.Equals("http://purl.org/dc/elements/1.1/") && xmlNode.LocalName.Equals("creator"))
                         {
                             webMaster = xmlNode.InnerText;
                         }
@@ -596,13 +608,14 @@ namespace Apricot
                 }
             }
 
-            return entryList;
+            return Tuple.Create<string, List<Entry>>(title, entryList);
         }
 
-        private List<Entry> ParseAtom10(XmlNode xmlRootNode)
+        private Tuple<string, List<Entry>> ParseAtom10(XmlNode xmlRootNode)
         {
             const string namespaceURI = "http://www.w3.org/2005/Atom";
             List<Entry> entryList = new List<Entry>();
+            string title = null;
             string author = null;
             Uri icon = null;
             Uri logo = null;
@@ -612,7 +625,11 @@ namespace Apricot
             {
                 if (xmlNode.NamespaceURI.Equals(namespaceURI))
                 {
-                    if (xmlNode.LocalName.Equals("updated"))
+                    if (xmlNode.LocalName.Equals("title"))
+                    {
+                        title = xmlNode.InnerText;
+                    }
+                    else if (xmlNode.LocalName.Equals("updated"))
                     {
                         DateTime dt;
 
@@ -776,7 +793,7 @@ namespace Apricot
                 }
             }
 
-            return entryList;
+            return Tuple.Create<string, List<Entry>>(title, entryList);
         }
 
         private DateTime ParseRfc822(string s)

@@ -212,6 +212,7 @@
     <Compile Include="Script.cs" />
     <Compile Include="Sequence.cs" />
     <Compile Include="Sound.cs" />
+    <Compile Include="Source.cs" />
     <Compile Include="Sprite.cs" />
     <Compile Include="Word.cs" />
     <Page Include="Balloon.xaml">

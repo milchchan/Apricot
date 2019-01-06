@@ -26,6 +26,7 @@ namespace Apricot
         private System.Windows.Threading.DispatcherTimer updateTimer = null;
         private Collection<Character> characterCollection = null;
         private Collection<Word> wordCollection = null;
+        private Collection<Source> sourceCollection = null;
         private Collection<Sequence> sequenceCollection = null;
         private Dictionary<string, string> sequenceStateDictionary = null;
         private Queue<Sequence> sequenceQueue = null;
@@ -57,6 +58,14 @@ namespace Apricot
             get
             {
                 return this.wordCollection;
+            }
+        }
+
+        public Collection<Source> Sources
+        {
+            get
+            {
+                return this.sourceCollection;
             }
         }
 
@@ -165,6 +174,7 @@ namespace Apricot
         {
             this.characterCollection = new Collection<Character>();
             this.wordCollection = new Collection<Word>();
+            this.sourceCollection = new Collection<Source>();
             this.sequenceCollection = new Collection<Sequence>();
             this.sequenceStateDictionary = new Dictionary<string, string>();
             this.sequenceQueue = new Queue<Sequence>();
@@ -394,14 +404,35 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["Words"] != null)
                 {
-                    using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value) ? config1.AppSettings.Settings["Words"].Value : Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
-                    using (XmlReader xr = XmlReader.Create(fs))
+                    if (Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value))
                     {
-                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
-
-                        foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                        using (FileStream fs = new FileStream(config1.AppSettings.Settings["Words"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (XmlReader xr = XmlReader.Create(fs))
                         {
-                            this.wordCollection.Add(word);
+                            DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
+
+                            foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                            {
+                                this.wordCollection.Add(word);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        string path = Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value);
+
+                        if (File.Exists(path))
+                        {
+                            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (XmlReader xr = XmlReader.Create(fs))
+                            {
+                                DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
+
+                                foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                                {
+                                    this.wordCollection.Add(word);
+                                }
+                            }
                         }
                     }
                 }
@@ -460,8 +491,6 @@ namespace Apricot
                         {
                             Parse(path2);
                         });
-
-                        return;
                     }
                     else
                     {
@@ -519,105 +548,273 @@ namespace Apricot
                             {
                                 Parse(path2);
                             });
-
-                            return;
                         }
-                    }
-
-                    List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories) let extension = Path.GetExtension(filename) let attributes = File.GetAttributes(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
-                    Random random = new Random(Environment.TickCount);
-                    
-                    while (pathList2.Count > 0)
-                    {
-                        int i = random.Next(pathList2.Count);
-                        Tuple<bool, string> tuple1 = pathList2[i];
-
-                        pathList2.RemoveAt(i);
-
-                        if (tuple1.Item1)
+                        else
                         {
-                            FileStream fs = null;
+                            List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories) let extension = Path.GetExtension(filename) let attributes = File.GetAttributes(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
+                            Random random = new Random(Environment.TickCount);
 
-                            try
+                            while (pathList2.Count > 0)
                             {
-                                fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                int i = random.Next(pathList2.Count);
+                                Tuple<bool, string> tuple1 = pathList2[i];
 
-                                using (ZipArchive zipArchive = new ZipArchive(fs))
+                                pathList2.RemoveAt(i);
+
+                                if (tuple1.Item1)
                                 {
-                                    fs = null;
+                                    FileStream fs = null;
 
-                                    foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
+                                    try
                                     {
-                                        string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
-                                        Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-                                        string key;
-                                        List<Tuple<ZipArchiveEntry, string>> tupleList;
+                                        fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-                                        if (match.Success)
+                                        using (ZipArchive zipArchive = new ZipArchive(fs))
                                         {
-                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+                                            fs = null;
 
-                                            if (dictionary.TryGetValue(key, out tupleList))
+                                            foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
                                             {
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                            }
-                                            else
+                                                string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
+                                                Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                                string key;
+                                                List<Tuple<ZipArchiveEntry, string>> tupleList;
+
+                                                if (match.Success)
+                                                {
+                                                    key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+
+                                                    if (dictionary.TryGetValue(key, out tupleList))
+                                                    {
+                                                        tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                    }
+                                                    else
+                                                    {
+                                                        tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                        tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                        dictionary.Add(key, tupleList);
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+
+                                                    if (dictionary.TryGetValue(key, out tupleList))
+                                                    {
+                                                        tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                    }
+                                                    else
+                                                    {
+                                                        tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                        tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                        dictionary.Add(key, tupleList);
+                                                    }
+                                                }
+
+                                                return dictionary;
+                                            }).Values)
                                             {
-                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                                dictionary.Add(key, tupleList);
+                                                Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                {
+                                                    return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                });
+
+                                                if (tuple2 == null)
+                                                {
+                                                    tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                                    {
+                                                        return t.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                    });
+
+                                                    if (tuple2 != null)
+                                                    {
+                                                        StringBuilder stringBuilder = new StringBuilder(directory1);
+                                                        Stream stream = null;
+
+                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                        {
+                                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                        }
+
+                                                        string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+
+                                                        try
+                                                        {
+                                                            stream = tuple2.Item1.Open();
+
+                                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                                            xmlDocument.Load(stream);
+                                                            xmlDocument.Normalize();
+
+                                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                            {
+                                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                                {
+                                                                    if (xmlNode.Name.Equals("character"))
+                                                                    {
+                                                                        Character character = ParseCharacter(xmlNode);
+
+                                                                        character.Script = path;
+
+                                                                        this.characterCollection.Add(character);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        catch
+                                                        {
+                                                            this.characterCollection.Clear();
+
+                                                            break;
+                                                        }
+                                                        finally
+                                                        {
+                                                            if (stream != null)
+                                                            {
+                                                                stream.Close();
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    StringBuilder stringBuilder = new StringBuilder(directory1);
+                                                    Stream stream = null;
+
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    {
+                                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                    }
+
+                                                    string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+
+                                                    try
+                                                    {
+                                                        stream = tuple2.Item1.Open();
+
+                                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                                        xmlDocument.Load(stream);
+                                                        xmlDocument.Normalize();
+
+                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        {
+                                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                            {
+                                                                if (xmlNode.Name.Equals("character"))
+                                                                {
+                                                                    Character character = ParseCharacter(xmlNode);
+
+                                                                    character.Script = path;
+
+                                                                    this.characterCollection.Add(character);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        this.characterCollection.Clear();
+
+                                                        break;
+                                                    }
+                                                    finally
+                                                    {
+                                                        if (stream != null)
+                                                        {
+                                                            stream.Close();
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
-                                        else
+                                    }
+                                    finally
+                                    {
+                                        if (fs != null)
                                         {
-                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+                                            fs.Close();
+                                        }
+                                    }
 
-                                            if (dictionary.TryGetValue(key, out tupleList))
+                                    if (this.characterCollection.Count > 0)
+                                    {
+                                        Parse(tuple1.Item2);
+
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
+                                    Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                    List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
+                                    List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
+
+                                    if (match1.Success)
+                                    {
+                                        tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
+
+                                        while (pathList2.Count > 0)
+                                        {
+                                            int j = random.Next(pathList2.Count);
+                                            Tuple<bool, string> tuple2 = pathList2[j];
+                                            string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
+                                            Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                            pathList2.RemoveAt(j);
+
+                                            if (match2.Success)
                                             {
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
+                                                {
+                                                    tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+
+                                                    continue;
+                                                }
                                             }
-                                            else
+                                            else if (match1.Groups[1].Value.Equals(filename2))
                                             {
-                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-                                                dictionary.Add(key, tupleList);
+                                                tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                                continue;
                                             }
+
+                                            tempPathList.Add(tuple2);
                                         }
 
-                                        return dictionary;
-                                    }).Values)
-                                    {
-                                        Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                        Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                         {
-                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                            return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                         });
 
-                                        if (tuple2 == null)
+                                        if (tuple3 == null)
                                         {
-                                            tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                            tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                             {
-                                                return t.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
                                             });
 
-                                            if (tuple2 != null)
+                                            if (tuple3 != null)
                                             {
                                                 StringBuilder stringBuilder = new StringBuilder(directory1);
-                                                Stream stream = null;
+                                                FileStream fs = null;
 
                                                 if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
                                                 {
                                                     stringBuilder.Append(Path.DirectorySeparatorChar);
                                                 }
 
-                                                string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+                                                string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                                 try
                                                 {
-                                                    stream = tuple2.Item1.Open();
+                                                    fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                                     XmlDocument xmlDocument = new XmlDocument();
 
-                                                    xmlDocument.Load(stream);
+                                                    xmlDocument.Load(fs);
                                                     xmlDocument.Normalize();
 
                                                     if (xmlDocument.DocumentElement.Name.Equals("script"))
@@ -638,37 +835,45 @@ namespace Apricot
                                                 catch
                                                 {
                                                     this.characterCollection.Clear();
+                                                    pathList2 = tempPathList;
 
-                                                    break;
+                                                    continue;
                                                 }
                                                 finally
                                                 {
-                                                    if (stream != null)
+                                                    if (fs != null)
                                                     {
-                                                        stream.Close();
+                                                        fs.Close();
                                                     }
+                                                }
+
+                                                if (this.characterCollection.Count > 0)
+                                                {
+                                                    Parse(tuple3.Item1);
+
+                                                    break;
                                                 }
                                             }
                                         }
                                         else
                                         {
                                             StringBuilder stringBuilder = new StringBuilder(directory1);
-                                            Stream stream = null;
+                                            FileStream fs = null;
 
                                             if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
                                             {
                                                 stringBuilder.Append(Path.DirectorySeparatorChar);
                                             }
 
-                                            string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+                                            string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                             try
                                             {
-                                                stream = tuple2.Item1.Open();
+                                                fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                                 XmlDocument xmlDocument = new XmlDocument();
 
-                                                xmlDocument.Load(stream);
+                                                xmlDocument.Load(fs);
                                                 xmlDocument.Normalize();
 
                                                 if (xmlDocument.DocumentElement.Name.Equals("script"))
@@ -689,371 +894,539 @@ namespace Apricot
                                             catch
                                             {
                                                 this.characterCollection.Clear();
+                                                pathList2 = tempPathList;
 
-                                                break;
+                                                continue;
                                             }
                                             finally
                                             {
-                                                if (stream != null)
+                                                if (fs != null)
                                                 {
-                                                    stream.Close();
+                                                    fs.Close();
+                                                }
+                                            }
+
+                                            if (this.characterCollection.Count > 0)
+                                            {
+                                                Parse(tuple3.Item1);
+
+                                                break;
+                                            }
+                                        }
+
+                                        pathList2 = tempPathList;
+                                    }
+                                    else
+                                    {
+                                        tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                        while (pathList2.Count > 0)
+                                        {
+                                            int j = random.Next(pathList2.Count);
+                                            Tuple<bool, string> tuple2 = pathList2[j];
+                                            string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
+                                            Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                            pathList2.RemoveAt(j);
+
+                                            if (match2.Success)
+                                            {
+                                                if (filename1.Equals(match2.Groups[1].Value))
+                                                {
+                                                    tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+
+                                                    continue;
+                                                }
+                                            }
+                                            else if (filename1.Equals(filename2))
+                                            {
+                                                tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                                continue;
+                                            }
+
+                                            tempPathList.Add(tuple2);
+                                        }
+
+                                        Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                        {
+                                            return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                        });
+
+                                        if (tuple3 == null)
+                                        {
+                                            tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                            {
+                                                return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                            });
+
+                                            if (tuple3 != null)
+                                            {
+                                                StringBuilder stringBuilder = new StringBuilder(directory1);
+                                                FileStream fs = null;
+
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                {
+                                                    stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                }
+
+                                                string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                                try
+                                                {
+                                                    fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                                    xmlDocument.Load(fs);
+                                                    xmlDocument.Normalize();
+
+                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                    {
+                                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                        {
+                                                            if (xmlNode.Name.Equals("character"))
+                                                            {
+                                                                Character character = ParseCharacter(xmlNode);
+
+                                                                character.Script = path;
+
+                                                                this.characterCollection.Add(character);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                catch
+                                                {
+                                                    this.characterCollection.Clear();
+                                                    pathList2 = tempPathList;
+
+                                                    continue;
+                                                }
+                                                finally
+                                                {
+                                                    if (fs != null)
+                                                    {
+                                                        fs.Close();
+                                                    }
+                                                }
+
+                                                if (this.characterCollection.Count > 0)
+                                                {
+                                                    Parse(tuple3.Item1);
+
+                                                    break;
                                                 }
                                             }
                                         }
+                                        else
+                                        {
+                                            StringBuilder stringBuilder = new StringBuilder(directory1);
+                                            FileStream fs = null;
+
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            {
+                                                stringBuilder.Append(Path.DirectorySeparatorChar);
+                                            }
+
+                                            string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                            try
+                                            {
+                                                fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                xmlDocument.Load(fs);
+                                                xmlDocument.Normalize();
+
+                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                {
+                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                    {
+                                                        if (xmlNode.Name.Equals("character"))
+                                                        {
+                                                            Character character = ParseCharacter(xmlNode);
+
+                                                            character.Script = path;
+
+                                                            this.characterCollection.Add(character);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                this.characterCollection.Clear();
+                                                pathList2 = tempPathList;
+
+                                                continue;
+                                            }
+                                            finally
+                                            {
+                                                if (fs != null)
+                                                {
+                                                    fs.Close();
+                                                }
+                                            }
+
+                                            if (this.characterCollection.Count > 0)
+                                            {
+                                                Parse(tuple3.Item1);
+
+                                                break;
+                                            }
+                                        }
+
+                                        pathList2 = tempPathList;
                                     }
                                 }
                             }
-                            finally
+                        }
+                    }
+                }
+
+                if (config1.AppSettings.Settings["Sources"] == null)
+                {
+                    Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                    HashSet<string> pathHashSet = new HashSet<string>();
+                    List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+
+                    foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                    {
+                        string key = Path.GetFileNameWithoutExtension(filename);
+                        Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                        if (match.Success)
+                        {
+                            List<Tuple<string, string>> tupleList;
+
+                            key = match.Groups[1].Value;
+
+                            if (pathDictionary.TryGetValue(key, out tupleList))
                             {
-                                if (fs != null)
-                                {
-                                    fs.Close();
-                                }
+                                tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
                             }
-
-                            if (this.characterCollection.Count > 0)
+                            else
                             {
-                                Parse(tuple1.Item2);
-
-                                break;
+                                tupleList = new List<Tuple<string, string>>();
+                                tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                pathDictionary.Add(key, tupleList);
+                                pathList.Add(Tuple.Create<string, string>(null, key));
                             }
                         }
                         else
                         {
-                            string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
-                            Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-                            List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
-                            List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
+                            pathHashSet.Add(key);
+                            pathList.Add(Tuple.Create<string, string>(filename, key));
+                        }
+                    }
 
-                            if (match1.Success)
+                    pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                    {
+                        if (tuple1.Item1 == null)
+                        {
+                            if (!pathHashSet.Contains(tuple1.Item2))
                             {
-                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
+                                List<Tuple<string, string>> tupleList;
 
-                                while (pathList2.Count > 0)
+                                if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                 {
-                                    int j = random.Next(pathList2.Count);
-                                    Tuple<bool, string> tuple2 = pathList2[j];
-                                    string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
-                                    Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-
-                                    pathList2.RemoveAt(j);
-
-                                    if (match2.Success)
+                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                     {
-                                        if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
-                                        {
-                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
-
-                                            continue;
-                                        }
-                                    }
-                                    else if (match1.Groups[1].Value.Equals(filename2))
-                                    {
-                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                        continue;
-                                    }
-
-                                    tempPathList.Add(tuple2);
-                                }
-
-                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                {
-                                    return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                });
-
-                                if (tuple3 == null)
-                                {
-                                    tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                    {
-                                        return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                        return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                     });
 
-                                    if (tuple3 != null)
+                                    if (tuple2 != null)
                                     {
-                                        StringBuilder stringBuilder = new StringBuilder(directory1);
-                                        FileStream fs = null;
-
-                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
                                         {
-                                            stringBuilder.Append(Path.DirectorySeparatorChar);
-                                        }
-
-                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                        try
-                                        {
-                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
                                             XmlDocument xmlDocument = new XmlDocument();
 
                                             xmlDocument.Load(fs);
                                             xmlDocument.Normalize();
 
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
                                             {
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                string title = null;
+                                                Uri xmlUrl = null;
+
+                                                foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
                                                 {
-                                                    if (xmlNode.Name.Equals("character"))
+                                                    if (xmlAttribute.Name.Equals("title"))
                                                     {
-                                                        Character character = ParseCharacter(xmlNode);
-
-                                                        character.Script = path;
-
-                                                        this.characterCollection.Add(character);
+                                                        title = xmlAttribute.Value;
+                                                    }
+                                                    else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                    {
+                                                        xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
                                                     }
                                                 }
+
+                                                this.sourceCollection.Add(new Source(title, xmlUrl));
                                             }
-                                        }
-                                        catch
-                                        {
-                                            this.characterCollection.Clear();
-                                            pathList2 = tempPathList;
-
-                                            continue;
-                                        }
-                                        finally
-                                        {
-                                            if (fs != null)
-                                            {
-                                                fs.Close();
-                                            }
-                                        }
-
-                                        if (this.characterCollection.Count > 0)
-                                        {
-                                            Parse(tuple3.Item1);
-
-                                            break;
                                         }
                                     }
                                 }
-                                else
+                            }
+                        }
+                        else
+                        {
+                            List<Tuple<string, string>> tupleList;
+
+                            if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                            {
+                                Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                 {
-                                    StringBuilder stringBuilder = new StringBuilder(directory1);
-                                    FileStream fs = null;
+                                    return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                });
 
-                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                    xmlDocument.Load(fs);
+                                    xmlDocument.Normalize();
+
+                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
                                     {
-                                        stringBuilder.Append(Path.DirectorySeparatorChar);
-                                    }
+                                        string title = null;
+                                        Uri xmlUrl = null;
 
-                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                    try
-                                    {
-                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                        XmlDocument xmlDocument = new XmlDocument();
-
-                                        xmlDocument.Load(fs);
-                                        xmlDocument.Normalize();
-
-                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
                                         {
-                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                            if (xmlAttribute.Name.Equals("title"))
                                             {
-                                                if (xmlNode.Name.Equals("character"))
-                                                {
-                                                    Character character = ParseCharacter(xmlNode);
-
-                                                    character.Script = path;
-
-                                                    this.characterCollection.Add(character);
-                                                }
+                                                title = xmlAttribute.Value;
+                                            }
+                                            else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                            {
+                                                xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
                                             }
                                         }
-                                    }
-                                    catch
-                                    {
-                                        this.characterCollection.Clear();
-                                        pathList2 = tempPathList;
 
-                                        continue;
-                                    }
-                                    finally
-                                    {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-                                    }
-
-                                    if (this.characterCollection.Count > 0)
-                                    {
-                                        Parse(tuple3.Item1);
-
-                                        break;
+                                        this.sourceCollection.Add(new Source(title, xmlUrl));
                                     }
                                 }
-
-                                pathList2 = tempPathList;
                             }
                             else
                             {
-                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                while (pathList2.Count > 0)
+                                using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
                                 {
-                                    int j = random.Next(pathList2.Count);
-                                    Tuple<bool, string> tuple2 = pathList2[j];
-                                    string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
-                                    Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                    XmlDocument xmlDocument = new XmlDocument();
 
-                                    pathList2.RemoveAt(j);
+                                    xmlDocument.Load(fs);
+                                    xmlDocument.Normalize();
 
-                                    if (match2.Success)
+                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
                                     {
-                                        if (filename1.Equals(match2.Groups[1].Value))
+                                        string title = null;
+                                        Uri xmlUrl = null;
+
+                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
                                         {
-                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
-
-                                            continue;
+                                            if (xmlAttribute.Name.Equals("title"))
+                                            {
+                                                title = xmlAttribute.Value;
+                                            }
+                                            else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                            {
+                                                xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                            }
                                         }
-                                    }
-                                    else if (filename1.Equals(filename2))
-                                    {
-                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
 
-                                        continue;
+                                        this.sourceCollection.Add(new Source(title, xmlUrl));
                                     }
-
-                                    tempPathList.Add(tuple2);
                                 }
+                            }
+                        }
+                    });
+                }
+                else if (Path.IsPathRooted(config1.AppSettings.Settings["Sources"].Value))
+                {
+                    using (FileStream fs = new FileStream(config1.AppSettings.Settings["Sources"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (XmlReader xr = XmlReader.Create(fs))
+                    {
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
 
-                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                        {
+                            this.sourceCollection.Add(source);
+                        }
+                    }
+                }
+                else
+                {
+                    string path = Path.Combine(directory1, config1.AppSettings.Settings["Sources"].Value);
+
+                    if (File.Exists(path))
+                    {
+                        using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (XmlReader xr = XmlReader.Create(fs))
+                        {
+                            DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                            foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                            {
+                                this.sourceCollection.Add(source);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                        HashSet<string> pathHashSet = new HashSet<string>();
+                        List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+
+                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                        {
+                            string key = Path.GetFileNameWithoutExtension(filename);
+                            Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                            if (match.Success)
+                            {
+                                List<Tuple<string, string>> tupleList;
+
+                                key = match.Groups[1].Value;
+
+                                if (pathDictionary.TryGetValue(key, out tupleList))
                                 {
-                                    return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                });
-
-                                if (tuple3 == null)
-                                {
-                                    tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                    {
-                                        return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                    });
-
-                                    if (tuple3 != null)
-                                    {
-                                        StringBuilder stringBuilder = new StringBuilder(directory1);
-                                        FileStream fs = null;
-
-                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
-                                        {
-                                            stringBuilder.Append(Path.DirectorySeparatorChar);
-                                        }
-
-                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                        try
-                                        {
-                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                            {
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                {
-                                                    if (xmlNode.Name.Equals("character"))
-                                                    {
-                                                        Character character = ParseCharacter(xmlNode);
-
-                                                        character.Script = path;
-
-                                                        this.characterCollection.Add(character);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        catch
-                                        {
-                                            this.characterCollection.Clear();
-                                            pathList2 = tempPathList;
-
-                                            continue;
-                                        }
-                                        finally
-                                        {
-                                            if (fs != null)
-                                            {
-                                                fs.Close();
-                                            }
-                                        }
-
-                                        if (this.characterCollection.Count > 0)
-                                        {
-                                            Parse(tuple3.Item1);
-
-                                            break;
-                                        }
-                                    }
+                                    tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
                                 }
                                 else
                                 {
-                                    StringBuilder stringBuilder = new StringBuilder(directory1);
-                                    FileStream fs = null;
+                                    tupleList = new List<Tuple<string, string>>();
+                                    tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                    pathDictionary.Add(key, tupleList);
+                                    pathList.Add(Tuple.Create<string, string>(null, key));
+                                }
+                            }
+                            else
+                            {
+                                pathHashSet.Add(key);
+                                pathList.Add(Tuple.Create<string, string>(filename, key));
+                            }
+                        }
 
-                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                        pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                        {
+                            if (tuple1.Item1 == null)
+                            {
+                                if (!pathHashSet.Contains(tuple1.Item2))
+                                {
+                                    List<Tuple<string, string>> tupleList;
+
+                                    if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                     {
-                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                        Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                        {
+                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                        });
+
+                                        if (tuple2 != null)
+                                        {
+                                            using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                            {
+                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                xmlDocument.Load(fs);
+                                                xmlDocument.Normalize();
+
+                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                {
+                                                    string title = null;
+                                                    Uri xmlUrl = null;
+
+                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                    {
+                                                        if (xmlAttribute.Name.Equals("title"))
+                                                        {
+                                                            title = xmlAttribute.Value;
+                                                        }
+                                                        else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                        {
+                                                            xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                        }
+                                                    }
+
+                                                    this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                }
+                                            }
+                                        }
                                     }
+                                }
+                            }
+                            else
+                            {
+                                List<Tuple<string, string>> tupleList;
 
-                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                    try
+                                if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                                {
+                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                     {
-                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                        return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                    });
 
+                                    using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
                                         XmlDocument xmlDocument = new XmlDocument();
 
                                         xmlDocument.Load(fs);
                                         xmlDocument.Normalize();
 
-                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
                                         {
-                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                            string title = null;
+                                            Uri xmlUrl = null;
+
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
                                             {
-                                                if (xmlNode.Name.Equals("character"))
+                                                if (xmlAttribute.Name.Equals("title"))
                                                 {
-                                                    Character character = ParseCharacter(xmlNode);
-
-                                                    character.Script = path;
-
-                                                    this.characterCollection.Add(character);
+                                                    title = xmlAttribute.Value;
+                                                }
+                                                else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                {
+                                                    xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
                                                 }
                                             }
+
+                                            this.sourceCollection.Add(new Source(title, xmlUrl));
                                         }
-                                    }
-                                    catch
-                                    {
-                                        this.characterCollection.Clear();
-                                        pathList2 = tempPathList;
-
-                                        continue;
-                                    }
-                                    finally
-                                    {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-                                    }
-
-                                    if (this.characterCollection.Count > 0)
-                                    {
-                                        Parse(tuple3.Item1);
-
-                                        break;
                                     }
                                 }
+                                else
+                                {
+                                    using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
+                                        XmlDocument xmlDocument = new XmlDocument();
 
-                                pathList2 = tempPathList;
+                                        xmlDocument.Load(fs);
+                                        xmlDocument.Normalize();
+
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        {
+                                            string title = null;
+                                            Uri xmlUrl = null;
+
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            {
+                                                if (xmlAttribute.Name.Equals("title"))
+                                                {
+                                                    title = xmlAttribute.Value;
+                                                }
+                                                else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                {
+                                                    xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                }
+                                            }
+
+                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                        }
+                                    }
+                                }
                             }
-                        }
+                        });
                     }
                 }
             }
@@ -1082,22 +1455,43 @@ namespace Apricot
                         {
                             string path = Path.Combine(directory1, config2.AppSettings.Settings["Words"].Value);
 
-                            using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
-                            using (XmlReader xr = XmlReader.Create(fs))
+                            if (File.Exists(path))
                             {
-                                DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
-
-                                foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                using (XmlReader xr = XmlReader.Create(fs))
                                 {
-                                    this.wordCollection.Add(word);
+                                    DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
+
+                                    foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                                    {
+                                        this.wordCollection.Add(word);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Words"].Value);
+
+                                if (File.Exists(path))
+                                {
+                                    using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (XmlReader xr = XmlReader.Create(fs))
+                                    {
+                                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
+
+                                        foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                                        {
+                                            this.wordCollection.Add(word);
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                else
+                else if (Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value))
                 {
-                    using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Words"].Value) ? config1.AppSettings.Settings["Words"].Value : Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(config1.AppSettings.Settings["Words"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
                     using (XmlReader xr = XmlReader.Create(fs))
                     {
                         DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
@@ -1105,6 +1499,24 @@ namespace Apricot
                         foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
                         {
                             this.wordCollection.Add(word);
+                        }
+                    }
+                }
+                else
+                {
+                    string path = Path.Combine(directory1, config1.AppSettings.Settings["Words"].Value);
+
+                    if (File.Exists(path))
+                    {
+                        using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (XmlReader xr = XmlReader.Create(fs))
+                        {
+                            DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
+
+                            foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                            {
+                                this.wordCollection.Add(word);
+                            }
                         }
                     }
                 }
@@ -1166,8 +1578,6 @@ namespace Apricot
                             {
                                 Parse(path2);
                             });
-
-                            return;
                         }
                         else
                         {
@@ -1226,8 +1636,6 @@ namespace Apricot
                                 {
                                     Parse(path2);
                                 });
-
-                                return;
                             }
                             else
                             {
@@ -1287,107 +1695,333 @@ namespace Apricot
                                     {
                                         Parse(path2);
                                     });
-
-                                    return;
                                 }
-                            }
-                        }
-
-                        string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                        List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
-                        Random random = new Random(Environment.TickCount);
-
-                        while (pathList2.Count > 0)
-                        {
-                            int i = random.Next(pathList2.Count);
-                            Tuple<bool, string> tuple1 = pathList2[i];
-
-                            pathList2.RemoveAt(i);
-
-                            if (tuple1.Item1)
-                            {
-                                FileStream fs = null;
-
-                                try
+                                else
                                 {
-                                    fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                    string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                    List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
+                                    Random random = new Random(Environment.TickCount);
 
-                                    using (ZipArchive zipArchive = new ZipArchive(fs))
+                                    while (pathList2.Count > 0)
                                     {
-                                        fs = null;
+                                        int i = random.Next(pathList2.Count);
+                                        Tuple<bool, string> tuple1 = pathList2[i];
 
-                                        foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
+                                        pathList2.RemoveAt(i);
+
+                                        if (tuple1.Item1)
                                         {
-                                            string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
-                                            Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-                                            string key;
-                                            List<Tuple<ZipArchiveEntry, string>> tupleList;
+                                            FileStream fs = null;
 
-                                            if (match.Success)
+                                            try
                                             {
-                                                key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+                                                fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-                                                if (dictionary.TryGetValue(key, out tupleList))
+                                                using (ZipArchive zipArchive = new ZipArchive(fs))
                                                 {
-                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                                }
-                                                else
-                                                {
-                                                    tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                                    dictionary.Add(key, tupleList);
+                                                    fs = null;
+
+                                                    foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
+                                                    {
+                                                        string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
+                                                        Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                                        string key;
+                                                        List<Tuple<ZipArchiveEntry, string>> tupleList;
+
+                                                        if (match.Success)
+                                                        {
+                                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+
+                                                            if (dictionary.TryGetValue(key, out tupleList))
+                                                            {
+                                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                            }
+                                                            else
+                                                            {
+                                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                                dictionary.Add(key, tupleList);
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+
+                                                            if (dictionary.TryGetValue(key, out tupleList))
+                                                            {
+                                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                            }
+                                                            else
+                                                            {
+                                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                                dictionary.Add(key, tupleList);
+                                                            }
+                                                        }
+
+                                                        return dictionary;
+                                                    }).Values)
+                                                    {
+                                                        Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                        {
+                                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                        });
+
+                                                        if (tuple2 == null)
+                                                        {
+                                                            tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                            {
+                                                                return tuple3.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                            });
+
+                                                            if (tuple2 != null)
+                                                            {
+                                                                StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                                Stream stream = null;
+
+                                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                                {
+                                                                    stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                                }
+
+                                                                string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+
+                                                                try
+                                                                {
+                                                                    stream = tuple2.Item1.Open();
+
+                                                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                                                    xmlDocument.Load(stream);
+                                                                    xmlDocument.Normalize();
+
+                                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                                    {
+                                                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                                        {
+                                                                            if (xmlNode.Name.Equals("character"))
+                                                                            {
+                                                                                Character character = ParseCharacter(xmlNode);
+
+                                                                                character.Script = path;
+
+                                                                                this.characterCollection.Add(character);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                catch
+                                                                {
+                                                                    this.characterCollection.Clear();
+
+                                                                    break;
+                                                                }
+                                                                finally
+                                                                {
+                                                                    if (stream != null)
+                                                                    {
+                                                                        stream.Close();
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                            Stream stream = null;
+
+                                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                            {
+                                                                stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                            }
+
+                                                            string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+
+                                                            try
+                                                            {
+                                                                stream = tuple2.Item1.Open();
+
+                                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                                xmlDocument.Load(stream);
+                                                                xmlDocument.Normalize();
+
+                                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                                {
+                                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                                    {
+                                                                        if (xmlNode.Name.Equals("character"))
+                                                                        {
+                                                                            Character character = ParseCharacter(xmlNode);
+
+                                                                            character.Script = path;
+
+                                                                            this.characterCollection.Add(character);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            catch
+                                                            {
+                                                                this.characterCollection.Clear();
+
+                                                                break;
+                                                            }
+                                                            finally
+                                                            {
+                                                                if (stream != null)
+                                                                {
+                                                                    stream.Close();
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
-                                            else
+                                            finally
                                             {
-                                                key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
-
-                                                if (dictionary.TryGetValue(key, out tupleList))
+                                                if (fs != null)
                                                 {
-                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-                                                }
-                                                else
-                                                {
-                                                    tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                    tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-                                                    dictionary.Add(key, tupleList);
+                                                    fs.Close();
                                                 }
                                             }
 
-                                            return dictionary;
-                                        }).Values)
-                                        {
-                                            Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                            if (this.characterCollection.Count > 0)
                                             {
-                                                return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                            });
+                                                Parse(tuple1.Item2);
 
-                                            if (tuple2 == null)
+                                                break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
+                                            Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                            List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
+                                            List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
+
+                                            if (match1.Success)
                                             {
-                                                tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
+
+                                                while (pathList2.Count > 0)
                                                 {
-                                                    return tuple3.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                    int j = random.Next(pathList2.Count);
+                                                    Tuple<bool, string> tuple2 = pathList2[j];
+                                                    string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
+                                                    Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                                    pathList2.RemoveAt(j);
+
+                                                    if (match2.Success)
+                                                    {
+                                                        if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
+                                                        {
+                                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+
+                                                            continue;
+                                                        }
+                                                    }
+                                                    else if (match1.Groups[1].Value.Equals(filename2))
+                                                    {
+                                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                                        continue;
+                                                    }
+
+                                                    tempPathList.Add(tuple2);
+                                                }
+
+                                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                                {
+                                                    return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                 });
 
-                                                if (tuple2 != null)
+                                                if (tuple3 == null)
+                                                {
+                                                    tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                                    {
+                                                        return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                    });
+
+                                                    if (tuple3 != null)
+                                                    {
+                                                        StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                        FileStream fs = null;
+
+                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                        {
+                                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                        }
+
+                                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                                        try
+                                                        {
+                                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                                            xmlDocument.Load(fs);
+                                                            xmlDocument.Normalize();
+
+                                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                            {
+                                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                                {
+                                                                    if (xmlNode.Name.Equals("character"))
+                                                                    {
+                                                                        Character character = ParseCharacter(xmlNode);
+
+                                                                        character.Script = path;
+
+                                                                        this.characterCollection.Add(character);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        catch
+                                                        {
+                                                            this.characterCollection.Clear();
+                                                            pathList2 = tempPathList;
+
+                                                            continue;
+                                                        }
+                                                        finally
+                                                        {
+                                                            if (fs != null)
+                                                            {
+                                                                fs.Close();
+                                                            }
+                                                        }
+
+                                                        if (this.characterCollection.Count > 0)
+                                                        {
+                                                            Parse(tuple3.Item1);
+
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                else
                                                 {
                                                     StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                    Stream stream = null;
-                                                    
+                                                    FileStream fs = null;
+
                                                     if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
                                                     {
                                                         stringBuilder.Append(Path.DirectorySeparatorChar);
                                                     }
 
-                                                    string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+                                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                                     try
                                                     {
-                                                        stream = tuple2.Item1.Open();
+                                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                                         XmlDocument xmlDocument = new XmlDocument();
 
-                                                        xmlDocument.Load(stream);
+                                                        xmlDocument.Load(fs);
                                                         xmlDocument.Normalize();
 
                                                         if (xmlDocument.DocumentElement.Name.Equals("script"))
@@ -1408,420 +2042,194 @@ namespace Apricot
                                                     catch
                                                     {
                                                         this.characterCollection.Clear();
+                                                        pathList2 = tempPathList;
 
-                                                        break;
+                                                        continue;
                                                     }
                                                     finally
                                                     {
-                                                        if (stream != null)
+                                                        if (fs != null)
                                                         {
-                                                            stream.Close();
+                                                            fs.Close();
                                                         }
                                                     }
+
+                                                    if (this.characterCollection.Count > 0)
+                                                    {
+                                                        Parse(tuple3.Item1);
+
+                                                        break;
+                                                    }
                                                 }
+
+                                                pathList2 = tempPathList;
                                             }
                                             else
                                             {
-                                                StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                Stream stream = null;
+                                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
 
-                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                while (pathList2.Count > 0)
                                                 {
-                                                    stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                    int j = random.Next(pathList2.Count);
+                                                    Tuple<bool, string> tuple2 = pathList2[j];
+                                                    string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
+                                                    Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                                    pathList2.RemoveAt(j);
+
+                                                    if (match2.Success)
+                                                    {
+                                                        if (filename1.Equals(match2.Groups[1].Value))
+                                                        {
+                                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+
+                                                            continue;
+                                                        }
+                                                    }
+                                                    else if (filename1.Equals(filename2))
+                                                    {
+                                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                                        continue;
+                                                    }
+
+                                                    tempPathList.Add(tuple2);
                                                 }
 
-                                                string path = tuple1.Item2.Remove(0, stringBuilder.Length);
-
-                                                try
+                                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                                 {
-                                                    stream = tuple2.Item1.Open();
+                                                    return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                });
 
-                                                    XmlDocument xmlDocument = new XmlDocument();
-
-                                                    xmlDocument.Load(stream);
-                                                    xmlDocument.Normalize();
-
-                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                if (tuple3 == null)
+                                                {
+                                                    tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                                     {
-                                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                        return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                    });
+
+                                                    if (tuple3 != null)
+                                                    {
+                                                        StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                        FileStream fs = null;
+
+                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
                                                         {
-                                                            if (xmlNode.Name.Equals("character"))
+                                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                        }
+
+                                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                                        try
+                                                        {
+                                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                                            xmlDocument.Load(fs);
+                                                            xmlDocument.Normalize();
+
+                                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
                                                             {
-                                                                Character character = ParseCharacter(xmlNode);
+                                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                                {
+                                                                    if (xmlNode.Name.Equals("character"))
+                                                                    {
+                                                                        Character character = ParseCharacter(xmlNode);
 
-                                                                character.Script = path;
+                                                                        character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                        this.characterCollection.Add(character);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        catch
+                                                        {
+                                                            this.characterCollection.Clear();
+                                                            pathList2 = tempPathList;
+
+                                                            continue;
+                                                        }
+                                                        finally
+                                                        {
+                                                            if (fs != null)
+                                                            {
+                                                                fs.Close();
+                                                            }
+                                                        }
+
+                                                        if (this.characterCollection.Count > 0)
+                                                        {
+                                                            Parse(tuple3.Item1);
+
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                    FileStream fs = null;
+
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    {
+                                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                    }
+
+                                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                                    try
+                                                    {
+                                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                                        xmlDocument.Load(fs);
+                                                        xmlDocument.Normalize();
+
+                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        {
+                                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                            {
+                                                                if (xmlNode.Name.Equals("character"))
+                                                                {
+                                                                    Character character = ParseCharacter(xmlNode);
+
+                                                                    character.Script = path;
+
+                                                                    this.characterCollection.Add(character);
+                                                                }
                                                             }
                                                         }
                                                     }
-                                                }
-                                                catch
-                                                {
-                                                    this.characterCollection.Clear();
-
-                                                    break;
-                                                }
-                                                finally
-                                                {
-                                                    if (stream != null)
+                                                    catch
                                                     {
-                                                        stream.Close();
+                                                        this.characterCollection.Clear();
+                                                        pathList2 = tempPathList;
+
+                                                        continue;
                                                     }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                finally
-                                {
-                                    if (fs != null)
-                                    {
-                                        fs.Close();
-                                    }
-                                }
-
-                                if (this.characterCollection.Count > 0)
-                                {
-                                    Parse(tuple1.Item2);
-
-                                    break;
-                                }
-                            }
-                            else
-                            {
-                                string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
-                                Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-                                List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
-                                List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
-
-                                if (match1.Success)
-                                {
-                                    tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
-
-                                    while (pathList2.Count > 0)
-                                    {
-                                        int j = random.Next(pathList2.Count);
-                                        Tuple<bool, string> tuple2 = pathList2[j];
-                                        string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
-                                        Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-
-                                        pathList2.RemoveAt(j);
-
-                                        if (match2.Success)
-                                        {
-                                            if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
-                                            {
-                                                tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
-
-                                                continue;
-                                            }
-                                        }
-                                        else if (match1.Groups[1].Value.Equals(filename2))
-                                        {
-                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                            continue;
-                                        }
-
-                                        tempPathList.Add(tuple2);
-                                    }
-
-                                    Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                    {
-                                        return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                    });
-
-                                    if (tuple3 == null)
-                                    {
-                                        tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                        {
-                                            return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                        });
-
-                                        if (tuple3 != null)
-                                        {
-                                            StringBuilder stringBuilder = new StringBuilder(directory3);
-                                            FileStream fs = null;
-
-                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
-                                            {
-                                                stringBuilder.Append(Path.DirectorySeparatorChar);
-                                            }
-
-                                            string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                            try
-                                            {
-                                                fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                                XmlDocument xmlDocument = new XmlDocument();
-
-                                                xmlDocument.Load(fs);
-                                                xmlDocument.Normalize();
-
-                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                                {
-                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                    finally
                                                     {
-                                                        if (xmlNode.Name.Equals("character"))
+                                                        if (fs != null)
                                                         {
-                                                            Character character = ParseCharacter(xmlNode);
-
-                                                            character.Script = path;
-
-                                                            this.characterCollection.Add(character);
+                                                            fs.Close();
                                                         }
                                                     }
+
+                                                    if (this.characterCollection.Count > 0)
+                                                    {
+                                                        Parse(tuple3.Item1);
+
+                                                        break;
+                                                    }
                                                 }
-                                            }
-                                            catch
-                                            {
-                                                this.characterCollection.Clear();
+
                                                 pathList2 = tempPathList;
-
-                                                continue;
-                                            }
-                                            finally
-                                            {
-                                                if (fs != null)
-                                                {
-                                                    fs.Close();
-                                                }
-                                            }
-
-                                            if (this.characterCollection.Count > 0)
-                                            {
-                                                Parse(tuple3.Item1);
-
-                                                break;
                                             }
                                         }
                                     }
-                                    else
-                                    {
-                                        StringBuilder stringBuilder = new StringBuilder(directory3);
-                                        FileStream fs = null;
-
-                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
-                                        {
-                                            stringBuilder.Append(Path.DirectorySeparatorChar);
-                                        }
-
-                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                        try
-                                        {
-                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                            {
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                {
-                                                    if (xmlNode.Name.Equals("character"))
-                                                    {
-                                                        Character character = ParseCharacter(xmlNode);
-
-                                                        character.Script = path;
-
-                                                        this.characterCollection.Add(character);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        catch
-                                        {
-                                            this.characterCollection.Clear();
-                                            pathList2 = tempPathList;
-
-                                            continue;
-                                        }
-                                        finally
-                                        {
-                                            if (fs != null)
-                                            {
-                                                fs.Close();
-                                            }
-                                        }
-
-                                        if (this.characterCollection.Count > 0)
-                                        {
-                                            Parse(tuple3.Item1);
-
-                                            break;
-                                        }
-                                    }
-
-                                    pathList2 = tempPathList;
-                                }
-                                else
-                                {
-                                    tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                    while (pathList2.Count > 0)
-                                    {
-                                        int j = random.Next(pathList2.Count);
-                                        Tuple<bool, string> tuple2 = pathList2[j];
-                                        string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
-                                        Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-
-                                        pathList2.RemoveAt(j);
-
-                                        if (match2.Success)
-                                        {
-                                            if (filename1.Equals(match2.Groups[1].Value))
-                                            {
-                                                tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
-
-                                                continue;
-                                            }
-                                        }
-                                        else if (filename1.Equals(filename2))
-                                        {
-                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                            continue;
-                                        }
-
-                                        tempPathList.Add(tuple2);
-                                    }
-
-                                    Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                    {
-                                        return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                    });
-
-                                    if (tuple3 == null)
-                                    {
-                                        tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                        {
-                                            return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                        });
-
-                                        if (tuple3 != null)
-                                        {
-                                            StringBuilder stringBuilder = new StringBuilder(directory3);
-                                            FileStream fs = null;
-
-                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
-                                            {
-                                                stringBuilder.Append(Path.DirectorySeparatorChar);
-                                            }
-
-                                            string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                            try
-                                            {
-                                                fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                                XmlDocument xmlDocument = new XmlDocument();
-
-                                                xmlDocument.Load(fs);
-                                                xmlDocument.Normalize();
-
-                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                                {
-                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                    {
-                                                        if (xmlNode.Name.Equals("character"))
-                                                        {
-                                                            Character character = ParseCharacter(xmlNode);
-
-                                                            character.Script = path;
-
-                                                            this.characterCollection.Add(character);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            catch
-                                            {
-                                                this.characterCollection.Clear();
-                                                pathList2 = tempPathList;
-
-                                                continue;
-                                            }
-                                            finally
-                                            {
-                                                if (fs != null)
-                                                {
-                                                    fs.Close();
-                                                }
-                                            }
-
-                                            if (this.characterCollection.Count > 0)
-                                            {
-                                                Parse(tuple3.Item1);
-
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        StringBuilder stringBuilder = new StringBuilder(directory3);
-                                        FileStream fs = null;
-
-                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
-                                        {
-                                            stringBuilder.Append(Path.DirectorySeparatorChar);
-                                        }
-
-                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                        try
-                                        {
-                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                            {
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                {
-                                                    if (xmlNode.Name.Equals("character"))
-                                                    {
-                                                        Character character = ParseCharacter(xmlNode);
-
-                                                        character.Script = path;
-
-                                                        this.characterCollection.Add(character);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        catch
-                                        {
-                                            this.characterCollection.Clear();
-                                            pathList2 = tempPathList;
-
-                                            continue;
-                                        }
-                                        finally
-                                        {
-                                            if (fs != null)
-                                            {
-                                                fs.Close();
-                                            }
-                                        }
-
-                                        if (this.characterCollection.Count > 0)
-                                        {
-                                            Parse(tuple3.Item1);
-
-                                            break;
-                                        }
-                                    }
-
-                                    pathList2 = tempPathList;
                                 }
                             }
                         }
@@ -1882,8 +2290,6 @@ namespace Apricot
                         {
                             Parse(path2);
                         });
-
-                        return;
                     }
                     else
                     {
@@ -1942,8 +2348,6 @@ namespace Apricot
                             {
                                 Parse(path2);
                             });
-
-                            return;
                         }
                         else
                         {
@@ -2003,107 +2407,333 @@ namespace Apricot
                                 {
                                     Parse(path2);
                                 });
-
-                                return;
                             }
-                        }
-                    }
-
-                    string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                    List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
-                    Random random = new Random(Environment.TickCount);
-                    
-                    while (pathList2.Count > 0)
-                    {
-                        int i = random.Next(pathList2.Count);
-                        Tuple<bool, string> tuple1 = pathList2[i];
-
-                        pathList2.RemoveAt(i);
-
-                        if (tuple1.Item1)
-                        {
-                            FileStream fs = null;
-
-                            try
+                            else
                             {
-                                fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
+                                string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
+                                Random random = new Random(Environment.TickCount);
 
-                                using (ZipArchive zipArchive = new ZipArchive(fs))
+                                while (pathList2.Count > 0)
                                 {
-                                    fs = null;
+                                    int i = random.Next(pathList2.Count);
+                                    Tuple<bool, string> tuple1 = pathList2[i];
 
-                                    foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
+                                    pathList2.RemoveAt(i);
+
+                                    if (tuple1.Item1)
                                     {
-                                        string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
-                                        Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-                                        string key;
-                                        List<Tuple<ZipArchiveEntry, string>> tupleList;
+                                        FileStream fs = null;
 
-                                        if (match.Success)
+                                        try
                                         {
-                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+                                            fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-                                            if (dictionary.TryGetValue(key, out tupleList))
+                                            using (ZipArchive zipArchive = new ZipArchive(fs))
                                             {
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                            }
-                                            else
-                                            {
-                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
-                                                dictionary.Add(key, tupleList);
+                                                fs = null;
+
+                                                foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
+                                                {
+                                                    string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
+                                                    Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                                    string key;
+                                                    List<Tuple<ZipArchiveEntry, string>> tupleList;
+
+                                                    if (match.Success)
+                                                    {
+                                                        key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+
+                                                        if (dictionary.TryGetValue(key, out tupleList))
+                                                        {
+                                                            tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                        }
+                                                        else
+                                                        {
+                                                            tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                            tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                            dictionary.Add(key, tupleList);
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+
+                                                        if (dictionary.TryGetValue(key, out tupleList))
+                                                        {
+                                                            tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                        }
+                                                        else
+                                                        {
+                                                            tupleList = new List<Tuple<ZipArchiveEntry, string>>();
+                                                            tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                            dictionary.Add(key, tupleList);
+                                                        }
+                                                    }
+
+                                                    return dictionary;
+                                                }).Values)
+                                                {
+                                                    Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                    {
+                                                        return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                    });
+
+                                                    if (tuple2 == null)
+                                                    {
+                                                        tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                        {
+                                                            return tuple3.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                        });
+
+                                                        if (tuple2 != null)
+                                                        {
+                                                            StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                            Stream stream = null;
+
+                                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                            {
+                                                                stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                            }
+
+                                                            string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+
+                                                            try
+                                                            {
+                                                                stream = tuple2.Item1.Open();
+
+                                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                                xmlDocument.Load(stream);
+                                                                xmlDocument.Normalize();
+
+                                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                                {
+                                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                                    {
+                                                                        if (xmlNode.Name.Equals("character"))
+                                                                        {
+                                                                            Character character = ParseCharacter(xmlNode);
+
+                                                                            character.Script = path;
+
+                                                                            this.characterCollection.Add(character);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            catch
+                                                            {
+                                                                this.characterCollection.Clear();
+
+                                                                break;
+                                                            }
+                                                            finally
+                                                            {
+                                                                if (stream != null)
+                                                                {
+                                                                    stream.Close();
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                        Stream stream = null;
+
+                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                        {
+                                                            stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                        }
+
+                                                        string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+
+                                                        try
+                                                        {
+                                                            stream = tuple2.Item1.Open();
+
+                                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                                            xmlDocument.Load(stream);
+                                                            xmlDocument.Normalize();
+
+                                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                            {
+                                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                                {
+                                                                    if (xmlNode.Name.Equals("character"))
+                                                                    {
+                                                                        Character character = ParseCharacter(xmlNode);
+
+                                                                        character.Script = path;
+
+                                                                        this.characterCollection.Add(character);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        catch
+                                                        {
+                                                            this.characterCollection.Clear();
+
+                                                            break;
+                                                        }
+                                                        finally
+                                                        {
+                                                            if (stream != null)
+                                                            {
+                                                                stream.Close();
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
-                                        else
+                                        finally
                                         {
-                                            key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
-
-                                            if (dictionary.TryGetValue(key, out tupleList))
+                                            if (fs != null)
                                             {
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-                                            }
-                                            else
-                                            {
-                                                tupleList = new List<Tuple<ZipArchiveEntry, string>>();
-                                                tupleList.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-                                                dictionary.Add(key, tupleList);
+                                                fs.Close();
                                             }
                                         }
 
-                                        return dictionary;
-                                    }).Values)
-                                    {
-                                        Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                        if (this.characterCollection.Count > 0)
                                         {
-                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                        });
+                                            Parse(tuple1.Item2);
 
-                                        if (tuple2 == null)
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
+                                        Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                        List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
+                                        List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
+
+                                        if (match1.Success)
                                         {
-                                            tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                            tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
+
+                                            while (pathList2.Count > 0)
                                             {
-                                                return tuple3.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                int j = random.Next(pathList2.Count);
+                                                Tuple<bool, string> tuple2 = pathList2[j];
+                                                string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
+                                                Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                                pathList2.RemoveAt(j);
+
+                                                if (match2.Success)
+                                                {
+                                                    if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
+                                                    {
+                                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+
+                                                        continue;
+                                                    }
+                                                }
+                                                else if (match1.Groups[1].Value.Equals(filename2))
+                                                {
+                                                    tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                                    continue;
+                                                }
+
+                                                tempPathList.Add(tuple2);
+                                            }
+
+                                            Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                            {
+                                                return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                             });
 
-                                            if (tuple2 != null)
+                                            if (tuple3 == null)
+                                            {
+                                                tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                                {
+                                                    return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                });
+
+                                                if (tuple3 != null)
+                                                {
+                                                    StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                    FileStream fs = null;
+
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    {
+                                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                    }
+
+                                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                                    try
+                                                    {
+                                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                                        xmlDocument.Load(fs);
+                                                        xmlDocument.Normalize();
+
+                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        {
+                                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                            {
+                                                                if (xmlNode.Name.Equals("character"))
+                                                                {
+                                                                    Character character = ParseCharacter(xmlNode);
+
+                                                                    character.Script = path;
+
+                                                                    this.characterCollection.Add(character);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        this.characterCollection.Clear();
+                                                        pathList2 = tempPathList;
+
+                                                        continue;
+                                                    }
+                                                    finally
+                                                    {
+                                                        if (fs != null)
+                                                        {
+                                                            fs.Close();
+                                                        }
+                                                    }
+
+                                                    if (this.characterCollection.Count > 0)
+                                                    {
+                                                        Parse(tuple3.Item1);
+
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            else
                                             {
                                                 StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                Stream stream = null;
+                                                FileStream fs = null;
 
                                                 if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
                                                 {
                                                     stringBuilder.Append(Path.DirectorySeparatorChar);
                                                 }
 
-                                                string path = tuple1.Item2.Remove(0, stringBuilder.Length);
+                                                string path = tuple3.Item1.Remove(0, stringBuilder.Length);
 
                                                 try
                                                 {
-                                                    stream = tuple2.Item1.Open();
+                                                    fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                                     XmlDocument xmlDocument = new XmlDocument();
 
-                                                    xmlDocument.Load(stream);
+                                                    xmlDocument.Load(fs);
                                                     xmlDocument.Normalize();
 
                                                     if (xmlDocument.DocumentElement.Name.Equals("script"))
@@ -2124,422 +2754,751 @@ namespace Apricot
                                                 catch
                                                 {
                                                     this.characterCollection.Clear();
+                                                    pathList2 = tempPathList;
 
-                                                    break;
+                                                    continue;
                                                 }
                                                 finally
                                                 {
-                                                    if (stream != null)
+                                                    if (fs != null)
                                                     {
-                                                        stream.Close();
+                                                        fs.Close();
+                                                    }
+                                                }
+
+                                                if (this.characterCollection.Count > 0)
+                                                {
+                                                    Parse(tuple3.Item1);
+
+                                                    break;
+                                                }
+                                            }
+
+                                            pathList2 = tempPathList;
+                                        }
+                                        else
+                                        {
+                                            tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                            while (pathList2.Count > 0)
+                                            {
+                                                int j = random.Next(pathList2.Count);
+                                                Tuple<bool, string> tuple2 = pathList2[j];
+                                                string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
+                                                Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                                pathList2.RemoveAt(j);
+
+                                                if (match2.Success)
+                                                {
+                                                    if (filename1.Equals(match2.Groups[1].Value))
+                                                    {
+                                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+
+                                                        continue;
+                                                    }
+                                                }
+                                                else if (filename1.Equals(filename2))
+                                                {
+                                                    tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+
+                                                    continue;
+                                                }
+
+                                                tempPathList.Add(tuple2);
+                                            }
+
+                                            Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                            {
+                                                return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                            });
+
+                                            if (tuple3 == null)
+                                            {
+                                                tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                                {
+                                                    return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                });
+
+                                                if (tuple3 != null)
+                                                {
+                                                    StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                    FileStream fs = null;
+
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    {
+                                                        stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                    }
+
+                                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                                    try
+                                                    {
+                                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                                        xmlDocument.Load(fs);
+                                                        xmlDocument.Normalize();
+
+                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        {
+                                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                            {
+                                                                if (xmlNode.Name.Equals("character"))
+                                                                {
+                                                                    Character character = ParseCharacter(xmlNode);
+
+                                                                    character.Script = path;
+
+                                                                    this.characterCollection.Add(character);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        this.characterCollection.Clear();
+                                                        pathList2 = tempPathList;
+
+                                                        continue;
+                                                    }
+                                                    finally
+                                                    {
+                                                        if (fs != null)
+                                                        {
+                                                            fs.Close();
+                                                        }
+                                                    }
+
+                                                    if (this.characterCollection.Count > 0)
+                                                    {
+                                                        Parse(tuple3.Item1);
+
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                StringBuilder stringBuilder = new StringBuilder(directory3);
+                                                FileStream fs = null;
+
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                {
+                                                    stringBuilder.Append(Path.DirectorySeparatorChar);
+                                                }
+
+                                                string path = tuple3.Item1.Remove(0, stringBuilder.Length);
+
+                                                try
+                                                {
+                                                    fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                                    xmlDocument.Load(fs);
+                                                    xmlDocument.Normalize();
+
+                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                    {
+                                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                        {
+                                                            if (xmlNode.Name.Equals("character"))
+                                                            {
+                                                                Character character = ParseCharacter(xmlNode);
+
+                                                                character.Script = path;
+
+                                                                this.characterCollection.Add(character);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                catch
+                                                {
+                                                    this.characterCollection.Clear();
+                                                    pathList2 = tempPathList;
+
+                                                    continue;
+                                                }
+                                                finally
+                                                {
+                                                    if (fs != null)
+                                                    {
+                                                        fs.Close();
+                                                    }
+                                                }
+
+                                                if (this.characterCollection.Count > 0)
+                                                {
+                                                    Parse(tuple3.Item1);
+
+                                                    break;
+                                                }
+                                            }
+
+                                            pathList2 = tempPathList;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (config1.AppSettings.Settings["Sources"] == null)
+                {
+                    if (config2.AppSettings.Settings["Sources"] == null)
+                    {
+                        Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                        HashSet<string> pathHashSet = new HashSet<string>();
+                        List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+
+                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                        {
+                            string key = Path.GetFileNameWithoutExtension(filename);
+                            Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                            if (match.Success)
+                            {
+                                List<Tuple<string, string>> tupleList;
+
+                                key = match.Groups[1].Value;
+
+                                if (pathDictionary.TryGetValue(key, out tupleList))
+                                {
+                                    tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                }
+                                else
+                                {
+                                    tupleList = new List<Tuple<string, string>>();
+                                    tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                    pathDictionary.Add(key, tupleList);
+                                    pathList.Add(Tuple.Create<string, string>(null, key));
+                                }
+                            }
+                            else
+                            {
+                                pathHashSet.Add(key);
+                                pathList.Add(Tuple.Create<string, string>(filename, key));
+                            }
+                        }
+
+                        pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                        {
+                            if (tuple1.Item1 == null)
+                            {
+                                if (!pathHashSet.Contains(tuple1.Item2))
+                                {
+                                    List<Tuple<string, string>> tupleList;
+
+                                    if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                                    {
+                                        Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                        {
+                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                        });
+
+                                        if (tuple2 != null)
+                                        {
+                                            using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                            {
+                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                xmlDocument.Load(fs);
+                                                xmlDocument.Normalize();
+
+                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                {
+                                                    string title = null;
+                                                    Uri xmlUrl = null;
+
+                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                    {
+                                                        if (xmlAttribute.Name.Equals("title"))
+                                                        {
+                                                            title = xmlAttribute.Value;
+                                                        }
+                                                        else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                        {
+                                                            xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                        }
+                                                    }
+
+                                                    this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                List<Tuple<string, string>> tupleList;
+
+                                if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                                {
+                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                    {
+                                        return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                    });
+
+                                    using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
+                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                        xmlDocument.Load(fs);
+                                        xmlDocument.Normalize();
+
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        {
+                                            string title = null;
+                                            Uri xmlUrl = null;
+
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            {
+                                                if (xmlAttribute.Name.Equals("title"))
+                                                {
+                                                    title = xmlAttribute.Value;
+                                                }
+                                                else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                {
+                                                    xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                }
+                                            }
+
+                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
+                                        XmlDocument xmlDocument = new XmlDocument();
+
+                                        xmlDocument.Load(fs);
+                                        xmlDocument.Normalize();
+
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        {
+                                            string title = null;
+                                            Uri xmlUrl = null;
+
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            {
+                                                if (xmlAttribute.Name.Equals("title"))
+                                                {
+                                                    title = xmlAttribute.Value;
+                                                }
+                                                else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                {
+                                                    xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                }
+                                            }
+
+                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    else
+                    {
+                        if (Path.IsPathRooted(config2.AppSettings.Settings["Sources"].Value))
+                        {
+                            using (FileStream fs = new FileStream(config2.AppSettings.Settings["Sources"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (XmlReader xr = XmlReader.Create(fs))
+                            {
+                                DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                                foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                                {
+                                    this.sourceCollection.Add(source);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            string path = Path.Combine(directory1, config2.AppSettings.Settings["Sources"].Value);
+
+                            if (File.Exists(path))
+                            {
+                                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                using (XmlReader xr = XmlReader.Create(fs))
+                                {
+                                    DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                                    foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                                    {
+                                        this.sourceCollection.Add(source);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Sources"].Value);
+
+                                if (File.Exists(path))
+                                {
+                                    using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (XmlReader xr = XmlReader.Create(fs))
+                                    {
+                                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                                        {
+                                            this.sourceCollection.Add(source);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                                    HashSet<string> pathHashSet = new HashSet<string>();
+                                    List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+
+                                    foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                                    {
+                                        string key = Path.GetFileNameWithoutExtension(filename);
+                                        Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                                        if (match.Success)
+                                        {
+                                            List<Tuple<string, string>> tupleList;
+
+                                            key = match.Groups[1].Value;
+
+                                            if (pathDictionary.TryGetValue(key, out tupleList))
+                                            {
+                                                tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                            }
+                                            else
+                                            {
+                                                tupleList = new List<Tuple<string, string>>();
+                                                tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                                pathDictionary.Add(key, tupleList);
+                                                pathList.Add(Tuple.Create<string, string>(null, key));
+                                            }
+                                        }
+                                        else
+                                        {
+                                            pathHashSet.Add(key);
+                                            pathList.Add(Tuple.Create<string, string>(filename, key));
+                                        }
+                                    }
+
+                                    pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                                    {
+                                        if (tuple1.Item1 == null)
+                                        {
+                                            if (!pathHashSet.Contains(tuple1.Item2))
+                                            {
+                                                List<Tuple<string, string>> tupleList;
+
+                                                if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
+                                                {
+                                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                                    {
+                                                        return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                    });
+
+                                                    if (tuple2 != null)
+                                                    {
+                                                        using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                                        {
+                                                            XmlDocument xmlDocument = new XmlDocument();
+
+                                                            xmlDocument.Load(fs);
+                                                            xmlDocument.Normalize();
+
+                                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                            {
+                                                                string title = null;
+                                                                Uri xmlUrl = null;
+
+                                                                foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                                {
+                                                                    if (xmlAttribute.Name.Equals("title"))
+                                                                    {
+                                                                        title = xmlAttribute.Value;
+                                                                    }
+                                                                    else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                                    {
+                                                                        xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                                    }
+                                                                }
+
+                                                                this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                         else
                                         {
-                                            StringBuilder stringBuilder = new StringBuilder(directory3);
-                                            Stream stream = null;
+                                            List<Tuple<string, string>> tupleList;
 
-                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                             {
-                                                stringBuilder.Append(Path.DirectorySeparatorChar);
-                                            }
-
-                                            string path = tuple1.Item2.Remove(0, stringBuilder.Length);
-
-                                            try
-                                            {
-                                                stream = tuple2.Item1.Open();
-
-                                                XmlDocument xmlDocument = new XmlDocument();
-
-                                                xmlDocument.Load(stream);
-                                                xmlDocument.Normalize();
-
-                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                                 {
-                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                    return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                });
+
+                                                using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                                {
+                                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                                    xmlDocument.Load(fs);
+                                                    xmlDocument.Normalize();
+
+                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
                                                     {
-                                                        if (xmlNode.Name.Equals("character"))
+                                                        string title = null;
+                                                        Uri xmlUrl = null;
+
+                                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
                                                         {
-                                                            Character character = ParseCharacter(xmlNode);
-
-                                                            character.Script = path;
-
-                                                            this.characterCollection.Add(character);
+                                                            if (xmlAttribute.Name.Equals("title"))
+                                                            {
+                                                                title = xmlAttribute.Value;
+                                                            }
+                                                            else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                            {
+                                                                xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                            }
                                                         }
+
+                                                        this.sourceCollection.Add(new Source(title, xmlUrl));
                                                     }
                                                 }
                                             }
-                                            catch
+                                            else
                                             {
-                                                this.characterCollection.Clear();
-
-                                                break;
-                                            }
-                                            finally
-                                            {
-                                                if (stream != null)
+                                                using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
                                                 {
-                                                    stream.Close();
+                                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                                    xmlDocument.Load(fs);
+                                                    xmlDocument.Normalize();
+
+                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                    {
+                                                        string title = null;
+                                                        Uri xmlUrl = null;
+
+                                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                        {
+                                                            if (xmlAttribute.Name.Equals("title"))
+                                                            {
+                                                                title = xmlAttribute.Value;
+                                                            }
+                                                            else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                            {
+                                                                xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                            }
+                                                        }
+
+                                                        this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
+                                    });
                                 }
-                            }
-                            finally
-                            {
-                                if (fs != null)
-                                {
-                                    fs.Close();
-                                }
-                            }
-
-                            if (this.characterCollection.Count > 0)
-                            {
-                                Parse(tuple1.Item2);
-
-                                break;
                             }
                         }
-                        else
+                    }
+                }
+                else if (Path.IsPathRooted(config1.AppSettings.Settings["Sources"].Value))
+                {
+                    using (FileStream fs = new FileStream(config1.AppSettings.Settings["Sources"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (XmlReader xr = XmlReader.Create(fs))
+                    {
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
                         {
-                            string filename1 = Path.GetFileNameWithoutExtension(tuple1.Item2);
-                            Match match1 = Regex.Match(filename1, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-                            List<Tuple<string, string>> tupleList = new List<Tuple<string, string>>();
-                            List<Tuple<bool, string>> tempPathList = new List<Tuple<bool, string>>();
+                            this.sourceCollection.Add(source);
+                        }
+                    }
+                }
+                else
+                {
+                    string path = Path.Combine(directory1, config1.AppSettings.Settings["Sources"].Value);
 
-                            if (match1.Success)
+                    if (File.Exists(path))
+                    {
+                        using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (XmlReader xr = XmlReader.Create(fs))
+                        {
+                            DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                            foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
                             {
-                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match1.Groups[2].Value));
+                                this.sourceCollection.Add(source);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                        HashSet<string> pathHashSet = new HashSet<string>();
+                        List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
 
-                                while (pathList2.Count > 0)
+                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                        {
+                            string key = Path.GetFileNameWithoutExtension(filename);
+                            Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+
+                            if (match.Success)
+                            {
+                                List<Tuple<string, string>> tupleList;
+
+                                key = match.Groups[1].Value;
+
+                                if (pathDictionary.TryGetValue(key, out tupleList))
                                 {
-                                    int j = random.Next(pathList2.Count);
-                                    Tuple<bool, string> tuple2 = pathList2[j];
-                                    string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
-                                    Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-
-                                    pathList2.RemoveAt(j);
-
-                                    if (match2.Success)
-                                    {
-                                        if (match1.Groups[1].Value.Equals(match2.Groups[1].Value))
-                                        {
-                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
-
-                                            continue;
-                                        }
-                                    }
-                                    else if (match1.Groups[1].Value.Equals(filename2))
-                                    {
-                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                        continue;
-                                    }
-
-                                    tempPathList.Add(tuple2);
-                                }
-
-                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                {
-                                    return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                });
-
-                                if (tuple3 == null)
-                                {
-                                    tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                    {
-                                        return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                    });
-
-                                    if (tuple3 != null)
-                                    {
-                                        StringBuilder stringBuilder = new StringBuilder(directory3);
-                                        FileStream fs = null;
-
-                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
-                                        {
-                                            stringBuilder.Append(Path.DirectorySeparatorChar);
-                                        }
-
-                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                        try
-                                        {
-                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                            {
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                {
-                                                    if (xmlNode.Name.Equals("character"))
-                                                    {
-                                                        Character character = ParseCharacter(xmlNode);
-
-                                                        character.Script = path;
-
-                                                        this.characterCollection.Add(character);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        catch
-                                        {
-                                            this.characterCollection.Clear();
-                                            pathList2 = tempPathList;
-
-                                            continue;
-                                        }
-                                        finally
-                                        {
-                                            if (fs != null)
-                                            {
-                                                fs.Close();
-                                            }
-                                        }
-
-                                        if (this.characterCollection.Count > 0)
-                                        {
-                                            Parse(tuple3.Item1);
-
-                                            break;
-                                        }
-                                    }
+                                    tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
                                 }
                                 else
                                 {
-                                    StringBuilder stringBuilder = new StringBuilder(directory3);
-                                    FileStream fs = null;
-
-                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
-                                    {
-                                        stringBuilder.Append(Path.DirectorySeparatorChar);
-                                    }
-
-                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                    try
-                                    {
-                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                        XmlDocument xmlDocument = new XmlDocument();
-
-                                        xmlDocument.Load(fs);
-                                        xmlDocument.Normalize();
-
-                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                        {
-                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                            {
-                                                if (xmlNode.Name.Equals("character"))
-                                                {
-                                                    Character character = ParseCharacter(xmlNode);
-
-                                                    character.Script = path;
-
-                                                    this.characterCollection.Add(character);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    catch
-                                    {
-                                        this.characterCollection.Clear();
-                                        pathList2 = tempPathList;
-
-                                        continue;
-                                    }
-                                    finally
-                                    {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-                                    }
-
-                                    if (this.characterCollection.Count > 0)
-                                    {
-                                        Parse(tuple3.Item1);
-
-                                        break;
-                                    }
+                                    tupleList = new List<Tuple<string, string>>();
+                                    tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
+                                    pathDictionary.Add(key, tupleList);
+                                    pathList.Add(Tuple.Create<string, string>(null, key));
                                 }
-
-                                pathList2 = tempPathList;
                             }
                             else
                             {
-                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                pathHashSet.Add(key);
+                                pathList.Add(Tuple.Create<string, string>(filename, key));
+                            }
+                        }
 
-                                while (pathList2.Count > 0)
+                        pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                        {
+                            if (tuple1.Item1 == null)
+                            {
+                                if (!pathHashSet.Contains(tuple1.Item2))
                                 {
-                                    int j = random.Next(pathList2.Count);
-                                    Tuple<bool, string> tuple2 = pathList2[j];
-                                    string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
-                                    Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                    List<Tuple<string, string>> tupleList;
 
-                                    pathList2.RemoveAt(j);
-
-                                    if (match2.Success)
+                                    if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                     {
-                                        if (filename1.Equals(match2.Groups[1].Value))
+                                        Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                         {
-                                            tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, match2.Groups[2].Value));
+                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                        });
 
-                                            continue;
-                                        }
-                                    }
-                                    else if (filename1.Equals(filename2))
-                                    {
-                                        tupleList.Add(Tuple.Create<string, string>(tuple2.Item2, CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
-
-                                        continue;
-                                    }
-
-                                    tempPathList.Add(tuple2);
-                                }
-
-                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                {
-                                    return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                });
-
-                                if (tuple3 == null)
-                                {
-                                    tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
-                                    {
-                                        return tuple4.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                    });
-
-                                    if (tuple3 != null)
-                                    {
-                                        StringBuilder stringBuilder = new StringBuilder(directory3);
-                                        FileStream fs = null;
-
-                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        if (tuple2 != null)
                                         {
-                                            stringBuilder.Append(Path.DirectorySeparatorChar);
-                                        }
-
-                                        string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                        try
-                                        {
-                                            fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                            using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
                                             {
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                                XmlDocument xmlDocument = new XmlDocument();
+
+                                                xmlDocument.Load(fs);
+                                                xmlDocument.Normalize();
+
+                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
                                                 {
-                                                    if (xmlNode.Name.Equals("character"))
+                                                    string title = null;
+                                                    Uri xmlUrl = null;
+
+                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
                                                     {
-                                                        Character character = ParseCharacter(xmlNode);
-
-                                                        character.Script = path;
-
-                                                        this.characterCollection.Add(character);
+                                                        if (xmlAttribute.Name.Equals("title"))
+                                                        {
+                                                            title = xmlAttribute.Value;
+                                                        }
+                                                        else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                        {
+                                                            xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                        }
                                                     }
+
+                                                    this.sourceCollection.Add(new Source(title, xmlUrl));
                                                 }
                                             }
                                         }
-                                        catch
-                                        {
-                                            this.characterCollection.Clear();
-                                            pathList2 = tempPathList;
-
-                                            continue;
-                                        }
-                                        finally
-                                        {
-                                            if (fs != null)
-                                            {
-                                                fs.Close();
-                                            }
-                                        }
-
-                                        if (this.characterCollection.Count > 0)
-                                        {
-                                            Parse(tuple3.Item1);
-
-                                            break;
-                                        }
                                     }
                                 }
-                                else
+                            }
+                            else
+                            {
+                                List<Tuple<string, string>> tupleList;
+
+                                if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                 {
-                                    StringBuilder stringBuilder = new StringBuilder(directory3);
-                                    FileStream fs = null;
-
-                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                     {
-                                        stringBuilder.Append(Path.DirectorySeparatorChar);
-                                    }
+                                        return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                    });
 
-                                    string path = tuple3.Item1.Remove(0, stringBuilder.Length);
-
-                                    try
+                                    using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
                                     {
-                                        fs = new FileStream(tuple3.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
-
                                         XmlDocument xmlDocument = new XmlDocument();
 
                                         xmlDocument.Load(fs);
                                         xmlDocument.Normalize();
 
-                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
                                         {
-                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                                            string title = null;
+                                            Uri xmlUrl = null;
+
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
                                             {
-                                                if (xmlNode.Name.Equals("character"))
+                                                if (xmlAttribute.Name.Equals("title"))
                                                 {
-                                                    Character character = ParseCharacter(xmlNode);
-
-                                                    character.Script = path;
-
-                                                    this.characterCollection.Add(character);
+                                                    title = xmlAttribute.Value;
+                                                }
+                                                else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                {
+                                                    xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
                                                 }
                                             }
+
+                                            this.sourceCollection.Add(new Source(title, xmlUrl));
                                         }
-                                    }
-                                    catch
-                                    {
-                                        this.characterCollection.Clear();
-                                        pathList2 = tempPathList;
-
-                                        continue;
-                                    }
-                                    finally
-                                    {
-                                        if (fs != null)
-                                        {
-                                            fs.Close();
-                                        }
-                                    }
-
-                                    if (this.characterCollection.Count > 0)
-                                    {
-                                        Parse(tuple3.Item1);
-
-                                        break;
                                     }
                                 }
+                                else
+                                {
+                                    using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    {
+                                        XmlDocument xmlDocument = new XmlDocument();
 
-                                pathList2 = tempPathList;
+                                        xmlDocument.Load(fs);
+                                        xmlDocument.Normalize();
+
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        {
+                                            string title = null;
+                                            Uri xmlUrl = null;
+
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            {
+                                                if (xmlAttribute.Name.Equals("title"))
+                                                {
+                                                    title = xmlAttribute.Value;
+                                                }
+                                                else if (xmlAttribute.Name.Equals("xmlUrl"))
+                                                {
+                                                    xmlUrl = new Uri(xmlAttribute.Value, UriKind.Absolute);
+                                                }
+                                            }
+
+                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                        }
+                                    }
+                                }
                             }
-                        }
+                        });
                     }
                 }
             }
@@ -2567,6 +3526,38 @@ namespace Apricot
             {
                 config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
                 directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                if (config1.AppSettings.Settings["Sources"] != null)
+                {
+                    List<Source> sourceList = this.sourceCollection.ToList();
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
+
+                    sourceList.Sort(delegate (Source source1, Source source2)
+                    {
+                        return String.Compare(source1.Name, source2.Name, StringComparison.InvariantCulture);
+                    });
+
+                    using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
+                    {
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                        serializer.WriteObject(xw, sourceList);
+                        xw.Flush();
+                        ms.Seek(0, SeekOrigin.Begin);
+
+                        using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Sources"].Value) ? config1.AppSettings.Settings["Sources"].Value : Path.Combine(directory, config1.AppSettings.Settings["Sources"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                    }
+                }
 
                 if (config1.AppSettings.Settings["Characters"] != null)
                 {
@@ -2661,6 +3652,69 @@ namespace Apricot
             else
             {
                 System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
+
+                if (config1.AppSettings.Settings["Sources"] != null)
+                {
+                    List<Source> sourceList = this.sourceCollection.ToList();
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
+
+                    sourceList.Sort(delegate (Source source1, Source source2)
+                    {
+                        return String.Compare(source1.Name, source2.Name, StringComparison.InvariantCulture);
+                    });
+
+                    using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
+                    {
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                        serializer.WriteObject(xw, sourceList);
+                        xw.Flush();
+                        ms.Seek(0, SeekOrigin.Begin);
+
+                        using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Sources"].Value) ? config1.AppSettings.Settings["Sources"].Value : Path.Combine(directory, config1.AppSettings.Settings["Sources"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                    }
+                }
+                else if (config2.AppSettings.Settings["Sources"] != null)
+                {
+                    List<Source> sourceList = this.sourceCollection.ToList();
+                    XmlWriterSettings settings = new XmlWriterSettings();
+
+                    settings.Indent = true;
+                    settings.Encoding = new UTF8Encoding(false);
+
+                    sourceList.Sort(delegate (Source source1, Source source2)
+                    {
+                        return String.Compare(source1.Name, source2.Name, StringComparison.InvariantCulture);
+                    });
+
+                    using (MemoryStream ms = new MemoryStream())
+                    using (XmlWriter xw = XmlWriter.Create(ms, settings))
+                    {
+                        DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
+
+                        serializer.WriteObject(xw, sourceList);
+                        xw.Flush();
+                        ms.Seek(0, SeekOrigin.Begin);
+
+                        using (FileStream fs = new FileStream(Path.IsPathRooted(config2.AppSettings.Settings["Sources"].Value) ? config2.AppSettings.Settings["Sources"].Value : Path.Combine(directory, config2.AppSettings.Settings["Sources"].Value), FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            byte[] buffer = ms.ToArray();
+
+                            fs.Write(buffer, 0, buffer.Length);
+                            fs.Flush();
+                        }
+                    }
+                }
 
                 if (config1.AppSettings.Settings["Characters"] != null)
                 {
@@ -3770,11 +4824,18 @@ namespace Apricot
         {
             DateTime nowDateTime = DateTime.Now;
             DateTime updatedDateTime = reset ? nowDateTime - new TimeSpan(12, 0, 0) : this.lastUpdatedDateTime;
+            Fetcher fetcher = new Fetcher();
             string[] terms = (from word in this.wordCollection select word.Name).Distinct().ToArray();
+            List<Tuple<string, Uri>> sourceList = new List<Tuple<string, Uri>>();
             Dictionary<Uri, Entry> entryDictionary = new Dictionary<Uri, Entry>();
             Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> tempCacheDictionary = new Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>();
 
             this.lastUpdatedDateTime = nowDateTime;
+
+            foreach (Source source in this.sourceCollection)
+            {
+                fetcher.Locations.Add(source.Location);
+            }
 
             Task.Factory.StartNew(delegate
             {
@@ -3784,7 +4845,6 @@ namespace Apricot
                 {
                     System.Configuration.Configuration config1 = null;
                     string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
-                    Fetcher fetcher = new Fetcher();
 
                     if (Directory.Exists(directory))
                     {
@@ -3811,133 +4871,6 @@ namespace Apricot
                         if (config1.AppSettings.Settings["UserAgent"] != null)
                         {
                             fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                        }
-
-                        if (config1.AppSettings.Settings["Sources"] == null)
-                        {
-                            Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
-                            HashSet<string> pathHashSet = new HashSet<string>();
-                            List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
-
-                            foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
-                            {
-                                string key = Path.GetFileNameWithoutExtension(filename);
-                                Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-
-                                if (match.Success)
-                                {
-                                    List<Tuple<string, string>> tupleList;
-
-                                    key = match.Groups[1].Value;
-
-                                    if (pathDictionary.TryGetValue(key, out tupleList))
-                                    {
-                                        tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
-                                    }
-                                    else
-                                    {
-                                        tupleList = new List<Tuple<string, string>>();
-                                        tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
-                                        pathDictionary.Add(key, tupleList);
-                                        pathList.Add(Tuple.Create<string, string>(null, key));
-                                    }
-                                }
-                                else
-                                {
-                                    pathHashSet.Add(key);
-                                    pathList.Add(Tuple.Create<string, string>(filename, key));
-                                }
-                            }
-
-                            pathList.ForEach(delegate (Tuple<string, string> tuple1)
-                            {
-                                if (tuple1.Item1 == null)
-                                {
-                                    if (!pathHashSet.Contains(tuple1.Item2))
-                                    {
-                                        List<Tuple<string, string>> tupleList;
-
-                                        if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
-                                        {
-                                            Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
-                                            {
-                                                return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                            });
-
-                                            if (tuple2 != null)
-                                            {
-                                                using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                                {
-                                                    XmlDocument xmlDocument = new XmlDocument();
-
-                                                    xmlDocument.Load(fs);
-                                                    xmlDocument.Normalize();
-
-                                                    foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                                    {
-                                                        fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    List<Tuple<string, string>> tupleList;
-
-                                    if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
-                                    {
-                                        Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
-                                        {
-                                            return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                        });
-
-                                        using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                        {
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                            {
-                                                fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                        {
-                                            XmlDocument xmlDocument = new XmlDocument();
-
-                                            xmlDocument.Load(fs);
-                                            xmlDocument.Normalize();
-
-                                            foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                            {
-                                                fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                        else
-                        {
-                            using (FileStream fs = new FileStream(Path.IsPathRooted(config1.AppSettings.Settings["Sources"].Value) ? config1.AppSettings.Settings["Sources"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Sources"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
-                            {
-                                XmlDocument xmlDocument = new XmlDocument();
-
-                                xmlDocument.Load(fs);
-                                xmlDocument.Normalize();
-
-                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                {
-                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                }
-                            }
                         }
                     }
                     else
@@ -3967,204 +4900,27 @@ namespace Apricot
                         {
                             fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
                         }
-
-                        if (config1.AppSettings.Settings["Sources"] == null)
-                        {
-                            if (config2.AppSettings.Settings["Sources"] == null)
-                            {
-                                Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
-                                HashSet<string> pathHashSet = new HashSet<string>();
-                                List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
-
-                                foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
-                                {
-                                    string key = Path.GetFileNameWithoutExtension(filename);
-                                    Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
-
-                                    if (match.Success)
-                                    {
-                                        List<Tuple<string, string>> tupleList;
-
-                                        key = match.Groups[1].Value;
-
-                                        if (pathDictionary.TryGetValue(key, out tupleList))
-                                        {
-                                            tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
-                                        }
-                                        else
-                                        {
-                                            tupleList = new List<Tuple<string, string>>();
-                                            tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
-                                            pathDictionary.Add(key, tupleList);
-                                            pathList.Add(Tuple.Create<string, string>(null, key));
-                                        }
-                                    }
-                                    else
-                                    {
-                                        pathHashSet.Add(key);
-                                        pathList.Add(Tuple.Create<string, string>(filename, key));
-                                    }
-                                }
-
-                                pathList.ForEach(delegate (Tuple<string, string> tuple1)
-                                {
-                                    if (tuple1.Item1 == null)
-                                    {
-                                        if (!pathHashSet.Contains(tuple1.Item2))
-                                        {
-                                            List<Tuple<string, string>> tupleList;
-
-                                            if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
-                                            {
-                                                Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
-                                                {
-                                                    return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                                });
-
-                                                if (tuple2 != null)
-                                                {
-                                                    using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                                    {
-                                                        XmlDocument xmlDocument = new XmlDocument();
-
-                                                        xmlDocument.Load(fs);
-                                                        xmlDocument.Normalize();
-
-                                                        foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                                        {
-                                                            fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        List<Tuple<string, string>> tupleList;
-
-                                        if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
-                                        {
-                                            Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
-                                            {
-                                                return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                            });
-
-                                            using (FileStream fs = new FileStream(tuple2 == null ? tuple1.Item1 : tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                            {
-                                                XmlDocument xmlDocument = new XmlDocument();
-
-                                                xmlDocument.Load(fs);
-                                                xmlDocument.Normalize();
-
-                                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                                {
-                                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                            {
-                                                XmlDocument xmlDocument = new XmlDocument();
-
-                                                xmlDocument.Load(fs);
-                                                xmlDocument.Normalize();
-
-                                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                                {
-                                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                            else
-                            {
-                                if (Path.IsPathRooted(config2.AppSettings.Settings["Sources"].Value))
-                                {
-                                    using (FileStream fs = new FileStream(config2.AppSettings.Settings["Sources"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
-                                    {
-                                        XmlDocument xmlDocument = new XmlDocument();
-
-                                        xmlDocument.Load(fs);
-                                        xmlDocument.Normalize();
-
-                                        foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                        {
-                                            fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    string path = Path.Combine(directory, config2.AppSettings.Settings["Sources"].Value);
-
-                                    using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Sources"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
-                                    {
-                                        XmlDocument xmlDocument = new XmlDocument();
-
-                                        xmlDocument.Load(fs);
-                                        xmlDocument.Normalize();
-
-                                        foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                        {
-                                            fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else if (Path.IsPathRooted(config1.AppSettings.Settings["Sources"].Value))
-                        {
-                            using (FileStream fs = new FileStream(config1.AppSettings.Settings["Sources"].Value, FileMode.Open, FileAccess.Read, FileShare.Read))
-                            {
-                                XmlDocument xmlDocument = new XmlDocument();
-
-                                xmlDocument.Load(fs);
-                                xmlDocument.Normalize();
-
-                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                {
-                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            string path = Path.Combine(directory, config1.AppSettings.Settings["Sources"].Value);
-
-                            using (FileStream fs = new FileStream(File.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Sources"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
-                            {
-                                XmlDocument xmlDocument = new XmlDocument();
-
-                                xmlDocument.Load(fs);
-                                xmlDocument.Normalize();
-
-                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline/@xmlUrl"))
-                                {
-                                    fetcher.Sources.Add(new Uri(xmlAttribute.Value, UriKind.Absolute));
-                                }
-                            }
-                        }
                     }
 
                     fetcher.Collect();
 
-                    foreach (Entry entry in from entry in fetcher.Entries where entry.Resource != null && entry.Modified > pastDateTime && entry.Modified <= nowDateTime select entry)
+                    foreach (Tuple<string, Uri, IEnumerable<Entry>> feed in fetcher.Feeds)
                     {
-                        if (entryDictionary.ContainsKey(entry.Resource))
+                        sourceList.Add(Tuple.Create<string, Uri>(feed.Item1, feed.Item2));
+
+                        foreach (Entry entry in from entry in feed.Item3 where entry.Resource != null && entry.Modified > pastDateTime && entry.Modified <= nowDateTime select entry)
                         {
-                            if (entry.Modified > entryDictionary[entry.Resource].Modified)
+                            if (entryDictionary.ContainsKey(entry.Resource))
                             {
-                                entryDictionary[entry.Resource] = entry;
+                                if (entry.Modified > entryDictionary[entry.Resource].Modified)
+                                {
+                                    entryDictionary[entry.Resource] = entry;
+                                }
                             }
-                        }
-                        else
-                        {
-                            entryDictionary.Add(entry.Resource, entry);
+                            else
+                            {
+                                entryDictionary.Add(entry.Resource, entry);
+                            }
                         }
                     }
                 }
@@ -4502,7 +5258,21 @@ namespace Apricot
             {
                 List<Entry> newEntryList = (from entry in entryDictionary.Values where entry.Modified > updatedDateTime && entry.Modified <= nowDateTime orderby entry.Modified descending select entry).ToList();
                 bool tfidfIsUpdated = true;
-                
+
+                sourceList.ForEach(delegate (Tuple<string, Uri> tuple)
+                {
+                    if (!String.IsNullOrEmpty(tuple.Item1))
+                    {
+                        foreach (Source source in this.sourceCollection)
+                        {
+                            if (tuple.Item2.Equals(source.Location))
+                            {
+                                source.Name = tuple.Item1;
+                            }
+                        }
+                    }
+                });
+
                 if (reset && newEntryList.Count == 0)
                 {
                     newEntryList.AddRange((from entry in entryDictionary.Values where entry.Modified <= nowDateTime orderby entry.Modified descending select entry).Take(25));
