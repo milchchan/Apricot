@@ -4840,10 +4840,11 @@ namespace Apricot
             Task.Factory.StartNew(delegate
             {
                 DateTime pastDateTime = nowDateTime - new TimeSpan(24, 0, 0);
+                System.Configuration.Configuration config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
                 if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                 {
-                    System.Configuration.Configuration config1 = null;
+                    System.Configuration.Configuration config2 = null;
                     string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
 
                     if (Directory.Exists(directory))
@@ -4855,14 +4856,12 @@ namespace Apricot
                             System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
 
                             exeConfigurationFileMap.ExeConfigFilename = s;
-                            config1 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
+                            config2 = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
                         }
                     }
 
-                    if (config1 == null)
+                    if (config2 == null)
                     {
-                        config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-
                         if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                         {
                             fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
@@ -4875,30 +4874,28 @@ namespace Apricot
                     }
                     else
                     {
-                        System.Configuration.Configuration config2 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-
-                        if (config1.AppSettings.Settings["Timeout"] == null)
+                        if (config2.AppSettings.Settings["Timeout"] == null)
                         {
-                            if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                            if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                             {
-                                fetcher.Timeout = new Nullable<int>(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
+                                fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                             }
                         }
-                        else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                        else if (config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                         {
-                            fetcher.Timeout = new Nullable<int>(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
+                            fetcher.Timeout = new Nullable<int>(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                         }
 
-                        if (config1.AppSettings.Settings["UserAgent"] == null)
+                        if (config2.AppSettings.Settings["UserAgent"] == null)
                         {
-                            if (config2.AppSettings.Settings["UserAgent"] != null)
+                            if (config1.AppSettings.Settings["UserAgent"] != null)
                             {
-                                fetcher.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                                fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
                             }
                         }
                         else
                         {
-                            fetcher.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                            fetcher.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
                         }
                     }
 
@@ -4925,7 +4922,7 @@ namespace Apricot
                     }
                 }
 
-                foreach (System.Configuration.ConnectionStringSettings settings in System.Configuration.ConfigurationManager.ConnectionStrings)
+                foreach (System.Configuration.ConnectionStringSettings settings in config1.ConnectionStrings.ConnectionStrings)
                 {
                     DbProviderFactory factory = DbProviderFactories.GetFactory(settings.ProviderName);
 
@@ -5010,7 +5007,7 @@ namespace Apricot
 
                 if (entryDictionary.Count == 0)
                 {
-                    foreach (System.Configuration.ConnectionStringSettings settings in System.Configuration.ConfigurationManager.ConnectionStrings)
+                    foreach (System.Configuration.ConnectionStringSettings settings in config1.ConnectionStrings.ConnectionStrings)
                     {
                         DbProviderFactory factory = DbProviderFactories.GetFactory(settings.ProviderName);
 
@@ -6795,7 +6792,7 @@ namespace Apricot
                     return d;
                 });
 
-                foreach (System.Configuration.ConnectionStringSettings settings in System.Configuration.ConfigurationManager.ConnectionStrings)
+                foreach (System.Configuration.ConnectionStringSettings settings in System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None).ConnectionStrings.ConnectionStrings)
                 {
                     DbProviderFactory factory = DbProviderFactories.GetFactory(settings.ProviderName);
 

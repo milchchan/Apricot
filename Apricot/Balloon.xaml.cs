@@ -6191,7 +6191,7 @@ namespace Apricot
                                         Size size = new Size(this.baseWidth - 12, this.Canvas.Height - Canvas.GetTop(this.ScrollCanvas) - this.ScrollCanvas.Height - this.baseFooterHeight + 12);
                                         double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                                         double textWidth = size.Width - 30 - imageRect.Width;
-                                        
+
                                         if (!String.IsNullOrEmpty(title))
                                         {
                                             List<KeyValuePair<double, FormattedText>> list = new List<KeyValuePair<double, FormattedText>>();

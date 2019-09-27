@@ -24,7 +24,7 @@ namespace Apricot
     /// </summary>
     public partial class Agent : Window
     {
-        public event EventHandler DrawClipboard = null;
+        public event EventHandler<EventArgs> DrawClipboard = null;
         private readonly double frameRate = 60;
         private Nullable<IntPtr> nextClipboardViewer = null;
         private Nullable<int> hotKeyID = null;
@@ -82,13 +82,13 @@ namespace Apricot
             double opacity = 1;
             double scale = 2;
 
-            opacityMenuItem.Header = Properties.Resources.Opacity;
+            opacityMenuItem.Header = Apricot.Resources.Opacity;
 
             do
             {
                 MenuItem menuItem = new MenuItem();
 
-                menuItem.Header = String.Concat(((int)Math.Floor(opacity * 100)).ToString(System.Globalization.CultureInfo.CurrentCulture), Properties.Resources.Percent);
+                menuItem.Header = String.Concat(((int)Math.Floor(opacity * 100)).ToString(System.Globalization.CultureInfo.CurrentCulture), Apricot.Resources.Percent);
                 menuItem.Tag = opacity;
                 menuItem.Click += new RoutedEventHandler(delegate
                 {
@@ -176,13 +176,13 @@ namespace Apricot
                 opacity -= 0.1;
             } while (Math.Floor(opacity * 100) > 0);
 
-            scalingMenuItem.Header = Properties.Resources.Scaling;
+            scalingMenuItem.Header = Apricot.Resources.Scaling;
 
             do
             {
                 MenuItem menuItem = new MenuItem();
 
-                menuItem.Header = String.Concat(((int)Math.Floor(scale * 100)).ToString(System.Globalization.CultureInfo.CurrentCulture), Properties.Resources.Percent);
+                menuItem.Header = String.Concat(((int)Math.Floor(scale * 100)).ToString(System.Globalization.CultureInfo.CurrentCulture), Apricot.Resources.Percent);
                 menuItem.Tag = scale;
                 menuItem.Click += new RoutedEventHandler(delegate
                 {
@@ -305,7 +305,7 @@ namespace Apricot
                 scale -= 0.25;
             } while (Math.Floor(scale * 100) > 0);
 
-            refreshMenuItem.Header = Properties.Resources.Refresh;
+            refreshMenuItem.Header = Apricot.Resources.Refresh;
             refreshMenuItem.Click += new RoutedEventHandler(delegate
             {
                 foreach (Window window in Application.Current.Windows)
@@ -318,7 +318,7 @@ namespace Apricot
                     }
                 }
             });
-            topmostMenuItem.Header = Properties.Resources.Topmost;
+            topmostMenuItem.Header = Apricot.Resources.Topmost;
             topmostMenuItem.IsCheckable = true;
             topmostMenuItem.Click += new RoutedEventHandler(delegate
             {
@@ -330,7 +330,7 @@ namespace Apricot
                     }
                 }
             });
-            showInTaskbarMenuItem.Header = Properties.Resources.ShowInTaskbar;
+            showInTaskbarMenuItem.Header = Apricot.Resources.ShowInTaskbar;
             showInTaskbarMenuItem.IsCheckable = true;
             showInTaskbarMenuItem.Click += new RoutedEventHandler(delegate
             {
@@ -342,7 +342,7 @@ namespace Apricot
                     }
                 }
             });
-            muteMenuItem.Header = Properties.Resources.Mute;
+            muteMenuItem.Header = Apricot.Resources.Mute;
             muteMenuItem.IsCheckable = true;
             muteMenuItem.Click += new RoutedEventHandler(delegate
             {
@@ -356,14 +356,14 @@ namespace Apricot
                     }
                 }
             });
-            charactersMenuItem.Header = Properties.Resources.Characters;
-            sourcesMenuItem.Header = Properties.Resources.Sources;
-            updateMenuItem.Header = Properties.Resources.Update;
+            charactersMenuItem.Header = Apricot.Resources.Characters;
+            sourcesMenuItem.Header = Apricot.Resources.Sources;
+            updateMenuItem.Header = Apricot.Resources.Update;
             updateMenuItem.Click += new RoutedEventHandler(delegate
             {
                 Script.Instance.Update(true);
             });
-            exitMenuItem.Header = Properties.Resources.Exit;
+            exitMenuItem.Header = Apricot.Resources.Exit;
             exitMenuItem.Click += new RoutedEventHandler(delegate
             {
                 if (Script.Instance.Enabled)
@@ -1252,7 +1252,7 @@ namespace Apricot
                                 {
                                     MenuItem menuItem = new MenuItem();
 
-                                    menuItem.Header = Properties.Resources.Like;
+                                    menuItem.Header = Apricot.Resources.Like;
                                     menuItem.Click += new RoutedEventHandler(delegate
                                     {
                                         this.baseDateTime = this.baseDateTime.AddMinutes(30);
@@ -1715,7 +1715,7 @@ namespace Apricot
                                         sourcesMenuItem.Items.Add(sourceMenuItem);
                                         sourcesMenuItem.Items.Add(new Separator());
 
-                                        addMenuItem.Header = Properties.Resources.Add;
+                                        addMenuItem.Header = Apricot.Resources.Add;
                                         addMenuItem.Click += new RoutedEventHandler(delegate
                                         {
                                             Uri u = sourceMenuItem.Tag as Uri;
@@ -1755,7 +1755,7 @@ namespace Apricot
                                 sourceMenuItem.Header = String.IsNullOrEmpty(source.Name) ? source.Location.ToString() : source.Name;
                                 sourceMenuItem.Tag = source;
 
-                                removeMenuItem.Header = Properties.Resources.Remove;
+                                removeMenuItem.Header = Apricot.Resources.Remove;
                                 removeMenuItem.Click += new RoutedEventHandler(delegate
                                 {
                                     Source s = sourceMenuItem.Tag as Source;
@@ -1820,7 +1820,7 @@ namespace Apricot
                             sourcesMenuItem.IsEnabled = true;
                             sourcesMenuItem.Items.Add(sourceMenuItem);
 
-                            addMenuItem.Header = Properties.Resources.Add;
+                            addMenuItem.Header = Apricot.Resources.Add;
                             addMenuItem.Click += new RoutedEventHandler(delegate
                             {
                                 Uri u = sourceMenuItem.Tag as Uri;
@@ -2483,7 +2483,7 @@ namespace Apricot
                         bool isOwner = true;
                         Nullable<Point> point = null;
                         string directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                        
+
                         foreach (Nullable<Point> p in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select new Nullable<Point>(new Point(agent.Left - character.Location.X - character.BaseLocation.X, agent.Top - character.Location.Y - character.BaseLocation.Y)))
                         {
                             point = p;
@@ -3297,233 +3297,236 @@ namespace Apricot
         {
             base.OnMouseWheel(e);
 
-            const int WHEEL_DATA = 120;
-            int lines = e.Delta * SystemParameters.WheelScrollLines / WHEEL_DATA;
-            Agent agent = Application.Current.MainWindow as Agent;
-
-            if (agent != null)
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
-                double scale = agent.scale + 0.25 * lines;
+                const int WHEEL_DATA = 120;
+                int lines = e.Delta * SystemParameters.WheelScrollLines / WHEEL_DATA;
+                Agent agent = Application.Current.MainWindow as Agent;
 
-                if (scale > 0)
+                if (agent != null)
                 {
-                    agent.scale = scale;
-                }
+                    double scale = agent.scale + 0.25 * lines;
 
-                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select character)
-                {
-                    Storyboard storyboard = new Storyboard();
-                    DoubleAnimation doubleAnimation1 = new DoubleAnimation(agent.ZoomScaleTransform.ScaleX, agent.scale, TimeSpan.FromMilliseconds(500));
-                    DoubleAnimation doubleAnimation2 = new DoubleAnimation(agent.ZoomScaleTransform.ScaleY, agent.scale, TimeSpan.FromMilliseconds(500));
-                    DoubleAnimation doubleAnimation3 = new DoubleAnimation(agent.LayoutRoot.Width, character.Size.Width * agent.scale, TimeSpan.FromMilliseconds(500));
-                    DoubleAnimation doubleAnimation4 = new DoubleAnimation(agent.LayoutRoot.Height, character.Size.Height * agent.scale, TimeSpan.FromMilliseconds(500));
-
-                    if (agent.scaleStoryboard != null)
+                    if (scale > 0)
                     {
-                        agent.scaleStoryboard.Stop(agent.LayoutRoot);
+                        agent.scale = scale;
                     }
 
-                    if (agent.ZoomScaleTransform.ScaleX < agent.scale)
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select character)
                     {
-                        SineEase sineEase = new SineEase();
+                        Storyboard storyboard = new Storyboard();
+                        DoubleAnimation doubleAnimation1 = new DoubleAnimation(agent.ZoomScaleTransform.ScaleX, agent.scale, TimeSpan.FromMilliseconds(500));
+                        DoubleAnimation doubleAnimation2 = new DoubleAnimation(agent.ZoomScaleTransform.ScaleY, agent.scale, TimeSpan.FromMilliseconds(500));
+                        DoubleAnimation doubleAnimation3 = new DoubleAnimation(agent.LayoutRoot.Width, character.Size.Width * agent.scale, TimeSpan.FromMilliseconds(500));
+                        DoubleAnimation doubleAnimation4 = new DoubleAnimation(agent.LayoutRoot.Height, character.Size.Height * agent.scale, TimeSpan.FromMilliseconds(500));
 
-                        sineEase.EasingMode = EasingMode.EaseOut;
-                        doubleAnimation1.EasingFunction = sineEase;
-                    }
-                    else if (agent.ZoomScaleTransform.ScaleX > agent.scale)
-                    {
-                        SineEase sineEase = new SineEase();
-
-                        sineEase.EasingMode = EasingMode.EaseIn;
-                        doubleAnimation1.EasingFunction = sineEase;
-                    }
-
-                    if (agent.ZoomScaleTransform.ScaleY < agent.scale)
-                    {
-                        SineEase sineEase = new SineEase();
-
-                        sineEase.EasingMode = EasingMode.EaseOut;
-                        doubleAnimation2.EasingFunction = sineEase;
-                    }
-                    else if (agent.ZoomScaleTransform.ScaleY > agent.scale)
-                    {
-                        SineEase sineEase = new SineEase();
-
-                        sineEase.EasingMode = EasingMode.EaseIn;
-                        doubleAnimation2.EasingFunction = sineEase;
-                    }
-
-                    if (agent.LayoutRoot.Width < character.Size.Width * agent.scale)
-                    {
-                        SineEase sineEase = new SineEase();
-
-                        sineEase.EasingMode = EasingMode.EaseOut;
-                        doubleAnimation3.EasingFunction = sineEase;
-                    }
-                    else if (agent.LayoutRoot.Width > character.Size.Width * agent.scale)
-                    {
-                        SineEase sineEase = new SineEase();
-
-                        sineEase.EasingMode = EasingMode.EaseIn;
-                        doubleAnimation3.EasingFunction = sineEase;
-                    }
-
-                    if (agent.LayoutRoot.Height < character.Size.Height * agent.scale)
-                    {
-                        SineEase sineEase = new SineEase();
-
-                        sineEase.EasingMode = EasingMode.EaseOut;
-                        doubleAnimation4.EasingFunction = sineEase;
-                    }
-                    else if (agent.LayoutRoot.Height > character.Size.Height * agent.scale)
-                    {
-                        SineEase sineEase = new SineEase();
-
-                        sineEase.EasingMode = EasingMode.EaseIn;
-                        doubleAnimation4.EasingFunction = sineEase;
-                    }
-
-                    storyboard.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
-                    {
-                        if (((Clock)s).CurrentState == ClockState.Filling)
+                        if (agent.scaleStoryboard != null)
                         {
-                            agent.ZoomScaleTransform.ScaleX = agent.scale;
-                            agent.ZoomScaleTransform.ScaleY = agent.scale;
-
-                            foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
-                            {
-                                agent.LayoutRoot.Width = c.Size.Width * agent.scale;
-                                agent.LayoutRoot.Height = c.Size.Height * agent.scale;
-                            }
-
-                            storyboard.Remove(agent.LayoutRoot);
-                            agent.scaleStoryboard = null;
+                            agent.scaleStoryboard.Stop(agent.LayoutRoot);
                         }
-                    });
-                    storyboard.Children.Add(doubleAnimation1);
-                    storyboard.Children.Add(doubleAnimation2);
-                    storyboard.Children.Add(doubleAnimation3);
-                    storyboard.Children.Add(doubleAnimation4);
 
-                    Storyboard.SetTargetProperty(doubleAnimation1, new PropertyPath("(0).(1).(2)", ContentControl.ContentProperty, Canvas.RenderTransformProperty, ScaleTransform.ScaleXProperty));
-                    Storyboard.SetTargetProperty(doubleAnimation2, new PropertyPath("(0).(1).(2)", ContentControl.ContentProperty, Canvas.RenderTransformProperty, ScaleTransform.ScaleYProperty));
-                    Storyboard.SetTargetProperty(doubleAnimation3, new PropertyPath(ContentControl.WidthProperty));
-                    Storyboard.SetTargetProperty(doubleAnimation4, new PropertyPath(ContentControl.HeightProperty));
-
-                    agent.scaleStoryboard = storyboard;
-                    agent.LayoutRoot.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
-                }
-
-                foreach (Window window in agent.OwnedWindows)
-                {
-                    Agent a = window as Agent;
-
-                    if (a != null)
-                    {
-                        a.scale = agent.scale;
-
-                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(a.characterName) select character)
+                        if (agent.ZoomScaleTransform.ScaleX < agent.scale)
                         {
-                            Storyboard storyboard = new Storyboard();
-                            DoubleAnimation doubleAnimation1 = new DoubleAnimation(a.ZoomScaleTransform.ScaleX, a.scale, TimeSpan.FromMilliseconds(500));
-                            DoubleAnimation doubleAnimation2 = new DoubleAnimation(a.ZoomScaleTransform.ScaleY, a.scale, TimeSpan.FromMilliseconds(500));
-                            DoubleAnimation doubleAnimation3 = new DoubleAnimation(a.LayoutRoot.Width, character.Size.Width * a.scale, TimeSpan.FromMilliseconds(500));
-                            DoubleAnimation doubleAnimation4 = new DoubleAnimation(a.LayoutRoot.Height, character.Size.Height * a.scale, TimeSpan.FromMilliseconds(500));
+                            SineEase sineEase = new SineEase();
 
-                            if (a.scaleStoryboard != null)
+                            sineEase.EasingMode = EasingMode.EaseOut;
+                            doubleAnimation1.EasingFunction = sineEase;
+                        }
+                        else if (agent.ZoomScaleTransform.ScaleX > agent.scale)
+                        {
+                            SineEase sineEase = new SineEase();
+
+                            sineEase.EasingMode = EasingMode.EaseIn;
+                            doubleAnimation1.EasingFunction = sineEase;
+                        }
+
+                        if (agent.ZoomScaleTransform.ScaleY < agent.scale)
+                        {
+                            SineEase sineEase = new SineEase();
+
+                            sineEase.EasingMode = EasingMode.EaseOut;
+                            doubleAnimation2.EasingFunction = sineEase;
+                        }
+                        else if (agent.ZoomScaleTransform.ScaleY > agent.scale)
+                        {
+                            SineEase sineEase = new SineEase();
+
+                            sineEase.EasingMode = EasingMode.EaseIn;
+                            doubleAnimation2.EasingFunction = sineEase;
+                        }
+
+                        if (agent.LayoutRoot.Width < character.Size.Width * agent.scale)
+                        {
+                            SineEase sineEase = new SineEase();
+
+                            sineEase.EasingMode = EasingMode.EaseOut;
+                            doubleAnimation3.EasingFunction = sineEase;
+                        }
+                        else if (agent.LayoutRoot.Width > character.Size.Width * agent.scale)
+                        {
+                            SineEase sineEase = new SineEase();
+
+                            sineEase.EasingMode = EasingMode.EaseIn;
+                            doubleAnimation3.EasingFunction = sineEase;
+                        }
+
+                        if (agent.LayoutRoot.Height < character.Size.Height * agent.scale)
+                        {
+                            SineEase sineEase = new SineEase();
+
+                            sineEase.EasingMode = EasingMode.EaseOut;
+                            doubleAnimation4.EasingFunction = sineEase;
+                        }
+                        else if (agent.LayoutRoot.Height > character.Size.Height * agent.scale)
+                        {
+                            SineEase sineEase = new SineEase();
+
+                            sineEase.EasingMode = EasingMode.EaseIn;
+                            doubleAnimation4.EasingFunction = sineEase;
+                        }
+
+                        storyboard.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
+                        {
+                            if (((Clock)s).CurrentState == ClockState.Filling)
                             {
-                                a.scaleStoryboard.Stop(a.LayoutRoot);
-                            }
+                                agent.ZoomScaleTransform.ScaleX = agent.scale;
+                                agent.ZoomScaleTransform.ScaleY = agent.scale;
 
-                            if (a.ZoomScaleTransform.ScaleX < a.scale)
-                            {
-                                SineEase sineEase = new SineEase();
-
-                                sineEase.EasingMode = EasingMode.EaseOut;
-                                doubleAnimation1.EasingFunction = sineEase;
-                            }
-                            else if (a.ZoomScaleTransform.ScaleX > a.scale)
-                            {
-                                SineEase sineEase = new SineEase();
-
-                                sineEase.EasingMode = EasingMode.EaseIn;
-                                doubleAnimation1.EasingFunction = sineEase;
-                            }
-
-                            if (a.ZoomScaleTransform.ScaleY < a.scale)
-                            {
-                                SineEase sineEase = new SineEase();
-
-                                sineEase.EasingMode = EasingMode.EaseOut;
-                                doubleAnimation2.EasingFunction = sineEase;
-                            }
-                            else if (a.ZoomScaleTransform.ScaleY > a.scale)
-                            {
-                                SineEase sineEase = new SineEase();
-
-                                sineEase.EasingMode = EasingMode.EaseIn;
-                                doubleAnimation2.EasingFunction = sineEase;
-                            }
-
-                            if (a.LayoutRoot.Width < character.Size.Width * a.scale)
-                            {
-                                SineEase sineEase = new SineEase();
-
-                                sineEase.EasingMode = EasingMode.EaseOut;
-                                doubleAnimation3.EasingFunction = sineEase;
-                            }
-                            else if (a.LayoutRoot.Width > character.Size.Width * a.scale)
-                            {
-                                SineEase sineEase = new SineEase();
-
-                                sineEase.EasingMode = EasingMode.EaseIn;
-                                doubleAnimation3.EasingFunction = sineEase;
-                            }
-
-                            if (a.LayoutRoot.Height < character.Size.Height * a.scale)
-                            {
-                                SineEase sineEase = new SineEase();
-
-                                sineEase.EasingMode = EasingMode.EaseOut;
-                                doubleAnimation4.EasingFunction = sineEase;
-                            }
-                            else if (a.LayoutRoot.Height > character.Size.Height * a.scale)
-                            {
-                                SineEase sineEase = new SineEase();
-
-                                sineEase.EasingMode = EasingMode.EaseIn;
-                                doubleAnimation4.EasingFunction = sineEase;
-                            }
-
-                            storyboard.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
-                            {
-                                if (((Clock)s).CurrentState == ClockState.Filling)
+                                foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
                                 {
-                                    a.ZoomScaleTransform.ScaleX = a.scale;
-                                    a.ZoomScaleTransform.ScaleY = a.scale;
-
-                                    foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(a.characterName) select c)
-                                    {
-                                        a.LayoutRoot.Width = c.Size.Width * a.scale;
-                                        a.LayoutRoot.Height = c.Size.Height * a.scale;
-                                    }
-
-                                    storyboard.Remove(a.LayoutRoot);
-                                    a.scaleStoryboard = null;
+                                    agent.LayoutRoot.Width = c.Size.Width * agent.scale;
+                                    agent.LayoutRoot.Height = c.Size.Height * agent.scale;
                                 }
-                            });
-                            storyboard.Children.Add(doubleAnimation1);
-                            storyboard.Children.Add(doubleAnimation2);
-                            storyboard.Children.Add(doubleAnimation3);
-                            storyboard.Children.Add(doubleAnimation4);
 
-                            Storyboard.SetTargetProperty(doubleAnimation1, new PropertyPath("(0).(1).(2)", ContentControl.ContentProperty, Canvas.RenderTransformProperty, ScaleTransform.ScaleXProperty));
-                            Storyboard.SetTargetProperty(doubleAnimation2, new PropertyPath("(0).(1).(2)", ContentControl.ContentProperty, Canvas.RenderTransformProperty, ScaleTransform.ScaleYProperty));
-                            Storyboard.SetTargetProperty(doubleAnimation3, new PropertyPath(ContentControl.WidthProperty));
-                            Storyboard.SetTargetProperty(doubleAnimation4, new PropertyPath(ContentControl.HeightProperty));
+                                storyboard.Remove(agent.LayoutRoot);
+                                agent.scaleStoryboard = null;
+                            }
+                        });
+                        storyboard.Children.Add(doubleAnimation1);
+                        storyboard.Children.Add(doubleAnimation2);
+                        storyboard.Children.Add(doubleAnimation3);
+                        storyboard.Children.Add(doubleAnimation4);
 
-                            a.scaleStoryboard = storyboard;
-                            a.LayoutRoot.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
+                        Storyboard.SetTargetProperty(doubleAnimation1, new PropertyPath("(0).(1).(2)", ContentControl.ContentProperty, Canvas.RenderTransformProperty, ScaleTransform.ScaleXProperty));
+                        Storyboard.SetTargetProperty(doubleAnimation2, new PropertyPath("(0).(1).(2)", ContentControl.ContentProperty, Canvas.RenderTransformProperty, ScaleTransform.ScaleYProperty));
+                        Storyboard.SetTargetProperty(doubleAnimation3, new PropertyPath(ContentControl.WidthProperty));
+                        Storyboard.SetTargetProperty(doubleAnimation4, new PropertyPath(ContentControl.HeightProperty));
+
+                        agent.scaleStoryboard = storyboard;
+                        agent.LayoutRoot.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
+                    }
+
+                    foreach (Window window in agent.OwnedWindows)
+                    {
+                        Agent a = window as Agent;
+
+                        if (a != null)
+                        {
+                            a.scale = agent.scale;
+
+                            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(a.characterName) select character)
+                            {
+                                Storyboard storyboard = new Storyboard();
+                                DoubleAnimation doubleAnimation1 = new DoubleAnimation(a.ZoomScaleTransform.ScaleX, a.scale, TimeSpan.FromMilliseconds(500));
+                                DoubleAnimation doubleAnimation2 = new DoubleAnimation(a.ZoomScaleTransform.ScaleY, a.scale, TimeSpan.FromMilliseconds(500));
+                                DoubleAnimation doubleAnimation3 = new DoubleAnimation(a.LayoutRoot.Width, character.Size.Width * a.scale, TimeSpan.FromMilliseconds(500));
+                                DoubleAnimation doubleAnimation4 = new DoubleAnimation(a.LayoutRoot.Height, character.Size.Height * a.scale, TimeSpan.FromMilliseconds(500));
+
+                                if (a.scaleStoryboard != null)
+                                {
+                                    a.scaleStoryboard.Stop(a.LayoutRoot);
+                                }
+
+                                if (a.ZoomScaleTransform.ScaleX < a.scale)
+                                {
+                                    SineEase sineEase = new SineEase();
+
+                                    sineEase.EasingMode = EasingMode.EaseOut;
+                                    doubleAnimation1.EasingFunction = sineEase;
+                                }
+                                else if (a.ZoomScaleTransform.ScaleX > a.scale)
+                                {
+                                    SineEase sineEase = new SineEase();
+
+                                    sineEase.EasingMode = EasingMode.EaseIn;
+                                    doubleAnimation1.EasingFunction = sineEase;
+                                }
+
+                                if (a.ZoomScaleTransform.ScaleY < a.scale)
+                                {
+                                    SineEase sineEase = new SineEase();
+
+                                    sineEase.EasingMode = EasingMode.EaseOut;
+                                    doubleAnimation2.EasingFunction = sineEase;
+                                }
+                                else if (a.ZoomScaleTransform.ScaleY > a.scale)
+                                {
+                                    SineEase sineEase = new SineEase();
+
+                                    sineEase.EasingMode = EasingMode.EaseIn;
+                                    doubleAnimation2.EasingFunction = sineEase;
+                                }
+
+                                if (a.LayoutRoot.Width < character.Size.Width * a.scale)
+                                {
+                                    SineEase sineEase = new SineEase();
+
+                                    sineEase.EasingMode = EasingMode.EaseOut;
+                                    doubleAnimation3.EasingFunction = sineEase;
+                                }
+                                else if (a.LayoutRoot.Width > character.Size.Width * a.scale)
+                                {
+                                    SineEase sineEase = new SineEase();
+
+                                    sineEase.EasingMode = EasingMode.EaseIn;
+                                    doubleAnimation3.EasingFunction = sineEase;
+                                }
+
+                                if (a.LayoutRoot.Height < character.Size.Height * a.scale)
+                                {
+                                    SineEase sineEase = new SineEase();
+
+                                    sineEase.EasingMode = EasingMode.EaseOut;
+                                    doubleAnimation4.EasingFunction = sineEase;
+                                }
+                                else if (a.LayoutRoot.Height > character.Size.Height * a.scale)
+                                {
+                                    SineEase sineEase = new SineEase();
+
+                                    sineEase.EasingMode = EasingMode.EaseIn;
+                                    doubleAnimation4.EasingFunction = sineEase;
+                                }
+
+                                storyboard.CurrentStateInvalidated += new EventHandler(delegate (object s, EventArgs ea)
+                                {
+                                    if (((Clock)s).CurrentState == ClockState.Filling)
+                                    {
+                                        a.ZoomScaleTransform.ScaleX = a.scale;
+                                        a.ZoomScaleTransform.ScaleY = a.scale;
+
+                                        foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(a.characterName) select c)
+                                        {
+                                            a.LayoutRoot.Width = c.Size.Width * a.scale;
+                                            a.LayoutRoot.Height = c.Size.Height * a.scale;
+                                        }
+
+                                        storyboard.Remove(a.LayoutRoot);
+                                        a.scaleStoryboard = null;
+                                    }
+                                });
+                                storyboard.Children.Add(doubleAnimation1);
+                                storyboard.Children.Add(doubleAnimation2);
+                                storyboard.Children.Add(doubleAnimation3);
+                                storyboard.Children.Add(doubleAnimation4);
+
+                                Storyboard.SetTargetProperty(doubleAnimation1, new PropertyPath("(0).(1).(2)", ContentControl.ContentProperty, Canvas.RenderTransformProperty, ScaleTransform.ScaleXProperty));
+                                Storyboard.SetTargetProperty(doubleAnimation2, new PropertyPath("(0).(1).(2)", ContentControl.ContentProperty, Canvas.RenderTransformProperty, ScaleTransform.ScaleYProperty));
+                                Storyboard.SetTargetProperty(doubleAnimation3, new PropertyPath(ContentControl.WidthProperty));
+                                Storyboard.SetTargetProperty(doubleAnimation4, new PropertyPath(ContentControl.HeightProperty));
+
+                                a.scaleStoryboard = storyboard;
+                                a.LayoutRoot.BeginStoryboard(storyboard, HandoffBehavior.SnapshotAndReplace, true);
+                            }
                         }
                     }
                 }
@@ -4069,7 +4072,7 @@ namespace Apricot
                         string filename = String.Concat(Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location), ".config");
                         string path = Path.Combine(directory, filename);
                         System.Configuration.ExeConfigurationFileMap exeConfigurationFileMap = new System.Configuration.ExeConfigurationFileMap();
-                        
+
                         if (Directory.Exists(directory))
                         {
                             if (File.Exists(path))
@@ -4151,7 +4154,7 @@ namespace Apricot
                                 exeConfigurationFileMap.ExeConfigFilename = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None).FilePath;
 
                                 System.Configuration.Configuration config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
-                                
+
                                 foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                                 {
                                     if (config.AppSettings.Settings["Left"] == null)
@@ -4965,7 +4968,7 @@ namespace Apricot
                                 {
                                     FileStream fs = null;
                                     Stream s = null;
-                                    
+
                                     try
                                     {
                                         fs = new FileStream(Path.IsPathRooted(v.Script) ? v.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), v.Script), FileMode.Open, FileAccess.Read, FileShare.Read);

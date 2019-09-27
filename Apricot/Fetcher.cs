@@ -184,7 +184,7 @@ namespace Apricot
                 }
             }
 
-            foreach (System.Configuration.ConnectionStringSettings settings in System.Configuration.ConfigurationManager.ConnectionStrings)
+            foreach (System.Configuration.ConnectionStringSettings settings in System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None).ConnectionStrings.ConnectionStrings)
             {
                 DbProviderFactory factory = DbProviderFactories.GetFactory(settings.ProviderName);
 
