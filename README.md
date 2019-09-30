@@ -5,6 +5,14 @@
 This repository contains Apricot implementation for Windows. Apricot is a desktop mascot who reads RSS/Atom news feeds and add comments on the news one by one.
 Inspired by fed news articles, a character speaks to you in a way that human beings never can.
 
+## Installation
+
+Download the Apricot free from the Microsoft Store and it'll be continuously updated:
+
+<a href='https://www.microsoft.com/store/apps/9WZDNCRDT09Q'><img src='https://assets.windowsphone.com/85864462-9c82-451e-9355-a3d5f874397a/English_get-it-from-MS_InvariantCulture_Default.png' alt='English badge' width="284" height="104" style='width: 284px; height: 104px;'/></a>
+
+### 
+
 ## Build
 
 To build Apricot, run .NET Core CLI command.
