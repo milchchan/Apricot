@@ -17,6 +17,8 @@ namespace Apricot
     public partial class App : Application
     {
         private bool sessionEnding = false;
+        [System.Composition.ImportMany]
+        public IEnumerable<IExtension> Extensions { get; set; }
 
         public App()
         {
@@ -55,6 +57,39 @@ namespace Apricot
                     }
 
                     Task<ScriptState<object>>.WaitAll(taskList.ToArray());
+                }
+
+                if (config1.AppSettings.Settings["Extensions"] != null)
+                {
+                    List<System.Reflection.Assembly> assemblyList = new List<System.Reflection.Assembly>();
+
+                    foreach (string filename in Directory.EnumerateFiles(Path.IsPathRooted(config1.AppSettings.Settings["Extensions"].Value) ? config1.AppSettings.Settings["Extensions"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
+                    {
+                        assemblyList.Add(System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(filename));
+                    }
+
+                    if (assemblyList.Count > 0)
+                    {
+                        using (System.Composition.Hosting.CompositionHost container = new System.Composition.Hosting.ContainerConfiguration().WithAssemblies(assemblyList).CreateContainer())
+                        {
+                            this.Extensions = container.GetExports<IExtension>();
+                        }
+
+                        Script.Instance.Start += new EventHandler<EventArgs>(delegate
+                        {
+                            foreach (IExtension extension in this.Extensions)
+                            {
+                                extension.Attach();
+                            }
+                        });
+                        Script.Instance.Stop += new EventHandler<EventArgs>(delegate
+                        {
+                            foreach (IExtension extension in this.Extensions)
+                            {
+                                extension.Detach();
+                            }
+                        });
+                    }
                 }
             }
             else
@@ -133,6 +168,98 @@ namespace Apricot
 
                     Task<ScriptState<object>>.WaitAll(taskList.ToArray());
                 }
+
+                if (config1.AppSettings.Settings["Extensions"] == null)
+                {
+                    if (config2.AppSettings.Settings["Extensions"] != null)
+                    {
+                        List<System.Reflection.Assembly> assemblyList = new List<System.Reflection.Assembly>();
+
+                        if (Path.IsPathRooted(config2.AppSettings.Settings["Extensions"].Value))
+                        {
+                            foreach (string filename in Directory.EnumerateFiles(config2.AppSettings.Settings["Extensions"].Value, "*.dll", SearchOption.TopDirectoryOnly))
+                            {
+                                assemblyList.Add(System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(filename));
+                            }
+                        }
+                        else
+                        {
+                            string path = Path.Combine(directory, config2.AppSettings.Settings["Extensions"].Value);
+
+                            foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
+                            {
+                                assemblyList.Add(System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(filename));
+                            }
+                        }
+
+                        if (assemblyList.Count > 0)
+                        {
+                            using (System.Composition.Hosting.CompositionHost container = new System.Composition.Hosting.ContainerConfiguration().WithAssemblies(assemblyList).CreateContainer())
+                            {
+                                this.Extensions = container.GetExports<IExtension>();
+                            }
+
+                            Script.Instance.Start += new EventHandler<EventArgs>(delegate
+                            {
+                                foreach (IExtension extension in this.Extensions)
+                                {
+                                    extension.Attach();
+                                }
+                            });
+                            Script.Instance.Stop += new EventHandler<EventArgs>(delegate
+                            {
+                                foreach (IExtension extension in this.Extensions)
+                                {
+                                    extension.Detach();
+                                }
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    List<System.Reflection.Assembly> assemblyList = new List<System.Reflection.Assembly>();
+
+                    if (Path.IsPathRooted(config1.AppSettings.Settings["Extensions"].Value))
+                    {
+                        foreach (string filename in Directory.EnumerateFiles(config1.AppSettings.Settings["Extensions"].Value, "*.dll", SearchOption.TopDirectoryOnly))
+                        {
+                            assemblyList.Add(System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(filename));
+                        }
+                    }
+                    else
+                    {
+                        string path = Path.Combine(directory, config1.AppSettings.Settings["Extensions"].Value);
+
+                        foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
+                        {
+                            assemblyList.Add(System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(filename));
+                        }
+                    }
+
+                    if (assemblyList.Count > 0)
+                    {
+                        using (System.Composition.Hosting.CompositionHost container = new System.Composition.Hosting.ContainerConfiguration().WithAssemblies(assemblyList).CreateContainer())
+                        {
+                            this.Extensions = container.GetExports<IExtension>();
+                        }
+
+                        Script.Instance.Start += new EventHandler<EventArgs>(delegate
+                        {
+                            foreach (IExtension extension in this.Extensions)
+                            {
+                                extension.Attach();
+                            }
+                        });
+                        Script.Instance.Stop += new EventHandler<EventArgs>(delegate
+                        {
+                            foreach (IExtension extension in this.Extensions)
+                            {
+                                extension.Detach();
+                            }
+                        });
+                    }
+                }
             }
         }
 
@@ -190,6 +317,12 @@ namespace Apricot
         {
             System.Diagnostics.Trace.WriteLine(e.Exception.ToString());
         }
+    }
+
+    public interface IExtension
+    {
+        public void Attach();
+        public void Detach();
     }
 
     internal static class NativeMethods
