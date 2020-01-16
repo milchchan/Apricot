@@ -6574,22 +6574,20 @@ namespace Apricot
                                                                 }
                                                                 else if (this.inspectorEntry.Resource == null)
                                                                 {
-                                                                    Script.Instance.Learn(this.inspectorEntry.Title);
+                                                                    Script.Instance.Search(this.inspectorEntry.Title);
                                                                 }
+                                                            }
+                                                            else if (this.inspectorEntry.Resource == null)
+                                                            {
+                                                                Script.Instance.Learn(this.inspectorEntry.Title);
+
                                                             }
                                                             else
                                                             {
-                                                                if (this.inspectorEntry.Resource == null)
+                                                                Task.Factory.StartNew(delegate (object state)
                                                                 {
-                                                                    Script.Instance.Search(this.inspectorEntry.Title);
-                                                                }
-                                                                else
-                                                                {
-                                                                    Task.Factory.StartNew(delegate (object state)
-                                                                    {
-                                                                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo((string)state));
-                                                                    }, this.inspectorEntry.Resource.ToString());
-                                                                }
+                                                                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo((string)state));
+                                                                }, this.inspectorEntry.Resource.ToString());
                                                             }
                                                         }
 
@@ -8018,11 +8016,11 @@ namespace Apricot
 
                                                             if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
                                                             {
-                                                                Script.Instance.Learn(tag);
+                                                                Script.Instance.Search(tag);
                                                             }
                                                             else
                                                             {
-                                                                Script.Instance.Search(tag);
+                                                                Script.Instance.Learn(tag);
                                                             }
                                                         }
 
