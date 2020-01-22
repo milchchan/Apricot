@@ -4822,15 +4822,11 @@ namespace Apricot
 
         public void Update(bool reset)
         {
-            DateTime nowDateTime = DateTime.Now;
-            DateTime updatedDateTime = reset ? nowDateTime - new TimeSpan(12, 0, 0) : this.lastUpdatedDateTime;
+            DateTime updatedDateTime = this.lastUpdatedDateTime;
             Fetcher fetcher = new Fetcher();
-            string[] terms = (from word in this.wordCollection select word.Name).Distinct().ToArray();
             List<Tuple<string, Uri>> sourceList = new List<Tuple<string, Uri>>();
-            Dictionary<Uri, Entry> entryDictionary = new Dictionary<Uri, Entry>();
-            Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> tempCacheDictionary = new Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>();
-
-            this.lastUpdatedDateTime = nowDateTime;
+            List<Entry> entryList = new List<Entry>();
+            Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> tempCacheDictionary = new Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>(this.cacheDictionary);
 
             foreach (Source source in this.sourceCollection)
             {
@@ -4839,7 +4835,6 @@ namespace Apricot
 
             Task.Factory.StartNew(delegate
             {
-                DateTime pastDateTime = nowDateTime - new TimeSpan(24, 0, 0);
                 System.Configuration.Configuration config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
 
                 if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
@@ -4904,21 +4899,7 @@ namespace Apricot
                     foreach (Tuple<string, Uri, IEnumerable<Entry>> feed in fetcher.Feeds)
                     {
                         sourceList.Add(Tuple.Create<string, Uri>(feed.Item1, feed.Item2));
-
-                        foreach (Entry entry in from entry in feed.Item3 where entry.Resource != null && entry.Modified > pastDateTime && entry.Modified <= nowDateTime select entry)
-                        {
-                            if (entryDictionary.ContainsKey(entry.Resource))
-                            {
-                                if (entry.Modified > entryDictionary[entry.Resource].Modified)
-                                {
-                                    entryDictionary[entry.Resource] = entry;
-                                }
-                            }
-                            else
-                            {
-                                entryDictionary.Add(entry.Resource, entry);
-                            }
-                        }
+                        entryList.AddRange(from entry in feed.Item3 where entry.Resource != null select entry);
                     }
                 }
 
@@ -4936,7 +4917,7 @@ namespace Apricot
                             IDataReader reader = null;
 
                             command.Connection = connection;
-                            command.CommandText = BuildSelectStatement(pastDateTime, nowDateTime);
+                            command.CommandText = BuildSelectStatement(100);
 
                             try
                             {
@@ -4981,17 +4962,7 @@ namespace Apricot
                                         entry.Modified = (DateTime)reader["Modified"];
                                     }
 
-                                    if (entryDictionary.ContainsKey(entry.Resource))
-                                    {
-                                        if (entry.Modified > entryDictionary[entry.Resource].Modified)
-                                        {
-                                            entryDictionary[entry.Resource] = entry;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        entryDictionary.Add(entry.Resource, entry);
-                                    }
+                                    entryList.Add(entry);
                                 }
                             }
                             finally
@@ -5004,95 +4975,176 @@ namespace Apricot
                         }
                     }
                 }
+            }, TaskCreationOptions.LongRunning).ContinueWith(async delegate
+            {
+                await UpdateAsync(entryList);
 
-                if (entryDictionary.Count == 0)
+                List<Entry> newEntryList = new List<Entry>();
+
+                sourceList.ForEach(delegate (Tuple<string, Uri> tuple)
                 {
-                    foreach (System.Configuration.ConnectionStringSettings settings in config1.ConnectionStrings.ConnectionStrings)
+                    if (!String.IsNullOrEmpty(tuple.Item1))
                     {
-                        DbProviderFactory factory = DbProviderFactories.GetFactory(settings.ProviderName);
-
-                        using (IDbConnection connection = factory.CreateConnection())
+                        foreach (Source source in this.sourceCollection)
                         {
-                            connection.ConnectionString = settings.ConnectionString;
-                            connection.Open();
-
-                            using (IDbCommand command = factory.CreateCommand())
+                            if (tuple.Item2.Equals(source.Location))
                             {
-                                IDataReader reader = null;
-
-                                command.Connection = connection;
-                                command.CommandText = BuildSelectStatement(100);
-
-                                try
-                                {
-                                    reader = command.ExecuteReader();
-
-                                    while (reader.Read())
-                                    {
-                                        Entry entry = new Entry();
-
-                                        if (!Convert.IsDBNull(reader["Resource"]))
-                                        {
-                                            Uri uri;
-
-                                            if (Uri.TryCreate((string)reader["Resource"], UriKind.RelativeOrAbsolute, out uri))
-                                            {
-                                                entry.Resource = uri;
-                                            }
-                                        }
-
-                                        if (!Convert.IsDBNull(reader["Title"]))
-                                        {
-                                            entry.Title = reader["Title"] as string;
-                                        }
-
-                                        if (!Convert.IsDBNull(reader["Description"]))
-                                        {
-                                            entry.Description = reader["Description"] as string;
-                                        }
-
-                                        if (!Convert.IsDBNull(reader["Author"]))
-                                        {
-                                            entry.Author = reader["Author"] as string;
-                                        }
-
-                                        if (!Convert.IsDBNull(reader["Created"]))
-                                        {
-                                            entry.Created = (DateTime)reader["Created"];
-                                        }
-
-                                        if (!Convert.IsDBNull(reader["Modified"]))
-                                        {
-                                            entry.Modified = (DateTime)reader["Modified"];
-                                        }
-
-                                        if (entryDictionary.ContainsKey(entry.Resource))
-                                        {
-                                            if (entry.Modified > entryDictionary[entry.Resource].Modified)
-                                            {
-                                                entryDictionary[entry.Resource] = entry;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            entryDictionary.Add(entry.Resource, entry);
-                                        }
-                                    }
-                                }
-                                finally
-                                {
-                                    if (reader != null)
-                                    {
-                                        reader.Close();
-                                    }
-                                }
+                                source.Name = tuple.Item1;
                             }
                         }
+                    }
+                });
+
+                if (reset)
+                {
+                    updatedDateTime = this.lastUpdatedDateTime - new TimeSpan(12, 0, 0);
+
+                    entryList.ForEach(delegate (Entry entry)
+                    {
+                        if (entry.Modified > updatedDateTime && entry.Modified <= this.lastUpdatedDateTime)
+                        {
+                            newEntryList.Add(entry);
+                        }
+                    });
+
+                    if (newEntryList.Count == 0)
+                    {
+                        entryList.ForEach(delegate (Entry entry)
+                        {
+                            if (entry.Modified <= this.lastUpdatedDateTime)
+                            {
+                                newEntryList.Add(entry);
+                            }
+                        });
+
+                        if (entryList.Count > 25)
+                        {
+                            entryList.RemoveRange(25, entryList.Count - 25);
+                        }
+                    }
+
+                    newEntryList.Sort(delegate (Entry e1, Entry e2)
+                    {
+                        return e1.Modified.CompareTo(e2.Modified);
+                    });
+                    newEntryList.Reverse();
+
+                    if (newEntryList.Count > 0)
+                    {
+                        Alert(newEntryList);
+                    }
+
+                    if (this.cacheDictionary.Count > 0)
+                    {
+                        Trend(this.cacheDictionary.Keys);
+                    }
+                }
+                else
+                {
+                    entryList.ForEach(delegate (Entry entry)
+                    {
+                        if (entry.Modified > updatedDateTime && entry.Modified <= this.lastUpdatedDateTime)
+                        {
+                            newEntryList.Add(entry);
+                        }
+                    });
+
+                    newEntryList.Sort(delegate (Entry e1, Entry e2)
+                    {
+                        return e1.Modified.CompareTo(e2.Modified);
+                    });
+                    newEntryList.Reverse();
+
+                    if (newEntryList.Count > 0)
+                    {
+                        Alert(newEntryList);
+                    }
+
+                    if (this.cacheDictionary.Count > 0)
+                    {
+                        if (this.cacheDictionary.Count == tempCacheDictionary.Count)
+                        {
+                            if (!tempCacheDictionary.All(delegate (KeyValuePair<string, Tuple<List<Tuple<Entry, double>>, double>> keyValuePair)
+                            {
+                                Tuple<List<Tuple<Entry, double>>, double> tuple1;
+
+                                if (this.cacheDictionary.TryGetValue(keyValuePair.Key, out tuple1))
+                                {
+                                    double sum1 = 0;
+                                    double sum2 = 0;
+
+                                    keyValuePair.Value.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
+                                    {
+                                        sum1 += tuple2.Item2;
+                                    });
+
+                                    tuple1.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
+                                    {
+                                        sum2 += tuple2.Item2;
+                                    });
+
+                                    if (sum1 / (from kvp in tempCacheDictionary from t in kvp.Value.Item1 select t.Item1.Resource).Distinct().Count() * keyValuePair.Value.Item2 == sum2 / (from kvp in this.cacheDictionary from t in kvp.Value.Item1 select t.Item1.Resource).Distinct().Count() * tuple1.Item2)
+                                    {
+                                        return true;
+                                    }
+                                }
+
+                                return false;
+                            }))
+                            {
+                                Trend(this.cacheDictionary.Keys);
+                            }
+                        }
+                        else
+                        {
+                            Trend(this.cacheDictionary.Keys);
+                        }
+                    }
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        public async Task UpdateAsync(IEnumerable<Entry> entries)
+        {
+            DateTime nowDateTime = DateTime.Now;
+            string[] terms = (from word in this.wordCollection select word.Name).Distinct().ToArray();
+            Dictionary<Uri, Entry> entryDictionary = new Dictionary<Uri, Entry>();
+            Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> tempCacheDictionary = new Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>();
+
+            await Task.Factory.StartNew(delegate
+            {
+                DateTime pastDateTime = nowDateTime - new TimeSpan(24, 0, 0);
+
+                foreach (Entry entry in from entry in entries.Concat(this.cacheDictionary.Values.Aggregate<Tuple<List<Tuple<Entry, double>>, double>, HashSet<Entry>>(new HashSet<Entry>(), delegate (HashSet<Entry> hs, Tuple<List<Tuple<Entry, double>>, double> t)
+                {
+                    foreach (Entry entry in from item in t.Item1 select item.Item1)
+                    {
+                        if (!hs.Contains(entry))
+                        {
+                            hs.Add(entry);
+                        }
+                    }
+
+                    return hs;
+                }))
+                                        where entry.Resource != null && entry.Modified > pastDateTime && entry.Modified <= nowDateTime
+                                        select entry)
+                {
+                    if (entryDictionary.ContainsKey(entry.Resource))
+                    {
+                        if (entry.Modified > entryDictionary[entry.Resource].Modified)
+                        {
+                            entryDictionary[entry.Resource] = entry;
+                        }
+                    }
+                    else
+                    {
+                        entryDictionary.Add(entry.Resource, entry);
                     }
                 }
 
                 Dictionary<char, List<string>> termDictionary = new Dictionary<char, List<string>>();
-                
+
                 foreach (string term in terms)
                 {
                     if (term.Length > 0)
@@ -5144,7 +5196,7 @@ namespace Apricot
                     Tuple<List<Tuple<Entry, double>>, double> tuple;
                     double[] vector = new double[terms.Length];
                     bool isZeroVector = true;
-                    
+
                     foreach (string key in d.Keys)
                     {
                         entry.Tags.Add(key);
@@ -5253,64 +5305,6 @@ namespace Apricot
                 }
             }, TaskCreationOptions.LongRunning).ContinueWith(delegate
             {
-                List<Entry> newEntryList = (from entry in entryDictionary.Values where entry.Modified > updatedDateTime && entry.Modified <= nowDateTime orderby entry.Modified descending select entry).ToList();
-                bool tfidfIsUpdated = true;
-
-                sourceList.ForEach(delegate (Tuple<string, Uri> tuple)
-                {
-                    if (!String.IsNullOrEmpty(tuple.Item1))
-                    {
-                        foreach (Source source in this.sourceCollection)
-                        {
-                            if (tuple.Item2.Equals(source.Location))
-                            {
-                                source.Name = tuple.Item1;
-                            }
-                        }
-                    }
-                });
-
-                if (reset && newEntryList.Count == 0)
-                {
-                    newEntryList.AddRange((from entry in entryDictionary.Values where entry.Modified <= nowDateTime orderby entry.Modified descending select entry).Take(25));
-                }
-
-                if (this.cacheDictionary.Count == tempCacheDictionary.Count)
-                {
-                    tfidfIsUpdated = !tempCacheDictionary.All(delegate (KeyValuePair<string, Tuple<List<Tuple<Entry, double>>, double>> keyValuePair)
-                    {
-                        Tuple<List<Tuple<Entry, double>>, double> tuple1;
-
-                        if (this.cacheDictionary.TryGetValue(keyValuePair.Key, out tuple1))
-                        {
-                            double sum1 = 0;
-                            double sum2 = 0;
-
-                            keyValuePair.Value.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
-                            {
-                                sum1 += tuple2.Item2;
-                            });
-
-                            tuple1.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
-                            {
-                                sum2 += tuple2.Item2;
-                            });
-
-                            if (sum1 / (from kvp in tempCacheDictionary from t in kvp.Value.Item1 select t.Item1.Resource).Distinct().Count() * keyValuePair.Value.Item2 == sum2 / (from kvp in this.cacheDictionary from t in kvp.Value.Item1 select t.Item1.Resource).Distinct().Count() * tuple1.Item2)
-                            {
-                                return true;
-                            }
-                        }
-
-                        return false;
-                    });
-                }
-
-                if (tfidfIsUpdated && this.cacheDictionary.Count == 0 && tempCacheDictionary.Count == 0)
-                {
-                    tfidfIsUpdated = false;
-                }
-
                 this.cacheDictionary.Clear();
 
                 foreach (KeyValuePair<string, Tuple<List<Tuple<Entry, double>>, double>> keyValuePair in tempCacheDictionary)
@@ -5318,15 +5312,7 @@ namespace Apricot
                     this.cacheDictionary.Add(keyValuePair.Key, keyValuePair.Value);
                 }
 
-                if (newEntryList.Count > 0)
-                {
-                    Alert(newEntryList);
-                }
-
-                if (tempCacheDictionary.Count > 0 && (reset || tfidfIsUpdated))
-                {
-                    Trend(tempCacheDictionary.Keys);
-                }
+                this.lastUpdatedDateTime = nowDateTime;
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
@@ -7933,11 +7919,6 @@ namespace Apricot
         private string BuildSelectStatement(int top)
         {
             return String.Format(CultureInfo.InvariantCulture, "SELECT TOP ({0}) Resource, Title, Description, Author, Created, Modified FROM Entry ORDER BY Modified DESC", top.ToString(CultureInfo.InvariantCulture));
-        }
-
-        private string BuildSelectStatement(DateTime fromDateTime, DateTime toDateTime)
-        {
-            return String.Format(CultureInfo.InvariantCulture, "SELECT Resource, Title, Description, Author, Created, Modified FROM Entry WHERE Modified > '{0}' AND Modified <= '{1}' ORDER BY Modified DESC", fromDateTime.ToString("G", DateTimeFormatInfo.InvariantInfo), toDateTime.ToString("G", DateTimeFormatInfo.InvariantInfo));
         }
 	}
 }
