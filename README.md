@@ -28,3 +28,5 @@ To build Apricot, run .NET Core CLI command.
 * Describing an character using flexible character markup language
 
 Please see https://www.kawatan.net/ for more information.
+
+![Footer](https://user-images.githubusercontent.com/246691/73124056-fb03ba00-3fd9-11ea-9483-edca9ed336cc.png)
