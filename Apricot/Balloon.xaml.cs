@@ -3592,7 +3592,7 @@ namespace Apricot
                                                                     {
                                                                         Task.Factory.StartNew(delegate (object state)
                                                                         {
-                                                                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo((string)state));
+                                                                            NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
                                                                         }, entry.Resource.ToString());
                                                                     }
                                                                 }
@@ -4337,7 +4337,7 @@ namespace Apricot
                                                                     {
                                                                         Task.Factory.StartNew(delegate (object state)
                                                                         {
-                                                                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo((string)state));
+                                                                            NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
                                                                         }, attachmentEntry.Resource.ToString());
                                                                     }
                                                                     else if (!String.IsNullOrEmpty(attachmentEntry.Title))
@@ -4852,7 +4852,7 @@ namespace Apricot
                                                                 {
                                                                     Task.Factory.StartNew(delegate (object state)
                                                                     {
-                                                                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo((string)state));
+                                                                        NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
                                                                     }, attachmentEntry.Resource.ToString());
                                                                 }
                                                                 else if (!String.IsNullOrEmpty(attachmentEntry.Title))
@@ -6586,7 +6586,7 @@ namespace Apricot
                                                             {
                                                                 Task.Factory.StartNew(delegate (object state)
                                                                 {
-                                                                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo((string)state));
+                                                                    NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
                                                                 }, this.inspectorEntry.Resource.ToString());
                                                             }
                                                         }
@@ -6941,7 +6941,7 @@ namespace Apricot
 
                                                         Task.Factory.StartNew(delegate (object state)
                                                         {
-                                                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo((string)state));
+                                                            NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
                                                         }, this.inspectorEntry.Resource.GetLeftPart(UriPartial.Authority).ToString());
 
                                                         mbea.Handled = true;
