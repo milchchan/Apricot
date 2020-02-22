@@ -5,6 +5,8 @@
 This repository contains Apricot implementation for Windows. Apricot is a desktop agent who reads RSS/Atom news feeds and add comments on the news one by one.
 Inspired by fed news articles, a character speaks to you in a way that human beings never can.
 
+![](https://github.com/kawatan/Apricot/workflows/.NET%20Core/badge.svg)
+
 ## Installation
 
 Download the Apricot free from the Microsoft Store and it'll be continuously updated:
