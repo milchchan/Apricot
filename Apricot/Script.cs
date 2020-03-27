@@ -6860,16 +6860,16 @@ namespace Apricot
                                     if (!isZeroVector)
                                     {
                                         Entry e = null;
-                                        double lowestDistance = Double.MaxValue;
+                                        double maxDistance = 0;
 
                                         foreach (Tuple<Entry, double[]> kvp in vectorDictionary.Values)
                                         {
                                             double similarity = CosineSimilarity(vectorList, kvp.Item2);
 
-                                            if (lowestDistance > similarity)
+                                            if (similarity > maxDistance)
                                             {
                                                 e = kvp.Item1;
-                                                lowestDistance = similarity;
+                                                maxDistance = similarity;
                                             }
                                         }
 
@@ -7332,6 +7332,7 @@ namespace Apricot
 
                     return 0;
                 });
+                entryList.Reverse();
                 entryList.ForEach(delegate (Tuple<Entry, double> tuple)
                 {
                     this.activateEntryQueue.Enqueue(tuple.Item1);
