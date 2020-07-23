@@ -655,11 +655,6 @@ namespace Apricot
                                                             }
                                                         }
 
-                                                        if (pathHashSet.Contains(tuple1.Item2))
-                                                        {
-
-                                                        }
-
                                                         namePathList.AddRange(tupleList2);
                                                     }
                                                 }
@@ -3276,6 +3271,591 @@ namespace Apricot
             if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
                 Script.Instance.Activate();
+            }
+            else if ((Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
+            {
+                if (this.balloon.Messages.Count > 0)
+                {
+                    List<string> termList = new List<string>();
+
+                    foreach (object o in this.balloon.Messages[this.balloon.Messages.Count - 1])
+                    {
+                        Entry entry = o as Entry;
+
+                        if (entry != null)
+                        {
+                            termList.Add(entry.Title);
+                        }
+                    }
+
+                    if (termList.Count > 0)
+                    {
+                        HashSet<string> baseDirectoryHashSet = new HashSet<string>();
+                        string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                        Dictionary<string, List<Tuple<string, string>>> cachedPathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
+                        List<Character> cachedCharacterList = new List<Character>();
+
+                        foreach (Character character in Script.Instance.Characters)
+                        {
+                            string directoryName = Path.GetDirectoryName(Path.IsPathRooted(character.Script) ? character.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), character.Script));
+
+                            if (!baseDirectoryHashSet.Contains(directoryName))
+                            {
+                                baseDirectoryHashSet.Add(directoryName);
+                            }
+                        }
+
+                        foreach (Tuple<bool, string> tuple1 in from path in baseDirectoryHashSet from filename in Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename))
+                        {
+                            if (!cachedPathDictionary.Values.Any(delegate (List<Tuple<string, string>> tupleList1)
+                            {
+                                return tupleList1.Exists(delegate (Tuple<string, string> tuple)
+                                {
+                                    return tuple.Item1.Equals(tuple1.Item2);
+                                });
+                            }))
+                            {
+                                if (tuple1.Item1)
+                                {
+                                    FileStream fs = null;
+
+                                    try
+                                    {
+                                        fs = new FileStream(tuple1.Item2, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                        using (ZipArchive zipArchive = new ZipArchive(fs))
+                                        {
+                                            fs = null;
+
+                                            foreach (List<Tuple<ZipArchiveEntry, string>> tupleList1 in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
+                                            {
+                                                string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
+                                                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+                                                string key;
+                                                List<Tuple<ZipArchiveEntry, string>> tupleList1;
+
+                                                if (match.Success)
+                                                {
+                                                    key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+
+                                                    if (dictionary.TryGetValue(key, out tupleList1))
+                                                    {
+                                                        tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                    }
+                                                    else
+                                                    {
+                                                        tupleList1 = new List<Tuple<ZipArchiveEntry, string>>();
+                                                        tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                                        dictionary.Add(key, tupleList1);
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), filename);
+
+                                                    if (dictionary.TryGetValue(key, out tupleList1))
+                                                    {
+                                                        tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                    }
+                                                    else
+                                                    {
+                                                        tupleList1 = new List<Tuple<ZipArchiveEntry, string>>();
+                                                        tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                                        dictionary.Add(key, tupleList1);
+                                                    }
+                                                }
+
+                                                return dictionary;
+                                            }).Values)
+                                            {
+                                                Tuple<ZipArchiveEntry, string> tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                {
+                                                    return tuple3.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                                });
+
+                                                if (tuple2 == null)
+                                                {
+                                                    tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                    {
+                                                        return tuple3.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
+                                                    });
+
+                                                    if (tuple2 != null)
+                                                    {
+                                                        Stream stream = null;
+                                                        List<Character> tempCharacterList = new List<Character>();
+
+                                                        try
+                                                        {
+                                                            stream = tuple2.Item1.Open();
+
+                                                            foreach (XElement element in from element in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character")).Cast<XElement>() select element)
+                                                            {
+                                                                Character character = new Character();
+                                                                double originX = 0.0;
+                                                                double originY = 0.0;
+                                                                double x = 0.0;
+                                                                double y = 0.0;
+                                                                double width = 0.0;
+                                                                double height = 0.0;
+
+                                                                foreach (XAttribute attribute in element.Attributes())
+                                                                {
+                                                                    if (attribute.Name.LocalName.Equals("name"))
+                                                                    {
+                                                                        character.Name = attribute.Value;
+                                                                    }
+                                                                    else if (attribute.Name.LocalName.Equals("origin-x"))
+                                                                    {
+                                                                        originX = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                    }
+                                                                    else if (attribute.Name.LocalName.Equals("origin-y"))
+                                                                    {
+                                                                        originY = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                    }
+                                                                    else if (attribute.Name.LocalName.Equals("x") || attribute.Name.LocalName.Equals("left"))
+                                                                    {
+                                                                        x = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                    }
+                                                                    else if (attribute.Name.LocalName.Equals("y") || attribute.Name.LocalName.Equals("top"))
+                                                                    {
+                                                                        y = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                    }
+                                                                    else if (attribute.Name.LocalName.Equals("width"))
+                                                                    {
+                                                                        width = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                    }
+                                                                    else if (attribute.Name.LocalName.Equals("height"))
+                                                                    {
+                                                                        height = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                    }
+                                                                }
+
+                                                                character.Origin = new Point(originX, originY);
+                                                                character.BaseLocation = new Point(x, y);
+                                                                character.Size = new Size(width, height);
+                                                                character.Script = tuple1.Item2;
+
+                                                                tempCharacterList.Add(character);
+                                                            }
+                                                        }
+                                                        catch
+                                                        {
+                                                            continue;
+                                                        }
+                                                        finally
+                                                        {
+                                                            if (stream != null)
+                                                            {
+                                                                stream.Close();
+                                                            }
+                                                        }
+
+                                                        tempCharacterList.ForEach(delegate (Character character)
+                                                        {
+                                                            if (!(from c in Script.Instance.Characters where c.Name.Equals(character.Name) select c).Any())
+                                                            {
+                                                                cachedCharacterList.Add(character);
+                                                            }
+                                                        });
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Stream stream = null;
+                                                    List<Character> tempCharacterList = new List<Character>();
+
+                                                    try
+                                                    {
+                                                        stream = tuple2.Item1.Open();
+
+                                                        foreach (XElement element in from element in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character")).Cast<XElement>() select element)
+                                                        {
+                                                            Character character = new Character();
+                                                            double originX = 0.0;
+                                                            double originY = 0.0;
+                                                            double x = 0.0;
+                                                            double y = 0.0;
+                                                            double width = 0.0;
+                                                            double height = 0.0;
+
+                                                            foreach (XAttribute attribute in element.Attributes())
+                                                            {
+                                                                if (attribute.Name.LocalName.Equals("name"))
+                                                                {
+                                                                    character.Name = attribute.Value;
+                                                                }
+                                                                else if (attribute.Name.LocalName.Equals("origin-x"))
+                                                                {
+                                                                    originX = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                }
+                                                                else if (attribute.Name.LocalName.Equals("origin-y"))
+                                                                {
+                                                                    originY = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                }
+                                                                else if (attribute.Name.LocalName.Equals("x") || attribute.Name.LocalName.Equals("left"))
+                                                                {
+                                                                    x = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                }
+                                                                else if (attribute.Name.LocalName.Equals("y") || attribute.Name.LocalName.Equals("top"))
+                                                                {
+                                                                    y = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                }
+                                                                else if (attribute.Name.LocalName.Equals("width"))
+                                                                {
+                                                                    width = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                }
+                                                                else if (attribute.Name.LocalName.Equals("height"))
+                                                                {
+                                                                    height = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                                }
+                                                            }
+
+                                                            character.Origin = new Point(originX, originY);
+                                                            character.BaseLocation = new Point(x, y);
+                                                            character.Size = new Size(width, height);
+                                                            character.Script = tuple1.Item2;
+
+                                                            tempCharacterList.Add(character);
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        continue;
+                                                    }
+                                                    finally
+                                                    {
+                                                        if (stream != null)
+                                                        {
+                                                            stream.Close();
+                                                        }
+                                                    }
+
+                                                    tempCharacterList.ForEach(delegate (Character character)
+                                                    {
+                                                        if (!(from c in Script.Instance.Characters where c.Name.Equals(character.Name) select c).Any())
+                                                        {
+                                                            cachedCharacterList.Add(character);
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        if (fs != null)
+                                        {
+                                            fs.Close();
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    string filename = Path.GetFileNameWithoutExtension(tuple1.Item2);
+                                    System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+                                    string key;
+                                    List<Tuple<string, string>> tupleList;
+
+                                    if (match.Success)
+                                    {
+                                        key = String.Concat(Path.GetDirectoryName(tuple1.Item2), match.Groups[1].Value);
+
+                                        if (cachedPathDictionary.TryGetValue(key, out tupleList))
+                                        {
+                                            tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match.Groups[2].Value));
+                                        }
+                                        else
+                                        {
+                                            tupleList = new List<Tuple<string, string>>();
+                                            tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match.Groups[2].Value));
+                                            cachedPathDictionary.Add(key, tupleList);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        key = String.Concat(Path.GetDirectoryName(tuple1.Item2), filename);
+
+                                        if (cachedPathDictionary.TryGetValue(key, out tupleList))
+                                        {
+                                            tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                        }
+                                        else
+                                        {
+                                            tupleList = new List<Tuple<string, string>>();
+                                            tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName));
+                                            cachedPathDictionary.Add(key, tupleList);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        foreach (List<Tuple<string, string>> tupleList in cachedPathDictionary.Values)
+                        {
+                            Tuple<string, string> tuple1 = null;
+                            Tuple<string, string> tuple2 = null;
+
+                            tupleList.ForEach(delegate (Tuple<string, string> tuple3)
+                            {
+                                if (tuple3.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName))
+                                {
+                                    tuple1 = tuple3;
+                                }
+                                else if (tuple3.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName))
+                                {
+                                    tuple2 = tuple3;
+                                }
+                            });
+
+                            if (tuple1 == null)
+                            {
+                                if (tuple2 != null)
+                                {
+                                    FileStream fs = null;
+
+                                    try
+                                    {
+                                        fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                        foreach (XElement element in from element in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character")).Cast<XElement>() select element)
+                                        {
+                                            Character character = new Character();
+                                            double originX = 0.0;
+                                            double originY = 0.0;
+                                            double x = 0.0;
+                                            double y = 0.0;
+                                            double width = 0.0;
+                                            double height = 0.0;
+
+                                            foreach (XAttribute attribute in element.Attributes())
+                                            {
+                                                if (attribute.Name.LocalName.Equals("name"))
+                                                {
+                                                    character.Name = attribute.Value;
+                                                }
+                                                else if (attribute.Name.LocalName.Equals("origin-x"))
+                                                {
+                                                    originX = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                }
+                                                else if (attribute.Name.LocalName.Equals("origin-y"))
+                                                {
+                                                    originY = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                }
+                                                else if (attribute.Name.LocalName.Equals("x") || attribute.Name.LocalName.Equals("left"))
+                                                {
+                                                    x = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                }
+                                                else if (attribute.Name.LocalName.Equals("y") || attribute.Name.LocalName.Equals("top"))
+                                                {
+                                                    y = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                }
+                                                else if (attribute.Name.LocalName.Equals("width"))
+                                                {
+                                                    width = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                }
+                                                else if (attribute.Name.LocalName.Equals("height"))
+                                                {
+                                                    height = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                                }
+                                            }
+
+                                            character.Origin = new Point(originX, originY);
+                                            character.BaseLocation = new Point(x, y);
+                                            character.Size = new Size(width, height);
+                                            character.Script = tuple2.Item1;
+
+                                            if (!(from c in Script.Instance.Characters where c.Name.Equals(character.Name) select c).Any())
+                                            {
+                                                cachedCharacterList.Add(character);
+                                            }
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        continue;
+                                    }
+                                    finally
+                                    {
+                                        if (fs != null)
+                                        {
+                                            fs.Close();
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                FileStream fs = null;
+
+                                try
+                                {
+                                    fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                                    foreach (XElement element in from element in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character")).Cast<XElement>() select element)
+                                    {
+                                        Character character = new Character();
+                                        double originX = 0.0;
+                                        double originY = 0.0;
+                                        double x = 0.0;
+                                        double y = 0.0;
+                                        double width = 0.0;
+                                        double height = 0.0;
+
+                                        foreach (XAttribute attribute in element.Attributes())
+                                        {
+                                            if (attribute.Name.LocalName.Equals("name"))
+                                            {
+                                                character.Name = attribute.Value;
+                                            }
+                                            else if (attribute.Name.LocalName.Equals("origin-x"))
+                                            {
+                                                originX = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                            }
+                                            else if (attribute.Name.LocalName.Equals("origin-y"))
+                                            {
+                                                originY = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                            }
+                                            else if (attribute.Name.LocalName.Equals("x") || attribute.Name.LocalName.Equals("left"))
+                                            {
+                                                x = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                            }
+                                            else if (attribute.Name.LocalName.Equals("y") || attribute.Name.LocalName.Equals("top"))
+                                            {
+                                                y = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                            }
+                                            else if (attribute.Name.LocalName.Equals("width"))
+                                            {
+                                                width = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                            }
+                                            else if (attribute.Name.LocalName.Equals("height"))
+                                            {
+                                                height = Double.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                                            }
+                                        }
+
+                                        character.Origin = new Point(originX, originY);
+                                        character.BaseLocation = new Point(x, y);
+                                        character.Size = new Size(width, height);
+                                        character.Script = tuple1.Item1;
+
+                                        if (!(from c in Script.Instance.Characters where c.Name.Equals(character.Name) select c).Any())
+                                        {
+                                            cachedCharacterList.Add(character);
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    continue;
+                                }
+                                finally
+                                {
+                                    if (fs != null)
+                                    {
+                                        fs.Close();
+                                    }
+                                }
+                            }
+                        }
+
+                        if (cachedCharacterList.Count > 0)
+                        {
+                            Character character = cachedCharacterList[new Random(Environment.TickCount).Next(cachedCharacterList.Count)];
+                            var query = from sequence in Script.Instance.Sequences where sequence.Owner.Equals(character.Name) select sequence;
+
+                            if (query.Any())
+                            {
+                                Agent agent = new Agent(character.Name);
+                                List<Sequence> preparedSequenceList = new List<Sequence>();
+                                var q = from sequence in query where sequence.Name.Equals("Activate") select sequence;
+
+                                foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(this.characterName) select c)
+                                {
+                                    if (c.Mirror)
+                                    {
+                                        character.Location = new Character.Point<double>(c.BaseLocation.X - c.Origin.X + c.Size.Width - character.Origin.X, c.BaseLocation.Y + (c.Size.Height - character.Size.Height) / 2);
+                                    }
+                                    else
+                                    {
+                                        character.Location = new Character.Point<double>(c.BaseLocation.X + c.Origin.X - character.Size.Width + character.Origin.X, c.BaseLocation.Y + (c.Size.Height - character.Size.Height) / 2);
+                                    }
+
+                                    character.Mirror = !c.Mirror;
+                                }
+
+                                Script.Instance.Characters.Add(character);
+
+                                agent.Closing += new System.ComponentModel.CancelEventHandler(delegate (object sender, System.ComponentModel.CancelEventArgs args)
+                                {
+                                    Character[] characters = Script.Instance.Characters.ToArray();
+                                    List<Sequence> sequenceList = new List<Sequence>();
+                                    bool isCleared;
+
+                                    Script.Instance.Characters.Remove(character);
+
+                                    foreach (Sequence sequence in Script.Instance.Sequences.ToArray())
+                                    {
+                                        if (sequence.Owner.Equals(character.Name))
+                                        {
+                                            Script.Instance.Sequences.Remove(sequence);
+                                        }
+                                    }
+
+                                    do
+                                    {
+                                        isCleared = true;
+
+                                        foreach (Character c in characters)
+                                        {
+                                            Sequence sequence;
+
+                                            if (Script.Instance.TryDequeue(c.Name, out sequence))
+                                            {
+                                                if (!character.Name.Equals(c.Name))
+                                                {
+                                                    sequenceList.Add(sequence);
+                                                }
+
+                                                isCleared = false;
+                                            }
+                                        }
+                                    } while (!isCleared);
+
+                                    Script.Instance.TryEnqueue(sequenceList);
+                                });
+                                agent.Show();
+
+                                foreach (Sequence sequence in Script.Instance.Prepare(from sequence in query where sequence.Name.Equals("Start") select sequence, null))
+                                {
+                                    if (preparedSequenceList.Count == 0)
+                                    {
+                                        Sequence s1 = new Sequence();
+
+                                        s1.Owner = character.Name;
+
+                                        preparedSequenceList.Add(s1);
+                                    }
+
+                                    preparedSequenceList.Add(sequence);
+                                }
+
+                                Script.Instance.TryEnqueue(preparedSequenceList);
+
+                                if (!Script.Instance.TryEnqueue(Script.Instance.Prepare(q, null, termList)))
+                                {
+                                    Script.Instance.TryEnqueue(Script.Instance.Prepare(q, null, Enumerable.Empty<string>()));
+                                }
+
+                                Sequence s2 = new Sequence();
+
+                                s2.Owner = character.Name;
+
+                                Script.Instance.TryEnqueue(new Sequence[] { s2 });
+                            }
+                        }
+                    }
+                }
             }
             else
             {
