@@ -3782,6 +3782,11 @@ namespace Apricot
                                     }
 
                                     character.Mirror = !c.Mirror;
+
+                                    foreach (string type in c.Types)
+                                    {
+                                        character.Types.Add(type);
+                                    }
                                 }
 
                                 Script.Instance.Characters.Add(character);
@@ -3793,14 +3798,6 @@ namespace Apricot
                                     bool isCleared;
 
                                     Script.Instance.Characters.Remove(character);
-
-                                    foreach (Sequence sequence in Script.Instance.Sequences.ToArray())
-                                    {
-                                        if (sequence.Owner.Equals(character.Name))
-                                        {
-                                            Script.Instance.Sequences.Remove(sequence);
-                                        }
-                                    }
 
                                     do
                                     {
