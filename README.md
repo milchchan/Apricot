@@ -11,7 +11,7 @@ Inspired by fed news articles, a character speaks to you in a way that human bei
 
 Download the Apricot free from the Microsoft Store and it'll be continuously updated:
 
-<a href='//www.microsoft.com/store/apps/9WZDNCRDT09Q?cid=storebadge&ocid=badge'><img src='https://user-images.githubusercontent.com/246691/96752052-ea695e80-1408-11eb-9c73-0b00d96eb9ac.png' alt='English badge' style='width: 284px; height: 104px;'/></a>
+<a href='//www.microsoft.com/store/apps/9WZDNCRDT09Q?cid=storebadge&ocid=badge'><img src='https://user-images.githubusercontent.com/246691/96752052-ea695e80-1408-11eb-9c73-0b00d96eb9ac.png' alt='English badge' width='284px' height='104px' style='width: 284px; height: 104px;'/></a>
 
 ### 
 
