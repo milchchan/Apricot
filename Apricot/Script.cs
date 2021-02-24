@@ -5776,6 +5776,8 @@ namespace Apricot
 
         public IEnumerable<Sequence> Prepare(IEnumerable<Sequence> sequences, string state, IEnumerable<string> terms)
         {
+            const int beamWidth = 3;
+            double epsilon = Math.Pow(10, -6);
             Dictionary<string, string> stateDictionary = new Dictionary<string, string>(this.sequenceStateDictionary);
             List<Sequence> preparedSequenceList = new List<Sequence>();
             Dictionary<int, LinkedList<Tuple<Sequence, Tuple<LinkedList<string>, HashSet<string>>>>> dataDictionary = new Dictionary<int, LinkedList<Tuple<Sequence, Tuple<LinkedList<string>, HashSet<string>>>>>();
@@ -5951,30 +5953,31 @@ namespace Apricot
                     return false;
                 }))
                 {
-                    Dictionary<string, Entry> d = new Dictionary<string, Entry>();
+                    Dictionary<string, Entry> d1 = new Dictionary<string, Entry>();
+                    HashSet<string> hs = new HashSet<string>();
 
                     preparedSequenceList.ForEach(delegate (Sequence sequence)
                     {
                         System.Collections.ArrayList arrayList = new System.Collections.ArrayList();
 
-                        foreach (object o in sequence)
+                        foreach (object o1 in sequence)
                         {
-                            Message message = o as Message;
+                            Message message = o1 as Message;
 
                             if (message == null)
                             {
-                                arrayList.Add(o);
+                                arrayList.Add(o1);
                             }
                             else
                             {
                                 int index = 0;
                                 StringBuilder stringBuilder = new StringBuilder();
-                                Message newMessage = new Message();
+                                List<Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, double>> inlinesList = new List<Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, double>>();
+
+                                inlinesList.Add(Tuple.Create<System.Collections.ArrayList, Dictionary<string, Entry>, double>(new System.Collections.ArrayList(), new Dictionary<string, Entry>(d1), 1.0));
 
                                 for (Match match = Regex.Match(message.Text, @"(?<1>(?<Open>\{{2})*)\{(?<2>(?:[^{}]|(?<3>(?:(?:\{|}){2})+))+)}(?<4>(?<Close-Open>}{2})*)(?(Open)(?!))(?!})", RegexOptions.CultureInvariant); match.Success; match = match.NextMatch())
                                 {
-                                    Entry entry;
-
                                     if (match.Index > index)
                                     {
                                         stringBuilder.Append(Regex.Replace(message.Text.Substring(index, match.Index - index), @"\{\{|}}", new MatchEvaluator(delegate (Match m)
@@ -5988,15 +5991,22 @@ namespace Apricot
                                         stringBuilder.Append(match.Groups[1].Value.Substring(match.Groups[1].Length / 2));
                                     }
 
-                                    if (d.TryGetValue(match.Groups[2].Value, out entry))
+                                    if (hs.Contains(match.Groups[2].Value))
                                     {
                                         if (stringBuilder.Length > 0)
                                         {
-                                            newMessage.Add(stringBuilder.ToString());
+                                            inlinesList.ForEach(delegate (Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, double> tuple)
+                                            {
+                                                tuple.Item1.Add(stringBuilder.ToString());
+                                            });
+
                                             stringBuilder.Clear();
                                         }
 
-                                        newMessage.Add(entry);
+                                        inlinesList.ForEach(delegate (Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, double> tuple)
+                                        {
+                                            tuple.Item1.Add(tuple.Item2[match.Groups[2].Value]);
+                                        });
                                     }
                                     else
                                     {
@@ -6030,75 +6040,152 @@ namespace Apricot
                                             pattern = match.Groups[2].Value;
                                         }
 
-                                        foreach (string term in terms)
+                                        List<Tuple<string, double>> termList = terms.Aggregate<string, List<Tuple<string, double>>>(new List<Tuple<string, double>>(), delegate (List<Tuple<string, double>> tupleList, string s)
                                         {
                                             List<string> attributeList;
 
-                                            if (wordDictionary.TryGetValue(term, out attributeList) && attributeList.Exists(delegate (string attribute)
+                                            if (wordDictionary.TryGetValue(s, out attributeList) && attributeList.Exists(delegate (string attribute)
                                             {
                                                 return Regex.IsMatch(attribute, pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline);
                                             }))
                                             {
-                                                Entry newEntry = new Entry();
                                                 Tuple<List<Tuple<Entry, double>>, double> tuple1;
 
-                                                newEntry.Title = term;
-
-                                                if (this.cacheDictionary.TryGetValue(term, out tuple1))
+                                                if (this.cacheDictionary.TryGetValue(s, out tuple1))
                                                 {
-                                                    Tuple<Entry, double> maxTuple = null;
                                                     double sum = 0;
 
                                                     tuple1.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
                                                     {
-                                                        if (maxTuple == null)
-                                                        {
-                                                            if (tuple2.Item1.Description != null && Regex.IsMatch(tuple2.Item1.Description, "img.*?src\\s*=\\s*(?:\"(?<1>[^\"]*)\"|(?<1>\\S+))", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline))
-                                                            {
-                                                                maxTuple = Tuple.Create<Entry, double>(tuple2.Item1, tuple2.Item2 * tuple1.Item2);
-                                                            }
-                                                        }
-                                                        else if (tuple2.Item2 * tuple1.Item2 > maxTuple.Item2 && tuple2.Item1.Description != null && Regex.IsMatch(tuple2.Item1.Description, "img.*?src\\s*=\\s*(?:\"(?<1>[^\"]*)\"|(?<1>\\S+))", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline))
-                                                        {
-                                                            maxTuple = Tuple.Create<Entry, double>(tuple2.Item1, tuple2.Item2 * tuple1.Item2);
-                                                        }
-
                                                         sum += tuple2.Item2;
                                                     });
 
-                                                    if (maxTuple != null)
+                                                    tupleList.Add(Tuple.Create<string, double>(s, sum / (from kvp in this.cacheDictionary from t in kvp.Value.Item1 select t.Item1.Resource).Distinct().Count() * tuple1.Item2));
+                                                }
+                                                else
+                                                {
+                                                    tupleList.Add(Tuple.Create<string, double>(s, epsilon));
+                                                }
+                                            }
+
+                                            return tupleList;
+                                        });
+                                        List<Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, string, double, double>> candidateList = new List<Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, string, double, double>>();
+                                        IEnumerable<double> probabilities = Softmax(termList.ConvertAll<double>(delegate (Tuple<string, double> tuple)
+                                        {
+                                            return tuple.Item2;
+                                        }));
+
+                                        if (stringBuilder.Length > 0)
+                                        {
+                                            inlinesList.ForEach(delegate (Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, double> tuple)
+                                            {
+                                                int k = 0;
+
+                                                tuple.Item1.Add(stringBuilder.ToString());
+
+                                                foreach (double probability in probabilities)
+                                                {
+                                                    if (!tuple.Item2.Values.Any(x => x.Title.Equals(termList[k].Item1)))
                                                     {
-                                                        StringBuilder sb = new StringBuilder();
-
-                                                        foreach (Match m in Regex.Matches(maxTuple.Item1.Description, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
-                                                        {
-                                                            sb.Append(m.Value);
-                                                        }
-
-                                                        newEntry.Description = sb.ToString();
+                                                        candidateList.Add(Tuple.Create<System.Collections.ArrayList, Dictionary<string, Entry>, string, double, double>(tuple.Item1, tuple.Item2, termList[k].Item1, termList[k].Item2, tuple.Item3 * probability));
                                                     }
 
-                                                    newEntry.Score = new Nullable<double>(sum / (from kvp in this.cacheDictionary from t in kvp.Value.Item1 select t.Item1.Resource).Distinct().Count() * tuple1.Item2);
+                                                    k++;
                                                 }
+                                            });
 
-                                                foreach (string s in from s in terms where !s.Equals(term) select s)
-                                                {
-                                                    newEntry.Tags.Add(s);
-                                                }
-
-                                                if (stringBuilder.Length > 0)
-                                                {
-                                                    newMessage.Add(stringBuilder.ToString());
-                                                    stringBuilder.Clear();
-                                                }
-
-                                                newMessage.Add(newEntry);
-                                                d.Add(match.Groups[2].Value, newEntry);
-                                                wordDictionary.Remove(term);
-
-                                                break;
-                                            }
+                                            stringBuilder.Clear();
                                         }
+                                        else
+                                        {
+                                            inlinesList.ForEach(delegate (Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, double> tuple)
+                                            {
+                                                int k = 0;
+
+                                                foreach (double probability in probabilities)
+                                                {
+                                                    if (!tuple.Item2.Values.Any(x => x.Title.Equals(termList[k].Item1)))
+                                                    {
+                                                        candidateList.Add(Tuple.Create<System.Collections.ArrayList, Dictionary<string, Entry>, string, double, double>(tuple.Item1, tuple.Item2, termList[k].Item1, termList[k].Item2, tuple.Item3 * probability));
+                                                    }
+
+                                                    k++;
+                                                }
+                                            });
+                                        }
+
+                                        candidateList.Sort(delegate (Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, string, double, double> tuple1, Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, string, double, double> tuple2)
+                                        {
+                                            if (tuple1.Item5 > tuple2.Item5)
+                                            {
+                                                return 1;
+                                            }
+                                            else if (tuple1.Item5 < tuple2.Item5)
+                                            {
+                                                return -1;
+                                            }
+
+                                            return 0;
+                                        });
+                                        candidateList.Reverse();
+
+                                        inlinesList.Clear();
+
+                                        for (int k = 0, length = Math.Min(beamWidth, candidateList.Count); k < length; k++)
+                                        {
+                                            System.Collections.ArrayList inlineArrayList = new System.Collections.ArrayList(candidateList[k].Item1);
+                                            Dictionary<string, Entry> d2 = new Dictionary<string, Entry>(candidateList[k].Item2);
+                                            Entry newEntry = new Entry();
+                                            Tuple<List<Tuple<Entry, double>>, double> tuple1;
+
+                                            newEntry.Title = candidateList[k].Item3;
+
+                                            if (this.cacheDictionary.TryGetValue(candidateList[k].Item3, out tuple1))
+                                            {
+                                                Tuple<Entry, double> maxTuple = null;
+
+                                                tuple1.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
+                                                {
+                                                    if (maxTuple == null)
+                                                    {
+                                                        if (tuple2.Item1.Description != null && Regex.IsMatch(tuple2.Item1.Description, "img.*?src\\s*=\\s*(?:\"(?<1>[^\"]*)\"|(?<1>\\S+))", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline))
+                                                        {
+                                                            maxTuple = Tuple.Create<Entry, double>(tuple2.Item1, tuple2.Item2 * tuple1.Item2);
+                                                        }
+                                                    }
+                                                    else if (tuple2.Item2 * tuple1.Item2 > maxTuple.Item2 && tuple2.Item1.Description != null && Regex.IsMatch(tuple2.Item1.Description, "img.*?src\\s*=\\s*(?:\"(?<1>[^\"]*)\"|(?<1>\\S+))", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline))
+                                                    {
+                                                        maxTuple = Tuple.Create<Entry, double>(tuple2.Item1, tuple2.Item2 * tuple1.Item2);
+                                                    }
+                                                });
+
+                                                if (maxTuple != null)
+                                                {
+                                                    StringBuilder sb = new StringBuilder();
+
+                                                    foreach (Match m in Regex.Matches(maxTuple.Item1.Description, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
+                                                    {
+                                                        sb.Append(m.Value);
+                                                    }
+
+                                                    newEntry.Description = sb.ToString();
+                                                }
+
+                                                newEntry.Score = new Nullable<double>(candidateList[k].Item4);
+                                            }
+
+                                            foreach (string s in from s in terms where !s.Equals(candidateList[k].Item3) select s)
+                                            {
+                                                newEntry.Tags.Add(s);
+                                            }
+
+                                            inlineArrayList.Add(newEntry);
+                                            d2.Add(match.Groups[2].Value, newEntry);
+                                            inlinesList.Add(Tuple.Create<System.Collections.ArrayList, Dictionary<string, Entry>, double>(inlineArrayList, d2, candidateList[k].Item5));
+                                        }
+
+                                        hs.Add(match.Groups[2].Value);
                                     }
 
                                     if (match.Groups[4].Success)
@@ -6109,17 +6196,36 @@ namespace Apricot
                                     index = match.Index + match.Length;
                                 }
 
+                                Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, double> tuple = inlinesList[Choice(Softmax(inlinesList.ConvertAll<double>(delegate (Tuple<System.Collections.ArrayList, Dictionary<string, Entry>, double> tuple)
+                                {
+                                    return tuple.Item3;
+                                })))];
+                                Message newMessage = new Message();
+
                                 if (message.Text.Length > index)
                                 {
                                     stringBuilder.Append(Regex.Replace(message.Text.Substring(index, message.Text.Length - index), @"\{\{|}}", new MatchEvaluator(delegate (Match m)
                                     {
                                         return m.Value.Substring(m.Length / 2);
                                     }), RegexOptions.CultureInvariant));
-                                    newMessage.Add(stringBuilder.ToString());
+                                    tuple.Item1.Add(stringBuilder.ToString());
                                 }
                                 else if (stringBuilder.Length > 0)
                                 {
-                                    newMessage.Add(stringBuilder.ToString());
+                                    tuple.Item1.Add(stringBuilder.ToString());
+                                }
+
+                                foreach (object o2 in tuple.Item1)
+                                {
+                                    newMessage.Add(o2);
+                                }
+
+                                foreach (KeyValuePair<string, Entry> keyValuePair in tuple.Item2)
+                                {
+                                    if (!d1.ContainsKey(keyValuePair.Key))
+                                    {
+                                        d1.Add(keyValuePair.Key, keyValuePair.Value);
+                                    }
                                 }
 
                                 newMessage.Speed = message.Speed;
@@ -8129,6 +8235,53 @@ namespace Apricot
             }
 
             return array;
+        }
+
+        private int Choice(IEnumerable<double> probabilities)
+        {
+            double number = new Random(Environment.TickCount).NextDouble();
+            double sum = 0.0;
+            int index = 0;
+
+            foreach (double probability in probabilities)
+            {
+                if (sum <= number && number < sum + probability)
+                {
+                    break;
+                }
+
+                sum += probability;
+                index++;
+            }
+
+            return index;
+        }
+
+        private IEnumerable<double> Softmax(IEnumerable<double> collection)
+        {
+            List<double> yList = new List<double>();
+            double max = 0.0;
+            double sum = 0.0;
+
+            foreach (double x in collection)
+            {
+                if (x > max)
+                {
+                    max = x;
+                }
+            }
+
+            foreach (double x in collection)
+            {
+                sum += Math.Exp(x - max);
+            }
+
+            foreach (double x in collection)
+            {
+                yList.Add(Math.Exp(x - max) / sum);
+            }
+
+            return yList;
         }
 
         private string BuildSelectStatement(string query)
