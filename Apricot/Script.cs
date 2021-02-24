@@ -4390,6 +4390,8 @@ namespace Apricot
 
             Queue<Sequence> q = new Queue<Sequence>(this.sequenceCollection);
             HashSet<string> hs = new HashSet<string>();
+            Match match = Regex.Match(Path.GetFileNameWithoutExtension(path), "^.+?\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+            string currentLanguage = match.Success ? match.Groups[1].Value : CultureInfo.InvariantCulture.TwoLetterISOLanguageName;
 
             while (q.Count > 0)
             {
@@ -4444,22 +4446,22 @@ namespace Apricot
                                 foreach (List<Tuple<ZipArchiveEntry, string>> tupleList1 in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
                                 {
                                     string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
-                                    Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                                    Match m = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                                     string key;
                                     List<Tuple<ZipArchiveEntry, string>> tupleList1;
 
-                                    if (match.Success)
+                                    if (m.Success)
                                     {
-                                        key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), match.Groups[1].Value);
+                                        key = String.Concat(Path.GetDirectoryName(zipArchiveEntry.FullName), m.Groups[1].Value);
 
                                         if (dictionary.TryGetValue(key, out tupleList1))
                                         {
-                                            tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                            tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, m.Groups[2].Value));
                                         }
                                         else
                                         {
                                             tupleList1 = new List<Tuple<ZipArchiveEntry, string>>();
-                                            tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, match.Groups[2].Value));
+                                            tupleList1.Add(Tuple.Create<ZipArchiveEntry, string>(zipArchiveEntry, m.Groups[2].Value));
                                             dictionary.Add(key, tupleList1);
                                         }
                                     }
@@ -4484,55 +4486,10 @@ namespace Apricot
                                 {
                                     Tuple<ZipArchiveEntry, string> tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                     {
-                                        return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
+                                        return tuple3.Item2.Equals(currentLanguage);
                                     });
 
-                                    if (tuple2 == null)
-                                    {
-                                        tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
-                                        {
-                                            return tuple3.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                        });
-
-                                        if (tuple2 != null)
-                                        {
-                                            using (Stream stream = tuple2.Item1.Open())
-                                            {
-                                                XmlDocument xmlDocument = new XmlDocument();
-
-                                                xmlDocument.Load(stream);
-                                                xmlDocument.Normalize();
-
-                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
-                                                {
-                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                                    {
-                                                        if (xmlNode.Name.Equals("character"))
-                                                        {
-                                                            Character character = ParseCharacter(xmlNode);
-
-                                                            if (!(from c in this.characterCollection where c.Name.Equals(character.Name) select c).Any())
-                                                            {
-                                                                List<Sequence> sequenceList = new List<Sequence>();
-
-                                                                foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
-                                                                {
-                                                                    if (sequenceNode.Name.Equals("sequence"))
-                                                                    {
-                                                                        Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
-
-                                                                        sequenceList.Add(sequence);
-                                                                        this.sequenceCollection.Add(sequence);
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else
+                                    if (tuple2 != null)
                                     {
                                         using (Stream stream = tuple2.Item1.Open())
                                         {
@@ -4583,22 +4540,22 @@ namespace Apricot
                     else
                     {
                         string filename = Path.GetFileNameWithoutExtension(tuple1.Item2);
-                        Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
+                        Match m = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                         string key;
                         List<Tuple<string, string>> tupleList;
 
-                        if (match.Success)
+                        if (m.Success)
                         {
-                            key = String.Concat(Path.GetDirectoryName(tuple1.Item2), match.Groups[1].Value);
+                            key = String.Concat(Path.GetDirectoryName(tuple1.Item2), m.Groups[1].Value);
 
                             if (cachedPathDictionary.TryGetValue(key, out tupleList))
                             {
-                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match.Groups[2].Value));
+                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, m.Groups[2].Value));
                             }
                             else
                             {
                                 tupleList = new List<Tuple<string, string>>();
-                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, match.Groups[2].Value));
+                                tupleList.Add(Tuple.Create<string, string>(tuple1.Item2, m.Groups[2].Value));
                                 cachedPathDictionary.Add(key, tupleList);
                             }
                         }
@@ -4624,64 +4581,16 @@ namespace Apricot
             foreach (List<Tuple<string, string>> tupleList in cachedPathDictionary.Values)
             {
                 Tuple<string, string> tuple1 = null;
-                Tuple<string, string> tuple2 = null;
-
-                tupleList.ForEach(delegate (Tuple<string, string> tuple3)
+                
+                tupleList.ForEach(delegate (Tuple<string, string> tuple2)
                 {
-                    if (tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName))
+                    if (tuple2.Item2.Equals(currentLanguage))
                     {
-                        tuple1 = tuple3;
-                    }
-                    else if (tuple3.Item2.Equals(CultureInfo.InvariantCulture.TwoLetterISOLanguageName))
-                    {
-                        tuple2 = tuple3;
+                        tuple1 = tuple2;
                     }
                 });
 
-                if (tuple1 == null)
-                {
-                    if (tuple2 != null)
-                    {
-                        using (FileStream fs = new FileStream(tuple2.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        {
-                            XmlDocument xmlDocument = new XmlDocument();
-
-                            xmlDocument.Load(fs);
-                            xmlDocument.Normalize();
-
-                            if (xmlDocument.DocumentElement.Name.Equals("script"))
-                            {
-                                List<Sprite> cachedSpriteList = new List<Sprite>();
-                                List<Sound> cachedSoundList = new List<Sound>();
-
-                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
-                                {
-                                    if (xmlNode.Name.Equals("character"))
-                                    {
-                                        Character character = ParseCharacter(xmlNode);
-
-                                        if (!(from c in this.characterCollection where c.Name.Equals(character.Name) select c).Any())
-                                        {
-                                            List<Sequence> sequenceList = new List<Sequence>();
-
-                                            foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
-                                            {
-                                                if (sequenceNode.Name.Equals("sequence"))
-                                                {
-                                                    Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
-
-                                                    sequenceList.Add(sequence);
-                                                    this.sequenceCollection.Add(sequence);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
+                if (tuple1 != null)
                 {
                     using (FileStream fs = new FileStream(tuple1.Item1, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
