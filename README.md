@@ -25,7 +25,7 @@ To build Apricot, run .NET Core CLI command.
 
 ## Features
 
-* Building User Interface with WPF on .NET Core
+* Building User Interface with WPF on .NET
 * Generating messages based on machine leraning
 * Describing an character using flexible character markup language
 
