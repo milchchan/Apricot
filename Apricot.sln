@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29318.209
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apricot", "Apricot\Apricot.csproj", "{C858F25D-051B-4F70-A5D4-C279405F46BA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Apricot", "Apricot\Apricot.csproj", "{C858F25D-051B-4F70-A5D4-C279405F46BA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Notifications", "Notifications\Notifications.csproj", "{522D4BA6-AEBB-4FAE-8962-4107A8F69106}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Weather", "Weather\Weather.csproj", "{AAA813F0-32C7-4C0B-B46C-C9ADEEECE35F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{C858F25D-051B-4F70-A5D4-C279405F46BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C858F25D-051B-4F70-A5D4-C279405F46BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C858F25D-051B-4F70-A5D4-C279405F46BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{522D4BA6-AEBB-4FAE-8962-4107A8F69106}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{522D4BA6-AEBB-4FAE-8962-4107A8F69106}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{522D4BA6-AEBB-4FAE-8962-4107A8F69106}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{522D4BA6-AEBB-4FAE-8962-4107A8F69106}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAA813F0-32C7-4C0B-B46C-C9ADEEECE35F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAA813F0-32C7-4C0B-B46C-C9ADEEECE35F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAA813F0-32C7-4C0B-B46C-C9ADEEECE35F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAA813F0-32C7-4C0B-B46C-C9ADEEECE35F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
