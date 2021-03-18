@@ -663,6 +663,14 @@ namespace Apricot
                                                                     }
                                                                 }
                                                             }
+                                                            else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                            {
+                                                                Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                                character.Script = path;
+
+                                                                this.characterCollection.Add(character);
+                                                            }
                                                         }
                                                         catch
                                                         {
@@ -713,6 +721,14 @@ namespace Apricot
                                                                     this.characterCollection.Add(character);
                                                                 }
                                                             }
+                                                        }
+                                                        else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                        {
+                                                            Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                            character.Script = path;
+
+                                                            this.characterCollection.Add(character);
                                                         }
                                                     }
                                                     catch
@@ -833,6 +849,14 @@ namespace Apricot
                                                             }
                                                         }
                                                     }
+                                                    else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                    {
+                                                        Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                        character.Script = path;
+
+                                                        this.characterCollection.Add(character);
+                                                    }
                                                 }
                                                 catch
                                                 {
@@ -891,6 +915,14 @@ namespace Apricot
                                                             this.characterCollection.Add(character);
                                                         }
                                                     }
+                                                }
+                                                else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                {
+                                                    Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                    character.Script = path;
+
+                                                    this.characterCollection.Add(character);
                                                 }
                                             }
                                             catch
@@ -997,6 +1029,14 @@ namespace Apricot
                                                             }
                                                         }
                                                     }
+                                                    else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                    {
+                                                        Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                        character.Script = path;
+
+                                                        this.characterCollection.Add(character);
+                                                    }
                                                 }
                                                 catch
                                                 {
@@ -1055,6 +1095,14 @@ namespace Apricot
                                                             this.characterCollection.Add(character);
                                                         }
                                                     }
+                                                }
+                                                else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                {
+                                                    Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                    character.Script = path;
+
+                                                    this.characterCollection.Add(character);
                                                 }
                                             }
                                             catch
@@ -1811,6 +1859,14 @@ namespace Apricot
                                                                             }
                                                                         }
                                                                     }
+                                                                    else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                                    {
+                                                                        Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                                        character.Script = path;
+
+                                                                        this.characterCollection.Add(character);
+                                                                    }
                                                                 }
                                                                 catch
                                                                 {
@@ -1861,6 +1917,14 @@ namespace Apricot
                                                                             this.characterCollection.Add(character);
                                                                         }
                                                                     }
+                                                                }
+                                                                else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                                {
+                                                                    Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                                    character.Script = path;
+
+                                                                    this.characterCollection.Add(character);
                                                                 }
                                                             }
                                                             catch
@@ -1981,6 +2045,14 @@ namespace Apricot
                                                                     }
                                                                 }
                                                             }
+                                                            else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                            {
+                                                                Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                                character.Script = path;
+
+                                                                this.characterCollection.Add(character);
+                                                            }
                                                         }
                                                         catch
                                                         {
@@ -2039,6 +2111,14 @@ namespace Apricot
                                                                     this.characterCollection.Add(character);
                                                                 }
                                                             }
+                                                        }
+                                                        else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                        {
+                                                            Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                            character.Script = path;
+
+                                                            this.characterCollection.Add(character);
                                                         }
                                                     }
                                                     catch
@@ -2145,6 +2225,14 @@ namespace Apricot
                                                                     }
                                                                 }
                                                             }
+                                                            else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                            {
+                                                                Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                                character.Script = path;
+
+                                                                this.characterCollection.Add(character);
+                                                            }
                                                         }
                                                         catch
                                                         {
@@ -2203,6 +2291,14 @@ namespace Apricot
                                                                     this.characterCollection.Add(character);
                                                                 }
                                                             }
+                                                        }
+                                                        else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                        {
+                                                            Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                            character.Script = path;
+
+                                                            this.characterCollection.Add(character);
                                                         }
                                                     }
                                                     catch
@@ -2523,6 +2619,14 @@ namespace Apricot
                                                                         }
                                                                     }
                                                                 }
+                                                                else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                                {
+                                                                    Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                                    character.Script = path;
+
+                                                                    this.characterCollection.Add(character);
+                                                                }
                                                             }
                                                             catch
                                                             {
@@ -2573,6 +2677,14 @@ namespace Apricot
                                                                         this.characterCollection.Add(character);
                                                                     }
                                                                 }
+                                                            }
+                                                            else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                            {
+                                                                Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                                character.Script = path;
+
+                                                                this.characterCollection.Add(character);
                                                             }
                                                         }
                                                         catch
@@ -2693,6 +2805,14 @@ namespace Apricot
                                                                 }
                                                             }
                                                         }
+                                                        else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                        {
+                                                            Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                            character.Script = path;
+
+                                                            this.characterCollection.Add(character);
+                                                        }
                                                     }
                                                     catch
                                                     {
@@ -2751,6 +2871,14 @@ namespace Apricot
                                                                 this.characterCollection.Add(character);
                                                             }
                                                         }
+                                                    }
+                                                    else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                    {
+                                                        Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                        character.Script = path;
+
+                                                        this.characterCollection.Add(character);
                                                     }
                                                 }
                                                 catch
@@ -2857,6 +2985,14 @@ namespace Apricot
                                                                 }
                                                             }
                                                         }
+                                                        else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                        {
+                                                            Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                            character.Script = path;
+
+                                                            this.characterCollection.Add(character);
+                                                        }
                                                     }
                                                     catch
                                                     {
@@ -2915,6 +3051,14 @@ namespace Apricot
                                                                 this.characterCollection.Add(character);
                                                             }
                                                         }
+                                                    }
+                                                    else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                                    {
+                                                        Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                        character.Script = path;
+
+                                                        this.characterCollection.Add(character);
                                                     }
                                                 }
                                                 catch
@@ -3996,6 +4140,7 @@ namespace Apricot
                                     using (Stream stream = tuple.Item1.Open())
                                     {
                                         XmlDocument xmlDocument = new XmlDocument();
+                                        List<XmlNode> xmlNodeList = new List<XmlNode>();
 
                                         xmlDocument.Load(stream);
                                         xmlDocument.Normalize();
@@ -4006,115 +4151,124 @@ namespace Apricot
                                             {
                                                 if (xmlNode.Name.Equals("character"))
                                                 {
-                                                    Character character = ParseCharacter(xmlNode);
-                                                    List<Sequence> sequenceList = new List<Sequence>();
-
-                                                    if (!characterNameHashSet.Contains(character.Name))
-                                                    {
-                                                        List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
-
-                                                        tempSequenceList.ForEach(delegate (Sequence sequence)
-                                                        {
-                                                            if (sequence.Owner.Equals(character.Name))
-                                                            {
-                                                                this.sequenceCollection.Remove(sequence);
-                                                            }
-                                                        });
-
-                                                        characterNameHashSet.Add(character.Name);
-                                                    }
-
-                                                    foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
-                                                    {
-                                                        if (sequenceNode.Name.Equals("sequence"))
-                                                        {
-                                                            Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
-
-                                                            sequenceList.Add(sequence);
-                                                            this.sequenceCollection.Add(sequence);
-                                                        }
-                                                    }
-
-                                                    for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
-                                                    {
-                                                        if (nextLinkedListNode.Value.Name.Equals(character.Name))
-                                                        {
-                                                            string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
-
-                                                            nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
-                                                            nextLinkedListNode.Value.Size = character.Size;
-                                                            nextLinkedListNode.Value.Origin = character.Origin;
-
-                                                            if (nextLinkedListNode.Value.HasTypes)
-                                                            {
-                                                                Queue<Sequence> sequenceQueue = new Queue<Sequence>(this.sequenceCollection);
-                                                                HashSet<string> motionTypeHashSet;
-
-                                                                if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
-                                                                {
-                                                                    motionTypeHashSet = new HashSet<string>();
-                                                                    motionTypeDictionary.Add(nextLinkedListNode.Value.Name, motionTypeHashSet);
-                                                                }
-
-                                                                while (sequenceQueue.Count > 0)
-                                                                {
-                                                                    Sequence sequence = sequenceQueue.Dequeue();
-
-                                                                    foreach (object o in sequence)
-                                                                    {
-                                                                        Sequence s = o as Sequence;
-
-                                                                        if (s == null)
-                                                                        {
-                                                                            if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
-                                                                            {
-                                                                                Collection<Motion> collection = o as Collection<Motion>;
-
-                                                                                if (collection != null)
-                                                                                {
-                                                                                    foreach (Motion motion in from motion in collection where motion.Type != null select motion)
-                                                                                    {
-                                                                                        if (!motionTypeHashSet.Contains(motion.Type))
-                                                                                        {
-                                                                                            motionTypeHashSet.Add(motion.Type);
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        else if (s.Any())
-                                                                        {
-                                                                            sequenceQueue.Enqueue(s);
-                                                                        }
-                                                                    }
-                                                                }
-
-                                                                string[] types = nextLinkedListNode.Value.Types.ToArray();
-
-                                                                nextLinkedListNode.Value.Types.Clear();
-
-                                                                foreach (string type in types)
-                                                                {
-                                                                    if (motionTypeHashSet.Contains(type))
-                                                                    {
-                                                                        nextLinkedListNode.Value.Types.Add(type);
-                                                                    }
-                                                                }
-                                                            }
-                                                            
-                                                            if (!baseDirectoryHashSet.Contains(directoryName))
-                                                            {
-                                                                baseDirectoryHashSet.Add(directoryName);
-                                                            }
-
-                                                            characterLinkedList.Remove(nextLinkedListNode);
-
-                                                            break;
-                                                        }
-                                                    }
+                                                    xmlNodeList.Add(xmlNode);
                                                 }
                                             }
                                         }
+                                        else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                        {
+                                            xmlNodeList.Add(xmlDocument.DocumentElement);
+                                        }
+
+                                        xmlNodeList.ForEach(delegate (XmlNode xmlNode)
+                                        {
+                                            Character character = ParseCharacter(xmlNode);
+                                            List<Sequence> sequenceList = new List<Sequence>();
+
+                                            if (!characterNameHashSet.Contains(character.Name))
+                                            {
+                                                List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
+
+                                                tempSequenceList.ForEach(delegate (Sequence sequence)
+                                                {
+                                                    if (sequence.Owner.Equals(character.Name))
+                                                    {
+                                                        this.sequenceCollection.Remove(sequence);
+                                                    }
+                                                });
+
+                                                characterNameHashSet.Add(character.Name);
+                                            }
+
+                                            foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
+                                            {
+                                                if (sequenceNode.Name.Equals("sequence"))
+                                                {
+                                                    Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+
+                                                    sequenceList.Add(sequence);
+                                                    this.sequenceCollection.Add(sequence);
+                                                }
+                                            }
+
+                                            for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                                            {
+                                                if (nextLinkedListNode.Value.Name.Equals(character.Name))
+                                                {
+                                                    string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
+
+                                                    nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
+                                                    nextLinkedListNode.Value.Size = character.Size;
+                                                    nextLinkedListNode.Value.Origin = character.Origin;
+
+                                                    if (nextLinkedListNode.Value.HasTypes)
+                                                    {
+                                                        Queue<Sequence> sequenceQueue = new Queue<Sequence>(this.sequenceCollection);
+                                                        HashSet<string> motionTypeHashSet;
+
+                                                        if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
+                                                        {
+                                                            motionTypeHashSet = new HashSet<string>();
+                                                            motionTypeDictionary.Add(nextLinkedListNode.Value.Name, motionTypeHashSet);
+                                                        }
+
+                                                        while (sequenceQueue.Count > 0)
+                                                        {
+                                                            Sequence sequence = sequenceQueue.Dequeue();
+
+                                                            foreach (object o in sequence)
+                                                            {
+                                                                Sequence s = o as Sequence;
+
+                                                                if (s == null)
+                                                                {
+                                                                    if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
+                                                                    {
+                                                                        Collection<Motion> collection = o as Collection<Motion>;
+
+                                                                        if (collection != null)
+                                                                        {
+                                                                            foreach (Motion motion in from motion in collection where motion.Type != null select motion)
+                                                                            {
+                                                                                if (!motionTypeHashSet.Contains(motion.Type))
+                                                                                {
+                                                                                    motionTypeHashSet.Add(motion.Type);
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                else if (s.Any())
+                                                                {
+                                                                    sequenceQueue.Enqueue(s);
+                                                                }
+                                                            }
+                                                        }
+
+                                                        string[] types = nextLinkedListNode.Value.Types.ToArray();
+
+                                                        nextLinkedListNode.Value.Types.Clear();
+
+                                                        foreach (string type in types)
+                                                        {
+                                                            if (motionTypeHashSet.Contains(type))
+                                                            {
+                                                                nextLinkedListNode.Value.Types.Add(type);
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (!baseDirectoryHashSet.Contains(directoryName))
+                                                    {
+                                                        baseDirectoryHashSet.Add(directoryName);
+                                                    }
+
+                                                    characterLinkedList.Remove(nextLinkedListNode);
+
+                                                    break;
+                                                }
+                                            }
+                                        });
                                     }
                                 }
                             }
@@ -4123,6 +4277,7 @@ namespace Apricot
                                 using (Stream stream = tuple.Item1.Open())
                                 {
                                     XmlDocument xmlDocument = new XmlDocument();
+                                    List<XmlNode> xmlNodeList = new List<XmlNode>();
 
                                     xmlDocument.Load(stream);
                                     xmlDocument.Normalize();
@@ -4133,115 +4288,124 @@ namespace Apricot
                                         {
                                             if (xmlNode.Name.Equals("character"))
                                             {
-                                                Character character = ParseCharacter(xmlNode);
-                                                List<Sequence> sequenceList = new List<Sequence>();
-
-                                                if (!characterNameHashSet.Contains(character.Name))
-                                                {
-                                                    List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
-
-                                                    tempSequenceList.ForEach(delegate (Sequence sequence)
-                                                    {
-                                                        if (sequence.Owner.Equals(character.Name))
-                                                        {
-                                                            this.sequenceCollection.Remove(sequence);
-                                                        }
-                                                    });
-
-                                                    characterNameHashSet.Add(character.Name);
-                                                }
-
-                                                foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
-                                                {
-                                                    if (sequenceNode.Name.Equals("sequence"))
-                                                    {
-                                                        Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
-
-                                                        sequenceList.Add(sequence);
-                                                        this.sequenceCollection.Add(sequence);
-                                                    }
-                                                }
-
-                                                for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
-                                                {
-                                                    if (nextLinkedListNode.Value.Name.Equals(character.Name))
-                                                    {
-                                                        string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
-
-                                                        nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
-                                                        nextLinkedListNode.Value.Size = character.Size;
-                                                        nextLinkedListNode.Value.Origin = character.Origin;
-
-                                                        if (nextLinkedListNode.Value.HasTypes)
-                                                        {
-                                                            Queue<Sequence> sequenceQueue = new Queue<Sequence>(this.sequenceCollection);
-                                                            HashSet<string> motionTypeHashSet;
-
-                                                            if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
-                                                            {
-                                                                motionTypeHashSet = new HashSet<string>();
-                                                                motionTypeDictionary.Add(nextLinkedListNode.Value.Name, motionTypeHashSet);
-                                                            }
-
-                                                            while (sequenceQueue.Count > 0)
-                                                            {
-                                                                Sequence sequence = sequenceQueue.Dequeue();
-
-                                                                foreach (object o in sequence)
-                                                                {
-                                                                    Sequence s = o as Sequence;
-
-                                                                    if (s == null)
-                                                                    {
-                                                                        if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
-                                                                        {
-                                                                            Collection<Motion> collection = o as Collection<Motion>;
-
-                                                                            if (collection != null)
-                                                                            {
-                                                                                foreach (Motion motion in from motion in collection where motion.Type != null select motion)
-                                                                                {
-                                                                                    if (!motionTypeHashSet.Contains(motion.Type))
-                                                                                    {
-                                                                                        motionTypeHashSet.Add(motion.Type);
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    else if (s.Any())
-                                                                    {
-                                                                        sequenceQueue.Enqueue(s);
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            string[] types = nextLinkedListNode.Value.Types.ToArray();
-
-                                                            nextLinkedListNode.Value.Types.Clear();
-
-                                                            foreach (string type in types)
-                                                            {
-                                                                if (motionTypeHashSet.Contains(type))
-                                                                {
-                                                                    nextLinkedListNode.Value.Types.Add(type);
-                                                                }
-                                                            }
-                                                        }
-
-                                                        if (!baseDirectoryHashSet.Contains(directoryName))
-                                                        {
-                                                            baseDirectoryHashSet.Add(directoryName);
-                                                        }
-
-                                                        characterLinkedList.Remove(nextLinkedListNode);
-
-                                                        break;
-                                                    }
-                                                }
+                                                xmlNodeList.Add(xmlNode);
                                             }
                                         }
                                     }
+                                    else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                    {
+                                        xmlNodeList.Add(xmlDocument.DocumentElement);
+                                    }
+
+                                    xmlNodeList.ForEach(delegate (XmlNode xmlNode)
+                                    {
+                                        Character character = ParseCharacter(xmlNode);
+                                        List<Sequence> sequenceList = new List<Sequence>();
+
+                                        if (!characterNameHashSet.Contains(character.Name))
+                                        {
+                                            List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
+
+                                            tempSequenceList.ForEach(delegate (Sequence sequence)
+                                            {
+                                                if (sequence.Owner.Equals(character.Name))
+                                                {
+                                                    this.sequenceCollection.Remove(sequence);
+                                                }
+                                            });
+
+                                            characterNameHashSet.Add(character.Name);
+                                        }
+
+                                        foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
+                                        {
+                                            if (sequenceNode.Name.Equals("sequence"))
+                                            {
+                                                Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+
+                                                sequenceList.Add(sequence);
+                                                this.sequenceCollection.Add(sequence);
+                                            }
+                                        }
+
+                                        for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                                        {
+                                            if (nextLinkedListNode.Value.Name.Equals(character.Name))
+                                            {
+                                                string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
+
+                                                nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
+                                                nextLinkedListNode.Value.Size = character.Size;
+                                                nextLinkedListNode.Value.Origin = character.Origin;
+
+                                                if (nextLinkedListNode.Value.HasTypes)
+                                                {
+                                                    Queue<Sequence> sequenceQueue = new Queue<Sequence>(this.sequenceCollection);
+                                                    HashSet<string> motionTypeHashSet;
+
+                                                    if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
+                                                    {
+                                                        motionTypeHashSet = new HashSet<string>();
+                                                        motionTypeDictionary.Add(nextLinkedListNode.Value.Name, motionTypeHashSet);
+                                                    }
+
+                                                    while (sequenceQueue.Count > 0)
+                                                    {
+                                                        Sequence sequence = sequenceQueue.Dequeue();
+
+                                                        foreach (object o in sequence)
+                                                        {
+                                                            Sequence s = o as Sequence;
+
+                                                            if (s == null)
+                                                            {
+                                                                if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
+                                                                {
+                                                                    Collection<Motion> collection = o as Collection<Motion>;
+
+                                                                    if (collection != null)
+                                                                    {
+                                                                        foreach (Motion motion in from motion in collection where motion.Type != null select motion)
+                                                                        {
+                                                                            if (!motionTypeHashSet.Contains(motion.Type))
+                                                                            {
+                                                                                motionTypeHashSet.Add(motion.Type);
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            else if (s.Any())
+                                                            {
+                                                                sequenceQueue.Enqueue(s);
+                                                            }
+                                                        }
+                                                    }
+
+                                                    string[] types = nextLinkedListNode.Value.Types.ToArray();
+
+                                                    nextLinkedListNode.Value.Types.Clear();
+
+                                                    foreach (string type in types)
+                                                    {
+                                                        if (motionTypeHashSet.Contains(type))
+                                                        {
+                                                            nextLinkedListNode.Value.Types.Add(type);
+                                                        }
+                                                    }
+                                                }
+
+                                                if (!baseDirectoryHashSet.Contains(directoryName))
+                                                {
+                                                    baseDirectoryHashSet.Add(directoryName);
+                                                }
+
+                                                characterLinkedList.Remove(nextLinkedListNode);
+
+                                                break;
+                                            }
+                                        }
+                                    });
                                 }
                             }
                         }
@@ -4260,11 +4424,27 @@ namespace Apricot
                 using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     XmlDocument xmlDocument = new XmlDocument();
+                    List<XmlNode> xmlNodeList = new List<XmlNode>();
 
                     xmlDocument.Load(fs);
                     xmlDocument.Normalize();
 
                     if (xmlDocument.DocumentElement.Name.Equals("script"))
+                    {
+                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                        {
+                            if (xmlNode.Name.Equals("character"))
+                            {
+                                xmlNodeList.Add(xmlNode);
+                            }
+                        }
+                    }
+                    else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                    {
+                        xmlNodeList.Add(xmlDocument.DocumentElement);
+                    }
+
+                    if (xmlNodeList.Count > 0)
                     {
                         HashSet<string> characterNameHashSet = new HashSet<string>();
                         LinkedList<Character> characterLinkedList = new LinkedList<Character>(this.characterCollection);
@@ -4272,118 +4452,115 @@ namespace Apricot
                         List<Sound> cachedSoundList = new List<Sound>();
                         Dictionary<string, HashSet<string>> motionTypeDictionary = new Dictionary<string, HashSet<string>>();
 
-                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
+                        xmlNodeList.ForEach(delegate (XmlNode xmlNode)
                         {
-                            if (xmlNode.Name.Equals("character"))
+                            Character character = ParseCharacter(xmlNode);
+                            List<Sequence> sequenceList = new List<Sequence>();
+
+                            if (!characterNameHashSet.Contains(character.Name))
                             {
-                                Character character = ParseCharacter(xmlNode);
-                                List<Sequence> sequenceList = new List<Sequence>();
+                                List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
 
-                                if (!characterNameHashSet.Contains(character.Name))
+                                tempSequenceList.ForEach(delegate (Sequence sequence)
                                 {
-                                    List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
-
-                                    tempSequenceList.ForEach(delegate (Sequence sequence)
+                                    if (sequence.Owner.Equals(character.Name))
                                     {
-                                        if (sequence.Owner.Equals(character.Name))
-                                        {
-                                            this.sequenceCollection.Remove(sequence);
-                                        }
-                                    });
-
-                                    characterNameHashSet.Add(character.Name);
-                                }
-
-                                foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
-                                {
-                                    if (sequenceNode.Name.Equals("sequence"))
-                                    {
-                                        Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
-
-                                        sequenceList.Add(sequence);
-                                        this.sequenceCollection.Add(sequence);
+                                        this.sequenceCollection.Remove(sequence);
                                     }
-                                }
+                                });
 
-                                for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                                characterNameHashSet.Add(character.Name);
+                            }
+
+                            foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
+                            {
+                                if (sequenceNode.Name.Equals("sequence"))
                                 {
-                                    if (nextLinkedListNode.Value.Name.Equals(character.Name))
+                                    Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+
+                                    sequenceList.Add(sequence);
+                                    this.sequenceCollection.Add(sequence);
+                                }
+                            }
+
+                            for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                            {
+                                if (nextLinkedListNode.Value.Name.Equals(character.Name))
+                                {
+                                    string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
+
+                                    nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
+                                    nextLinkedListNode.Value.Size = character.Size;
+                                    nextLinkedListNode.Value.Origin = character.Origin;
+
+                                    if (nextLinkedListNode.Value.HasTypes)
                                     {
-                                        string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
+                                        Queue<Sequence> sequenceQueue = new Queue<Sequence>(sequenceList);
+                                        HashSet<string> motionTypeHashSet;
 
-                                        nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
-                                        nextLinkedListNode.Value.Size = character.Size;
-                                        nextLinkedListNode.Value.Origin = character.Origin;
-
-                                        if (nextLinkedListNode.Value.HasTypes)
+                                        if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
                                         {
-                                            Queue<Sequence> sequenceQueue = new Queue<Sequence>(sequenceList);
-                                            HashSet<string> motionTypeHashSet;
+                                            motionTypeHashSet = new HashSet<string>();
+                                            motionTypeDictionary.Add(nextLinkedListNode.Value.Name, motionTypeHashSet);
+                                        }
 
-                                            if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
+                                        while (sequenceQueue.Count > 0)
+                                        {
+                                            Sequence sequence = sequenceQueue.Dequeue();
+
+                                            foreach (object o in sequence)
                                             {
-                                                motionTypeHashSet = new HashSet<string>();
-                                                motionTypeDictionary.Add(nextLinkedListNode.Value.Name, motionTypeHashSet);
-                                            }
+                                                Sequence s = o as Sequence;
 
-                                            while (sequenceQueue.Count > 0)
-                                            {
-                                                Sequence sequence = sequenceQueue.Dequeue();
-
-                                                foreach (object o in sequence)
+                                                if (s == null)
                                                 {
-                                                    Sequence s = o as Sequence;
-
-                                                    if (s == null)
+                                                    if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
                                                     {
-                                                        if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
-                                                        {
-                                                            Collection<Motion> collection = o as Collection<Motion>;
+                                                        Collection<Motion> collection = o as Collection<Motion>;
 
-                                                            if (collection != null)
+                                                        if (collection != null)
+                                                        {
+                                                            foreach (Motion motion in from motion in collection where motion.Type != null select motion)
                                                             {
-                                                                foreach (Motion motion in from motion in collection where motion.Type != null select motion)
+                                                                if (!motionTypeHashSet.Contains(motion.Type))
                                                                 {
-                                                                    if (!motionTypeHashSet.Contains(motion.Type))
-                                                                    {
-                                                                        motionTypeHashSet.Add(motion.Type);
-                                                                    }
+                                                                    motionTypeHashSet.Add(motion.Type);
                                                                 }
                                                             }
                                                         }
                                                     }
-                                                    else if (s.Any())
-                                                    {
-                                                        sequenceQueue.Enqueue(s);
-                                                    }
                                                 }
-                                            }
-
-                                            string[] types = nextLinkedListNode.Value.Types.ToArray();
-
-                                            nextLinkedListNode.Value.Types.Clear();
-
-                                            foreach (string type in types)
-                                            {
-                                                if (motionTypeHashSet.Contains(type))
+                                                else if (s.Any())
                                                 {
-                                                    nextLinkedListNode.Value.Types.Add(type);
+                                                    sequenceQueue.Enqueue(s);
                                                 }
                                             }
                                         }
 
-                                        if (!baseDirectoryHashSet.Contains(directoryName))
+                                        string[] types = nextLinkedListNode.Value.Types.ToArray();
+
+                                        nextLinkedListNode.Value.Types.Clear();
+
+                                        foreach (string type in types)
                                         {
-                                            baseDirectoryHashSet.Add(directoryName);
+                                            if (motionTypeHashSet.Contains(type))
+                                            {
+                                                nextLinkedListNode.Value.Types.Add(type);
+                                            }
                                         }
-
-                                        characterLinkedList.Remove(nextLinkedListNode);
-
-                                        break;
                                     }
+
+                                    if (!baseDirectoryHashSet.Contains(directoryName))
+                                    {
+                                        baseDirectoryHashSet.Add(directoryName);
+                                    }
+
+                                    characterLinkedList.Remove(nextLinkedListNode);
+
+                                    break;
                                 }
                             }
-                        }
+                        });
                     }
                 }
             }
@@ -4524,6 +4701,26 @@ namespace Apricot
                                                     }
                                                 }
                                             }
+                                            else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                                            {
+                                                Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                                                if (!(from c in this.characterCollection where c.Name.Equals(character.Name) select c).Any())
+                                                {
+                                                    List<Sequence> sequenceList = new List<Sequence>();
+
+                                                    foreach (XmlNode sequenceNode in xmlDocument.DocumentElement.ChildNodes)
+                                                    {
+                                                        if (sequenceNode.Name.Equals("sequence"))
+                                                        {
+                                                            Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+
+                                                            sequenceList.Add(sequence);
+                                                            this.sequenceCollection.Add(sequence);
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -4624,6 +4821,29 @@ namespace Apricot
                                                 this.sequenceCollection.Add(sequence);
                                             }
                                         }
+                                    }
+                                }
+                            }
+                        }
+                        else if (xmlDocument.DocumentElement.Name.Equals("character"))
+                        {
+                            List<Sprite> cachedSpriteList = new List<Sprite>();
+                            List<Sound> cachedSoundList = new List<Sound>();
+
+                            Character character = ParseCharacter(xmlDocument.DocumentElement);
+
+                            if (!(from c in this.characterCollection where c.Name.Equals(character.Name) select c).Any())
+                            {
+                                List<Sequence> sequenceList = new List<Sequence>();
+
+                                foreach (XmlNode sequenceNode in xmlDocument.DocumentElement.ChildNodes)
+                                {
+                                    if (sequenceNode.Name.Equals("sequence"))
+                                    {
+                                        Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+
+                                        sequenceList.Add(sequence);
+                                        this.sequenceCollection.Add(sequence);
                                     }
                                 }
                             }
