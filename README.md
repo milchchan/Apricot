@@ -1,4 +1,4 @@
-![Screenshot](https://user-images.githubusercontent.com/246691/40046950-1da37be0-5869-11e8-97cb-3e0de44c36e9.png "Screenshot")
+![Screenshot](https://user-images.githubusercontent.com/246691/123876078-b837d580-d975-11eb-997e-297197f7723f.png "Screenshot")
 
 # Apricot
 
