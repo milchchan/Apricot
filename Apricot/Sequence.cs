@@ -5,24 +5,24 @@ namespace Apricot
 {
     public class Sequence : IEnumerable
     {
-        private string name = null;
-        private string owner = null;
-        private string state = null;
-        private ArrayList segmentList = null;
+        private string? name = null;
+        private string? owner = null;
+        private string? state = null;
+        private ArrayList? segmentList = null;
 
-        public object this[int index]
+        public object? this[int index]
         {
             get
             {
-                return this.segmentList[index];
+                return this.segmentList![index];
             }
             set
             {
-                this.segmentList[index] = value;
+                this.segmentList![index] = value;
             }
         }
 
-        public string Name
+        public string? Name
         {
             get
             {
@@ -34,7 +34,7 @@ namespace Apricot
             }
         }
 
-        public string Owner
+        public string? Owner
         {
             get
             {
@@ -46,7 +46,7 @@ namespace Apricot
             }
         }
 
-        public string State
+        public string? State
         {
             get
             {
@@ -65,27 +65,27 @@ namespace Apricot
 
         public IEnumerator GetEnumerator()
         {
-            return this.segmentList.GetEnumerator();
+            return this.segmentList!.GetEnumerator();
         }
 
         public bool Any()
         {
-            return this.segmentList.Count > 0;
+            return this.segmentList!.Count > 0;
         }
 
         public void Add(object o)
         {
-            this.segmentList.Add(o);
+            this.segmentList!.Add(o);
         }
 
         public void Remove(object o)
         {
-            this.segmentList.Remove(o);
+            this.segmentList!.Remove(o);
         }
 
         public void Clear()
         {
-            this.segmentList.Clear();
+            this.segmentList!.Clear();
         }
     }
 }

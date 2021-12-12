@@ -17,22 +17,22 @@ namespace Apricot
 {
 	public sealed class Script
 	{
-        public event EventHandler<EventArgs> Start = null;
-        public event EventHandler<EventArgs> Stop = null;
+        public event EventHandler<EventArgs>? Start = null;
+        public event EventHandler<EventArgs>? Stop = null;
         private static readonly Script instance = new Script();
         private readonly long activateThreshold = Int64.MaxValue;
         private bool isEnabled = false;
-        private System.Windows.Threading.DispatcherTimer pollingTimer = null;
-        private System.Windows.Threading.DispatcherTimer updateTimer = null;
-        private Collection<Character> characterCollection = null;
-        private Collection<Word> wordCollection = null;
-        private Collection<Source> sourceCollection = null;
-        private Collection<Sequence> sequenceCollection = null;
-        private Dictionary<string, string> sequenceStateDictionary = null;
-        private Queue<Sequence> sequenceQueue = null;
-        private Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> cacheDictionary = null;
-        private Queue<Entry> activateEntryQueue = null;
-        private HashSet<string> recentTermHashSet = null;
+        private System.Windows.Threading.DispatcherTimer? pollingTimer = null;
+        private System.Windows.Threading.DispatcherTimer? updateTimer = null;
+        private Collection<Character>? characterCollection = null;
+        private Collection<Word>? wordCollection = null;
+        private Collection<Source>? sourceCollection = null;
+        private Collection<Sequence>? sequenceCollection = null;
+        private Dictionary<string, string>? sequenceStateDictionary = null;
+        private Queue<Sequence>? sequenceQueue = null;
+        private Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>? cacheDictionary = null;
+        private Queue<Entry>? activateEntryQueue = null;
+        private HashSet<string>? recentTermHashSet = null;
         private DateTime lastPolledDateTime;
         private DateTime lastUpdatedDateTime;
         private TimeSpan idleTimeSpan = TimeSpan.Zero;
@@ -49,7 +49,7 @@ namespace Apricot
         {
             get
             {
-                return this.characterCollection;
+                return this.characterCollection!;
             }
         }
 
@@ -57,7 +57,7 @@ namespace Apricot
         {
             get
             {
-                return this.wordCollection;
+                return this.wordCollection!;
             }
         }
 
@@ -65,7 +65,7 @@ namespace Apricot
         {
             get
             {
-                return this.sourceCollection;
+                return this.sourceCollection!;
             }
         }
 
@@ -73,7 +73,7 @@ namespace Apricot
         {
             get
             {
-                return this.sequenceCollection;
+                return this.sequenceCollection!;
             }
         }
 
@@ -90,11 +90,11 @@ namespace Apricot
                     List<Sequence> preparedSequenceList = new List<Sequence>();
 
                     this.isEnabled = true;
-                    this.sequenceQueue.Clear();
-                    this.sequenceStateDictionary.Clear();
-                    this.cacheDictionary.Clear();
-                    this.activateEntryQueue.Clear();
-                    this.recentTermHashSet.Clear();
+                    this.sequenceQueue!.Clear();
+                    this.sequenceStateDictionary!.Clear();
+                    this.cacheDictionary!.Clear();
+                    this.activateEntryQueue!.Clear();
+                    this.recentTermHashSet!.Clear();
                     this.idleTimeSpan = TimeSpan.Zero;
                     this.lastPolledDateTime = this.lastUpdatedDateTime = DateTime.Now;
 
@@ -108,7 +108,7 @@ namespace Apricot
                         this.updateTimer.Start();
                     }
 
-                    foreach (Character character in this.characterCollection)
+                    foreach (Character character in this.characterCollection!)
                     {
                         Sequence sequence = new Sequence();
 
@@ -117,7 +117,7 @@ namespace Apricot
                         preparedSequenceList.Add(sequence);
                     }
 
-                    preparedSequenceList.AddRange(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Start") select sequence, null));
+                    preparedSequenceList.AddRange(Prepare(from sequence in this.sequenceCollection where sequence.Name!.Equals("Start") select sequence, null));
 
                     TryEnqueue(preparedSequenceList);
 
@@ -129,16 +129,16 @@ namespace Apricot
 
                     foreach (Character character in this.characterCollection)
                     {
-                        TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Like") && sequence.Owner.Equals(character.Name) select sequence, character.Likes.ToString(CultureInfo.InvariantCulture)));
+                        TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name!.Equals("Like") && sequence.Owner!.Equals(character.Name) select sequence, character.Likes.ToString(CultureInfo.InvariantCulture)));
                     }
                 }
                 else
                 {
-                    List<Sequence> preparedSequenceList = new List<Sequence>(Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Stop") select sequence, null));
+                    List<Sequence> preparedSequenceList = new List<Sequence>(Prepare(from sequence in this.sequenceCollection where sequence.Name!.Equals("Stop") select sequence, null));
 
-                    this.sequenceQueue.Clear();
+                    this.sequenceQueue!.Clear();
 
-                    foreach (Character character in this.characterCollection)
+                    foreach (Character character in this.characterCollection!)
                     {
                         Sequence sequence = new Sequence();
 
@@ -182,8 +182,8 @@ namespace Apricot
             this.activateEntryQueue = new Queue<Entry>();
             this.recentTermHashSet = new HashSet<string>();
 
-            System.Configuration.Configuration config1 = null;
-            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            System.Configuration.Configuration? config1 = null;
+            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
 
             if (Directory.Exists(directory))
             {
@@ -381,8 +381,8 @@ namespace Apricot
 
         public void Load()
         {
-            System.Configuration.Configuration config1 = null;
-            string directory1 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            System.Configuration.Configuration? config1 = null;
+            string directory1 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
             HashSet<string> baseDirectoryHashSet = new HashSet<string>();
             Dictionary<string, List<Tuple<string, string>>> cachedPathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
 
@@ -401,8 +401,8 @@ namespace Apricot
 
             if (config1 == null)
             {
-                config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                directory1 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None)!;
+                directory1 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
                 if (config1.AppSettings.Settings["Words"] != null)
                 {
@@ -413,9 +413,9 @@ namespace Apricot
                         {
                             DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                            foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                            foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr)!)
                             {
-                                this.wordCollection.Add(word);
+                                this.wordCollection!.Add(word);
                             }
                         }
                     }
@@ -430,9 +430,9 @@ namespace Apricot
                             {
                                 DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                                foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                                foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr)!)
                                 {
-                                    this.wordCollection.Add(word);
+                                    this.wordCollection!.Add(word);
                                 }
                             }
                         }
@@ -450,7 +450,7 @@ namespace Apricot
                         {
                             DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
 
-                            foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
+                            foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr)!)
                             {
                                 if (Path.IsPathRooted(character.Script))
                                 {
@@ -469,7 +469,7 @@ namespace Apricot
                                 }
                                 else
                                 {
-                                    string path1 = Path.Combine(directory1, character.Script);
+                                    string path1 = Path.Combine(directory1, character.Script!);
 
                                     if (!pathList1.Exists(delegate (string path2)
                                     {
@@ -478,14 +478,14 @@ namespace Apricot
                                             return path1.Equals(path2);
                                         }
 
-                                        return character.Script.Equals(path2);
+                                        return character.Script!.Equals(path2);
                                     }))
                                     {
                                         pathList1.Add(path1);
                                     }
                                 }
 
-                                this.characterCollection.Add(character);
+                                this.characterCollection!.Add(character);
                             }
                         }
 
@@ -507,7 +507,7 @@ namespace Apricot
                             {
                                 DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
 
-                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
+                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr)!)
                                 {
                                     if (Path.IsPathRooted(character.Script))
                                     {
@@ -526,7 +526,7 @@ namespace Apricot
                                     }
                                     else
                                     {
-                                        string path2 = Path.Combine(directory1, character.Script);
+                                        string path2 = Path.Combine(directory1, character.Script!);
 
                                         if (!pathList1.Exists(delegate (string path3)
                                         {
@@ -535,14 +535,14 @@ namespace Apricot
                                                 return path2.Equals(path3);
                                             }
 
-                                            return character.Script.Equals(path3);
+                                            return character.Script!.Equals(path3);
                                         }))
                                         {
                                             pathList1.Add(path2);
                                         }
                                     }
 
-                                    this.characterCollection.Add(character);
+                                    this.characterCollection!.Add(character);
                                 }
                             }
 
@@ -565,7 +565,7 @@ namespace Apricot
 
                                 if (tuple1.Item1)
                                 {
-                                    FileStream fs = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -580,7 +580,7 @@ namespace Apricot
                                                 string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                                                 Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                                                 string key;
-                                                List<Tuple<ZipArchiveEntry, string>> tupleList;
+                                                List<Tuple<ZipArchiveEntry, string>>? tupleList;
 
                                                 if (match.Success)
                                                 {
@@ -616,7 +616,7 @@ namespace Apricot
                                                 return dictionary;
                                             }).Values)
                                             {
-                                                Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                Tuple<ZipArchiveEntry, string>? tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                 {
                                                     return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                 });
@@ -631,9 +631,9 @@ namespace Apricot
                                                     if (tuple2 != null)
                                                     {
                                                         StringBuilder stringBuilder = new StringBuilder(directory1);
-                                                        Stream stream = null;
+                                                        Stream? stream = null;
 
-                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                         {
                                                             stringBuilder.Append(Path.DirectorySeparatorChar);
                                                         }
@@ -649,7 +649,7 @@ namespace Apricot
                                                             xmlDocument.Load(stream);
                                                             xmlDocument.Normalize();
 
-                                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                            if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                             {
                                                                 foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                                 {
@@ -659,7 +659,7 @@ namespace Apricot
 
                                                                         character.Script = path;
 
-                                                                        this.characterCollection.Add(character);
+                                                                        this.characterCollection!.Add(character);
                                                                     }
                                                                 }
                                                             }
@@ -669,12 +669,12 @@ namespace Apricot
 
                                                                 character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                this.characterCollection!.Add(character);
                                                             }
                                                         }
                                                         catch
                                                         {
-                                                            this.characterCollection.Clear();
+                                                            this.characterCollection!.Clear();
 
                                                             break;
                                                         }
@@ -690,9 +690,9 @@ namespace Apricot
                                                 else
                                                 {
                                                     StringBuilder stringBuilder = new StringBuilder(directory1);
-                                                    Stream stream = null;
+                                                    Stream? stream = null;
 
-                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                     {
                                                         stringBuilder.Append(Path.DirectorySeparatorChar);
                                                     }
@@ -708,7 +708,7 @@ namespace Apricot
                                                         xmlDocument.Load(stream);
                                                         xmlDocument.Normalize();
 
-                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                         {
                                                             foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                             {
@@ -718,7 +718,7 @@ namespace Apricot
 
                                                                     character.Script = path;
 
-                                                                    this.characterCollection.Add(character);
+                                                                    this.characterCollection!.Add(character);
                                                                 }
                                                             }
                                                         }
@@ -728,12 +728,12 @@ namespace Apricot
 
                                                             character.Script = path;
 
-                                                            this.characterCollection.Add(character);
+                                                            this.characterCollection!.Add(character);
                                                         }
                                                     }
                                                     catch
                                                     {
-                                                        this.characterCollection.Clear();
+                                                        this.characterCollection!.Clear();
 
                                                         break;
                                                     }
@@ -756,7 +756,7 @@ namespace Apricot
                                         }
                                     }
 
-                                    if (this.characterCollection.Count > 0)
+                                    if (this.characterCollection!.Count > 0)
                                     {
                                         Parse(tuple1.Item2);
 
@@ -802,7 +802,7 @@ namespace Apricot
                                             tempPathList.Add(tuple2);
                                         }
 
-                                        Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                        Tuple<string, string>? tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                         {
                                             return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                         });
@@ -817,9 +817,9 @@ namespace Apricot
                                             if (tuple3 != null)
                                             {
                                                 StringBuilder stringBuilder = new StringBuilder(directory1);
-                                                FileStream fs = null;
+                                                FileStream? fs = null;
 
-                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                 {
                                                     stringBuilder.Append(Path.DirectorySeparatorChar);
                                                 }
@@ -835,7 +835,7 @@ namespace Apricot
                                                     xmlDocument.Load(fs);
                                                     xmlDocument.Normalize();
 
-                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                    if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                     {
                                                         foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                         {
@@ -845,7 +845,7 @@ namespace Apricot
 
                                                                 character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                this.characterCollection!.Add(character);
                                                             }
                                                         }
                                                     }
@@ -855,12 +855,12 @@ namespace Apricot
 
                                                         character.Script = path;
 
-                                                        this.characterCollection.Add(character);
+                                                        this.characterCollection!.Add(character);
                                                     }
                                                 }
                                                 catch
                                                 {
-                                                    this.characterCollection.Clear();
+                                                    this.characterCollection!.Clear();
                                                     pathList2 = tempPathList;
 
                                                     continue;
@@ -873,7 +873,7 @@ namespace Apricot
                                                     }
                                                 }
 
-                                                if (this.characterCollection.Count > 0)
+                                                if (this.characterCollection!.Count > 0)
                                                 {
                                                     Parse(tuple3.Item1);
 
@@ -884,9 +884,9 @@ namespace Apricot
                                         else
                                         {
                                             StringBuilder stringBuilder = new StringBuilder(directory1);
-                                            FileStream fs = null;
+                                            FileStream? fs = null;
 
-                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                             {
                                                 stringBuilder.Append(Path.DirectorySeparatorChar);
                                             }
@@ -902,7 +902,7 @@ namespace Apricot
                                                 xmlDocument.Load(fs);
                                                 xmlDocument.Normalize();
 
-                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                 {
                                                     foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                     {
@@ -912,7 +912,7 @@ namespace Apricot
 
                                                             character.Script = path;
 
-                                                            this.characterCollection.Add(character);
+                                                            this.characterCollection!.Add(character);
                                                         }
                                                     }
                                                 }
@@ -922,12 +922,12 @@ namespace Apricot
 
                                                     character.Script = path;
 
-                                                    this.characterCollection.Add(character);
+                                                    this.characterCollection!.Add(character);
                                                 }
                                             }
                                             catch
                                             {
-                                                this.characterCollection.Clear();
+                                                this.characterCollection!.Clear();
                                                 pathList2 = tempPathList;
 
                                                 continue;
@@ -940,7 +940,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            if (this.characterCollection.Count > 0)
+                                            if (this.characterCollection!.Count > 0)
                                             {
                                                 Parse(tuple3.Item1);
 
@@ -982,7 +982,7 @@ namespace Apricot
                                             tempPathList.Add(tuple2);
                                         }
 
-                                        Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                        Tuple<string, string>? tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                         {
                                             return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                         });
@@ -997,9 +997,9 @@ namespace Apricot
                                             if (tuple3 != null)
                                             {
                                                 StringBuilder stringBuilder = new StringBuilder(directory1);
-                                                FileStream fs = null;
+                                                FileStream? fs = null;
 
-                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                 {
                                                     stringBuilder.Append(Path.DirectorySeparatorChar);
                                                 }
@@ -1015,7 +1015,7 @@ namespace Apricot
                                                     xmlDocument.Load(fs);
                                                     xmlDocument.Normalize();
 
-                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                    if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                     {
                                                         foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                         {
@@ -1025,7 +1025,7 @@ namespace Apricot
 
                                                                 character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                this.characterCollection!.Add(character);
                                                             }
                                                         }
                                                     }
@@ -1035,12 +1035,12 @@ namespace Apricot
 
                                                         character.Script = path;
 
-                                                        this.characterCollection.Add(character);
+                                                        this.characterCollection!.Add(character);
                                                     }
                                                 }
                                                 catch
                                                 {
-                                                    this.characterCollection.Clear();
+                                                    this.characterCollection!.Clear();
                                                     pathList2 = tempPathList;
 
                                                     continue;
@@ -1053,7 +1053,7 @@ namespace Apricot
                                                     }
                                                 }
 
-                                                if (this.characterCollection.Count > 0)
+                                                if (this.characterCollection!.Count > 0)
                                                 {
                                                     Parse(tuple3.Item1);
 
@@ -1064,9 +1064,9 @@ namespace Apricot
                                         else
                                         {
                                             StringBuilder stringBuilder = new StringBuilder(directory1);
-                                            FileStream fs = null;
+                                            FileStream? fs = null;
 
-                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                             {
                                                 stringBuilder.Append(Path.DirectorySeparatorChar);
                                             }
@@ -1082,7 +1082,7 @@ namespace Apricot
                                                 xmlDocument.Load(fs);
                                                 xmlDocument.Normalize();
 
-                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                 {
                                                     foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                     {
@@ -1092,7 +1092,7 @@ namespace Apricot
 
                                                             character.Script = path;
 
-                                                            this.characterCollection.Add(character);
+                                                            this.characterCollection!.Add(character);
                                                         }
                                                     }
                                                 }
@@ -1102,12 +1102,12 @@ namespace Apricot
 
                                                     character.Script = path;
 
-                                                    this.characterCollection.Add(character);
+                                                    this.characterCollection!.Add(character);
                                                 }
                                             }
                                             catch
                                             {
-                                                this.characterCollection.Clear();
+                                                this.characterCollection!.Clear();
                                                 pathList2 = tempPathList;
 
                                                 continue;
@@ -1120,7 +1120,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            if (this.characterCollection.Count > 0)
+                                            if (this.characterCollection!.Count > 0)
                                             {
                                                 Parse(tuple3.Item1);
 
@@ -1140,16 +1140,16 @@ namespace Apricot
                 {
                     Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                     HashSet<string> pathHashSet = new HashSet<string>();
-                    List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+                    List<Tuple<string?, string>> pathList = new List<Tuple<string?, string>>();
 
-                    foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                    foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
                     {
                         string key = Path.GetFileNameWithoutExtension(filename);
                         Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
 
                         if (match.Success)
                         {
-                            List<Tuple<string, string>> tupleList;
+                            List<Tuple<string, string>>? tupleList;
 
                             key = match.Groups[1].Value;
 
@@ -1162,27 +1162,27 @@ namespace Apricot
                                 tupleList = new List<Tuple<string, string>>();
                                 tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
                                 pathDictionary.Add(key, tupleList);
-                                pathList.Add(Tuple.Create<string, string>(null, key));
+                                pathList.Add(Tuple.Create<string?, string>(null, key));
                             }
                         }
                         else
                         {
                             pathHashSet.Add(key);
-                            pathList.Add(Tuple.Create<string, string>(filename, key));
+                            pathList.Add(Tuple.Create<string?, string>(filename, key));
                         }
                     }
 
-                    pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                    pathList.ForEach(delegate (Tuple<string?, string> tuple1)
                     {
                         if (tuple1.Item1 == null)
                         {
                             if (!pathHashSet.Contains(tuple1.Item2))
                             {
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                 {
-                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                    Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                     {
                                         return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                     });
@@ -1196,12 +1196,12 @@ namespace Apricot
                                             xmlDocument.Load(fs);
                                             xmlDocument.Normalize();
 
-                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                             {
-                                                string title = null;
-                                                Uri xmlUrl = null;
+                                                string? title = null;
+                                                Uri? xmlUrl = null;
 
-                                                foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                                 {
                                                     if (xmlAttribute.Name.Equals("title"))
                                                     {
@@ -1213,7 +1213,7 @@ namespace Apricot
                                                     }
                                                 }
 
-                                                this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                             }
                                         }
                                     }
@@ -1222,11 +1222,11 @@ namespace Apricot
                         }
                         else
                         {
-                            List<Tuple<string, string>> tupleList;
+                            List<Tuple<string, string>>? tupleList;
 
                             if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                             {
-                                Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                 {
                                     return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                 });
@@ -1238,12 +1238,12 @@ namespace Apricot
                                     xmlDocument.Load(fs);
                                     xmlDocument.Normalize();
 
-                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                     {
-                                        string title = null;
-                                        Uri xmlUrl = null;
+                                        string? title = null;
+                                        Uri? xmlUrl = null;
 
-                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                         {
                                             if (xmlAttribute.Name.Equals("title"))
                                             {
@@ -1255,7 +1255,7 @@ namespace Apricot
                                             }
                                         }
 
-                                        this.sourceCollection.Add(new Source(title, xmlUrl));
+                                        this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                     }
                                 }
                             }
@@ -1268,12 +1268,12 @@ namespace Apricot
                                     xmlDocument.Load(fs);
                                     xmlDocument.Normalize();
 
-                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                     {
-                                        string title = null;
-                                        Uri xmlUrl = null;
+                                        string? title = null;
+                                        Uri? xmlUrl = null;
 
-                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                         {
                                             if (xmlAttribute.Name.Equals("title"))
                                             {
@@ -1285,7 +1285,7 @@ namespace Apricot
                                             }
                                         }
 
-                                        this.sourceCollection.Add(new Source(title, xmlUrl));
+                                        this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                     }
                                 }
                             }
@@ -1299,9 +1299,9 @@ namespace Apricot
                     {
                         DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
 
-                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr)!)
                         {
-                            this.sourceCollection.Add(source);
+                            this.sourceCollection!.Add(source);
                         }
                     }
                 }
@@ -1316,9 +1316,9 @@ namespace Apricot
                         {
                             DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
 
-                            foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                            foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr)!)
                             {
-                                this.sourceCollection.Add(source);
+                                this.sourceCollection!.Add(source);
                             }
                         }
                     }
@@ -1326,16 +1326,16 @@ namespace Apricot
                     {
                         Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                         HashSet<string> pathHashSet = new HashSet<string>();
-                        List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+                        List<Tuple<string?, string>> pathList = new List<Tuple<string?, string>>();
 
-                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
                         {
                             string key = Path.GetFileNameWithoutExtension(filename);
                             Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
 
                             if (match.Success)
                             {
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 key = match.Groups[1].Value;
 
@@ -1348,27 +1348,27 @@ namespace Apricot
                                     tupleList = new List<Tuple<string, string>>();
                                     tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
                                     pathDictionary.Add(key, tupleList);
-                                    pathList.Add(Tuple.Create<string, string>(null, key));
+                                    pathList.Add(Tuple.Create<string?, string>(null, key));
                                 }
                             }
                             else
                             {
                                 pathHashSet.Add(key);
-                                pathList.Add(Tuple.Create<string, string>(filename, key));
+                                pathList.Add(Tuple.Create<string?, string>(filename, key));
                             }
                         }
 
-                        pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                        pathList.ForEach(delegate (Tuple<string?, string> tuple1)
                         {
                             if (tuple1.Item1 == null)
                             {
                                 if (!pathHashSet.Contains(tuple1.Item2))
                                 {
-                                    List<Tuple<string, string>> tupleList;
+                                    List<Tuple<string, string>>? tupleList;
 
                                     if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                     {
-                                        Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                        Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                         {
                                             return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                         });
@@ -1382,12 +1382,12 @@ namespace Apricot
                                                 xmlDocument.Load(fs);
                                                 xmlDocument.Normalize();
 
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                                 {
-                                                    string title = null;
-                                                    Uri xmlUrl = null;
+                                                    string? title = null;
+                                                    Uri? xmlUrl = null;
 
-                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                                     {
                                                         if (xmlAttribute.Name.Equals("title"))
                                                         {
@@ -1399,7 +1399,7 @@ namespace Apricot
                                                         }
                                                     }
 
-                                                    this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                    this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                                 }
                                             }
                                         }
@@ -1408,11 +1408,11 @@ namespace Apricot
                             }
                             else
                             {
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                 {
-                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                    Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                     {
                                         return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                     });
@@ -1424,12 +1424,12 @@ namespace Apricot
                                         xmlDocument.Load(fs);
                                         xmlDocument.Normalize();
 
-                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                         {
-                                            string title = null;
-                                            Uri xmlUrl = null;
+                                            string? title = null;
+                                            Uri? xmlUrl = null;
 
-                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                             {
                                                 if (xmlAttribute.Name.Equals("title"))
                                                 {
@@ -1441,7 +1441,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                            this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                         }
                                     }
                                 }
@@ -1454,12 +1454,12 @@ namespace Apricot
                                         xmlDocument.Load(fs);
                                         xmlDocument.Normalize();
 
-                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                         {
-                                            string title = null;
-                                            Uri xmlUrl = null;
+                                            string? title = null;
+                                            Uri? xmlUrl = null;
 
-                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                             {
                                                 if (xmlAttribute.Name.Equals("title"))
                                                 {
@@ -1471,7 +1471,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                            this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                         }
                                     }
                                 }
@@ -1495,9 +1495,9 @@ namespace Apricot
                             {
                                 DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                                foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                                foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr)!)
                                 {
-                                    this.wordCollection.Add(word);
+                                    this.wordCollection!.Add(word);
                                 }
                             }
                         }
@@ -1512,15 +1512,15 @@ namespace Apricot
                                 {
                                     DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                                    foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                                    foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr)!)
                                     {
-                                        this.wordCollection.Add(word);
+                                        this.wordCollection!.Add(word);
                                     }
                                 }
                             }
                             else
                             {
-                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Words"].Value);
+                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config2.AppSettings.Settings["Words"].Value);
 
                                 if (File.Exists(path))
                                 {
@@ -1529,9 +1529,9 @@ namespace Apricot
                                     {
                                         DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                                        foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                                        foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr)!)
                                         {
-                                            this.wordCollection.Add(word);
+                                            this.wordCollection!.Add(word);
                                         }
                                     }
                                 }
@@ -1546,9 +1546,9 @@ namespace Apricot
                     {
                         DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                        foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                        foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr)!)
                         {
-                            this.wordCollection.Add(word);
+                            this.wordCollection!.Add(word);
                         }
                     }
                 }
@@ -1563,9 +1563,9 @@ namespace Apricot
                         {
                             DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Word>));
 
-                            foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr))
+                            foreach (Word word in (IEnumerable<Word>)serializer.ReadObject(xr)!)
                             {
-                                this.wordCollection.Add(word);
+                                this.wordCollection!.Add(word);
                             }
                         }
                     }
@@ -1583,9 +1583,9 @@ namespace Apricot
                             using (XmlReader xr = XmlReader.Create(fs))
                             {
                                 DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
-                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
-                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
+                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr)!)
                                 {
                                     if (Path.IsPathRooted(character.Script))
                                     {
@@ -1604,7 +1604,7 @@ namespace Apricot
                                     }
                                     else
                                     {
-                                        string path2 = Path.Combine(directory2, character.Script);
+                                        string path2 = Path.Combine(directory2, character.Script!);
 
                                         if (!pathList1.Exists(delegate (string path3)
                                         {
@@ -1613,14 +1613,14 @@ namespace Apricot
                                                 return path2.Equals(path3);
                                             }
 
-                                            return character.Script.Equals(path3);
+                                            return character.Script!.Equals(path3);
                                         }))
                                         {
                                             pathList1.Add(path2);
                                         }
                                     }
 
-                                    this.characterCollection.Add(character);
+                                    this.characterCollection!.Add(character);
                                 }
                             }
 
@@ -1641,9 +1641,9 @@ namespace Apricot
                                 using (XmlReader xr = XmlReader.Create(fs))
                                 {
                                     DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
-                                    string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                    string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
-                                    foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
+                                    foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr)!)
                                     {
                                         if (Path.IsPathRooted(character.Script))
                                         {
@@ -1662,7 +1662,7 @@ namespace Apricot
                                         }
                                         else
                                         {
-                                            string path2 = Path.Combine(directory2, character.Script);
+                                            string path2 = Path.Combine(directory2, character.Script!);
 
                                             if (!pathList1.Exists(delegate (string path3)
                                             {
@@ -1671,14 +1671,14 @@ namespace Apricot
                                                     return path2.Equals(path3);
                                                 }
 
-                                                return character.Script.Equals(path3);
+                                                return character.Script!.Equals(path3);
                                             }))
                                             {
                                                 pathList1.Add(path2);
                                             }
                                         }
 
-                                        this.characterCollection.Add(character);
+                                        this.characterCollection!.Add(character);
                                     }
                                 }
 
@@ -1689,7 +1689,7 @@ namespace Apricot
                             }
                             else
                             {
-                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
                                 path1 = Path.Combine(directory2, config2.AppSettings.Settings["Characters"].Value);
 
@@ -1702,7 +1702,7 @@ namespace Apricot
                                     {
                                         DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
                                         
-                                        foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
+                                        foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr)!)
                                         {
                                             if (Path.IsPathRooted(character.Script))
                                             {
@@ -1721,7 +1721,7 @@ namespace Apricot
                                             }
                                             else
                                             {
-                                                string path2 = Path.Combine(directory2, character.Script);
+                                                string path2 = Path.Combine(directory2, character.Script!);
 
                                                 if (!pathList1.Exists(delegate (string path3)
                                                 {
@@ -1730,14 +1730,14 @@ namespace Apricot
                                                         return path2.Equals(path3);
                                                     }
 
-                                                    return character.Script.Equals(path3);
+                                                    return character.Script!.Equals(path3);
                                                 }))
                                                 {
                                                     pathList1.Add(path2);
                                                 }
                                             }
 
-                                            this.characterCollection.Add(character);
+                                            this.characterCollection!.Add(character);
                                         }
                                     }
 
@@ -1748,7 +1748,7 @@ namespace Apricot
                                 }
                                 else
                                 {
-                                    string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                    string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
                                     List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
                                     Random random = new Random(Environment.TickCount);
 
@@ -1761,7 +1761,7 @@ namespace Apricot
 
                                         if (tuple1.Item1)
                                         {
-                                            FileStream fs = null;
+                                            FileStream? fs = null;
 
                                             try
                                             {
@@ -1776,7 +1776,7 @@ namespace Apricot
                                                         string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                                                         Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                                                         string key;
-                                                        List<Tuple<ZipArchiveEntry, string>> tupleList;
+                                                        List<Tuple<ZipArchiveEntry, string>>? tupleList;
 
                                                         if (match.Success)
                                                         {
@@ -1812,7 +1812,7 @@ namespace Apricot
                                                         return dictionary;
                                                     }).Values)
                                                     {
-                                                        Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                        Tuple<ZipArchiveEntry, string>? tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                         {
                                                             return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                         });
@@ -1827,9 +1827,9 @@ namespace Apricot
                                                             if (tuple2 != null)
                                                             {
                                                                 StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                                Stream stream = null;
+                                                                Stream? stream = null;
 
-                                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                                 {
                                                                     stringBuilder.Append(Path.DirectorySeparatorChar);
                                                                 }
@@ -1845,7 +1845,7 @@ namespace Apricot
                                                                     xmlDocument.Load(stream);
                                                                     xmlDocument.Normalize();
 
-                                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                                    if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                                     {
                                                                         foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                                         {
@@ -1855,7 +1855,7 @@ namespace Apricot
 
                                                                                 character.Script = path;
 
-                                                                                this.characterCollection.Add(character);
+                                                                                this.characterCollection!.Add(character);
                                                                             }
                                                                         }
                                                                     }
@@ -1865,12 +1865,12 @@ namespace Apricot
 
                                                                         character.Script = path;
 
-                                                                        this.characterCollection.Add(character);
+                                                                        this.characterCollection!.Add(character);
                                                                     }
                                                                 }
                                                                 catch
                                                                 {
-                                                                    this.characterCollection.Clear();
+                                                                    this.characterCollection!.Clear();
 
                                                                     break;
                                                                 }
@@ -1886,9 +1886,9 @@ namespace Apricot
                                                         else
                                                         {
                                                             StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                            Stream stream = null;
+                                                            Stream? stream = null;
 
-                                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                             {
                                                                 stringBuilder.Append(Path.DirectorySeparatorChar);
                                                             }
@@ -1904,7 +1904,7 @@ namespace Apricot
                                                                 xmlDocument.Load(stream);
                                                                 xmlDocument.Normalize();
 
-                                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                                if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                                 {
                                                                     foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                                     {
@@ -1914,7 +1914,7 @@ namespace Apricot
 
                                                                             character.Script = path;
 
-                                                                            this.characterCollection.Add(character);
+                                                                            this.characterCollection!.Add(character);
                                                                         }
                                                                     }
                                                                 }
@@ -1924,12 +1924,12 @@ namespace Apricot
 
                                                                     character.Script = path;
 
-                                                                    this.characterCollection.Add(character);
+                                                                    this.characterCollection!.Add(character);
                                                                 }
                                                             }
                                                             catch
                                                             {
-                                                                this.characterCollection.Clear();
+                                                                this.characterCollection!.Clear();
 
                                                                 break;
                                                             }
@@ -1952,7 +1952,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            if (this.characterCollection.Count > 0)
+                                            if (this.characterCollection!.Count > 0)
                                             {
                                                 Parse(tuple1.Item2);
 
@@ -1998,7 +1998,7 @@ namespace Apricot
                                                     tempPathList.Add(tuple2);
                                                 }
 
-                                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                                Tuple<string, string>? tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                                 {
                                                     return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                 });
@@ -2013,9 +2013,9 @@ namespace Apricot
                                                     if (tuple3 != null)
                                                     {
                                                         StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                        FileStream fs = null;
+                                                        FileStream? fs = null;
 
-                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                         {
                                                             stringBuilder.Append(Path.DirectorySeparatorChar);
                                                         }
@@ -2031,7 +2031,7 @@ namespace Apricot
                                                             xmlDocument.Load(fs);
                                                             xmlDocument.Normalize();
 
-                                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                            if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                             {
                                                                 foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                                 {
@@ -2041,7 +2041,7 @@ namespace Apricot
 
                                                                         character.Script = path;
 
-                                                                        this.characterCollection.Add(character);
+                                                                        this.characterCollection!.Add(character);
                                                                     }
                                                                 }
                                                             }
@@ -2051,12 +2051,12 @@ namespace Apricot
 
                                                                 character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                this.characterCollection!.Add(character);
                                                             }
                                                         }
                                                         catch
                                                         {
-                                                            this.characterCollection.Clear();
+                                                            this.characterCollection!.Clear();
                                                             pathList2 = tempPathList;
 
                                                             continue;
@@ -2069,7 +2069,7 @@ namespace Apricot
                                                             }
                                                         }
 
-                                                        if (this.characterCollection.Count > 0)
+                                                        if (this.characterCollection!.Count > 0)
                                                         {
                                                             Parse(tuple3.Item1);
 
@@ -2080,9 +2080,9 @@ namespace Apricot
                                                 else
                                                 {
                                                     StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                    FileStream fs = null;
+                                                    FileStream? fs = null;
 
-                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                     {
                                                         stringBuilder.Append(Path.DirectorySeparatorChar);
                                                     }
@@ -2098,7 +2098,7 @@ namespace Apricot
                                                         xmlDocument.Load(fs);
                                                         xmlDocument.Normalize();
 
-                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                         {
                                                             foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                             {
@@ -2108,7 +2108,7 @@ namespace Apricot
 
                                                                     character.Script = path;
 
-                                                                    this.characterCollection.Add(character);
+                                                                    this.characterCollection!.Add(character);
                                                                 }
                                                             }
                                                         }
@@ -2118,12 +2118,12 @@ namespace Apricot
 
                                                             character.Script = path;
 
-                                                            this.characterCollection.Add(character);
+                                                            this.characterCollection!.Add(character);
                                                         }
                                                     }
                                                     catch
                                                     {
-                                                        this.characterCollection.Clear();
+                                                        this.characterCollection!.Clear();
                                                         pathList2 = tempPathList;
 
                                                         continue;
@@ -2136,7 +2136,7 @@ namespace Apricot
                                                         }
                                                     }
 
-                                                    if (this.characterCollection.Count > 0)
+                                                    if (this.characterCollection!.Count > 0)
                                                     {
                                                         Parse(tuple3.Item1);
 
@@ -2178,7 +2178,7 @@ namespace Apricot
                                                     tempPathList.Add(tuple2);
                                                 }
 
-                                                Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                                Tuple<string, string>? tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                                 {
                                                     return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                 });
@@ -2193,9 +2193,9 @@ namespace Apricot
                                                     if (tuple3 != null)
                                                     {
                                                         StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                        FileStream fs = null;
+                                                        FileStream? fs = null;
 
-                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                         {
                                                             stringBuilder.Append(Path.DirectorySeparatorChar);
                                                         }
@@ -2211,7 +2211,7 @@ namespace Apricot
                                                             xmlDocument.Load(fs);
                                                             xmlDocument.Normalize();
 
-                                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                            if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                             {
                                                                 foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                                 {
@@ -2221,7 +2221,7 @@ namespace Apricot
 
                                                                         character.Script = path;
 
-                                                                        this.characterCollection.Add(character);
+                                                                        this.characterCollection!.Add(character);
                                                                     }
                                                                 }
                                                             }
@@ -2231,12 +2231,12 @@ namespace Apricot
 
                                                                 character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                this.characterCollection!.Add(character);
                                                             }
                                                         }
                                                         catch
                                                         {
-                                                            this.characterCollection.Clear();
+                                                            this.characterCollection!.Clear();
                                                             pathList2 = tempPathList;
 
                                                             continue;
@@ -2249,7 +2249,7 @@ namespace Apricot
                                                             }
                                                         }
 
-                                                        if (this.characterCollection.Count > 0)
+                                                        if (this.characterCollection!.Count > 0)
                                                         {
                                                             Parse(tuple3.Item1);
 
@@ -2260,9 +2260,9 @@ namespace Apricot
                                                 else
                                                 {
                                                     StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                    FileStream fs = null;
+                                                    FileStream? fs = null;
 
-                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                     {
                                                         stringBuilder.Append(Path.DirectorySeparatorChar);
                                                     }
@@ -2278,7 +2278,7 @@ namespace Apricot
                                                         xmlDocument.Load(fs);
                                                         xmlDocument.Normalize();
 
-                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                         {
                                                             foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                             {
@@ -2288,7 +2288,7 @@ namespace Apricot
 
                                                                     character.Script = path;
 
-                                                                    this.characterCollection.Add(character);
+                                                                    this.characterCollection!.Add(character);
                                                                 }
                                                             }
                                                         }
@@ -2298,12 +2298,12 @@ namespace Apricot
 
                                                             character.Script = path;
 
-                                                            this.characterCollection.Add(character);
+                                                            this.characterCollection!.Add(character);
                                                         }
                                                     }
                                                     catch
                                                     {
-                                                        this.characterCollection.Clear();
+                                                        this.characterCollection!.Clear();
                                                         pathList2 = tempPathList;
 
                                                         continue;
@@ -2316,7 +2316,7 @@ namespace Apricot
                                                         }
                                                     }
 
-                                                    if (this.characterCollection.Count > 0)
+                                                    if (this.characterCollection!.Count > 0)
                                                     {
                                                         Parse(tuple3.Item1);
 
@@ -2343,9 +2343,9 @@ namespace Apricot
                         using (XmlReader xr = XmlReader.Create(fs))
                         {
                             DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
-                            string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                            string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
-                            foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
+                            foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr)!)
                             {
                                 if (Path.IsPathRooted(character.Script))
                                 {
@@ -2364,7 +2364,7 @@ namespace Apricot
                                 }
                                 else
                                 {
-                                    string path2 = Path.Combine(directory2, character.Script);
+                                    string path2 = Path.Combine(directory2, character.Script!);
 
                                     if (!pathList1.Exists(delegate (string path3)
                                     {
@@ -2373,14 +2373,14 @@ namespace Apricot
                                             return path2.Equals(path3);
                                         }
 
-                                        return character.Script.Equals(path3);
+                                        return character.Script!.Equals(path3);
                                     }))
                                     {
                                         pathList1.Add(path2);
                                     }
                                 }
 
-                                this.characterCollection.Add(character);
+                                this.characterCollection!.Add(character);
                             }
                         }
 
@@ -2401,9 +2401,9 @@ namespace Apricot
                             using (XmlReader xr = XmlReader.Create(fs))
                             {
                                 DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
-                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
-                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
+                                foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr)!)
                                 {
                                     if (Path.IsPathRooted(character.Script))
                                     {
@@ -2422,7 +2422,7 @@ namespace Apricot
                                     }
                                     else
                                     {
-                                        string path2 = Path.Combine(directory2, character.Script);
+                                        string path2 = Path.Combine(directory2, character.Script!);
 
                                         if (!pathList1.Exists(delegate (string path3)
                                         {
@@ -2431,14 +2431,14 @@ namespace Apricot
                                                 return path2.Equals(path3);
                                             }
 
-                                            return character.Script.Equals(path3);
+                                            return character.Script!.Equals(path3);
                                         }))
                                         {
                                             pathList1.Add(path2);
                                         }
                                     }
 
-                                    this.characterCollection.Add(character);
+                                    this.characterCollection!.Add(character);
                                 }
                             }
 
@@ -2449,7 +2449,7 @@ namespace Apricot
                         }
                         else
                         {
-                            string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                            string directory2 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
                             path1 = Path.Combine(directory2, config1.AppSettings.Settings["Characters"].Value);
 
@@ -2462,7 +2462,7 @@ namespace Apricot
                                 {
                                     DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Character>));
                                     
-                                    foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr))
+                                    foreach (Character character in (IEnumerable<Character>)serializer.ReadObject(xr)!)
                                     {
                                         if (Path.IsPathRooted(character.Script))
                                         {
@@ -2481,7 +2481,7 @@ namespace Apricot
                                         }
                                         else
                                         {
-                                            string path2 = Path.Combine(directory2, character.Script);
+                                            string path2 = Path.Combine(directory2, character.Script!);
 
                                             if (!pathList1.Exists(delegate (string path3)
                                             {
@@ -2490,14 +2490,14 @@ namespace Apricot
                                                     return path2.Equals(path3);
                                                 }
 
-                                                return character.Script.Equals(path3);
+                                                return character.Script!.Equals(path3);
                                             }))
                                             {
                                                 pathList1.Add(path2);
                                             }
                                         }
 
-                                        this.characterCollection.Add(character);
+                                        this.characterCollection!.Add(character);
                                     }
                                 }
 
@@ -2508,7 +2508,7 @@ namespace Apricot
                             }
                             else
                             {
-                                string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
                                 List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
                                 Random random = new Random(Environment.TickCount);
 
@@ -2521,7 +2521,7 @@ namespace Apricot
 
                                     if (tuple1.Item1)
                                     {
-                                        FileStream fs = null;
+                                        FileStream? fs = null;
 
                                         try
                                         {
@@ -2536,7 +2536,7 @@ namespace Apricot
                                                     string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                                                     Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                                                     string key;
-                                                    List<Tuple<ZipArchiveEntry, string>> tupleList;
+                                                    List<Tuple<ZipArchiveEntry, string>>? tupleList;
 
                                                     if (match.Success)
                                                     {
@@ -2572,7 +2572,7 @@ namespace Apricot
                                                     return dictionary;
                                                 }).Values)
                                                 {
-                                                    Tuple<ZipArchiveEntry, string> tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                    Tuple<ZipArchiveEntry, string>? tuple2 = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                     {
                                                         return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                     });
@@ -2587,9 +2587,9 @@ namespace Apricot
                                                         if (tuple2 != null)
                                                         {
                                                             StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                            Stream stream = null;
+                                                            Stream? stream = null;
 
-                                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                             {
                                                                 stringBuilder.Append(Path.DirectorySeparatorChar);
                                                             }
@@ -2605,7 +2605,7 @@ namespace Apricot
                                                                 xmlDocument.Load(stream);
                                                                 xmlDocument.Normalize();
 
-                                                                if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                                if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                                 {
                                                                     foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                                     {
@@ -2615,7 +2615,7 @@ namespace Apricot
 
                                                                             character.Script = path;
 
-                                                                            this.characterCollection.Add(character);
+                                                                            this.characterCollection!.Add(character);
                                                                         }
                                                                     }
                                                                 }
@@ -2625,12 +2625,12 @@ namespace Apricot
 
                                                                     character.Script = path;
 
-                                                                    this.characterCollection.Add(character);
+                                                                    this.characterCollection!.Add(character);
                                                                 }
                                                             }
                                                             catch
                                                             {
-                                                                this.characterCollection.Clear();
+                                                                this.characterCollection!.Clear();
 
                                                                 break;
                                                             }
@@ -2646,9 +2646,9 @@ namespace Apricot
                                                     else
                                                     {
                                                         StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                        Stream stream = null;
+                                                        Stream? stream = null;
 
-                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                         {
                                                             stringBuilder.Append(Path.DirectorySeparatorChar);
                                                         }
@@ -2664,7 +2664,7 @@ namespace Apricot
                                                             xmlDocument.Load(stream);
                                                             xmlDocument.Normalize();
 
-                                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                            if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                             {
                                                                 foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                                 {
@@ -2674,7 +2674,7 @@ namespace Apricot
 
                                                                         character.Script = path;
 
-                                                                        this.characterCollection.Add(character);
+                                                                        this.characterCollection!.Add(character);
                                                                     }
                                                                 }
                                                             }
@@ -2684,12 +2684,12 @@ namespace Apricot
 
                                                                 character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                this.characterCollection!.Add(character);
                                                             }
                                                         }
                                                         catch
                                                         {
-                                                            this.characterCollection.Clear();
+                                                            this.characterCollection!.Clear();
 
                                                             break;
                                                         }
@@ -2712,7 +2712,7 @@ namespace Apricot
                                             }
                                         }
 
-                                        if (this.characterCollection.Count > 0)
+                                        if (this.characterCollection!.Count > 0)
                                         {
                                             Parse(tuple1.Item2);
 
@@ -2758,7 +2758,7 @@ namespace Apricot
                                                 tempPathList.Add(tuple2);
                                             }
 
-                                            Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                            Tuple<string, string>? tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                             {
                                                 return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                             });
@@ -2773,9 +2773,9 @@ namespace Apricot
                                                 if (tuple3 != null)
                                                 {
                                                     StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                    FileStream fs = null;
+                                                    FileStream? fs = null;
 
-                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                     {
                                                         stringBuilder.Append(Path.DirectorySeparatorChar);
                                                     }
@@ -2791,7 +2791,7 @@ namespace Apricot
                                                         xmlDocument.Load(fs);
                                                         xmlDocument.Normalize();
 
-                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                         {
                                                             foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                             {
@@ -2801,7 +2801,7 @@ namespace Apricot
 
                                                                     character.Script = path;
 
-                                                                    this.characterCollection.Add(character);
+                                                                    this.characterCollection!.Add(character);
                                                                 }
                                                             }
                                                         }
@@ -2811,12 +2811,12 @@ namespace Apricot
 
                                                             character.Script = path;
 
-                                                            this.characterCollection.Add(character);
+                                                            this.characterCollection!.Add(character);
                                                         }
                                                     }
                                                     catch
                                                     {
-                                                        this.characterCollection.Clear();
+                                                        this.characterCollection!.Clear();
                                                         pathList2 = tempPathList;
 
                                                         continue;
@@ -2829,7 +2829,7 @@ namespace Apricot
                                                         }
                                                     }
 
-                                                    if (this.characterCollection.Count > 0)
+                                                    if (this.characterCollection!.Count > 0)
                                                     {
                                                         Parse(tuple3.Item1);
 
@@ -2840,9 +2840,9 @@ namespace Apricot
                                             else
                                             {
                                                 StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                FileStream fs = null;
+                                                FileStream? fs = null;
 
-                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                 {
                                                     stringBuilder.Append(Path.DirectorySeparatorChar);
                                                 }
@@ -2858,7 +2858,7 @@ namespace Apricot
                                                     xmlDocument.Load(fs);
                                                     xmlDocument.Normalize();
 
-                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                    if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                     {
                                                         foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                         {
@@ -2868,7 +2868,7 @@ namespace Apricot
 
                                                                 character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                this.characterCollection!.Add(character);
                                                             }
                                                         }
                                                     }
@@ -2878,12 +2878,12 @@ namespace Apricot
 
                                                         character.Script = path;
 
-                                                        this.characterCollection.Add(character);
+                                                        this.characterCollection!.Add(character);
                                                     }
                                                 }
                                                 catch
                                                 {
-                                                    this.characterCollection.Clear();
+                                                    this.characterCollection!.Clear();
                                                     pathList2 = tempPathList;
 
                                                     continue;
@@ -2896,7 +2896,7 @@ namespace Apricot
                                                     }
                                                 }
 
-                                                if (this.characterCollection.Count > 0)
+                                                if (this.characterCollection!.Count > 0)
                                                 {
                                                     Parse(tuple3.Item1);
 
@@ -2938,7 +2938,7 @@ namespace Apricot
                                                 tempPathList.Add(tuple2);
                                             }
 
-                                            Tuple<string, string> tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
+                                            Tuple<string, string>? tuple3 = tupleList.Find(delegate (Tuple<string, string> tuple4)
                                             {
                                                 return tuple4.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                             });
@@ -2953,9 +2953,9 @@ namespace Apricot
                                                 if (tuple3 != null)
                                                 {
                                                     StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                    FileStream fs = null;
+                                                    FileStream? fs = null;
 
-                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                     {
                                                         stringBuilder.Append(Path.DirectorySeparatorChar);
                                                     }
@@ -2971,7 +2971,7 @@ namespace Apricot
                                                         xmlDocument.Load(fs);
                                                         xmlDocument.Normalize();
 
-                                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                        if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                         {
                                                             foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                             {
@@ -2981,7 +2981,7 @@ namespace Apricot
 
                                                                     character.Script = path;
 
-                                                                    this.characterCollection.Add(character);
+                                                                    this.characterCollection!.Add(character);
                                                                 }
                                                             }
                                                         }
@@ -2991,12 +2991,12 @@ namespace Apricot
 
                                                             character.Script = path;
 
-                                                            this.characterCollection.Add(character);
+                                                            this.characterCollection!.Add(character);
                                                         }
                                                     }
                                                     catch
                                                     {
-                                                        this.characterCollection.Clear();
+                                                        this.characterCollection!.Clear();
                                                         pathList2 = tempPathList;
 
                                                         continue;
@@ -3009,7 +3009,7 @@ namespace Apricot
                                                         }
                                                     }
 
-                                                    if (this.characterCollection.Count > 0)
+                                                    if (this.characterCollection!.Count > 0)
                                                     {
                                                         Parse(tuple3.Item1);
 
@@ -3020,9 +3020,9 @@ namespace Apricot
                                             else
                                             {
                                                 StringBuilder stringBuilder = new StringBuilder(directory3);
-                                                FileStream fs = null;
+                                                FileStream? fs = null;
 
-                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                 {
                                                     stringBuilder.Append(Path.DirectorySeparatorChar);
                                                 }
@@ -3038,7 +3038,7 @@ namespace Apricot
                                                     xmlDocument.Load(fs);
                                                     xmlDocument.Normalize();
 
-                                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                                    if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                                     {
                                                         foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                         {
@@ -3048,7 +3048,7 @@ namespace Apricot
 
                                                                 character.Script = path;
 
-                                                                this.characterCollection.Add(character);
+                                                                this.characterCollection!.Add(character);
                                                             }
                                                         }
                                                     }
@@ -3058,12 +3058,12 @@ namespace Apricot
 
                                                         character.Script = path;
 
-                                                        this.characterCollection.Add(character);
+                                                        this.characterCollection!.Add(character);
                                                     }
                                                 }
                                                 catch
                                                 {
-                                                    this.characterCollection.Clear();
+                                                    this.characterCollection!.Clear();
                                                     pathList2 = tempPathList;
 
                                                     continue;
@@ -3076,7 +3076,7 @@ namespace Apricot
                                                     }
                                                 }
 
-                                                if (this.characterCollection.Count > 0)
+                                                if (this.characterCollection!.Count > 0)
                                                 {
                                                     Parse(tuple3.Item1);
 
@@ -3099,16 +3099,16 @@ namespace Apricot
                     {
                         Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                         HashSet<string> pathHashSet = new HashSet<string>();
-                        List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+                        List<Tuple<string?, string>> pathList = new List<Tuple<string?, string>>();
 
-                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
                         {
                             string key = Path.GetFileNameWithoutExtension(filename);
                             Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
 
                             if (match.Success)
                             {
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 key = match.Groups[1].Value;
 
@@ -3121,27 +3121,27 @@ namespace Apricot
                                     tupleList = new List<Tuple<string, string>>();
                                     tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
                                     pathDictionary.Add(key, tupleList);
-                                    pathList.Add(Tuple.Create<string, string>(null, key));
+                                    pathList.Add(Tuple.Create<string?, string>(null, key));
                                 }
                             }
                             else
                             {
                                 pathHashSet.Add(key);
-                                pathList.Add(Tuple.Create<string, string>(filename, key));
+                                pathList.Add(Tuple.Create<string?, string>(filename, key));
                             }
                         }
 
-                        pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                        pathList.ForEach(delegate (Tuple<string?, string> tuple1)
                         {
                             if (tuple1.Item1 == null)
                             {
                                 if (!pathHashSet.Contains(tuple1.Item2))
                                 {
-                                    List<Tuple<string, string>> tupleList;
+                                    List<Tuple<string, string>>? tupleList;
 
                                     if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                     {
-                                        Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                        Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                         {
                                             return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                         });
@@ -3155,12 +3155,12 @@ namespace Apricot
                                                 xmlDocument.Load(fs);
                                                 xmlDocument.Normalize();
 
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                                 {
-                                                    string title = null;
-                                                    Uri xmlUrl = null;
+                                                    string? title = null;
+                                                    Uri? xmlUrl = null;
 
-                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                                     {
                                                         if (xmlAttribute.Name.Equals("title"))
                                                         {
@@ -3172,7 +3172,7 @@ namespace Apricot
                                                         }
                                                     }
 
-                                                    this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                    this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                                 }
                                             }
                                         }
@@ -3181,11 +3181,11 @@ namespace Apricot
                             }
                             else
                             {
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                 {
-                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                    Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                     {
                                         return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                     });
@@ -3197,12 +3197,12 @@ namespace Apricot
                                         xmlDocument.Load(fs);
                                         xmlDocument.Normalize();
 
-                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                         {
-                                            string title = null;
-                                            Uri xmlUrl = null;
+                                            string? title = null;
+                                            Uri? xmlUrl = null;
 
-                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                             {
                                                 if (xmlAttribute.Name.Equals("title"))
                                                 {
@@ -3214,7 +3214,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                            this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                         }
                                     }
                                 }
@@ -3227,12 +3227,12 @@ namespace Apricot
                                         xmlDocument.Load(fs);
                                         xmlDocument.Normalize();
 
-                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                         {
-                                            string title = null;
-                                            Uri xmlUrl = null;
+                                            string? title = null;
+                                            Uri? xmlUrl = null;
 
-                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                             {
                                                 if (xmlAttribute.Name.Equals("title"))
                                                 {
@@ -3244,7 +3244,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                            this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                         }
                                     }
                                 }
@@ -3260,9 +3260,9 @@ namespace Apricot
                             {
                                 DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
 
-                                foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                                foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr)!)
                                 {
-                                    this.sourceCollection.Add(source);
+                                    this.sourceCollection!.Add(source);
                                 }
                             }
                         }
@@ -3277,15 +3277,15 @@ namespace Apricot
                                 {
                                     DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
 
-                                    foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                                    foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr)!)
                                     {
-                                        this.sourceCollection.Add(source);
+                                        this.sourceCollection!.Add(source);
                                     }
                                 }
                             }
                             else
                             {
-                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Sources"].Value);
+                                path = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config2.AppSettings.Settings["Sources"].Value);
 
                                 if (File.Exists(path))
                                 {
@@ -3294,9 +3294,9 @@ namespace Apricot
                                     {
                                         DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
 
-                                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr)!)
                                         {
-                                            this.sourceCollection.Add(source);
+                                            this.sourceCollection!.Add(source);
                                         }
                                     }
                                 }
@@ -3304,16 +3304,16 @@ namespace Apricot
                                 {
                                     Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                                     HashSet<string> pathHashSet = new HashSet<string>();
-                                    List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+                                    List<Tuple<string?, string>> pathList = new List<Tuple<string?, string>>();
 
-                                    foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                                    foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
                                     {
                                         string key = Path.GetFileNameWithoutExtension(filename);
                                         Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
 
                                         if (match.Success)
                                         {
-                                            List<Tuple<string, string>> tupleList;
+                                            List<Tuple<string, string>>? tupleList;
 
                                             key = match.Groups[1].Value;
 
@@ -3326,27 +3326,27 @@ namespace Apricot
                                                 tupleList = new List<Tuple<string, string>>();
                                                 tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
                                                 pathDictionary.Add(key, tupleList);
-                                                pathList.Add(Tuple.Create<string, string>(null, key));
+                                                pathList.Add(Tuple.Create<string?, string>(null, key));
                                             }
                                         }
                                         else
                                         {
                                             pathHashSet.Add(key);
-                                            pathList.Add(Tuple.Create<string, string>(filename, key));
+                                            pathList.Add(Tuple.Create<string?, string>(filename, key));
                                         }
                                     }
 
-                                    pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                                    pathList.ForEach(delegate (Tuple<string?, string> tuple1)
                                     {
                                         if (tuple1.Item1 == null)
                                         {
                                             if (!pathHashSet.Contains(tuple1.Item2))
                                             {
-                                                List<Tuple<string, string>> tupleList;
+                                                List<Tuple<string, string>>? tupleList;
 
                                                 if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                                 {
-                                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                                    Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                                     {
                                                         return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                     });
@@ -3360,12 +3360,12 @@ namespace Apricot
                                                             xmlDocument.Load(fs);
                                                             xmlDocument.Normalize();
 
-                                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                            foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                                             {
-                                                                string title = null;
-                                                                Uri xmlUrl = null;
+                                                                string? title = null;
+                                                                Uri? xmlUrl = null;
 
-                                                                foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                                foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                                                 {
                                                                     if (xmlAttribute.Name.Equals("title"))
                                                                     {
@@ -3377,7 +3377,7 @@ namespace Apricot
                                                                     }
                                                                 }
 
-                                                                this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                                this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                                             }
                                                         }
                                                     }
@@ -3386,11 +3386,11 @@ namespace Apricot
                                         }
                                         else
                                         {
-                                            List<Tuple<string, string>> tupleList;
+                                            List<Tuple<string, string>>? tupleList;
 
                                             if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                             {
-                                                Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                                Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                                 {
                                                     return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                 });
@@ -3402,12 +3402,12 @@ namespace Apricot
                                                     xmlDocument.Load(fs);
                                                     xmlDocument.Normalize();
 
-                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                                     {
-                                                        string title = null;
-                                                        Uri xmlUrl = null;
+                                                        string? title = null;
+                                                        Uri? xmlUrl = null;
 
-                                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                                         {
                                                             if (xmlAttribute.Name.Equals("title"))
                                                             {
@@ -3419,7 +3419,7 @@ namespace Apricot
                                                             }
                                                         }
 
-                                                        this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                        this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                                     }
                                                 }
                                             }
@@ -3432,12 +3432,12 @@ namespace Apricot
                                                     xmlDocument.Load(fs);
                                                     xmlDocument.Normalize();
 
-                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                    foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                                     {
-                                                        string title = null;
-                                                        Uri xmlUrl = null;
+                                                        string? title = null;
+                                                        Uri? xmlUrl = null;
 
-                                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                        foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                                         {
                                                             if (xmlAttribute.Name.Equals("title"))
                                                             {
@@ -3449,7 +3449,7 @@ namespace Apricot
                                                             }
                                                         }
 
-                                                        this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                        this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                                     }
                                                 }
                                             }
@@ -3467,9 +3467,9 @@ namespace Apricot
                     {
                         DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
 
-                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                        foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr)!)
                         {
-                            this.sourceCollection.Add(source);
+                            this.sourceCollection!.Add(source);
                         }
                     }
                 }
@@ -3484,9 +3484,9 @@ namespace Apricot
                         {
                             DataContractSerializer serializer = new DataContractSerializer(typeof(IEnumerable<Source>));
 
-                            foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr))
+                            foreach (Source source in (IEnumerable<Source>)serializer.ReadObject(xr)!)
                             {
-                                this.sourceCollection.Add(source);
+                                this.sourceCollection!.Add(source);
                             }
                         }
                     }
@@ -3494,16 +3494,16 @@ namespace Apricot
                     {
                         Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                         HashSet<string> pathHashSet = new HashSet<string>();
-                        List<Tuple<string, string>> pathList = new List<Tuple<string, string>>();
+                        List<Tuple<string?, string>> pathList = new List<Tuple<string?, string>>();
 
-                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
+                        foreach (string filename in from filename in Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, "*.opml", SearchOption.TopDirectoryOnly) let attributes = File.GetAttributes(filename) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden select filename)
                         {
                             string key = Path.GetFileNameWithoutExtension(filename);
                             Match match = Regex.Match(key, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
 
                             if (match.Success)
                             {
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 key = match.Groups[1].Value;
 
@@ -3516,27 +3516,27 @@ namespace Apricot
                                     tupleList = new List<Tuple<string, string>>();
                                     tupleList.Add(Tuple.Create<string, string>(filename, match.Groups[2].Value));
                                     pathDictionary.Add(key, tupleList);
-                                    pathList.Add(Tuple.Create<string, string>(null, key));
+                                    pathList.Add(Tuple.Create<string?, string>(null, key));
                                 }
                             }
                             else
                             {
                                 pathHashSet.Add(key);
-                                pathList.Add(Tuple.Create<string, string>(filename, key));
+                                pathList.Add(Tuple.Create<string?, string>(filename, key));
                             }
                         }
 
-                        pathList.ForEach(delegate (Tuple<string, string> tuple1)
+                        pathList.ForEach(delegate (Tuple<string?, string> tuple1)
                         {
                             if (tuple1.Item1 == null)
                             {
                                 if (!pathHashSet.Contains(tuple1.Item2))
                                 {
-                                    List<Tuple<string, string>> tupleList;
+                                    List<Tuple<string, string>>? tupleList;
 
                                     if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                     {
-                                        Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                        Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                         {
                                             return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                         });
@@ -3550,12 +3550,12 @@ namespace Apricot
                                                 xmlDocument.Load(fs);
                                                 xmlDocument.Normalize();
 
-                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                                foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                                 {
-                                                    string title = null;
-                                                    Uri xmlUrl = null;
+                                                    string? title = null;
+                                                    Uri? xmlUrl = null;
 
-                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                                     {
                                                         if (xmlAttribute.Name.Equals("title"))
                                                         {
@@ -3567,7 +3567,7 @@ namespace Apricot
                                                         }
                                                     }
 
-                                                    this.sourceCollection.Add(new Source(title, xmlUrl));
+                                                    this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                                 }
                                             }
                                         }
@@ -3576,11 +3576,11 @@ namespace Apricot
                             }
                             else
                             {
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 if (pathDictionary.TryGetValue(tuple1.Item2, out tupleList))
                                 {
-                                    Tuple<string, string> tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
+                                    Tuple<string, string>? tuple2 = tupleList.Find(delegate (Tuple<string, string> tuple3)
                                     {
                                         return tuple3.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                     });
@@ -3592,12 +3592,12 @@ namespace Apricot
                                         xmlDocument.Load(fs);
                                         xmlDocument.Normalize();
 
-                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                         {
-                                            string title = null;
-                                            Uri xmlUrl = null;
+                                            string? title = null;
+                                            Uri? xmlUrl = null;
 
-                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                             {
                                                 if (xmlAttribute.Name.Equals("title"))
                                                 {
@@ -3609,7 +3609,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                            this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                         }
                                     }
                                 }
@@ -3622,12 +3622,12 @@ namespace Apricot
                                         xmlDocument.Load(fs);
                                         xmlDocument.Normalize();
 
-                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement.SelectNodes("/opml/body//outline[@xmlUrl]"))
+                                        foreach (XmlNode xmlNode in xmlDocument.DocumentElement!.SelectNodes("/opml/body//outline[@xmlUrl]")!)
                                         {
-                                            string title = null;
-                                            Uri xmlUrl = null;
+                                            string? title = null;
+                                            Uri? xmlUrl = null;
 
-                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                            foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                             {
                                                 if (xmlAttribute.Name.Equals("title"))
                                                 {
@@ -3639,7 +3639,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            this.sourceCollection.Add(new Source(title, xmlUrl));
+                                            this.sourceCollection!.Add(new Source(title!, xmlUrl!));
                                         }
                                     }
                                 }
@@ -3652,8 +3652,8 @@ namespace Apricot
 
         public void Save()
         {
-            System.Configuration.Configuration config1 = null;
-            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            System.Configuration.Configuration? config1 = null;
+            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
 
             if (Directory.Exists(directory))
             {
@@ -3671,11 +3671,11 @@ namespace Apricot
             if (config1 == null)
             {
                 config1 = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
-                directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
                 if (config1.AppSettings.Settings["Sources"] != null)
                 {
-                    List<Source> sourceList = this.sourceCollection.ToList();
+                    List<Source> sourceList = this.sourceCollection!.ToList();
                     XmlWriterSettings settings = new XmlWriterSettings();
 
                     settings.Indent = true;
@@ -3748,7 +3748,7 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["Words"] != null)
                 {
-                    List<Word> wordList = this.wordCollection.ToList();
+                    List<Word> wordList = this.wordCollection!.ToList();
                     XmlWriterSettings settings = new XmlWriterSettings();
 
                     settings.Indent = true;
@@ -3801,7 +3801,7 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["Sources"] != null)
                 {
-                    List<Source> sourceList = this.sourceCollection.ToList();
+                    List<Source> sourceList = this.sourceCollection!.ToList();
                     XmlWriterSettings settings = new XmlWriterSettings();
 
                     settings.Indent = true;
@@ -3832,7 +3832,7 @@ namespace Apricot
                 }
                 else if (config2.AppSettings.Settings["Sources"] != null)
                 {
-                    List<Source> sourceList = this.sourceCollection.ToList();
+                    List<Source> sourceList = this.sourceCollection!.ToList();
                     XmlWriterSettings settings = new XmlWriterSettings();
 
                     settings.Indent = true;
@@ -3945,7 +3945,7 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["Words"] != null)
                 {
-                    List<Word> wordList = this.wordCollection.ToList();
+                    List<Word> wordList = this.wordCollection!.ToList();
                     XmlWriterSettings settings = new XmlWriterSettings();
 
                     settings.Indent = true;
@@ -3993,7 +3993,7 @@ namespace Apricot
                 }
                 else if (config2.AppSettings.Settings["Words"] != null)
                 {
-                    List<Word> wordList = this.wordCollection.ToList();
+                    List<Word> wordList = this.wordCollection!.ToList();
                     XmlWriterSettings settings = new XmlWriterSettings();
 
                     settings.Indent = true;
@@ -4047,16 +4047,16 @@ namespace Apricot
             HashSet<string> baseDirectoryHashSet = new HashSet<string>();
             Dictionary<string, List<Tuple<string, string>>> cachedPathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
 
-            if (this.sequenceCollection.Count > 0)
+            if (this.sequenceCollection!.Count > 0)
             {
                 List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
 
                 this.sequenceCollection.Clear();
                 tempSequenceList.ForEach(delegate (Sequence sequence)
                 {
-                    if (this.characterCollection.Any(delegate (Character character)
+                    if (this.characterCollection!.Any(delegate (Character character)
                     {
-                        return character.Name.Equals(sequence.Owner);
+                        return character.Name!.Equals(sequence.Owner);
                     }))
                     {
                         this.sequenceCollection.Add(sequence);
@@ -4066,7 +4066,7 @@ namespace Apricot
 
             if (Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase))
             {
-                FileStream fs = null;
+                FileStream? fs = null;
 
                 try
                 {
@@ -4077,7 +4077,7 @@ namespace Apricot
                         fs = null;
 
                         HashSet<string> characterNameHashSet = new HashSet<string>();
-                        LinkedList<Character> characterLinkedList = new LinkedList<Character>(this.characterCollection);
+                        LinkedList<Character> characterLinkedList = new LinkedList<Character>(this.characterCollection!);
                         List<Sprite> cachedSpriteList = new List<Sprite>();
                         List<Sound> cachedSoundList = new List<Sound>();
                         Dictionary<string, HashSet<string>> motionTypeDictionary = new Dictionary<string, HashSet<string>>();
@@ -4087,7 +4087,7 @@ namespace Apricot
                             string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                             Match match = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                             string key;
-                            List<Tuple<ZipArchiveEntry, string>> tupleList;
+                            List<Tuple<ZipArchiveEntry, string>>? tupleList;
 
                             if (match.Success)
                             {
@@ -4123,7 +4123,7 @@ namespace Apricot
                             return dictionary;
                         }).Values)
                         {
-                            Tuple<ZipArchiveEntry, string> tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                            Tuple<ZipArchiveEntry, string>? tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
                             {
                                 return t.Item2.Equals(CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                             });
@@ -4145,7 +4145,7 @@ namespace Apricot
                                         xmlDocument.Load(stream);
                                         xmlDocument.Normalize();
 
-                                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                        if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                         {
                                             foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                             {
@@ -4165,19 +4165,19 @@ namespace Apricot
                                             Character character = ParseCharacter(xmlNode);
                                             List<Sequence> sequenceList = new List<Sequence>();
 
-                                            if (!characterNameHashSet.Contains(character.Name))
+                                            if (!characterNameHashSet.Contains(character.Name!))
                                             {
                                                 List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
 
                                                 tempSequenceList.ForEach(delegate (Sequence sequence)
                                                 {
-                                                    if (sequence.Owner.Equals(character.Name))
+                                                    if (sequence.Owner!.Equals(character.Name))
                                                     {
                                                         this.sequenceCollection.Remove(sequence);
                                                     }
                                                 });
 
-                                                characterNameHashSet.Add(character.Name);
+                                                characterNameHashSet.Add(character.Name!);
                                             }
 
                                             foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
@@ -4191,11 +4191,11 @@ namespace Apricot
                                                 }
                                             }
 
-                                            for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                                            for (LinkedListNode<Character>? nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
                                             {
-                                                if (nextLinkedListNode.Value.Name.Equals(character.Name))
+                                                if (nextLinkedListNode.Value.Name!.Equals(character.Name))
                                                 {
-                                                    string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
+                                                    string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, nextLinkedListNode.Value.Script!))!;
 
                                                     nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
                                                     nextLinkedListNode.Value.Size = character.Size;
@@ -4204,7 +4204,7 @@ namespace Apricot
                                                     if (nextLinkedListNode.Value.HasTypes)
                                                     {
                                                         Queue<Sequence> sequenceQueue = new Queue<Sequence>(this.sequenceCollection);
-                                                        HashSet<string> motionTypeHashSet;
+                                                        HashSet<string>? motionTypeHashSet;
 
                                                         if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
                                                         {
@@ -4218,21 +4218,21 @@ namespace Apricot
 
                                                             foreach (object o in sequence)
                                                             {
-                                                                Sequence s = o as Sequence;
+                                                                Sequence? s = o as Sequence;
 
                                                                 if (s == null)
                                                                 {
                                                                     if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
                                                                     {
-                                                                        Collection<Motion> collection = o as Collection<Motion>;
+                                                                        Collection<Motion>? collection = o as Collection<Motion>;
 
                                                                         if (collection != null)
                                                                         {
                                                                             foreach (Motion motion in from motion in collection where motion.Type != null select motion)
                                                                             {
-                                                                                if (!motionTypeHashSet.Contains(motion.Type))
+                                                                                if (!motionTypeHashSet.Contains(motion.Type!))
                                                                                 {
-                                                                                    motionTypeHashSet.Add(motion.Type);
+                                                                                    motionTypeHashSet.Add(motion.Type!);
                                                                                 }
                                                                             }
                                                                         }
@@ -4282,7 +4282,7 @@ namespace Apricot
                                     xmlDocument.Load(stream);
                                     xmlDocument.Normalize();
 
-                                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                    if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                     {
                                         foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                         {
@@ -4302,19 +4302,19 @@ namespace Apricot
                                         Character character = ParseCharacter(xmlNode);
                                         List<Sequence> sequenceList = new List<Sequence>();
 
-                                        if (!characterNameHashSet.Contains(character.Name))
+                                        if (!characterNameHashSet.Contains(character.Name!))
                                         {
                                             List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
 
                                             tempSequenceList.ForEach(delegate (Sequence sequence)
                                             {
-                                                if (sequence.Owner.Equals(character.Name))
+                                                if (sequence.Owner!.Equals(character.Name))
                                                 {
                                                     this.sequenceCollection.Remove(sequence);
                                                 }
                                             });
 
-                                            characterNameHashSet.Add(character.Name);
+                                            characterNameHashSet.Add(character.Name!);
                                         }
 
                                         foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
@@ -4328,11 +4328,11 @@ namespace Apricot
                                             }
                                         }
 
-                                        for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                                        for (LinkedListNode<Character>? nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
                                         {
-                                            if (nextLinkedListNode.Value.Name.Equals(character.Name))
+                                            if (nextLinkedListNode.Value.Name!.Equals(character.Name))
                                             {
-                                                string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
+                                                string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, nextLinkedListNode.Value.Script!))!;
 
                                                 nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
                                                 nextLinkedListNode.Value.Size = character.Size;
@@ -4341,7 +4341,7 @@ namespace Apricot
                                                 if (nextLinkedListNode.Value.HasTypes)
                                                 {
                                                     Queue<Sequence> sequenceQueue = new Queue<Sequence>(this.sequenceCollection);
-                                                    HashSet<string> motionTypeHashSet;
+                                                    HashSet<string>? motionTypeHashSet;
 
                                                     if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
                                                     {
@@ -4355,21 +4355,21 @@ namespace Apricot
 
                                                         foreach (object o in sequence)
                                                         {
-                                                            Sequence s = o as Sequence;
+                                                            Sequence? s = o as Sequence;
 
                                                             if (s == null)
                                                             {
                                                                 if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
                                                                 {
-                                                                    Collection<Motion> collection = o as Collection<Motion>;
+                                                                    Collection<Motion>? collection = o as Collection<Motion>;
 
                                                                     if (collection != null)
                                                                     {
                                                                         foreach (Motion motion in from motion in collection where motion.Type != null select motion)
                                                                         {
-                                                                            if (!motionTypeHashSet.Contains(motion.Type))
+                                                                            if (!motionTypeHashSet.Contains(motion.Type!))
                                                                             {
-                                                                                motionTypeHashSet.Add(motion.Type);
+                                                                                motionTypeHashSet.Add(motion.Type!);
                                                                             }
                                                                         }
                                                                     }
@@ -4429,7 +4429,7 @@ namespace Apricot
                     xmlDocument.Load(fs);
                     xmlDocument.Normalize();
 
-                    if (xmlDocument.DocumentElement.Name.Equals("script"))
+                    if (xmlDocument.DocumentElement!.Name.Equals("script"))
                     {
                         foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                         {
@@ -4447,7 +4447,7 @@ namespace Apricot
                     if (xmlNodeList.Count > 0)
                     {
                         HashSet<string> characterNameHashSet = new HashSet<string>();
-                        LinkedList<Character> characterLinkedList = new LinkedList<Character>(this.characterCollection);
+                        LinkedList<Character> characterLinkedList = new LinkedList<Character>(this.characterCollection!);
                         List<Sprite> cachedSpriteList = new List<Sprite>();
                         List<Sound> cachedSoundList = new List<Sound>();
                         Dictionary<string, HashSet<string>> motionTypeDictionary = new Dictionary<string, HashSet<string>>();
@@ -4457,19 +4457,19 @@ namespace Apricot
                             Character character = ParseCharacter(xmlNode);
                             List<Sequence> sequenceList = new List<Sequence>();
 
-                            if (!characterNameHashSet.Contains(character.Name))
+                            if (!characterNameHashSet.Contains(character.Name!))
                             {
                                 List<Sequence> tempSequenceList = this.sequenceCollection.ToList();
 
                                 tempSequenceList.ForEach(delegate (Sequence sequence)
                                 {
-                                    if (sequence.Owner.Equals(character.Name))
+                                    if (sequence.Owner!.Equals(character.Name))
                                     {
                                         this.sequenceCollection.Remove(sequence);
                                     }
                                 });
 
-                                characterNameHashSet.Add(character.Name);
+                                characterNameHashSet.Add(character.Name!);
                             }
 
                             foreach (XmlNode sequenceNode in xmlNode.ChildNodes)
@@ -4483,11 +4483,11 @@ namespace Apricot
                                 }
                             }
 
-                            for (LinkedListNode<Character> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                            for (LinkedListNode<Character>? nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
                             {
-                                if (nextLinkedListNode.Value.Name.Equals(character.Name))
+                                if (nextLinkedListNode.Value.Name!.Equals(character.Name))
                                 {
-                                    string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), nextLinkedListNode.Value.Script));
+                                    string directoryName = Path.GetDirectoryName(Path.IsPathRooted(nextLinkedListNode.Value.Script) ? nextLinkedListNode.Value.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, nextLinkedListNode.Value.Script!))!;
 
                                     nextLinkedListNode.Value.BaseLocation = character.BaseLocation;
                                     nextLinkedListNode.Value.Size = character.Size;
@@ -4496,7 +4496,7 @@ namespace Apricot
                                     if (nextLinkedListNode.Value.HasTypes)
                                     {
                                         Queue<Sequence> sequenceQueue = new Queue<Sequence>(sequenceList);
-                                        HashSet<string> motionTypeHashSet;
+                                        HashSet<string>? motionTypeHashSet;
 
                                         if (!motionTypeDictionary.TryGetValue(nextLinkedListNode.Value.Name, out motionTypeHashSet))
                                         {
@@ -4510,21 +4510,21 @@ namespace Apricot
 
                                             foreach (object o in sequence)
                                             {
-                                                Sequence s = o as Sequence;
+                                                Sequence? s = o as Sequence;
 
                                                 if (s == null)
                                                 {
                                                     if (nextLinkedListNode.Value.Name.Equals(sequence.Owner))
                                                     {
-                                                        Collection<Motion> collection = o as Collection<Motion>;
+                                                        Collection<Motion>? collection = o as Collection<Motion>;
 
                                                         if (collection != null)
                                                         {
                                                             foreach (Motion motion in from motion in collection where motion.Type != null select motion)
                                                             {
-                                                                if (!motionTypeHashSet.Contains(motion.Type))
+                                                                if (!motionTypeHashSet.Contains(motion.Type!))
                                                                 {
-                                                                    motionTypeHashSet.Add(motion.Type);
+                                                                    motionTypeHashSet.Add(motion.Type!);
                                                                 }
                                                             }
                                                         }
@@ -4576,7 +4576,7 @@ namespace Apricot
 
                 foreach (object o in sequence)
                 {
-                    Sequence s = o as Sequence;
+                    Sequence? s = o as Sequence;
 
                     if (s != null)
                     {
@@ -4584,13 +4584,13 @@ namespace Apricot
                     }
                 }
 
-                if (!hs.Contains(sequence.Name))
+                if (!hs.Contains(sequence.Name!))
                 {
-                    hs.Add(sequence.Name);
+                    hs.Add(sequence.Name!);
                 }
             }
 
-            foreach (string s in (from s in this.sequenceStateDictionary.Keys where !hs.Contains(s) select s).ToArray())
+            foreach (string s in (from s in this.sequenceStateDictionary!.Keys where !hs.Contains(s) select s).ToArray())
             {
                 this.sequenceStateDictionary.Remove(s);
             }
@@ -4607,7 +4607,7 @@ namespace Apricot
                 {
                     if (tuple1.Item1)
                     {
-                        FileStream fs = null;
+                        FileStream? fs = null;
 
                         try
                         {
@@ -4625,7 +4625,7 @@ namespace Apricot
                                     string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                                     Match m = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                                     string key;
-                                    List<Tuple<ZipArchiveEntry, string>> tupleList1;
+                                    List<Tuple<ZipArchiveEntry, string>>? tupleList1;
 
                                     if (m.Success)
                                     {
@@ -4661,7 +4661,7 @@ namespace Apricot
                                     return dictionary;
                                 }).Values)
                                 {
-                                    Tuple<ZipArchiveEntry, string> tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                    Tuple<ZipArchiveEntry, string>? tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                     {
                                         return tuple3.Item2.Equals(currentLanguage);
                                     });
@@ -4675,7 +4675,7 @@ namespace Apricot
                                             xmlDocument.Load(stream);
                                             xmlDocument.Normalize();
 
-                                            if (xmlDocument.DocumentElement.Name.Equals("script"))
+                                            if (xmlDocument.DocumentElement!.Name.Equals("script"))
                                             {
                                                 foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                                                 {
@@ -4683,7 +4683,7 @@ namespace Apricot
                                                     {
                                                         Character character = ParseCharacter(xmlNode);
 
-                                                        if (!(from c in this.characterCollection where c.Name.Equals(character.Name) select c).Any())
+                                                        if (!(from c in this.characterCollection where c.Name!.Equals(character.Name) select c).Any())
                                                         {
                                                             List<Sequence> sequenceList = new List<Sequence>();
 
@@ -4705,7 +4705,7 @@ namespace Apricot
                                             {
                                                 Character character = ParseCharacter(xmlDocument.DocumentElement);
 
-                                                if (!(from c in this.characterCollection where c.Name.Equals(character.Name) select c).Any())
+                                                if (!(from c in this.characterCollection where c.Name!.Equals(character.Name) select c).Any())
                                                 {
                                                     List<Sequence> sequenceList = new List<Sequence>();
 
@@ -4739,7 +4739,7 @@ namespace Apricot
                         string filename = Path.GetFileNameWithoutExtension(tuple1.Item2);
                         Match m = Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
                         string key;
-                        List<Tuple<string, string>> tupleList;
+                        List<Tuple<string, string>>? tupleList;
 
                         if (m.Success)
                         {
@@ -4777,7 +4777,7 @@ namespace Apricot
 
             foreach (List<Tuple<string, string>> tupleList in cachedPathDictionary.Values)
             {
-                Tuple<string, string> tuple1 = null;
+                Tuple<string, string>? tuple1 = null;
                 
                 tupleList.ForEach(delegate (Tuple<string, string> tuple2)
                 {
@@ -4796,7 +4796,7 @@ namespace Apricot
                         xmlDocument.Load(fs);
                         xmlDocument.Normalize();
 
-                        if (xmlDocument.DocumentElement.Name.Equals("script"))
+                        if (xmlDocument.DocumentElement!.Name.Equals("script"))
                         {
                             List<Sprite> cachedSpriteList = new List<Sprite>();
                             List<Sound> cachedSoundList = new List<Sound>();
@@ -4807,7 +4807,7 @@ namespace Apricot
                                 {
                                     Character character = ParseCharacter(xmlNode);
 
-                                    if (!(from c in this.characterCollection where c.Name.Equals(character.Name) select c).Any())
+                                    if (!(from c in this.characterCollection where c.Name!.Equals(character.Name) select c).Any())
                                     {
                                         List<Sequence> sequenceList = new List<Sequence>();
 
@@ -4832,7 +4832,7 @@ namespace Apricot
 
                             Character character = ParseCharacter(xmlDocument.DocumentElement);
 
-                            if (!(from c in this.characterCollection where c.Name.Equals(character.Name) select c).Any())
+                            if (!(from c in this.characterCollection where c.Name!.Equals(character.Name) select c).Any())
                             {
                                 List<Sequence> sequenceList = new List<Sequence>();
 
@@ -4863,7 +4863,7 @@ namespace Apricot
             double width = 0;
             double height = 0;
             
-            foreach (XmlAttribute characterAttribute in characterNode.Attributes)
+            foreach (XmlAttribute characterAttribute in characterNode.Attributes!)
             {
                 if (characterAttribute.Name.Equals("name"))
                 {
@@ -4908,7 +4908,7 @@ namespace Apricot
             System.Collections.Queue queue = new System.Collections.Queue();
             System.Collections.ArrayList arrayList = new System.Collections.ArrayList();
             
-            foreach (XmlAttribute sequenceAttribute in sequenceNode.Attributes)
+            foreach (XmlAttribute sequenceAttribute in sequenceNode.Attributes!)
             {
                 if (sequenceAttribute.Name.Equals("name"))
                 {
@@ -4942,8 +4942,8 @@ namespace Apricot
 
             while (queue.Count > 0)
             {
-                object o = queue.Dequeue();
-                Motion motion = o as Motion;
+                object o = queue.Dequeue()!;
+                Motion? motion = o as Motion;
 
                 if (motion == null)
                 {
@@ -4965,8 +4965,8 @@ namespace Apricot
                             break;
                         }
 
-                        Motion m = (Motion)queue.Dequeue();
-                        LinkedList<Motion> linkedList;
+                        Motion m = (Motion)queue.Dequeue()!;
+                        LinkedList<Motion>? linkedList;
 
                         if (!motionDictionary.TryGetValue(m.ZIndex, out linkedList))
                         {
@@ -4982,8 +4982,8 @@ namespace Apricot
                         do
                         {
                             Queue<Motion> motionQueue = new Queue<Motion>();
-                            string type = keyValuePair.Value.First.Value.Type;
-                            LinkedListNode<Motion> nextLinkedListNode = keyValuePair.Value.First.Next;
+                            string? type = keyValuePair.Value.First!.Value.Type;
+                            LinkedListNode<Motion>? nextLinkedListNode = keyValuePair.Value.First.Next;
                                 
                             motionQueue.Enqueue(keyValuePair.Value.First.Value);
                             keyValuePair.Value.RemoveFirst();
@@ -5102,7 +5102,7 @@ namespace Apricot
                 message.Add(stringBuilder.ToString());
             }
 
-            foreach (XmlAttribute attribute in messageNode.Attributes)
+            foreach (XmlAttribute attribute in messageNode.Attributes!)
             {
                 if (attribute.Name.Equals("speed"))
                 {
@@ -5123,7 +5123,7 @@ namespace Apricot
             int iterations = 1;
             List<Sprite> spriteList = new List<Sprite>();
 
-            foreach (XmlAttribute motionAttribute in motionNode.Attributes)
+            foreach (XmlAttribute motionAttribute in motionNode.Attributes!)
             {
                 if (motionAttribute.Name.Equals("repeats"))
                 {
@@ -5157,7 +5157,7 @@ namespace Apricot
                     Nullable<double> height = null;
                     Nullable<double> opacity = null;
 
-                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                    foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                     {
                         if (xmlAttribute.Name.Equals("x"))
                         {
@@ -5181,9 +5181,9 @@ namespace Apricot
                         }
                     }
 
-                    Sprite sprite = cachedSpriteList.Find(delegate (Sprite s)
+                    Sprite? sprite = cachedSpriteList.Find(delegate (Sprite s)
                     {
-                        if (s.Location.X == (x.HasValue ? x.Value : 0) && s.Location.Y == (y.HasValue ? y.Value : 0) && s.Opacity == (opacity.HasValue ? opacity.Value : 1) && s.Path.Equals(xmlNode.InnerText))
+                        if (s.Location.X == (x.HasValue ? x.Value : 0) && s.Location.Y == (y.HasValue ? y.Value : 0) && s.Opacity == (opacity.HasValue ? opacity.Value : 1) && xmlNode.InnerText.Equals(s.Path))
                         {
                             if (s.Size.IsEmpty)
                             {
@@ -5262,9 +5262,9 @@ namespace Apricot
 
         private Sound ParseSound(XmlNode soundNode, List<Sound> cachedSoundList)
         {
-            Sound sound = cachedSoundList.Find(delegate (Sound s)
+            Sound? sound = cachedSoundList.Find(delegate (Sound s)
             {
-                return s.Path.Equals(soundNode.InnerText);
+                return soundNode.InnerText.Equals(s.Path);
             });
 
             if (sound == null)
@@ -5286,13 +5286,13 @@ namespace Apricot
         {
             DateTime updatedDateTime = this.lastUpdatedDateTime;
             Fetcher fetcher = new Fetcher();
-            List<Tuple<string, Uri>> sourceList = new List<Tuple<string, Uri>>();
+            List<Tuple<string?, Uri>> sourceList = new List<Tuple<string?, Uri>>();
             List<Entry> entryList = new List<Entry>();
-            Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> tempCacheDictionary = new Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>(this.cacheDictionary);
+            Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>> tempCacheDictionary = new Dictionary<string, Tuple<List<Tuple<Entry, double>>, double>>(this.cacheDictionary!);
 
-            foreach (Source source in this.sourceCollection)
+            foreach (Source source in this.sourceCollection!)
             {
-                fetcher.Locations.Add(source.Location);
+                fetcher.Locations.Add(source.Location!);
             }
 
             Task.Factory.StartNew(delegate
@@ -5301,8 +5301,8 @@ namespace Apricot
 
                 if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                 {
-                    System.Configuration.Configuration config2 = null;
-                    string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                    System.Configuration.Configuration? config2 = null;
+                    string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
 
                     if (Directory.Exists(directory))
                     {
@@ -5358,9 +5358,9 @@ namespace Apricot
 
                     fetcher.Collect();
 
-                    foreach (Tuple<string, Uri, IEnumerable<Entry>> feed in fetcher.Feeds)
+                    foreach (Tuple<string?, Uri, IEnumerable<Entry>> feed in fetcher.Feeds)
                     {
-                        sourceList.Add(Tuple.Create<string, Uri>(feed.Item1, feed.Item2));
+                        sourceList.Add(Tuple.Create<string?, Uri>(feed.Item1, feed.Item2));
                         entryList.AddRange(from entry in feed.Item3 where entry.Resource != null select entry);
                     }
                 }
@@ -5369,14 +5369,14 @@ namespace Apricot
                 {
                     DbProviderFactory factory = DbProviderFactories.GetFactory(settings.ProviderName);
 
-                    using (IDbConnection connection = factory.CreateConnection())
+                    using (IDbConnection connection = factory.CreateConnection()!)
                     {
                         connection.ConnectionString = settings.ConnectionString;
                         connection.Open();
 
-                        using (IDbCommand command = factory.CreateCommand())
+                        using (IDbCommand command = factory.CreateCommand()!)
                         {
-                            IDataReader reader = null;
+                            IDataReader? reader = null;
 
                             command.Connection = connection;
                             command.CommandText = BuildSelectStatement(100);
@@ -5391,7 +5391,7 @@ namespace Apricot
 
                                     if (!Convert.IsDBNull(reader["Resource"]))
                                     {
-                                        Uri uri;
+                                        Uri? uri;
 
                                         if (Uri.TryCreate((string)reader["Resource"], UriKind.RelativeOrAbsolute, out uri))
                                         {
@@ -5443,7 +5443,7 @@ namespace Apricot
 
                 List<Entry> newEntryList = new List<Entry>();
 
-                sourceList.ForEach(delegate (Tuple<string, Uri> tuple)
+                sourceList.ForEach(delegate (Tuple<string?, Uri> tuple)
                 {
                     if (!String.IsNullOrEmpty(tuple.Item1))
                     {
@@ -5496,7 +5496,7 @@ namespace Apricot
                         Alert(newEntryList);
                     }
 
-                    if (this.cacheDictionary.Count > 0)
+                    if (this.cacheDictionary!.Count > 0)
                     {
                         Trend(this.cacheDictionary.Keys);
                     }
@@ -5522,13 +5522,13 @@ namespace Apricot
                         Alert(newEntryList);
                     }
 
-                    if (this.cacheDictionary.Count > 0)
+                    if (this.cacheDictionary!.Count > 0)
                     {
                         if (this.cacheDictionary.Count == tempCacheDictionary.Count)
                         {
                             if (!tempCacheDictionary.All(delegate (KeyValuePair<string, Tuple<List<Tuple<Entry, double>>, double>> keyValuePair)
                             {
-                                Tuple<List<Tuple<Entry, double>>, double> tuple1;
+                                Tuple<List<Tuple<Entry, double>>, double>? tuple1;
 
                                 if (this.cacheDictionary.TryGetValue(keyValuePair.Key, out tuple1))
                                 {
@@ -5577,7 +5577,7 @@ namespace Apricot
             {
                 DateTime pastDateTime = nowDateTime - new TimeSpan(24, 0, 0);
 
-                foreach (Entry entry in from entry in entries.Concat(this.cacheDictionary.Values.Aggregate<Tuple<List<Tuple<Entry, double>>, double>, HashSet<Entry>>(new HashSet<Entry>(), delegate (HashSet<Entry> hs, Tuple<List<Tuple<Entry, double>>, double> t)
+                foreach (Entry entry in from entry in entries.Concat(this.cacheDictionary!.Values.Aggregate<Tuple<List<Tuple<Entry, double>>, double>, HashSet<Entry>>(new HashSet<Entry>(), delegate (HashSet<Entry> hs, Tuple<List<Tuple<Entry, double>>, double> t)
                 {
                     foreach (Entry entry in from item in t.Item1 select item.Item1)
                     {
@@ -5592,16 +5592,16 @@ namespace Apricot
                                         where entry.Resource != null && entry.Modified > pastDateTime && entry.Modified <= nowDateTime
                                         select entry)
                 {
-                    if (entryDictionary.ContainsKey(entry.Resource))
+                    if (entryDictionary.ContainsKey(entry.Resource!))
                     {
-                        if (entry.Modified > entryDictionary[entry.Resource].Modified)
+                        if (entry.Modified > entryDictionary[entry.Resource!].Modified)
                         {
-                            entryDictionary[entry.Resource] = entry;
+                            entryDictionary[entry.Resource!] = entry;
                         }
                     }
                     else
                     {
-                        entryDictionary.Add(entry.Resource, entry);
+                        entryDictionary.Add(entry.Resource!, entry);
                     }
                 }
 
@@ -5611,7 +5611,7 @@ namespace Apricot
                 {
                     if (term.Length > 0)
                     {
-                        List<string> termList;
+                        List<string>? termList;
 
                         if (!termDictionary.TryGetValue(term[0], out termList))
                         {
@@ -5655,7 +5655,7 @@ namespace Apricot
                 recentEntryList.ForEach(delegate (Entry entry)
                 {
                     Dictionary<string, double> d = GetTermFrequency(termDictionary, entry);
-                    Tuple<List<Tuple<Entry, double>>, double> tuple;
+                    Tuple<List<Tuple<Entry, double>>, double>? tuple;
                     double[] vector = new double[terms.Length];
                     bool isZeroVector = true;
 
@@ -5699,7 +5699,7 @@ namespace Apricot
 
                     if (!isZeroVector)
                     {
-                        vectorDictionary.Add(entry.Resource, vector);
+                        vectorDictionary.Add(entry.Resource!, vector);
                     }
                 });
 
@@ -5735,7 +5735,7 @@ namespace Apricot
                     {
                         List<Entry> similarEntryList = new List<Entry>();
 
-                        foreach (string similarLabel in filter.Query(entry.Resource.ToString(), filter.Width * 25 / 100, filter.Height * 25 / 100))
+                        foreach (string similarLabel in filter.Query(entry.Resource!.ToString(), filter.Width * 25 / 100, filter.Height * 25 / 100))
                         {
                             Entry newEntry = (Entry)entryDictionary[new Uri(similarLabel, UriKind.RelativeOrAbsolute)].Clone();
 
@@ -5758,7 +5758,7 @@ namespace Apricot
                         });
                         similarEntryList.ForEach(delegate (Entry e)
                         {
-                            if (!e.Resource.Equals(entry.Resource))
+                            if (!e.Resource!.Equals(entry.Resource))
                             {
                                 entry.SimilarEntries.Add(e);
                             }
@@ -5767,7 +5767,7 @@ namespace Apricot
                 }
             }, TaskCreationOptions.LongRunning).ContinueWith(delegate
             {
-                this.cacheDictionary.Clear();
+                this.cacheDictionary!.Clear();
 
                 foreach (KeyValuePair<string, Tuple<List<Tuple<Entry, double>>, double>> keyValuePair in tempCacheDictionary)
                 {
@@ -5807,7 +5807,7 @@ namespace Apricot
             }
         }
 
-        public IEnumerable<Sequence> Prepare(IEnumerable<Sequence> sequences, string state)
+        public IEnumerable<Sequence> Prepare(IEnumerable<Sequence> sequences, string? state)
         {
             return Prepare(sequences, state, delegate (IEnumerable<Sequence> collection)
             {
@@ -5817,7 +5817,7 @@ namespace Apricot
             });
         }
 
-        private IEnumerable<Sequence> Prepare(IEnumerable<Sequence> sequences, string state, Func<IEnumerable<Sequence>, IEnumerable<Sequence>> func)
+        private IEnumerable<Sequence> Prepare(IEnumerable<Sequence> sequences, string? state, Func<IEnumerable<Sequence>, IEnumerable<Sequence>> func)
         {
             List<Sequence> executableSequenceList = new List<Sequence>();
             List<Sequence> preparedSequenceList = new List<Sequence>();
@@ -5825,13 +5825,13 @@ namespace Apricot
 
             foreach (Sequence sequence in from sequence in sequences where sequence.State != null select sequence)
             {
-                string newState = state;
+                string? newState = state;
 
                 if (newState == null)
                 {
-                    string oldState;
+                    string? oldState;
 
-                    if (this.sequenceStateDictionary.TryGetValue(sequence.Name, out oldState))
+                    if (this.sequenceStateDictionary!.TryGetValue(sequence.Name!, out oldState))
                     {
                         newState = oldState;
                     }
@@ -5839,7 +5839,7 @@ namespace Apricot
 
                 if (newState != null)
                 {
-                    if (Regex.IsMatch(newState, sequence.State, RegexOptions.CultureInvariant | RegexOptions.Singleline))
+                    if (Regex.IsMatch(newState, sequence.State!, RegexOptions.CultureInvariant | RegexOptions.Singleline))
                     {
                         executableSequenceList.Add(sequence);
                     }
@@ -5854,9 +5854,9 @@ namespace Apricot
 
             executableSequenceList.ForEach(delegate (Sequence sequence)
             {
-                if (!ownerList.Contains(sequence.Owner))
+                if (!ownerList.Contains(sequence.Owner!))
                 {
-                    ownerList.Add(sequence.Owner);
+                    ownerList.Add(sequence.Owner!);
                 }
             });
 
@@ -5864,20 +5864,20 @@ namespace Apricot
             {
                 foreach (Sequence sequence in func(executableSequenceList.FindAll(delegate (Sequence sequence)
                 {
-                    return sequence.Owner.Equals(owner);
+                    return sequence.Owner!.Equals(owner);
                 })))
                 {
                     Sequence flattenedSequence = new Sequence();
 
                     if (state != null)
                     {
-                        if (this.sequenceStateDictionary.ContainsKey(sequence.Name))
+                        if (this.sequenceStateDictionary!.ContainsKey(sequence.Name!))
                         {
-                            this.sequenceStateDictionary[sequence.Name] = state;
+                            this.sequenceStateDictionary[sequence.Name!] = state;
                         }
                         else
                         {
-                            this.sequenceStateDictionary.Add(sequence.Name, state);
+                            this.sequenceStateDictionary.Add(sequence.Name!, state);
                         }
                     }
 
@@ -5887,7 +5887,7 @@ namespace Apricot
 
                     foreach (object obj in sequence)
                     {
-                        Sequence nestedSequence = obj as Sequence;
+                        Sequence? nestedSequence = obj as Sequence;
 
                         if (nestedSequence == null)
                         {
@@ -5897,7 +5897,7 @@ namespace Apricot
                         {
                             List<Sequence> sequenceList = new List<Sequence>();
 
-                            foreach (Sequence s in this.sequenceCollection)
+                            foreach (Sequence s in this.sequenceCollection!)
                             {
                                 Stack<Sequence> sequenceStack = GetSequenceStack(s, nestedSequence);
 
@@ -5915,7 +5915,7 @@ namespace Apricot
 
                                             foreach (object o in sequenceStack.Peek())
                                             {
-                                                Sequence tempSequence = o as Sequence;
+                                                Sequence? tempSequence = o as Sequence;
 
                                                 if (tempSequence != null)
                                                 {
@@ -5956,10 +5956,10 @@ namespace Apricot
 
                             foreach (Sequence s in Prepare(sequenceList.FindAll(delegate (Sequence s)
                             {
-                                return s.Name.Equals(nestedSequence.Name);
+                                return s.Name!.Equals(nestedSequence.Name);
                             }), nestedSequence.State, func))
                             {
-                                if (s.Owner.Equals(sequence.Owner))
+                                if (s.Owner!.Equals(sequence.Owner))
                                 {
                                     foreach (object o in s)
                                     {
@@ -5994,26 +5994,26 @@ namespace Apricot
             return preparedSequenceList;
         }
 
-        public IEnumerable<Sequence> Prepare(IEnumerable<Sequence> sequences, string state, IEnumerable<string> terms)
+        public IEnumerable<Sequence> Prepare(IEnumerable<Sequence> sequences, string? state, IEnumerable<string> terms)
         {
             const int beamWidth = 3;
             double epsilon = Math.Pow(10, -6);
-            Dictionary<string, string> stateDictionary = new Dictionary<string, string>(this.sequenceStateDictionary);
+            Dictionary<string, string> stateDictionary = new Dictionary<string, string>(this.sequenceStateDictionary!);
             List<Sequence> preparedSequenceList = new List<Sequence>();
             Dictionary<int, LinkedList<Tuple<Sequence, Tuple<LinkedList<string>, HashSet<string>>>>> dataDictionary = new Dictionary<int, LinkedList<Tuple<Sequence, Tuple<LinkedList<string>, HashSet<string>>>>>();
             Dictionary<string, List<string>> wordDictionary = terms.Aggregate<string, Dictionary<string, List<string>>>(new Dictionary<string, List<string>>(), delegate (Dictionary<string, List<string>> d, string s)
             {
-                foreach (Word word in from word in this.wordCollection where word.Name.Equals(s) select word)
+                foreach (Word word in from word in this.wordCollection! where word.Name!.Equals(s) select word)
                 {
-                    List<string> nameList;
+                    List<string>? nameList;
 
-                    if (d.TryGetValue(word.Name, out nameList))
+                    if (d.TryGetValue(word.Name!, out nameList))
                     {
                         nameList.AddRange(word.Attributes);
                     }
                     else
                     {
-                        d.Add(word.Name, new List<string>(word.Attributes));
+                        d.Add(word.Name!, new List<string>(word.Attributes));
                     }
                 }
 
@@ -6023,14 +6023,14 @@ namespace Apricot
             do
             {
                 int i = 0;
-                LinkedList<string> linkedList = null;
+                LinkedList<string>? linkedList = null;
                 HashSet<string> hashSet = new HashSet<string>();
                 bool isAvailable = true;
 
                 preparedSequenceList.AddRange(Prepare(sequences, state, delegate (IEnumerable<Sequence> collection)
                 {
                     List<Sequence> sequenceList = new List<Sequence>();
-                    LinkedList<Tuple<Sequence, Tuple<LinkedList<string>, HashSet<string>>>> cachedLinkedList;
+                    LinkedList<Tuple<Sequence, Tuple<LinkedList<string>, HashSet<string>>>>? cachedLinkedList;
 
                     if (dataDictionary.TryGetValue(i, out cachedLinkedList))
                     {
@@ -6054,7 +6054,7 @@ namespace Apricot
 
                             foreach (object o in s)
                             {
-                                Message message = o as Message;
+                                Message? message = o as Message;
 
                                 if (message != null)
                                 {
@@ -6062,13 +6062,13 @@ namespace Apricot
                                     {
                                         if (!hs.Contains(match.Groups[1].Value))
                                         {
-                                            LinkedListNode<string> linkedListNode = ll.First;
+                                            LinkedListNode<string>? linkedListNode = ll.First;
 
                                             if (linkedListNode != null)
                                             {
                                                 do
                                                 {
-                                                    List<string> attributeList;
+                                                    List<string>? attributeList;
                                                     string pattern;
 
                                                     if (match.Groups[2].Success)
@@ -6162,7 +6162,7 @@ namespace Apricot
                 {
                     foreach (object o in sequence)
                     {
-                        Message message = o as Message;
+                        Message? message = o as Message;
 
                         if (message != null)
                         {
@@ -6182,7 +6182,7 @@ namespace Apricot
 
                         foreach (object o1 in sequence)
                         {
-                            Message message = o1 as Message;
+                            Message? message = o1 as Message;
 
                             if (message == null)
                             {
@@ -6262,16 +6262,16 @@ namespace Apricot
 
                                         List<Tuple<string, double>> termList = terms.Aggregate<string, List<Tuple<string, double>>>(new List<Tuple<string, double>>(), delegate (List<Tuple<string, double>> tupleList, string s)
                                         {
-                                            List<string> attributeList;
+                                            List<string>? attributeList;
 
                                             if (wordDictionary.TryGetValue(s, out attributeList) && attributeList.Exists(delegate (string attribute)
                                             {
                                                 return Regex.IsMatch(attribute, pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline);
                                             }))
                                             {
-                                                Tuple<List<Tuple<Entry, double>>, double> tuple1;
+                                                Tuple<List<Tuple<Entry, double>>, double>? tuple1;
 
-                                                if (this.cacheDictionary.TryGetValue(s, out tuple1))
+                                                if (this.cacheDictionary!.TryGetValue(s, out tuple1))
                                                 {
                                                     double sum = 0;
 
@@ -6306,7 +6306,7 @@ namespace Apricot
 
                                                 foreach (double probability in probabilities)
                                                 {
-                                                    if (!tuple.Item2.Values.Any(x => x.Title.Equals(termList[k].Item1)))
+                                                    if (!tuple.Item2.Values.Any(x => x.Title!.Equals(termList[k].Item1)))
                                                     {
                                                         candidateList.Add(Tuple.Create<System.Collections.ArrayList, Dictionary<string, Entry>, string, double, double>(tuple.Item1, tuple.Item2, termList[k].Item1, termList[k].Item2, tuple.Item3 * probability));
                                                     }
@@ -6325,7 +6325,7 @@ namespace Apricot
 
                                                 foreach (double probability in probabilities)
                                                 {
-                                                    if (!tuple.Item2.Values.Any(x => x.Title.Equals(termList[k].Item1)))
+                                                    if (!tuple.Item2.Values.Any(x => x.Title!.Equals(termList[k].Item1)))
                                                     {
                                                         candidateList.Add(Tuple.Create<System.Collections.ArrayList, Dictionary<string, Entry>, string, double, double>(tuple.Item1, tuple.Item2, termList[k].Item1, termList[k].Item2, tuple.Item3 * probability));
                                                     }
@@ -6357,13 +6357,13 @@ namespace Apricot
                                             System.Collections.ArrayList inlineArrayList = new System.Collections.ArrayList(candidateList[k].Item1);
                                             Dictionary<string, Entry> d2 = new Dictionary<string, Entry>(candidateList[k].Item2);
                                             Entry newEntry = new Entry();
-                                            Tuple<List<Tuple<Entry, double>>, double> tuple1;
+                                            Tuple<List<Tuple<Entry, double>>, double>? tuple1;
 
                                             newEntry.Title = candidateList[k].Item3;
 
-                                            if (this.cacheDictionary.TryGetValue(candidateList[k].Item3, out tuple1))
+                                            if (this.cacheDictionary!.TryGetValue(candidateList[k].Item3, out tuple1))
                                             {
-                                                Tuple<Entry, double> maxTuple = null;
+                                                Tuple<Entry, double>? maxTuple = null;
 
                                                 tuple1.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
                                                 {
@@ -6384,7 +6384,7 @@ namespace Apricot
                                                 {
                                                     StringBuilder sb = new StringBuilder();
 
-                                                    foreach (Match m in Regex.Matches(maxTuple.Item1.Description, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
+                                                    foreach (Match m in Regex.Matches(maxTuple.Item1.Description!, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
                                                     {
                                                         sb.Append(m.Value);
                                                     }
@@ -6467,7 +6467,7 @@ namespace Apricot
                 }
 
                 preparedSequenceList.Clear();
-                this.sequenceStateDictionary.Clear();
+                this.sequenceStateDictionary!.Clear();
 
                 foreach (KeyValuePair<string, string> keyValuePair in stateDictionary)
                 {
@@ -6476,7 +6476,7 @@ namespace Apricot
 
                 for (int j = i - 1; j >= 0; j--)
                 {
-                    LinkedList<Tuple<Sequence, Tuple<LinkedList<string>, HashSet<string>>>> ll;
+                    LinkedList<Tuple<Sequence, Tuple<LinkedList<string>, HashSet<string>>>>? ll;
 
                     if (dataDictionary.TryGetValue(j, out ll))
                     {
@@ -6507,7 +6507,7 @@ namespace Apricot
             {
                 foreach (object o in sourceSequence)
                 {
-                    Sequence sequence = o as Sequence;
+                    Sequence? sequence = o as Sequence;
 
                     if (sequence != null)
                     {
@@ -6540,13 +6540,13 @@ namespace Apricot
 
         public bool TryEnqueue(IEnumerable<Sequence> sequences)
         {
-            var query = from sequence in sequences where this.characterCollection.Any(character => character.Name.Equals(sequence.Owner)) select sequence;
+            var query = from sequence in sequences where this.characterCollection!.Any(character => character.Name!.Equals(sequence.Owner)) select sequence;
 
             if (query.Any())
             {
                 foreach (var sequence in query)
                 {
-                    this.sequenceQueue.Enqueue(sequence);
+                    this.sequenceQueue!.Enqueue(sequence);
                 }
 
                 this.idleTimeSpan = TimeSpan.Zero;
@@ -6557,21 +6557,21 @@ namespace Apricot
             return false;
         }
 
-        public bool TryDequeue(string name, out Sequence sequence)
+        public bool TryDequeue(string name, out Sequence? sequence)
         {
             sequence = null;
 
-            while (this.sequenceQueue.Count > 0)
+            while (this.sequenceQueue!.Count > 0)
             {
-                if (this.sequenceQueue.Peek().Owner.Equals(name))
+                if (this.sequenceQueue!.Peek().Owner!.Equals(name))
                 {
                     sequence = this.sequenceQueue.Dequeue();
 
                     return true;
                 }
-                else if (this.characterCollection.Any(delegate (Character character)
+                else if (this.characterCollection!.Any(delegate (Character character)
                 {
-                    return character.Name.Equals(this.sequenceQueue.Peek().Owner);
+                    return character.Name!.Equals(this.sequenceQueue.Peek().Owner);
                 }))
                 {
                     break;
@@ -6587,15 +6587,15 @@ namespace Apricot
 
         public void Idle()
         {
-            foreach (Sequence sequence in from sequence in Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Idle") select sequence, null) where this.characterCollection.Any(character => character.Name.Equals(sequence.Owner)) select sequence)
+            foreach (Sequence sequence in from sequence in Prepare(from sequence in this.sequenceCollection! where sequence.Name!.Equals("Idle") select sequence, null) where this.characterCollection!.Any(character => character.Name!.Equals(sequence.Owner)) select sequence)
             {
-                this.sequenceQueue.Enqueue(sequence);
+                this.sequenceQueue!.Enqueue(sequence);
             }
         }
 
         public void Tick(DateTime dateTime)
         {
-            IEnumerable<Sequence> preparedSequences = Prepare(from sequence in this.sequenceCollection where sequence.Name.Equals("Tick") select sequence, dateTime.ToString("s", CultureInfo.InvariantCulture));
+            IEnumerable<Sequence> preparedSequences = Prepare(from sequence in this.sequenceCollection where sequence.Name!.Equals("Tick") select sequence, dateTime.ToString("s", CultureInfo.InvariantCulture));
 
             foreach (Sequence sequence in preparedSequences)
             {
@@ -6603,7 +6603,7 @@ namespace Apricot
 
                 foreach (object o in sequence)
                 {
-                    Message message = o as Message;
+                    Message? message = o as Message;
 
                     if (message == null)
                     {
@@ -6703,11 +6703,11 @@ namespace Apricot
 
         public void Learn(string term)
         {
-            Queue<Sequence> sequenceQueue = new Queue<Sequence>(this.sequenceCollection);
+            Queue<Sequence> sequenceQueue = new Queue<Sequence>(this.sequenceCollection!);
             Dictionary<string, HashSet<string>> patternDicitonary = new Dictionary<string, HashSet<string>>();
-            Dictionary<string, bool> attributeDictionary = this.wordCollection.Aggregate<Word, Dictionary<string, bool>>(new Dictionary<string, bool>(), delegate (Dictionary<string, bool> dicitonary, Word word)
+            Dictionary<string, bool> attributeDictionary = this.wordCollection!.Aggregate<Word, Dictionary<string, bool>>(new Dictionary<string, bool>(), delegate (Dictionary<string, bool> dicitonary, Word word)
             {
-                if (word.Name.Equals(term))
+                if (word.Name!.Equals(term))
                 {
                     foreach (string attribute in word.Attributes)
                     {
@@ -6742,11 +6742,11 @@ namespace Apricot
 
                 foreach (object o in sequence1)
                 {
-                    Sequence sequence2 = o as Sequence;
+                    Sequence? sequence2 = o as Sequence;
 
                     if (sequence2 == null)
                     {
-                        Message message = o as Message;
+                        Message? message = o as Message;
 
                         if (message != null)
                         {
@@ -6788,9 +6788,9 @@ namespace Apricot
 
                                     if (s.Equals(Regex.Escape(s)))
                                     {
-                                        HashSet<string> hashSet;
+                                        HashSet<string>? hashSet;
 
-                                        if (patternDicitonary.TryGetValue(sequence1.Owner, out hashSet))
+                                        if (patternDicitonary.TryGetValue(sequence1.Owner!, out hashSet))
                                         {
                                             if (!hashSet.Contains(pattern))
                                             {
@@ -6801,7 +6801,7 @@ namespace Apricot
                                         {
                                             hashSet = new HashSet<string>();
                                             hashSet.Add(pattern);
-                                            patternDicitonary.Add(sequence1.Owner, hashSet);
+                                            patternDicitonary.Add(sequence1.Owner!, hashSet);
                                         }
 
                                         break;
@@ -6849,7 +6849,7 @@ namespace Apricot
                 }
             }
 
-            var query = from sequence in this.sequenceCollection where sequence.Name.Equals("Learn") select sequence;
+            var query = from sequence in this.sequenceCollection where sequence.Name!.Equals("Learn") select sequence;
             HashSet<Sequence> sequenceHashSet = new HashSet<Sequence>();
             HashSet<Message> messageHashSet = new HashSet<Message>();
             
@@ -6862,11 +6862,11 @@ namespace Apricot
                 {
                     foreach (object o in sequence)
                     {
-                        Sequence s = o as Sequence;
+                        Sequence? s = o as Sequence;
 
                         if (s == null)
                         {
-                            Message message = o as Message;
+                            Message? message = o as Message;
 
                             if (message != null && !messageHashSet.Contains(message))
                             {
@@ -6887,7 +6887,7 @@ namespace Apricot
 
                 foreach (object obj in sequence)
                 {
-                    Message message = obj as Message;
+                    Message? message = obj as Message;
 
                     if (message == null)
                     {
@@ -6898,7 +6898,7 @@ namespace Apricot
                         int index = 0;
                         StringBuilder stringBuilder = new StringBuilder();
                         Message newMessage = new Message();
-                        List<Entry> entryList;
+                        List<Entry>? entryList;
 
                         for (Match match = Regex.Match(message.Text, @"(?<1>(?<Open>\{{2})*)\{(?<2>(?:[^{}]|(?<3>(?:(?:\{|}){2})+))+)}(?<4>(?<Close-Open>}{2})*)(?(Open)(?!))(?!})", RegexOptions.CultureInvariant); match.Success; match = match.NextMatch())
                         {
@@ -6948,13 +6948,13 @@ namespace Apricot
                             if (Regex.IsMatch(term, pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline))
                             {
                                 Entry newEntry = new Entry();
-                                Tuple<List<Tuple<Entry, double>>, double> tuple1;
+                                Tuple<List<Tuple<Entry, double>>, double>? tuple1;
 
                                 newEntry.Title = term;
 
-                                if (this.cacheDictionary.TryGetValue(term, out tuple1))
+                                if (this.cacheDictionary!.TryGetValue(term, out tuple1))
                                 {
-                                    Tuple<Entry, double> maxTuple = null;
+                                    Tuple<Entry, double>? maxTuple = null;
                                     double sum = 0;
 
                                     tuple1.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
@@ -6978,7 +6978,7 @@ namespace Apricot
                                     {
                                         StringBuilder sb = new StringBuilder();
 
-                                        foreach (Match m in Regex.Matches(maxTuple.Item1.Description, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
+                                        foreach (Match m in Regex.Matches(maxTuple.Item1.Description!, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
                                         {
                                             sb.Append(m.Value);
                                         }
@@ -7026,7 +7026,7 @@ namespace Apricot
                         newMessage.Speed = message.Speed;
                         newMessage.Duration = message.Duration;
 
-                        if (messageHashSet.Contains(message) && attachmentDictionary.TryGetValue(sequence.Owner, out entryList))
+                        if (messageHashSet.Contains(message) && attachmentDictionary.TryGetValue(sequence.Owner!, out entryList))
                         {
                             entryList.ForEach(delegate (Entry entry)
                             {
@@ -7053,7 +7053,7 @@ namespace Apricot
 
         public void Alert(IEnumerable<Entry> entries)
         {
-            var query = from sequence in this.sequenceCollection where sequence.Name.Equals("Alert") select sequence;
+            var query = from sequence in this.sequenceCollection where sequence.Name!.Equals("Alert") select sequence;
             HashSet<Sequence> sequenceHashSet = new HashSet<Sequence>();
             HashSet<Message> messageHashSet = new HashSet<Message>();
             IEnumerable<Sequence> preparedSequences = Prepare(query, null, delegate (IEnumerable<Sequence> collection)
@@ -7065,11 +7065,11 @@ namespace Apricot
                 {
                     foreach (object o in sequence)
                     {
-                        Sequence s = o as Sequence;
+                        Sequence? s = o as Sequence;
 
                         if (s == null)
                         {
-                            Message message = o as Message;
+                            Message? message = o as Message;
 
                             if (message != null && !messageHashSet.Contains(message))
                             {
@@ -7092,7 +7092,7 @@ namespace Apricot
 
                 foreach (object obj in sequence)
                 {
-                    Message message = obj as Message;
+                    Message? message = obj as Message;
 
                     if (message == null)
                     {
@@ -7140,13 +7140,13 @@ namespace Apricot
             foreach (string term in terms)
             {
                 Entry newEntry = new Entry();
-                Tuple<List<Tuple<Entry, double>>, double> tuple1;
+                Tuple<List<Tuple<Entry, double>>, double>? tuple1;
 
                 newEntry.Title = term;
 
-                if (this.cacheDictionary.TryGetValue(term, out tuple1))
+                if (this.cacheDictionary!.TryGetValue(term, out tuple1))
                 {
-                    Tuple<Entry, double> maxTuple = null;
+                    Tuple<Entry, double>? maxTuple = null;
                     double sum = 0;
 
                     tuple1.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
@@ -7170,7 +7170,7 @@ namespace Apricot
                     {
                         StringBuilder stringBuilder = new StringBuilder();
 
-                        foreach (Match m in Regex.Matches(maxTuple.Item1.Description, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
+                        foreach (Match m in Regex.Matches(maxTuple.Item1.Description!, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
                         {
                             stringBuilder.Append(m.Value);
                         }
@@ -7199,7 +7199,7 @@ namespace Apricot
             });
             entryList.Reverse();
 
-            var query = from sequence in this.sequenceCollection where sequence.Name.Equals("Trend") select sequence;
+            var query = from sequence in this.sequenceCollection where sequence.Name!.Equals("Trend") select sequence;
             HashSet<Sequence> sequenceHashSet = new HashSet<Sequence>();
             HashSet<Message> messageHashSet = new HashSet<Message>();
             IEnumerable<Sequence> preparedSequences = Prepare(query, null, delegate (IEnumerable<Sequence> collection)
@@ -7211,11 +7211,11 @@ namespace Apricot
                 {
                     foreach (object o in sequence)
                     {
-                        Sequence s = o as Sequence;
+                        Sequence? s = o as Sequence;
 
                         if (s == null)
                         {
-                            Message message = o as Message;
+                            Message? message = o as Message;
 
                             if (message != null && !messageHashSet.Contains(message))
                             {
@@ -7238,7 +7238,7 @@ namespace Apricot
 
                 foreach (object obj in sequence)
                 {
-                    Message message = obj as Message;
+                    Message? message = obj as Message;
 
                     if (message == null)
                     {
@@ -7284,11 +7284,11 @@ namespace Apricot
             Dictionary<Uri, Tuple<Entry, double[]>> vectorDictionary = new Dictionary<Uri, Tuple<Entry, double[]>>();
             Dictionary<string, double> idfDictionary = new Dictionary<string, double>();
             int i = 0;
-            Dictionary<char, List<string>> termDictionary = this.wordCollection.Aggregate<Word, Dictionary<char, List<string>>>(new Dictionary<char, List<string>>(), delegate (Dictionary<char, List<string>> d, Word word)
+            Dictionary<char, List<string>> termDictionary = this.wordCollection!.Aggregate<Word, Dictionary<char, List<string>>>(new Dictionary<char, List<string>>(), delegate (Dictionary<char, List<string>> d, Word word)
             {
-                if (word.Name.Length > 0)
+                if (word.Name!.Length > 0)
                 {
-                    List<string> nameList;
+                    List<string>? nameList;
 
                     if (!d.TryGetValue(word.Name[0], out nameList))
                     {
@@ -7303,13 +7303,13 @@ namespace Apricot
             });
             List<Entry> entryList = new List<Entry>();
 
-            foreach (KeyValuePair<string, Tuple<List<Tuple<Entry, double>>, double>> keyValuePair in this.cacheDictionary)
+            foreach (KeyValuePair<string, Tuple<List<Tuple<Entry, double>>, double>> keyValuePair in this.cacheDictionary!)
             {
                 keyValuePair.Value.Item1.ForEach(delegate (Tuple<Entry, double> tuple1)
                 {
-                    Tuple<Entry, double[]> tuple2;
+                    Tuple<Entry, double[]>? tuple2;
 
-                    if (vectorDictionary.TryGetValue(tuple1.Item1.Resource, out tuple2))
+                    if (vectorDictionary.TryGetValue(tuple1.Item1.Resource!, out tuple2))
                     {
                         tuple2.Item2[i] = tuple1.Item2 * keyValuePair.Value.Item2;
                     }
@@ -7318,7 +7318,7 @@ namespace Apricot
                         double[] vector2 = new double[this.cacheDictionary.Count];
 
                         vector2[i] = tuple1.Item2 * keyValuePair.Value.Item2;
-                        vectorDictionary.Add(tuple1.Item1.Resource, Tuple.Create<Entry, double[]>(tuple1.Item1, vector2));
+                        vectorDictionary.Add(tuple1.Item1.Resource!, Tuple.Create<Entry, double[]>(tuple1.Item1, vector2));
                     }
                 });
                 idfDictionary.Add(keyValuePair.Key, keyValuePair.Value.Item2);
@@ -7332,7 +7332,7 @@ namespace Apricot
                 {
                     if (term.Length > 0)
                     {
-                        List<string> termList;
+                        List<string>? termList;
 
                         if (!d.TryGetValue(term[0], out termList))
                         {
@@ -7350,14 +7350,14 @@ namespace Apricot
                 {
                     DbProviderFactory factory = DbProviderFactories.GetFactory(settings.ProviderName);
 
-                    using (IDbConnection connection = factory.CreateConnection())
+                    using (IDbConnection connection = factory.CreateConnection()!)
                     {
                         connection.ConnectionString = settings.ConnectionString;
                         connection.Open();
 
-                        using (IDbCommand command = factory.CreateCommand())
+                        using (IDbCommand command = factory.CreateCommand()!)
                         {
-                            IDataReader reader = null;
+                            IDataReader? reader = null;
 
                             command.Connection = connection;
                             command.CommandText = BuildSelectStatement(query);
@@ -7372,7 +7372,7 @@ namespace Apricot
 
                                     if (!Convert.IsDBNull(reader["Resource"]))
                                     {
-                                        Uri uri;
+                                        Uri? uri;
 
                                         if (Uri.TryCreate((string)reader["Resource"], UriKind.RelativeOrAbsolute, out uri))
                                         {
@@ -7427,7 +7427,7 @@ namespace Apricot
 
                                     if (!isZeroVector)
                                     {
-                                        Entry e = null;
+                                        Entry? e = null;
                                         double maxDistance = 0;
 
                                         foreach (Tuple<Entry, double[]> kvp in vectorDictionary.Values)
@@ -7486,7 +7486,7 @@ namespace Apricot
                 }
             }, TaskCreationOptions.LongRunning).ContinueWith(delegate
             {
-                var q = from sequence in this.sequenceCollection where sequence.Name.Equals("Search") select sequence;
+                var q = from sequence in this.sequenceCollection where sequence.Name!.Equals("Search") select sequence;
                 HashSet<Sequence> sequenceHashSet = new HashSet<Sequence>();
                 HashSet<Message> messageHashSet = new HashSet<Message>();
 
@@ -7499,11 +7499,11 @@ namespace Apricot
                     {
                         foreach (object o in sequence)
                         {
-                            Sequence s = o as Sequence;
+                            Sequence? s = o as Sequence;
 
                             if (s == null)
                             {
-                                Message message = o as Message;
+                                Message? message = o as Message;
 
                                 if (message != null && !messageHashSet.Contains(message))
                                 {
@@ -7524,7 +7524,7 @@ namespace Apricot
 
                     foreach (object o in sequence)
                     {
-                        Message message = o as Message;
+                        Message? message = o as Message;
 
                         if (message == null)
                         {
@@ -7584,13 +7584,13 @@ namespace Apricot
                                 if (Regex.IsMatch(query, pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline))
                                 {
                                     Entry newEntry = new Entry();
-                                    Tuple<List<Tuple<Entry, double>>, double> tuple1;
+                                    Tuple<List<Tuple<Entry, double>>, double>? tuple1;
 
                                     newEntry.Title = query;
 
                                     if (this.cacheDictionary.TryGetValue(query, out tuple1))
                                     {
-                                        Tuple<Entry, double> maxTuple = null;
+                                        Tuple<Entry, double>? maxTuple = null;
                                         double sum = 0;
 
                                         tuple1.Item1.ForEach(delegate (Tuple<Entry, double> tuple2)
@@ -7614,7 +7614,7 @@ namespace Apricot
                                         {
                                             StringBuilder sb = new StringBuilder();
 
-                                            foreach (Match m in Regex.Matches(maxTuple.Item1.Description, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
+                                            foreach (Match m in Regex.Matches(maxTuple.Item1.Description!, "<.+?>", RegexOptions.CultureInvariant | RegexOptions.Singleline))
                                             {
                                                 sb.Append(m.Value);
                                             }
@@ -7690,7 +7690,7 @@ namespace Apricot
 
         public void Suggest(string caption, IEnumerable<Entry> entries)
         {
-            var query = from sequence in this.sequenceCollection where sequence.Name.Equals("Suggest") select sequence;
+            var query = from sequence in this.sequenceCollection where sequence.Name!.Equals("Suggest") select sequence;
             HashSet<Sequence> sequenceHashSet = new HashSet<Sequence>();
             HashSet<Message> messageHashSet = new HashSet<Message>();
 
@@ -7703,11 +7703,11 @@ namespace Apricot
                 {
                     foreach (object o in sequence)
                     {
-                        Sequence s = o as Sequence;
+                        Sequence? s = o as Sequence;
 
                         if (s == null)
                         {
-                            Message message = o as Message;
+                            Message? message = o as Message;
 
                             if (message != null && !messageHashSet.Contains(message))
                             {
@@ -7728,7 +7728,7 @@ namespace Apricot
 
                 foreach (object o in sequence)
                 {
-                    Message message = o as Message;
+                    Message? message = o as Message;
 
                     if (message == null)
                     {
@@ -7847,9 +7847,9 @@ namespace Apricot
         {
             List<string> mergedTermList = new List<string>();
             
-            if (this.activateEntryQueue.Count == 0)
+            if (this.activateEntryQueue!.Count == 0)
             {
-                double[] vector1 = new double[this.cacheDictionary.Count];
+                double[] vector1 = new double[this.cacheDictionary!.Count];
                 Dictionary<Uri, Tuple<Entry, double[]>> vectorDictionary = new Dictionary<Uri, Tuple<Entry, double[]>>();
                 int i = 0;
 
@@ -7859,11 +7859,11 @@ namespace Apricot
 
                     keyValuePair.Value.Item1.ForEach(delegate (Tuple<Entry, double> tuple1)
                     {
-                        Tuple<Entry, double[]> tuple2;
+                        Tuple<Entry, double[]>? tuple2;
 
                         sum += tuple1.Item2;
 
-                        if (vectorDictionary.TryGetValue(tuple1.Item1.Resource, out tuple2))
+                        if (vectorDictionary.TryGetValue(tuple1.Item1.Resource!, out tuple2))
                         {
                             tuple2.Item2[i] = tuple1.Item2 * keyValuePair.Value.Item2;
                         }
@@ -7872,7 +7872,7 @@ namespace Apricot
                             double[] vector2 = new double[this.cacheDictionary.Count];
 
                             vector2[i] = tuple1.Item2 * keyValuePair.Value.Item2;
-                            vectorDictionary.Add(tuple1.Item1.Resource, Tuple.Create<Entry, double[]>(tuple1.Item1, vector2));
+                            vectorDictionary.Add(tuple1.Item1.Resource!, Tuple.Create<Entry, double[]>(tuple1.Item1, vector2));
                         }
                     });
 
@@ -7911,9 +7911,9 @@ namespace Apricot
             {
                 Entry entry = this.activateEntryQueue.Dequeue();
 
-                mergedTermList.AddRange(from kvp in this.cacheDictionary from t in kvp.Value.Item1 where t.Item1.Resource.Equals(entry.Resource) orderby kvp.Value.Item2 * t.Item2 descending select kvp.Key);
+                mergedTermList.AddRange(from kvp in this.cacheDictionary from t in kvp.Value.Item1 where t.Item1.Resource!.Equals(entry.Resource) orderby kvp.Value.Item2 * t.Item2 descending select kvp.Key);
 
-                foreach (string s in from similarEntry in entry.SimilarEntries from kvp in this.cacheDictionary from t in kvp.Value.Item1 where t.Item1.Resource.Equals(similarEntry.Resource) orderby kvp.Value.Item2 * t.Item2 descending select kvp.Key)
+                foreach (string s in from similarEntry in entry.SimilarEntries from kvp in this.cacheDictionary! from t in kvp.Value.Item1 where t.Item1.Resource!.Equals(similarEntry.Resource) orderby kvp.Value.Item2 * t.Item2 descending select kvp.Key)
                 {
                     if (!mergedTermList.Contains(s))
                     {
@@ -7922,16 +7922,16 @@ namespace Apricot
                 }
             }
 
-            List<string> usedTermList = Activate(from sequence in this.sequenceCollection where sequence.Name.Equals("Activate") select sequence, mergedTermList.FindAll(delegate (string term)
+            List<string> usedTermList = Activate(from sequence in this.sequenceCollection where sequence.Name!.Equals("Activate") select sequence, mergedTermList.FindAll(delegate (string term)
             {
-                return !this.recentTermHashSet.Contains(term);
+                return !this.recentTermHashSet!.Contains(term);
             }));
 
             if (usedTermList.Count > 0)
             {
                 usedTermList.ForEach(delegate (string s)
                 {
-                    if (!this.recentTermHashSet.Contains(s))
+                    if (!this.recentTermHashSet!.Contains(s))
                     {
                         this.recentTermHashSet.Add(s);
                     }
@@ -7939,7 +7939,7 @@ namespace Apricot
             }
             else
             {
-                this.recentTermHashSet.Clear();
+                this.recentTermHashSet!.Clear();
             }
         }
 
@@ -7952,13 +7952,13 @@ namespace Apricot
             {
                 foreach (object obj in sequence)
                 {
-                    Message message = obj as Message;
+                    Message? message = obj as Message;
 
                     if (message != null)
                     {
                         foreach (object o in message)
                         {
-                            Entry entry = o as Entry;
+                            Entry? entry = o as Entry;
 
                             if (entry != null)
                             {
@@ -7972,7 +7972,7 @@ namespace Apricot
                                     }
                                 });
 
-                                usedTermList.Add(entry.Title);
+                                usedTermList.Add(entry.Title!);
                             }
                         }
                     }
@@ -8001,8 +8001,8 @@ namespace Apricot
                 while (stringBuilder.Length > 0)
                 {
                     string s1 = stringBuilder.ToString();
-                    List<string> filteredTermList1;
-                    string selectedTerm1 = null;
+                    List<string>? filteredTermList1;
+                    string? selectedTerm1 = null;
 
                     if (dictionary.TryGetValue(s1[0], out filteredTermList1))
                     {
@@ -8022,13 +8022,13 @@ namespace Apricot
                     else
                     {
                         StringBuilder sb = new StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1));
-                        string selectedTerm2 = null;
+                        string? selectedTerm2 = null;
                         int max = 0;
 
                         for (int i = 0; sb.Length > 0 && i < selectedTerm1.Length; i++)
                         {
                             string s2 = sb.ToString();
-                            List<string> filteredTermList2;
+                            List<string>? filteredTermList2;
 
                             if (dictionary.TryGetValue(s2[0], out filteredTermList2))
                             {
@@ -8082,8 +8082,8 @@ namespace Apricot
                 while (stringBuilder.Length > 0)
                 {
                     string s1 = stringBuilder.ToString();
-                    List<string> filteredTermList1;
-                    string selectedTerm1 = null;
+                    List<string>? filteredTermList1;
+                    string? selectedTerm1 = null;
 
                     if (dictionary.TryGetValue(s1[0], out filteredTermList1))
                     {
@@ -8103,13 +8103,13 @@ namespace Apricot
                     else
                     {
                         StringBuilder sb = new StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1));
-                        string selectedTerm2 = null;
+                        string? selectedTerm2 = null;
                         int max = 0;
 
                         for (int i = 0; sb.Length > 0 && i < selectedTerm1.Length; i++)
                         {
                             string s2 = sb.ToString();
-                            List<string> filteredTermList2;
+                            List<string>? filteredTermList2;
 
                             if (dictionary.TryGetValue(s2[0], out filteredTermList2))
                             {
@@ -8184,8 +8184,8 @@ namespace Apricot
                     while (stringBuilder.Length > 0)
                     {
                         string s1 = stringBuilder.ToString();
-                        List<string> filteredTermList1;
-                        string selectedTerm1 = null;
+                        List<string>? filteredTermList1;
+                        string? selectedTerm1 = null;
 
                         if (dictionary.TryGetValue(s1[0], out filteredTermList1))
                         {
@@ -8205,13 +8205,13 @@ namespace Apricot
                         else
                         {
                             StringBuilder sb = new StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1));
-                            string selectedTerm2 = null;
+                            string? selectedTerm2 = null;
                             int max = 0;
 
                             for (int i = 0; sb.Length > 0 && i < selectedTerm1.Length; i++)
                             {
                                 string s2 = sb.ToString();
-                                List<string> filteredTermList2;
+                                List<string>? filteredTermList2;
 
                                 if (dictionary.TryGetValue(s2[0], out filteredTermList2))
                                 {
@@ -8257,8 +8257,8 @@ namespace Apricot
                     while (stringBuilder.Length > 0)
                     {
                         string s1 = stringBuilder.ToString();
-                        List<string> filteredTermList1;
-                        string selectedTerm1 = null;
+                        List<string>? filteredTermList1;
+                        string? selectedTerm1 = null;
 
                         if (dictionary.TryGetValue(s1[0], out filteredTermList1))
                         {
@@ -8278,13 +8278,13 @@ namespace Apricot
                         else
                         {
                             StringBuilder sb = new StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1));
-                            string selectedTerm2 = null;
+                            string? selectedTerm2 = null;
                             int max = 0;
 
                             for (int i = 0; sb.Length > 0 && i < selectedTerm1.Length; i++)
                             {
                                 string s2 = sb.ToString();
-                                List<string> filteredTermList2;
+                                List<string>? filteredTermList2;
 
                                 if (dictionary.TryGetValue(s2[0], out filteredTermList2))
                                 {
@@ -8352,8 +8352,8 @@ namespace Apricot
             while (stringBuilder.Length > 0)
             {
                 string s1 = stringBuilder.ToString();
-                List<string> filteredTermList1;
-                string selectedTerm1 = null;
+                List<string>? filteredTermList1;
+                string? selectedTerm1 = null;
 
                 if (dictionary.TryGetValue(s1[0], out filteredTermList1))
                 {
@@ -8373,13 +8373,13 @@ namespace Apricot
                 else
                 {
                     StringBuilder sb = new StringBuilder(stringBuilder.ToString(1, stringBuilder.Length - 1));
-                    string selectedTerm2 = null;
+                    string? selectedTerm2 = null;
                     int max = 0;
 
                     for (int i = 0; sb.Length > 0 && i < selectedTerm1.Length; i++)
                     {
                         string s2 = sb.ToString();
-                        List<string> filteredTermList2;
+                        List<string>? filteredTermList2;
 
                         if (dictionary.TryGetValue(s2[0], out filteredTermList2))
                         {
@@ -8423,9 +8423,9 @@ namespace Apricot
         private double CosineSimilarity(IEnumerable<double> x, IEnumerable<double> y)
         {
             double epsilon = Math.Pow(10, -8);
-            double sum = 0;
-            double normX = 0;
-            double normY = 0;
+            double sum = 0.0;
+            double normX = 0.0;
+            double normY = 0.0;
 
             for (int i = 0; i < x.Count(); i++)
             {

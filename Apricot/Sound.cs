@@ -4,9 +4,9 @@ namespace Apricot
 {
     public class Sound
     {
-        private string path = null;
+        private string? path = null;
 
-        public string Path
+        public string? Path
         {
             get
             {
@@ -18,7 +18,7 @@ namespace Apricot
             }
         }
 
-        public Sound(string path)
+        public Sound(string? path)
         {
             this.path = path;
         }

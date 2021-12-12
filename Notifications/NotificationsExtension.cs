@@ -11,7 +11,7 @@ namespace Notifications
     [System.Composition.Export(typeof(IExtension))]
     public class NotificationsExtension : IExtension
     {
-        private HttpListener httpListener = null;
+        private HttpListener? httpListener = null;
 
         public async void Attach()
         {
@@ -42,13 +42,13 @@ namespace Notifications
                 try
                 {
                     var httpListenerContext = await this.httpListener.GetContextAsync();
-                    List<Entry> entryList = null;
+                    List<Entry>? entryList = null;
 
                     try
                     {
-                        if (httpListenerContext.Request.HttpMethod.Equals(WebRequestMethods.Http.Post) && httpListenerContext.Request.Url.AbsolutePath.Equals("/alert"))
+                        if (httpListenerContext.Request.HttpMethod.Equals(WebRequestMethods.Http.Post) && httpListenerContext.Request.Url!.AbsolutePath.Equals("/alert"))
                         {
-                            if (httpListenerContext.Request.ContentType.Equals("application/json"))
+                            if (httpListenerContext.Request.ContentType!.Equals("application/json"))
                             {
                                 using (var stream = httpListenerContext.Request.InputStream)
                                 using (var streamReader = new StreamReader(stream))
@@ -156,7 +156,7 @@ namespace Notifications
                                                     {
                                                         foreach (var o in array)
                                                         {
-                                                            var s = o as string;
+                                                            string? s = o as string;
 
                                                             if (s != null)
                                                             {
@@ -241,7 +241,7 @@ namespace Notifications
         /// </summary>
         /// <param name="json">A JSON string.</param>
         /// <returns>An ArrayList, a Hashtable, a double, a string, null, true, or false</returns>
-        public static object JsonDecode(string json)
+        public static object? JsonDecode(string json)
         {
             bool success = true;
 
@@ -254,7 +254,7 @@ namespace Notifications
         /// <param name="json">A JSON string.</param>
         /// <param name="success">Successful parse?</param>
         /// <returns>An ArrayList, a Hashtable, a double, a string, null, true, or false</returns>
-        public static object JsonDecode(string json, ref bool success)
+        public static object? JsonDecode(string json, ref bool success)
         {
             success = true;
 
@@ -262,7 +262,7 @@ namespace Notifications
             {
                 char[] charArray = json.ToCharArray();
                 int index = 0;
-                object value = ParseValue(charArray, ref index, ref success);
+                object? value = ParseValue(charArray, ref index, ref success);
                 return value;
             }
             else
@@ -276,7 +276,7 @@ namespace Notifications
         /// </summary>
         /// <param name="json">A Hashtable / ArrayList</param>
         /// <returns>A JSON encoded string, or null if object 'json' is not serializable</returns>
-        public static string JsonEncode(object json)
+        public static string? JsonEncode(object json)
         {
             StringBuilder builder = new StringBuilder();
             bool success = SerializeValue(json, builder);
@@ -284,7 +284,7 @@ namespace Notifications
             return (success ? builder.ToString() : null);
         }
 
-        protected static Dictionary<string, object> ParseObject(char[] json, ref int index, ref bool success)
+        protected static Dictionary<string, object>? ParseObject(char[] json, ref int index, ref bool success)
         {
             Dictionary<string, object> table = new Dictionary<string, object>();
             int token;
@@ -317,7 +317,7 @@ namespace Notifications
                 else
                 {
                     // name
-                    string name = ParseString(json, ref index, ref success);
+                    string? name = ParseString(json, ref index, ref success);
 
                     if (!success)
                     {
@@ -336,7 +336,7 @@ namespace Notifications
                     }
 
                     // value
-                    object value = ParseValue(json, ref index, ref success);
+                    object? value = ParseValue(json, ref index, ref success);
 
                     if (!success)
                     {
@@ -345,14 +345,14 @@ namespace Notifications
                         return null;
                     }
 
-                    table.Add(name, value);
+                    table.Add(name!, value!);
                 }
             }
 
             return table;
         }
 
-        protected static object[] ParseArray(char[] json, ref int index, ref bool success)
+        protected static object[]? ParseArray(char[] json, ref int index, ref bool success)
         {
             List<object> array = new List<object>();
 
@@ -383,21 +383,21 @@ namespace Notifications
                 }
                 else
                 {
-                    object value = ParseValue(json, ref index, ref success);
+                    object? value = ParseValue(json, ref index, ref success);
 
                     if (!success)
                     {
                         return null;
                     }
 
-                    array.Add(value);
+                    array.Add(value!);
                 }
             }
 
             return array.ToArray();
         }
 
-        protected static object ParseValue(char[] json, ref int index, ref bool success)
+        protected static object? ParseValue(char[] json, ref int index, ref bool success)
         {
             switch (LookAhead(json, index))
             {
@@ -426,7 +426,7 @@ namespace Notifications
             return null;
         }
 
-        protected static string ParseString(char[] json, ref int index, ref bool success)
+        protected static string? ParseString(char[] json, ref int index, ref bool success)
         {
             StringBuilder s = new StringBuilder();
             char c;

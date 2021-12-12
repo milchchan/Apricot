@@ -8,19 +8,19 @@ namespace Apricot
         private bool isRepeat = false;
         private double frameRate = 60;
         private int zIndex = 0;
-        private String type = null;
+        private String? type = null;
         private int framePosition = 0;
-        private Collection<Sprite> spriteCollection = null;
+        private Collection<Sprite>? spriteCollection = null;
 
         public Sprite this[int index]
         {
             get
             {
-                return this.spriteCollection[index];
+                return this.spriteCollection![index];
             }
             set
             {
-                this.spriteCollection[index] = value;
+                this.spriteCollection![index] = value;
             }
         }
 
@@ -60,7 +60,7 @@ namespace Apricot
             }
         }
 
-        public string Type
+        public string? Type
         {
             get
             {
@@ -88,7 +88,7 @@ namespace Apricot
         {
             get
             {
-                return this.spriteCollection.Count > 0;
+                return this.spriteCollection!.Count > 0;
             }
         }
         
@@ -96,7 +96,7 @@ namespace Apricot
         {
             get
             {
-                return this.spriteCollection[this.framePosition];
+                return this.spriteCollection![this.framePosition];
             }
         }
         
@@ -104,7 +104,7 @@ namespace Apricot
         {
             get
             {
-                return this.spriteCollection;
+                return this.spriteCollection!;
             }
             set
             {
@@ -131,7 +131,7 @@ namespace Apricot
         {
             this.framePosition++;
 
-            if (this.framePosition < this.spriteCollection.Count)
+            if (this.framePosition < this.spriteCollection!.Count)
             {
                 return true;
             }

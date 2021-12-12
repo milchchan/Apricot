@@ -5,20 +5,22 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.IO;
-using System.Net;
+using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Apricot
 {
     public class Fetcher
     {
         private Nullable<int> timeout = null;
-        private string userAgent = null;
-        private Collection<Uri> locationList = null;
-        private List<Tuple<string, Uri, IEnumerable<Entry>>> feedList = null;
+        private string? userAgent = null;
+        private Collection<Uri>? locationList = null;
+        private List<Tuple<string?, Uri, IEnumerable<Entry>>>? feedList = null;
 
         public Nullable<int> Timeout
         {
@@ -32,7 +34,7 @@ namespace Apricot
             }
         }
 
-        public string UserAgent
+        public string? UserAgent
         {
             get
             {
@@ -48,123 +50,125 @@ namespace Apricot
         {
             get
             {
-                return this.locationList;
+                return this.locationList!;
             }
         }
 
-        public IEnumerable<Tuple<string, Uri, IEnumerable<Entry>>> Feeds
+        public IEnumerable<Tuple<string?, Uri, IEnumerable<Entry>>> Feeds
         {
             get
             {
-                return this.feedList;
+                return this.feedList!;
             }
         }
 
         public Fetcher()
         {
             this.locationList = new Collection<Uri>();
-            this.feedList = new List<Tuple<string, Uri, IEnumerable<Entry>>>();
+            this.feedList = new List<Tuple<string?, Uri, IEnumerable<Entry>>>();
         }
 
         public int Collect()
         {
-            Queue<Uri> uriQueue = new Queue<Uri>(this.locationList);
-            Queue<Task<Tuple<Uri, Tuple<string, List<Entry>>>>> taskQueue = new Queue<Task<Tuple<Uri, Tuple<string, List<Entry>>>>>();
+            Queue<Uri> uriQueue = new Queue<Uri>(this.locationList!);
+            Queue<Task<Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>>> taskQueue = new Queue<Task<Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>>>();
             List<Tuple<string, List<Entry>>> feedList = new List<Tuple<string, List<Entry>>>();
             int successfulRow = 0;
 
-            this.feedList.Clear();
+            this.feedList!.Clear();
             
             while (uriQueue.Count > 0 || taskQueue.Count > 0)
             {
                 while (uriQueue.Count > 0 && taskQueue.Count < 2 * Environment.ProcessorCount)
                 {
-                    WebRequest webRequest = WebRequest.Create(uriQueue.Dequeue());
-                    Task<Tuple<Uri, Tuple<string, List<Entry>>>> task = new Task<Tuple<Uri, Tuple<string, List<Entry>>>>(delegate (object state)
+                    HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
+                    Task<Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>> task = new Task<Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>>(delegate (object state)
                     {
-                        WebRequest request = (WebRequest)state;
-                        WebResponse response = null;
-                        Stream s = null;
-                        BufferedStream bs = null;
-
-                        try
+                        if (NetworkInterface.GetIsNetworkAvailable())
                         {
-                            response = request.GetResponse();
-                            s = response.GetResponseStream();
-                            bs = new BufferedStream(s);
-                            s = null;
+                            Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                            HttpResponseMessage? response = null;
+                            Stream? s = null;
+                            BufferedStream? bs = null;
 
-                            XmlDocument xmlDocument = new XmlDocument();
-
-                            xmlDocument.Load(bs);
-                            xmlDocument.Normalize();
-
-                            if (xmlDocument.DocumentElement.NamespaceURI.Equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#") && xmlDocument.DocumentElement.LocalName.Equals("RDF"))
+                            try
                             {
-                                return Tuple.Create<Uri, Tuple<string, List<Entry>>>(request.RequestUri, ParseRss10(xmlDocument.DocumentElement));
-                            }
-                            else if (xmlDocument.DocumentElement.Name.Equals("rss"))
-                            {
-                                foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.Attributes)
+                                response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
+
+                                if (response.IsSuccessStatusCode)
                                 {
-                                    if (xmlAttribute.Name.Equals("version"))
-                                    {
-                                        if (xmlAttribute.Value.Equals("2.0"))
-                                        {
-                                            return Tuple.Create<Uri, Tuple<string, List<Entry>>>(request.RequestUri, ParseRss20(xmlDocument.DocumentElement));
-                                        }
+                                    s = response.Content.ReadAsStream();
+                                    bs = new BufferedStream(s);
+                                    s = null;
 
-                                        break;
+                                    XmlDocument xmlDocument = new XmlDocument();
+
+                                    xmlDocument.Load(bs);
+                                    xmlDocument.Normalize();
+
+                                    if (xmlDocument.DocumentElement!.NamespaceURI.Equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#") && xmlDocument.DocumentElement.LocalName.Equals("RDF"))
+                                    {
+                                        return new Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>(ValueTuple.Create<Uri, Tuple<string?, List<Entry>>>(tuple.Item2, ParseRss10(xmlDocument.DocumentElement)));
+                                    }
+                                    else if (xmlDocument.DocumentElement.Name.Equals("rss"))
+                                    {
+                                        foreach (XmlAttribute xmlAttribute in xmlDocument.DocumentElement.Attributes)
+                                        {
+                                            if (xmlAttribute.Name.Equals("version"))
+                                            {
+                                                if (xmlAttribute.Value.Equals("2.0"))
+                                                {
+                                                    return new Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>(ValueTuple.Create<Uri, Tuple<string?, List<Entry>>>(tuple.Item2, ParseRss20(xmlDocument.DocumentElement)));
+                                                }
+
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else if (xmlDocument.DocumentElement.NamespaceURI.Equals("http://www.w3.org/2005/Atom") && xmlDocument.DocumentElement.LocalName.Equals("feed"))
+                                    {
+                                        return new Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>(ValueTuple.Create<Uri, Tuple<string?, List<Entry>>>(tuple.Item2, ParseAtom10(xmlDocument.DocumentElement)));
                                     }
                                 }
                             }
-                            else if (xmlDocument.DocumentElement.NamespaceURI.Equals("http://www.w3.org/2005/Atom") && xmlDocument.DocumentElement.LocalName.Equals("feed"))
+                            finally
                             {
-                                return Tuple.Create<Uri, Tuple<string, List<Entry>>>(request.RequestUri, ParseAtom10(xmlDocument.DocumentElement));
-                            }
-                        }
-                        finally
-                        {
-                            if (bs != null)
-                            {
-                                bs.Close();
-                            }
+                                if (bs != null)
+                                {
+                                    bs.Close();
+                                }
 
-                            if (s != null)
-                            {
-                                s.Close();
-                            }
+                                if (s != null)
+                                {
+                                    s.Close();
+                                }
 
-                            if (response != null)
-                            {
-                                response.Close();
+                                if (response != null)
+                                {
+                                    response.Dispose();
+                                }
                             }
                         }
 
                         return null;
-                    }, webRequest, TaskCreationOptions.LongRunning);
+                    }!, Tuple.Create<HttpClient, Uri>(httpClient, uriQueue.Dequeue()), TaskCreationOptions.LongRunning);
 
                     if (this.timeout.HasValue)
                     {
-                        webRequest.Timeout = this.timeout.Value;
+                        httpClient.Timeout = TimeSpan.FromMilliseconds(this.timeout.Value);
                     }
 
                     if (this.userAgent != null)
                     {
-                        HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                        if (httpWebRequest != null)
-                        {
-                            httpWebRequest.UserAgent = this.userAgent;
-                        }
+                        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", this.userAgent);
                     }
 
                     taskQueue.Enqueue(task);
                     task.Start();
                 }
 
-                Task<Tuple<Uri, Tuple<string, List<Entry>>>>[] tasks = taskQueue.ToArray();
-                int index = Task<IEnumerable<Entry>>.WaitAny(tasks);
+                Task<Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>>[] tasks = taskQueue.ToArray();
+                int index = Task<IEnumerable<Nullable<ValueTuple<Uri, Tuple<string?, List<Entry>>>>>>.WaitAny(tasks);
 
                 taskQueue.Clear();
 
@@ -172,9 +176,9 @@ namespace Apricot
                 {
                     if (index == i)
                     {
-                        if (tasks[i].Exception == null && tasks[i].Result != null)
+                        if (tasks[i].Exception == null && tasks[i].Result.HasValue)
                         {
-                            this.feedList.Add(Tuple.Create<string, Uri, IEnumerable<Entry>>(tasks[i].Result.Item2.Item1, tasks[i].Result.Item1, tasks[i].Result.Item2.Item2));
+                            this.feedList.Add(Tuple.Create<string?, Uri, IEnumerable<Entry>>(tasks[i].Result!.Value.Item2.Item1, tasks[i].Result!.Value.Item1, tasks[i].Result!.Value.Item2.Item2));
                         }
                     }
                     else
@@ -186,27 +190,27 @@ namespace Apricot
 
             foreach (System.Configuration.ConnectionStringSettings settings in System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None).ConnectionStrings.ConnectionStrings)
             {
-                DbProviderFactory factory = DbProviderFactories.GetFactory(settings.ProviderName);
+                DbProviderFactory? factory = DbProviderFactories.GetFactory(settings.ProviderName);
 
-                using (IDbConnection connection = factory.CreateConnection())
+                using (IDbConnection connection = factory.CreateConnection()!)
                 {
                     connection.ConnectionString = settings.ConnectionString;
                     connection.Open();
 
-                    this.feedList.ForEach(delegate (Tuple<string, Uri, IEnumerable<Entry>> feed)
+                    this.feedList.ForEach(delegate (Tuple<string?, Uri, IEnumerable<Entry>> feed)
                     {
                         foreach (Entry entry in feed.Item3)
                         {
                             if (entry.Resource != null)
                             {
-                                string sql = null;
+                                string? sql = null;
 
-                                using (IDbCommand command = factory.CreateCommand())
+                                using (IDbCommand command = factory.CreateCommand()!)
                                 {
                                     command.Connection = connection;
                                     command.CommandText = BuildSelectStatement(entry.Resource);
 
-                                    if ((int)command.ExecuteScalar() == 0)
+                                    if ((int)command.ExecuteScalar()! == 0)
                                     {
                                         sql = BuildInsertStatement(entry);
                                     }
@@ -218,7 +222,7 @@ namespace Apricot
 
                                 if (sql != null)
                                 {
-                                    using (IDbCommand c = factory.CreateCommand())
+                                    using (IDbCommand c = factory.CreateCommand()!)
                                     {
                                         c.Connection = connection;
                                         c.CommandText = sql;
@@ -317,19 +321,19 @@ namespace Apricot
                 updateSqlBuilder.AppendFormat(CultureInfo.InvariantCulture, "Author = '{0}', ", entry.Author.Replace("'", "''"));
             }
 
-            updateSqlBuilder.AppendFormat(CultureInfo.InvariantCulture, "Modified = '{0}' WHERE Resource = '{1}' AND '{2}' > Modified", entry.Modified.ToString("G", DateTimeFormatInfo.InvariantInfo), entry.Resource.ToString().Replace("'", "''"), entry.Modified.ToString("G", DateTimeFormatInfo.InvariantInfo));
+            updateSqlBuilder.AppendFormat(CultureInfo.InvariantCulture, "Modified = '{0}' WHERE Resource = '{1}' AND '{2}' > Modified", entry.Modified.ToString("G", DateTimeFormatInfo.InvariantInfo), entry.Resource!.ToString().Replace("'", "''"), entry.Modified.ToString("G", DateTimeFormatInfo.InvariantInfo));
 
             return updateSqlBuilder.ToString();
         }
 
-        private Tuple<string, List<Entry>> ParseRss10(XmlNode xmlRootNode)
+        private Tuple<string?, List<Entry>> ParseRss10(XmlNode xmlRootNode)
         {
             const string namespaceURI = "http://purl.org/rss/1.0/";
             List<Entry> entryList = new List<Entry>();
-            string title = null;
-            string dcCreator = null;
+            string? title = null;
+            string? dcCreator = null;
             DateTime dcDate = new DateTime(0);
-            Uri imageUri = null;
+            Uri? imageUri = null;
 
             foreach (XmlNode childNode in xmlRootNode.ChildNodes)
             {
@@ -364,7 +368,7 @@ namespace Apricot
                         {
                             if (xmlNode.NamespaceURI.Equals(namespaceURI) && xmlNode.LocalName.Equals("url"))
                             {
-                                Uri uri;
+                                Uri? uri;
 
                                 if (Uri.TryCreate(xmlNode.InnerText, UriKind.Absolute, out uri))
                                 {
@@ -381,8 +385,8 @@ namespace Apricot
                 if (childNode.NamespaceURI.Equals(namespaceURI) && childNode.LocalName.Equals("item"))
                 {
                     Entry entry = new Entry();
-                    string description = null;
-                    string contentEncoded = null;
+                    string? description = null;
+                    string? contentEncoded = null;
 
                     entry.Author = dcCreator;
                     entry.Created = entry.Modified = dcDate;
@@ -396,7 +400,7 @@ namespace Apricot
                         }
                         else if (xmlNode.NamespaceURI.Equals(namespaceURI) && xmlNode.LocalName.Equals("link"))
                         {
-                            Uri uri;
+                            Uri? uri;
 
                             if (Uri.TryCreate(xmlNode.InnerText, UriKind.Absolute, out uri))
                             {
@@ -456,16 +460,16 @@ namespace Apricot
                 }
             }
 
-            return Tuple.Create<string, List<Entry>>(title, entryList);
+            return Tuple.Create<string?, List<Entry>>(title, entryList);
         }
 
-        private Tuple<string, List<Entry>> ParseRss20(XmlNode xmlRootNode)
+        private Tuple<string?, List<Entry>> ParseRss20(XmlNode xmlRootNode)
         {
             List<Entry> entryList = new List<Entry>();
-            string title = null;
-            string webMaster = null;
+            string? title = null;
+            string? webMaster = null;
             DateTime pubDate = new DateTime(0);
-            Uri imageUri = null;
+            Uri? imageUri = null;
 
             foreach (XmlNode childNode in xmlRootNode.ChildNodes)
             {
@@ -514,7 +518,7 @@ namespace Apricot
                     {
                         if (xmlNode.Name.Equals("url"))
                         {
-                            Uri uri;
+                            Uri? uri;
 
                             if (Uri.TryCreate(xmlNode.InnerText, UriKind.Absolute, out uri))
                             {
@@ -547,7 +551,7 @@ namespace Apricot
                                 }
                                 else if (xmlNode.Name.Equals("link"))
                                 {
-                                    Uri uri;
+                                    Uri? uri;
 
                                     if (Uri.TryCreate(xmlNode.InnerText, UriKind.Absolute, out uri))
                                     {
@@ -608,17 +612,17 @@ namespace Apricot
                 }
             }
 
-            return Tuple.Create<string, List<Entry>>(title, entryList);
+            return Tuple.Create<string?, List<Entry>>(title, entryList);
         }
 
-        private Tuple<string, List<Entry>> ParseAtom10(XmlNode xmlRootNode)
+        private Tuple<string?, List<Entry>> ParseAtom10(XmlNode xmlRootNode)
         {
             const string namespaceURI = "http://www.w3.org/2005/Atom";
             List<Entry> entryList = new List<Entry>();
-            string title = null;
-            string author = null;
-            Uri icon = null;
-            Uri logo = null;
+            string? title = null;
+            string? author = null;
+            Uri? icon = null;
+            Uri? logo = null;
             DateTime updated = new DateTime(0);
 
             foreach (XmlNode xmlNode in xmlRootNode.ChildNodes)
@@ -650,7 +654,7 @@ namespace Apricot
                     }
                     else if (xmlNode.LocalName.Equals("icon"))
                     {
-                        Uri uri;
+                        Uri? uri;
 
                         if (Uri.TryCreate(xmlNode.InnerText, UriKind.Absolute, out uri))
                         {
@@ -659,7 +663,7 @@ namespace Apricot
                     }
                     else if (xmlNode.LocalName.Equals("logo"))
                     {
-                        Uri uri;
+                        Uri? uri;
 
                         if (Uri.TryCreate(xmlNode.InnerText, UriKind.Absolute, out uri))
                         {
@@ -673,8 +677,8 @@ namespace Apricot
             {
                 if (xmlEntryNode.NamespaceURI.Equals(namespaceURI) && xmlEntryNode.LocalName.Equals("entry"))
                 {
-                    string summary = null;
-                    string content = null;
+                    string? summary = null;
+                    string? content = null;
                     Entry entry = new Entry();
 
                     entry.Created = entry.Modified = updated;
@@ -717,10 +721,10 @@ namespace Apricot
                             }
                             else if (xmlNode.LocalName.Equals("link"))
                             {
-                                string href = null;
-                                string rel = null;
+                                string? href = null;
+                                string? rel = null;
 
-                                foreach (XmlAttribute xmlAttribute in xmlNode.Attributes)
+                                foreach (XmlAttribute xmlAttribute in xmlNode.Attributes!)
                                 {
                                     if (xmlAttribute.Name.Equals("href"))
                                     {
@@ -734,7 +738,7 @@ namespace Apricot
 
                                 if (href != null && (rel == null ? true : rel.Equals("alternate")))
                                 {
-                                    Uri uri;
+                                    Uri? uri;
 
                                     if (Uri.TryCreate(href, UriKind.Absolute, out uri))
                                     {
@@ -793,7 +797,7 @@ namespace Apricot
                 }
             }
 
-            return Tuple.Create<string, List<Entry>>(title, entryList);
+            return Tuple.Create<string?, List<Entry>>(title, entryList);
         }
 
         private DateTime ParseRfc822(string s)

@@ -9,11 +9,11 @@ namespace Apricot
     [KnownType(typeof(AttributeCollection<string>))]
     public class Word
     {
-        private string name = null;
-        private AttributeCollection<string> attributeCollection = null;
+        private string? name = null;
+        private AttributeCollection<string>? attributeCollection = null;
 
         [DataMember(Order = 0)]
-        public string Name
+        public string? Name
         {
             get
             {
@@ -29,7 +29,7 @@ namespace Apricot
         {
             get
             {
-                return this.attributeCollection.Count > 0;
+                return this.attributeCollection!.Count > 0;
             }
         }
 
@@ -38,7 +38,7 @@ namespace Apricot
         {
             get
             {
-                return this.attributeCollection;
+                return this.attributeCollection!;
             }
             set
             {
@@ -54,13 +54,13 @@ namespace Apricot
         [CollectionDataContract(Name = "Attributes", Namespace = "", ItemName = "string")]
         public class AttributeCollection<T> : ICollection<T>
         {
-            private List<T> attributeList = null;
+            private List<T>? attributeList = null;
 
             public int Count
             {
                 get
                 {
-                    return this.attributeList.Count;
+                    return this.attributeList!.Count;
                 }
             }
 
@@ -68,7 +68,7 @@ namespace Apricot
             {
                 get
                 {
-                    return ((ICollection<T>)this.attributeList).IsReadOnly;
+                    return ((ICollection<T>)this.attributeList!).IsReadOnly;
                 }
             }
 
@@ -79,37 +79,37 @@ namespace Apricot
 
             public void Add(T item)
             {
-                this.attributeList.Add(item);
+                this.attributeList!.Add(item);
             }
 
             public void Clear()
             {
-                this.attributeList.Clear();
+                this.attributeList!.Clear();
             }
 
             public bool Contains(T item)
             {
-                return this.attributeList.Contains(item);
+                return this.attributeList!.Contains(item);
             }
 
             public void CopyTo(T[] array, int arrayIndex)
             {
-                this.attributeList.CopyTo(array, arrayIndex);
+                this.attributeList!.CopyTo(array, arrayIndex);
             }
 
             public IEnumerator<T> GetEnumerator()
             {
-                return this.attributeList.GetEnumerator();
+                return this.attributeList!.GetEnumerator();
             }
 
             public bool Remove(T item)
             {
-                return this.attributeList.Remove(item);
+                return this.attributeList!.Remove(item);
             }
 
             IEnumerator IEnumerable.GetEnumerator()
             {
-                return this.attributeList.GetEnumerator();
+                return this.attributeList!.GetEnumerator();
             }
         }
     }

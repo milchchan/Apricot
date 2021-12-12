@@ -6,16 +6,16 @@ namespace Apricot
 {
     public class Filter
     {
-        private Random random = null;
-        private List<double[]> inputVectorList = null;
-        private List<double[]> outputVectorList = null;
+        private Random? random = null;
+        private List<double[]>? inputVectorList = null;
+        private List<double[]>? outputVectorList = null;
         private int maxIterations = 10000;
         private int iterations = 0;
         private int width = 10;
         private int height = 10;
-        private Dictionary<String, int> labelDictionary = null;
-        private Node<double> rootNode = null;
-        private Dictionary<Node<double>, string> nodeDictionary = null;
+        private Dictionary<String, int>? labelDictionary = null;
+        private Node<double>? rootNode = null;
+        private Dictionary<Node<double>, string>? nodeDictionary = null;
 
         public int MaxIterations
         {
@@ -64,22 +64,22 @@ namespace Apricot
 
         public void Add(string label, double[] vector)
         {
-            this.inputVectorList.Add(vector);
-            this.labelDictionary.Add(label, this.inputVectorList.IndexOf(vector));
+            this.inputVectorList!.Add(vector);
+            this.labelDictionary!.Add(label, this.inputVectorList.IndexOf(vector));
         }
 
         public void Remove(string label)
         {
-            this.inputVectorList.RemoveAt(this.labelDictionary[label]);
-            this.labelDictionary.Remove(label);
+            this.inputVectorList!.RemoveAt(this.labelDictionary![label]);
+            this.labelDictionary!.Remove(label);
         }
 
         public void Reset()
         {
-            int dimension = this.inputVectorList.Count > 0 ? this.inputVectorList[0].Length : 0;
+            int dimension = this.inputVectorList!.Count > 0 ? this.inputVectorList[0].Length : 0;
 
             this.iterations = 0;
-            this.outputVectorList.Clear();
+            this.outputVectorList!.Clear();
 
             for (int i = 0; i < this.width * this.height; i++)
             {
@@ -87,7 +87,7 @@ namespace Apricot
 
                 for (int j = 0; j < dimension; j++)
                 {
-                    vector[j] = this.random.NextDouble();
+                    vector[j] = this.random!.NextDouble();
                 }
 
                 this.outputVectorList.Add(vector);
@@ -102,8 +102,8 @@ namespace Apricot
 
             while (iterations > t++)
             {
-                int index = this.random.Next(this.inputVectorList.Count);
-                Nullable<int> winner = FindBestMatchingUnit(this.outputVectorList, this.inputVectorList[index]); // Use Winner-take-all model.
+                int index = this.random!.Next(this.inputVectorList!.Count);
+                Nullable<int> winner = FindBestMatchingUnit(this.outputVectorList!, this.inputVectorList[index]); // Use Winner-take-all model.
 
                 if (winner.HasValue)
                 {
@@ -111,7 +111,7 @@ namespace Apricot
                     int winnerM = winner.Value / this.width;
                     int dimension = this.inputVectorList[index].Length;
 
-                    for (int i = 0; i < this.outputVectorList.Count; i++)
+                    for (int i = 0; i < this.outputVectorList!.Count; i++)
                     {
                         double h = Neighborhood(i % this.width, i / this.width, winnerN, winnerM, this.width, this.height, this.iterations + t, this.maxIterations);
 
@@ -129,10 +129,10 @@ namespace Apricot
 
         public double GetDistance(string label1, string label2)
         {
-            double[] label1Vector = this.inputVectorList[this.labelDictionary[label1]];
-            double[] label2Vector = this.inputVectorList[this.labelDictionary[label2]];
-            Nullable<int> index1 = FindBestMatchingUnit(this.outputVectorList, label1Vector);
-            Nullable<int> index2 = FindBestMatchingUnit(this.outputVectorList, label2Vector);
+            double[] label1Vector = this.inputVectorList![this.labelDictionary![label1]]!;
+            double[] label2Vector = this.inputVectorList[this.labelDictionary[label2]]!;
+            Nullable<int> index1 = FindBestMatchingUnit(this.outputVectorList!, label1Vector);
+            Nullable<int> index2 = FindBestMatchingUnit(this.outputVectorList!, label2Vector);
 
             if (index1.HasValue && index2.HasValue)
             {
@@ -199,11 +199,11 @@ namespace Apricot
         {
             List<Node<double>> nodeList = new List<Node<double>>();
 
-            this.nodeDictionary.Clear();
+            this.nodeDictionary!.Clear();
 
-            foreach (string label in this.labelDictionary.Keys)
+            foreach (string label in this.labelDictionary!.Keys)
             {
-                Nullable<int> i = FindBestMatchingUnit(this.outputVectorList, this.inputVectorList[this.labelDictionary[label]]);
+                Nullable<int> i = FindBestMatchingUnit(this.outputVectorList!, this.inputVectorList![this.labelDictionary[label]]);
 
                 if (i.HasValue)
                 {
@@ -228,9 +228,9 @@ namespace Apricot
         {
             int index;
 
-            if (this.labelDictionary.TryGetValue(label, out index))
+            if (this.labelDictionary!.TryGetValue(label, out index))
             {
-                return Query(this.inputVectorList[index], width, height);
+                return Query(this.inputVectorList![index], width, height);
             }
 
             return Enumerable.Empty<string>();
@@ -238,7 +238,7 @@ namespace Apricot
 
         public IEnumerable<string> Query(double[] vector, int width, int height)
         {
-            Nullable<int> i = FindBestMatchingUnit(this.outputVectorList, vector);
+            Nullable<int> i = FindBestMatchingUnit(this.outputVectorList!, vector);
 
             if (i.HasValue)
             {
@@ -262,9 +262,9 @@ namespace Apricot
 
                 foreach (Node<double> node in Query(this.rootNode, location, size, 0))
                 {
-                    string label;
+                    string? label;
 
-                    if (this.nodeDictionary.TryGetValue(node, out label))
+                    if (this.nodeDictionary!.TryGetValue(node, out label))
                     {
                         yield return label;
                     }
@@ -276,7 +276,7 @@ namespace Apricot
         {
             /// Orthogonal range search in a K-d tree.
             bool withinRange = true;
-            int k = node.Vector.Length;
+            int k = node.Vector!.Length;
             int axis = depth % k;
 
             for (int i = 0; i < node.Vector.Length; i++)
@@ -311,7 +311,7 @@ namespace Apricot
             }
         }
 
-        private Node<double> KdTree(List<Node<double>> nodeList, int depth)
+        private Node<double>? KdTree(List<Node<double>> nodeList, int depth)
         {
             /// K-d tree (k-dimensional tree).
             if (nodeList.Count == 0)
@@ -319,12 +319,12 @@ namespace Apricot
                 return null;
             }
 
-            int k = nodeList[0].Vector.Length;
+            int k = nodeList[0].Vector!.Length;
             int axis = depth % k;
 
             nodeList.Sort(delegate (Node<double> n1, Node<double> n2)
             {
-                if (n1.Vector[axis] > n2.Vector[axis])
+                if (n1.Vector![axis] > n2.Vector![axis])
                 {
                     return 1;
                 }
@@ -370,12 +370,12 @@ namespace Apricot
 
         private class Node<T>
         {
-            Node<T> parentNode = null;
-            Node<T> leftChildNode = null;
-            Node<T> rightChildNode = null;
-            T[] vector = null;
+            Node<T>? parentNode = null;
+            Node<T>? leftChildNode = null;
+            Node<T>? rightChildNode = null;
+            T[]? vector = null;
 
-            public Node<T> Parent
+            public Node<T>? Parent
             {
                 get
                 {
@@ -387,7 +387,7 @@ namespace Apricot
                 }
             }
 
-            public Node<T> LeftChild
+            public Node<T>? LeftChild
             {
                 get
                 {
@@ -399,7 +399,7 @@ namespace Apricot
                 }
             }
 
-            public Node<T> RightChild
+            public Node<T>? RightChild
             {
                 get
                 {
@@ -411,7 +411,7 @@ namespace Apricot
                 }
             }
 
-            public T[] Vector
+            public T[]? Vector
             {
                 get
                 {

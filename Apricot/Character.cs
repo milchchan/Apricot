@@ -10,18 +10,18 @@ namespace Apricot
     [KnownType(typeof(TypeCollection<string>))]
     public class Character
     {
-        private string name = null;
+        private string? name = null;
         private System.Windows.Point origin = new System.Windows.Point(0, 0);
         private System.Windows.Point baseLocation = new System.Windows.Point(0, 0);
         private Point<double> location = new Point<double>(0, 0);
         private System.Windows.Size size = new System.Windows.Size(0, 0);
         private bool mirror = false;
-        private TypeCollection<string> typeCollection = null;
+        private TypeCollection<string>? typeCollection = null;
         private int likes = 0;
-        private string script = null;
+        private string? script = null;
 
         [DataMember(Order = 0)]
-        public string Name
+        public string? Name
         {
             get
             {
@@ -99,7 +99,7 @@ namespace Apricot
         {
             get
             {
-                return this.typeCollection.Count > 0;
+                return this.typeCollection!.Count > 0;
             }
         }
 
@@ -108,7 +108,7 @@ namespace Apricot
         {
             get
             {
-                return this.typeCollection;
+                return this.typeCollection!;
             }
             set
             {
@@ -130,7 +130,7 @@ namespace Apricot
         }
 
         [DataMember(Order = 5)]
-        public string Script
+        public string? Script
         {
             get
             {
@@ -189,13 +189,13 @@ namespace Apricot
         [CollectionDataContract(Name = "Types", Namespace = "", ItemName = "string")]
         public class TypeCollection<T> : ICollection<T>
         {
-            private List<T> typeList = null;
+            private List<T>? typeList = null;
 
             public int Count
             {
                 get
                 {
-                    return this.typeList.Count;
+                    return this.typeList!.Count;
                 }
             }
 
@@ -203,7 +203,7 @@ namespace Apricot
             {
                 get
                 {
-                    return ((ICollection<T>)this.typeList).IsReadOnly;
+                    return ((ICollection<T>)this.typeList!).IsReadOnly;
                 }
             }
 
@@ -214,37 +214,37 @@ namespace Apricot
 
             public void Add(T item)
             {
-                this.typeList.Add(item);
+                this.typeList!.Add(item);
             }
 
             public void Clear()
             {
-                this.typeList.Clear();
+                this.typeList!.Clear();
             }
 
             public bool Contains(T item)
             {
-                return this.typeList.Contains(item);
+                return this.typeList!.Contains(item);
             }
 
             public void CopyTo(T[] array, int arrayIndex)
             {
-                this.typeList.CopyTo(array, arrayIndex);
+                this.typeList!.CopyTo(array, arrayIndex);
             }
 
             public IEnumerator<T> GetEnumerator()
             {
-                return this.typeList.GetEnumerator();
+                return this.typeList!.GetEnumerator();
             }
 
             public bool Remove(T item)
             {
-                return this.typeList.Remove(item);
+                return this.typeList!.Remove(item);
             }
 
             IEnumerator IEnumerable.GetEnumerator()
             {
-                return this.typeList.GetEnumerator();
+                return this.typeList!.GetEnumerator();
             }
         }
     }

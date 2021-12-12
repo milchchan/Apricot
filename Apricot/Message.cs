@@ -5,10 +5,10 @@ namespace Apricot
 {
     public class Message : System.Collections.IEnumerable
     {
-        private System.Collections.ArrayList inlineList = null;
+        private System.Collections.ArrayList? inlineList = null;
         private double speed = 25;
         private TimeSpan duration = TimeSpan.FromSeconds(5);
-        private Collection<Entry> attachedEntryCollection = null;
+        private Collection<Entry>? attachedEntryCollection = null;
 
         public string Text
         {
@@ -16,13 +16,13 @@ namespace Apricot
             {
                 System.Text.StringBuilder stringBuilder = new System.Text.StringBuilder();
 
-                foreach (object o in this.inlineList)
+                foreach (object o in this.inlineList!)
                 {
-                    string s = o as string;
+                    string? s = o as string;
 
                     if (s == null)
                     {
-                        Entry entry = o as Entry;
+                        Entry? entry = o as Entry;
 
                         if (entry == null)
                         {
@@ -71,7 +71,7 @@ namespace Apricot
         {
             get
             {
-                return this.attachedEntryCollection.Count > 0;
+                return this.attachedEntryCollection!.Count > 0;
             }
         }
 
@@ -79,7 +79,7 @@ namespace Apricot
         {
             get
             {
-                return this.attachedEntryCollection;
+                return this.attachedEntryCollection!;
             }
             set
             {
@@ -95,22 +95,22 @@ namespace Apricot
 
         public System.Collections.IEnumerator GetEnumerator()
         {
-            return this.inlineList.GetEnumerator();
+            return this.inlineList!.GetEnumerator();
         }
 
         public void Add(object o)
         {
-            this.inlineList.Add(o);
+            this.inlineList!.Add(o);
         }
 
         public void Remove(object o)
         {
-            this.inlineList.Remove(o);
+            this.inlineList!.Remove(o);
         }
 
         public void Clear()
         {
-            this.inlineList.Clear();
+            this.inlineList!.Clear();
         }
     }
 }

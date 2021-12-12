@@ -6,11 +6,11 @@ namespace Apricot
     [DataContract(Namespace = "")]
     public class Source
     {
-        private string name = null;
-        private Uri location = null;
+        private string? name = null;
+        private Uri? location = null;
 
         [DataMember(Order = 0)]
-        public string Name
+        public string? Name
         {
             get
             {
@@ -23,7 +23,7 @@ namespace Apricot
         }
 
         [DataMember(Order = 1)]
-        public Uri Location
+        public Uri? Location
         {
             get
             {

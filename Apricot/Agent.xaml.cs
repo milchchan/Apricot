@@ -20,29 +20,29 @@ using System.Xml.XPath;
 namespace Apricot
 {
     /// <summary>
-    /// Interaction logic for Agent.xaml
+    /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class Agent : Window
     {
-        public event EventHandler<EventArgs> DrawClipboard = null;
+        public event EventHandler<EventArgs>? DrawClipboard = null;
         private readonly double frameRate = 60;
         private Nullable<IntPtr> nextClipboardViewer = null;
         private Nullable<int> hotKeyID = null;
-        private Balloon balloon = null;
-        private string characterName = null;
-        private Dictionary<string, BitmapImage> cachedBitmapImageDictionary = null;
-        private List<Motion> cachedMotionList = null;
-        private Dictionary<Storyboard, Window> fadeStoryboardDictionary = null;
-        private Storyboard scaleStoryboard = null;
-        private Storyboard mirrorStoryboard = null;
-        private Dictionary<Image, Storyboard> imageStoryboardDictionary = null;
+        private Balloon? balloon = null;
+        private string? characterName = null;
+        private Dictionary<string, BitmapImage>? cachedBitmapImageDictionary = null;
+        private List<Motion>? cachedMotionList = null;
+        private Dictionary<Storyboard, Window>? fadeStoryboardDictionary = null;
+        private Storyboard? scaleStoryboard = null;
+        private Storyboard? mirrorStoryboard = null;
+        private Dictionary<Image, Storyboard>? imageStoryboardDictionary = null;
         private double opacity = 1;
         private double scale = 1;
         private Nullable<Point> mouseDownPosition = null;
         private bool isMute = false;
         private bool isVisible = true;
-        private System.Collections.Queue queue = null;
-        private Queue<Motion> motionQueue = null;
+        private System.Collections.Queue? queue = null;
+        private Queue<Motion>? motionQueue = null;
         private bool isFirst = true;
         private bool isLast = false;
         private DateTime baseDateTime;
@@ -51,7 +51,7 @@ namespace Apricot
         {
             get
             {
-                return this.balloon;
+                return this.balloon!;
             }
         }
 
@@ -94,7 +94,7 @@ namespace Apricot
                 {
                     foreach (Window window in Application.Current.Windows)
                     {
-                        Agent agent = window as Agent;
+                        Agent? agent = window as Agent;
 
                         if (agent != null)
                         {
@@ -103,7 +103,7 @@ namespace Apricot
                             Storyboard storyboard1 = new Storyboard();
                             DoubleAnimation doubleAnimation1 = new DoubleAnimation(agent.Opacity, agent.opacity, TimeSpan.FromMilliseconds(500));
 
-                            foreach (KeyValuePair<Storyboard, Window> kvp in agent.fadeStoryboardDictionary)
+                            foreach (KeyValuePair<Storyboard, Window> kvp in agent.fadeStoryboardDictionary!)
                             {
                                 kvp.Key.Stop(kvp.Value);
                             }
@@ -133,7 +133,7 @@ namespace Apricot
                                     storyboard1.Remove(agent);
                                     agent.fadeStoryboardDictionary.Remove(storyboard1);
                                 }
-                            });
+                            }!);
 
                             storyboard1.Children.Add(doubleAnimation1);
 
@@ -142,7 +142,7 @@ namespace Apricot
                             agent.fadeStoryboardDictionary.Add(storyboard1, agent);
                             agent.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, true);
 
-                            if (agent.balloon.Opacity != 1)
+                            if (agent.balloon!.Opacity != 1)
                             {
                                 Storyboard storyboard2 = new Storyboard();
                                 DoubleAnimation doubleAnimation2 = new DoubleAnimation(agent.balloon.Opacity, 1, TimeSpan.FromMilliseconds(500));
@@ -159,7 +159,7 @@ namespace Apricot
                                         storyboard2.Remove(agent.balloon);
                                         agent.fadeStoryboardDictionary.Remove(storyboard2);
                                     }
-                                });
+                                }!);
 
                                 storyboard2.Children.Add(doubleAnimation2);
 
@@ -188,7 +188,7 @@ namespace Apricot
                 {
                     foreach (Window window in Application.Current.Windows)
                     {
-                        Agent agent = window as Agent;
+                        Agent? agent = window as Agent;
 
                         if (agent != null)
                         {
@@ -283,7 +283,7 @@ namespace Apricot
                                         storyboard.Remove(agent.LayoutRoot);
                                         agent.scaleStoryboard = null;
                                     }
-                                });
+                                }!);
                                 storyboard.Children.Add(doubleAnimation1);
                                 storyboard.Children.Add(doubleAnimation2);
                                 storyboard.Children.Add(doubleAnimation3);
@@ -310,7 +310,7 @@ namespace Apricot
             {
                 foreach (Window window in Application.Current.Windows)
                 {
-                    Agent agent = window as Agent;
+                    Agent? agent = window as Agent;
 
                     if (agent != null)
                     {
@@ -348,7 +348,7 @@ namespace Apricot
             {
                 foreach (Window window in Application.Current.Windows)
                 {
-                    Agent agent = window as Agent;
+                    Agent? agent = window as Agent;
 
                     if (agent != null)
                     {
@@ -389,7 +389,7 @@ namespace Apricot
             this.ContextMenu.Items.Add(exitMenuItem);
             this.ContextMenu.Opened += new RoutedEventHandler(delegate
             {
-                Agent agent = Application.Current.MainWindow as Agent;
+                Agent? agent = Application.Current.MainWindow as Agent;
 
                 if (agent != null)
                 {
@@ -412,14 +412,14 @@ namespace Apricot
                     List<MenuItem> characterMenuItemList = new List<MenuItem>(charactersMenuItem.Items.Cast<MenuItem>());
                     HashSet<string> pathHashSet = new HashSet<string>();
                     LinkedList<Tuple<Character, string>> characterLinkedList = new LinkedList<Tuple<Character, string>>();
-                    string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                    string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
                     Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
-                    List<Tuple<string, string, string>> namePathList = new List<Tuple<string, string, string>>();
+                    List<Tuple<string, string, string?>> namePathList = new List<Tuple<string, string, string?>>();
                     bool likeRequired = (DateTime.Now - this.baseDateTime).TotalMinutes / 30 >= 1 ? true : false;
 
                     foreach (Character character in Script.Instance.Characters)
                     {
-                        string path = Path.IsPathRooted(character.Script) ? character.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), character.Script);
+                        string path = Path.IsPathRooted(character.Script) ? character.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, character.Script!);
 
                         if (!pathHashSet.Contains(path))
                         {
@@ -429,9 +429,9 @@ namespace Apricot
                         characterLinkedList.AddLast(Tuple.Create<Character, string>(character, path));
                     }
 
-                    foreach (Tuple<bool, string> tuple1 in (from filename in Directory.Exists(dataDirectory) ? Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(dataDirectory, "*", SearchOption.AllDirectories)) : Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "*", SearchOption.AllDirectories) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).Concat(from path in pathHashSet select Tuple.Create<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)))
+                    foreach (Tuple<bool, string> tuple1 in (from filename in Directory.Exists(dataDirectory) ? Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(dataDirectory, "*", SearchOption.AllDirectories)) : Directory.EnumerateFiles(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, "*", SearchOption.AllDirectories) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).Concat(from path in pathHashSet select Tuple.Create<bool, string>(Path.GetExtension(path).Equals(".zip", StringComparison.OrdinalIgnoreCase), path)))
                     {
-                        if (!namePathList.Exists(delegate (Tuple<string, string, string> tuple2)
+                        if (!namePathList.Exists(delegate (Tuple<string, string, string?> tuple2)
                         {
                             return tuple2.Item2.Equals(tuple1.Item2);
                         }) && !pathDictionary.Values.Any(delegate (List<Tuple<string, string>> tupleList1)
@@ -444,7 +444,7 @@ namespace Apricot
                         {
                             if (tuple1.Item1)
                             {
-                                FileStream fs = null;
+                                FileStream? fs = null;
 
                                 try
                                 {
@@ -459,7 +459,7 @@ namespace Apricot
                                             string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                                             System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
                                             string key;
-                                            List<Tuple<ZipArchiveEntry, string>> tupleList1;
+                                            List<Tuple<ZipArchiveEntry, string>>? tupleList1;
 
                                             if (match.Success)
                                             {
@@ -498,12 +498,12 @@ namespace Apricot
                                             if (pathHashSet.Contains(tuple1.Item2))
                                             {
                                                 int length = namePathList.Count;
-                                                Tuple<string, List<Tuple<string, string>>> tuple2 = null;
-                                                Tuple<string, List<Tuple<string, string>>> tuple3 = null;
+                                                Tuple<string, List<Tuple<string, string>>>? tuple2 = null;
+                                                Tuple<string, List<Tuple<string, string>>>? tuple3 = null;
 
                                                 tupleList1.ForEach(delegate (Tuple<ZipArchiveEntry, string> tuple4)
                                                 {
-                                                    Stream stream = null;
+                                                    Stream? stream = null;
                                                     Tuple<string, List<Tuple<string, string>>> tupleList2 = Tuple.Create<string, List<Tuple<string, string>>>(tuple4.Item1.FullName, new List<Tuple<string, string>>());
 
                                                     try
@@ -533,7 +533,7 @@ namespace Apricot
                                                         {
                                                             if (tuple5.Item1.Equals(character.Name))
                                                             {
-                                                                namePathList.Add(Tuple.Create<string, string, string>(tuple5.Item1, tuple5.Item2, tupleList2.Item1));
+                                                                namePathList.Add(Tuple.Create<string, string, string?>(tuple5.Item1, tuple5.Item2, tupleList2.Item1));
 
                                                                 break;
                                                             }
@@ -558,7 +558,7 @@ namespace Apricot
                                                         {
                                                             tuple3.Item2.ForEach(delegate (Tuple<string, string> tuple4)
                                                             {
-                                                                namePathList.Add(Tuple.Create<string, string, string>(tuple4.Item1, tuple4.Item2, tuple3.Item1));
+                                                                namePathList.Add(Tuple.Create<string, string, string?>(tuple4.Item1, tuple4.Item2, tuple3.Item1));
                                                             });
                                                         }
                                                         else
@@ -579,7 +579,7 @@ namespace Apricot
                                                             {
                                                                 tuple3.Item2.ForEach(delegate (Tuple<string, string> tuple4)
                                                                 {
-                                                                    namePathList.Add(Tuple.Create<string, string, string>(tuple4.Item1, tuple4.Item2, tuple3.Item1));
+                                                                    namePathList.Add(Tuple.Create<string, string, string?>(tuple4.Item1, tuple4.Item2, tuple3.Item1));
                                                                 });
                                                             }
                                                         }
@@ -589,7 +589,7 @@ namespace Apricot
                                                 {
                                                     tuple2.Item2.ForEach(delegate (Tuple<string, string> tuple4)
                                                     {
-                                                        namePathList.Add(Tuple.Create<string, string, string>(tuple4.Item1, tuple4.Item2, tuple2.Item1));
+                                                        namePathList.Add(Tuple.Create<string, string, string?>(tuple4.Item1, tuple4.Item2, tuple2.Item1));
                                                     });
                                                 }
                                                 else
@@ -610,7 +610,7 @@ namespace Apricot
                                                     {
                                                         tuple2.Item2.ForEach(delegate (Tuple<string, string> tuple4)
                                                         {
-                                                            namePathList.Add(Tuple.Create<string, string, string>(tuple4.Item1, tuple4.Item2, tuple2.Item1));
+                                                            namePathList.Add(Tuple.Create<string, string, string?>(tuple4.Item1, tuple4.Item2, tuple2.Item1));
                                                         });
                                                     }
                                                 }
@@ -620,19 +620,19 @@ namespace Apricot
                                                 Tuple<ZipArchiveEntry, string> tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                 {
                                                     return tuple3.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
-                                                });
+                                                })!;
 
                                                 if (tuple2 == null)
                                                 {
                                                     tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                     {
                                                         return tuple3.Item2.Equals(System.Globalization.CultureInfo.InvariantCulture.TwoLetterISOLanguageName);
-                                                    });
+                                                    })!;
 
                                                     if (tuple2 != null)
                                                     {
-                                                        Stream stream = null;
-                                                        List<Tuple<string, string, string>> tupleList2 = new List<Tuple<string, string, string>>();
+                                                        Stream? stream = null;
+                                                        List<Tuple<string, string, string?>> tupleList2 = new List<Tuple<string, string, string?>>();
 
                                                         try
                                                         {
@@ -640,7 +640,7 @@ namespace Apricot
 
                                                             foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                                             {
-                                                                tupleList2.Add(Tuple.Create<string, string, string>(attribute, tuple1.Item2, tuple2.Item1.FullName));
+                                                                tupleList2.Add(Tuple.Create<string, string, string?>(attribute, tuple1.Item2, tuple2.Item1.FullName));
                                                             }
                                                         }
                                                         catch
@@ -660,8 +660,8 @@ namespace Apricot
                                                 }
                                                 else
                                                 {
-                                                    Stream stream = null;
-                                                    List<Tuple<string, string, string>> tupleList2 = new List<Tuple<string, string, string>>();
+                                                    Stream? stream = null;
+                                                    List<Tuple<string, string, string?>> tupleList2 = new List<Tuple<string, string, string?>>();
 
                                                     try
                                                     {
@@ -669,7 +669,7 @@ namespace Apricot
 
                                                         foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(stream).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                                         {
-                                                            tupleList2.Add(Tuple.Create<string, string, string>(attribute, tuple1.Item2, tuple2.Item1.FullName));
+                                                            tupleList2.Add(Tuple.Create<string, string, string?>(attribute, tuple1.Item2, tuple2.Item1.FullName));
                                                         }
                                                     }
                                                     catch
@@ -703,7 +703,7 @@ namespace Apricot
                                 string filename = Path.GetFileNameWithoutExtension(tuple1.Item2);
                                 System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
                                 string key;
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 if (match.Success)
                                 {
@@ -742,14 +742,14 @@ namespace Apricot
                     foreach (List<Tuple<string, string>> tupleList in pathDictionary.Values)
                     {
                         int length = namePathList.Count;
-                        Tuple<string, string> tuple1 = null;
-                        Tuple<string, string> tuple2 = null;
+                        Tuple<string, string>? tuple1 = null;
+                        Tuple<string, string>? tuple2 = null;
 
                         tupleList.ForEach(delegate (Tuple<string, string> tuple3)
                         {
                             if (pathHashSet.Contains(tuple3.Item1))
                             {
-                                FileStream fs = null;
+                                FileStream? fs = null;
 
                                 try
                                 {
@@ -757,7 +757,7 @@ namespace Apricot
 
                                     foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                     {
-                                        namePathList.Add(Tuple.Create<string, string, string>(attribute, tuple3.Item1, null));
+                                        namePathList.Add(Tuple.Create<string, string, string?>(attribute, tuple3.Item1, null));
                                     }
                                 }
                                 catch
@@ -789,7 +789,7 @@ namespace Apricot
                             {
                                 if (length == namePathList.Count)
                                 {
-                                    FileStream fs = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -797,7 +797,7 @@ namespace Apricot
 
                                         foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                         {
-                                            namePathList.Add(Tuple.Create<string, string, string>(attribute, tuple2.Item1, null));
+                                            namePathList.Add(Tuple.Create<string, string, string?>(attribute, tuple2.Item1, null));
                                         }
                                     }
                                     catch
@@ -828,7 +828,7 @@ namespace Apricot
 
                                     if (isNew)
                                     {
-                                        FileStream fs = null;
+                                        FileStream? fs = null;
 
                                         try
                                         {
@@ -836,7 +836,7 @@ namespace Apricot
 
                                             foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                             {
-                                                namePathList.Add(Tuple.Create<string, string, string>(attribute, tuple2.Item1, null));
+                                                namePathList.Add(Tuple.Create<string, string, string?>(attribute, tuple2.Item1, null));
                                             }
                                         }
                                         catch
@@ -856,7 +856,7 @@ namespace Apricot
                         }
                         else if (length == namePathList.Count)
                         {
-                            FileStream fs = null;
+                            FileStream? fs = null;
 
                             try
                             {
@@ -864,7 +864,7 @@ namespace Apricot
 
                                 foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                 {
-                                    namePathList.Add(Tuple.Create<string, string, string>(attribute, tuple1.Item1, null));
+                                    namePathList.Add(Tuple.Create<string, string, string?>(attribute, tuple1.Item1, null));
                                 }
                             }
                             catch
@@ -895,7 +895,7 @@ namespace Apricot
 
                             if (isNew)
                             {
-                                FileStream fs = null;
+                                FileStream? fs = null;
 
                                 try
                                 {
@@ -903,7 +903,7 @@ namespace Apricot
 
                                     foreach (string attribute in from attribute in ((System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/script/character/@name")).Cast<XAttribute>() select attribute.Value)
                                     {
-                                        namePathList.Add(Tuple.Create<string, string, string>(attribute, tuple1.Item1, null));
+                                        namePathList.Add(Tuple.Create<string, string, string?>(attribute, tuple1.Item1, null));
                                     }
                                 }
                                 catch
@@ -923,21 +923,21 @@ namespace Apricot
 
                     charactersMenuItem.Items.Clear();
 
-                    namePathList.Sort(delegate (Tuple<string, string, string> tuple1, Tuple<string, string, string> tuple2)
+                    namePathList.Sort(delegate (Tuple<string, string, string?> tuple1, Tuple<string, string, string?> tuple2)
                     {
                         return String.Compare(tuple1.Item1, tuple2.Item1, StringComparison.CurrentCulture);
                     });
-                    namePathList.ForEach(delegate (Tuple<string, string, string> tuple1)
+                    namePathList.ForEach(delegate (Tuple<string, string, string?> tuple1)
                     {
-                        for (LinkedListNode<Tuple<Character, string>> nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
+                        for (LinkedListNode<Tuple<Character, string>>? nextLinkedListNode = characterLinkedList.First; nextLinkedListNode != null; nextLinkedListNode = nextLinkedListNode.Next)
                         {
-                            if (nextLinkedListNode.Value.Item1.Name.Equals(tuple1.Item1) && nextLinkedListNode.Value.Item2.Equals(tuple1.Item2))
+                            if (nextLinkedListNode.Value.Item1.Name!.Equals(tuple1.Item1) && nextLinkedListNode.Value.Item2.Equals(tuple1.Item2))
                             {
-                                MenuItem selectedMenuItem = characterMenuItemList.Find(delegate (MenuItem menuItem)
+                                MenuItem? selectedMenuItem = characterMenuItemList.Find(delegate (MenuItem menuItem)
                                 {
                                     if (tuple1.Item1.Equals(menuItem.Header as string) && (menuItem.IsChecked || menuItem.HasItems))
                                     {
-                                        Tuple<string, string> tuple2 = menuItem.Tag as Tuple<string, string>;
+                                        Tuple<string, string?>? tuple2 = menuItem.Tag as Tuple<string, string?>;
 
                                         return tuple2 != null && tuple1.Item2.Equals(tuple2.Item1) && (tuple1.Item3 == null && tuple2.Item2 == null || tuple1.Item3 != null && tuple2.Item2 != null && tuple1.Item3.Equals(tuple2.Item2));
                                     }
@@ -949,7 +949,7 @@ namespace Apricot
                                 {
                                     selectedMenuItem = new MenuItem();
                                     selectedMenuItem.Header = tuple1.Item1;
-                                    selectedMenuItem.Tag = Tuple.Create<string, string>(tuple1.Item2, tuple1.Item3);
+                                    selectedMenuItem.Tag = Tuple.Create<string, string?>(tuple1.Item2, tuple1.Item3);
                                 }
                                 else
                                 {
@@ -967,7 +967,7 @@ namespace Apricot
                                 {
                                     if (motion.Type != null)
                                     {
-                                        SortedSet<int> sortedSet;
+                                        SortedSet<int>? sortedSet;
 
                                         if (dictionary.TryGetValue(motion.Type, out sortedSet))
                                         {
@@ -998,7 +998,7 @@ namespace Apricot
                                         {
                                             if (nextLinkedListNode.Value.Item1.HasTypes)
                                             {
-                                                menuItem.IsChecked = nextLinkedListNode.Value.Item1.Types.Contains(menuItem.Header as string);
+                                                menuItem.IsChecked = nextLinkedListNode.Value.Item1.Types.Contains((menuItem.Header as string)!);
                                             }
                                             else
                                             {
@@ -1017,7 +1017,7 @@ namespace Apricot
                                     childMenuItem.Tag = nextLinkedListNode.Value.Item1.Name;
                                     childMenuItem.Click += new RoutedEventHandler(delegate
                                     {
-                                        string tag = childMenuItem.Tag as string;
+                                        string? tag = childMenuItem.Tag as string;
 
                                         if (tag != null)
                                         {
@@ -1025,11 +1025,11 @@ namespace Apricot
                                             {
                                                 foreach (Window window in Application.Current.Windows)
                                                 {
-                                                    Agent a = window as Agent;
+                                                    Agent? a = window as Agent;
 
-                                                    if (a != null && c.Name.Equals(a.characterName))
+                                                    if (a != null && c.Name!.Equals(a.characterName))
                                                     {
-                                                        string header = childMenuItem.Header as string;
+                                                        string header = (childMenuItem.Header as string)!;
 
                                                         a.Render();
 
@@ -1039,13 +1039,13 @@ namespace Apricot
                                                         }
                                                         else if (header != null)
                                                         {
-                                                            SortedSet<int> sortedSet1;
+                                                            SortedSet<int>? sortedSet1;
 
                                                             if (dictionary.TryGetValue(header, out sortedSet1))
                                                             {
                                                                 foreach (string s in c.Types.ToArray())
                                                                 {
-                                                                    SortedSet<int> sortedSet2;
+                                                                    SortedSet<int>? sortedSet2;
 
                                                                     if (dictionary.TryGetValue(s, out sortedSet2) && sortedSet1.SequenceEqual(sortedSet2))
                                                                     {
@@ -1060,17 +1060,17 @@ namespace Apricot
                                                         foreach (Image image in a.Canvas.Children.Cast<Image>())
                                                         {
                                                             Image i = image;
-                                                            Motion motion = i.Tag as Motion;
+                                                            Motion? motion = i.Tag as Motion;
 
                                                             if (motion != null)
                                                             {
-                                                                List<string> typeList = null;
+                                                                List<string>? typeList = null;
                                                                 bool isVisible;
 
                                                                 if (motion.Type == null)
                                                                 {
                                                                     typeList = new List<string>();
-                                                                    a.cachedMotionList.ForEach(delegate (Motion m)
+                                                                    a.cachedMotionList!.ForEach(delegate (Motion m)
                                                                     {
                                                                         if (m.ZIndex == motion.ZIndex)
                                                                         {
@@ -1084,14 +1084,14 @@ namespace Apricot
                                                                     if (c.HasTypes)
                                                                     {
                                                                         typeList = new List<string>();
-                                                                        a.cachedMotionList.ForEach(delegate (Motion m)
+                                                                        a.cachedMotionList!.ForEach(delegate (Motion m)
                                                                         {
                                                                             if (m.ZIndex == motion.ZIndex && c.Types.Contains(m.Type))
                                                                             {
                                                                                 typeList.Add(m.Type);
                                                                             }
                                                                         });
-                                                                        isVisible = typeList.Count > 0 && typeList.LastIndexOf(motion.Type) == typeList.Count - 1;
+                                                                        isVisible = typeList.Count > 0 && typeList.LastIndexOf(motion.Type!) == typeList.Count - 1;
                                                                     }
                                                                     else
                                                                     {
@@ -1112,7 +1112,7 @@ namespace Apricot
 
                                                                 if (isVisible && (i.Visibility != Visibility.Visible || i.OpacityMask != null))
                                                                 {
-                                                                    LinearGradientBrush linearGradientBrush = i.OpacityMask as LinearGradientBrush;
+                                                                    LinearGradientBrush? linearGradientBrush = i.OpacityMask as LinearGradientBrush;
 
                                                                     if (linearGradientBrush == null)
                                                                     {
@@ -1124,13 +1124,13 @@ namespace Apricot
                                                                         i.OpacityMask = linearGradientBrush = new LinearGradientBrush(gradientStopCollection, new Point(0.5, 0), new Point(0.5, 1));
                                                                     }
 
-                                                                    Storyboard storyboard;
+                                                                    Storyboard? storyboard;
                                                                     ColorAnimation colorAnimation1 = new ColorAnimation(linearGradientBrush.GradientStops[0].Color, Color.FromArgb(Byte.MaxValue, 0, 0, 0), TimeSpan.FromMilliseconds(250));
                                                                     ColorAnimation colorAnimation2 = new ColorAnimation(linearGradientBrush.GradientStops[1].Color, Color.FromArgb(Byte.MaxValue, 0, 0, 0), TimeSpan.FromMilliseconds(250));
                                                                     SineEase sineEase1 = new SineEase();
                                                                     SineEase sineEase2 = new SineEase();
 
-                                                                    if (a.imageStoryboardDictionary.TryGetValue(i, out storyboard))
+                                                                    if (a.imageStoryboardDictionary!.TryGetValue(i, out storyboard))
                                                                     {
                                                                         storyboard.Stop(i);
                                                                         a.imageStoryboardDictionary[i] = storyboard = new Storyboard();
@@ -1156,7 +1156,7 @@ namespace Apricot
                                                                             storyboard.Remove(i);
                                                                             a.imageStoryboardDictionary.Remove(i);
                                                                         }
-                                                                    });
+                                                                    }!);
                                                                     storyboard.Children.Add(colorAnimation1);
                                                                     storyboard.Children.Add(colorAnimation2);
 
@@ -1168,7 +1168,7 @@ namespace Apricot
                                                                 }
                                                                 else if (!isVisible && (i.Visibility == Visibility.Visible || i.OpacityMask != null))
                                                                 {
-                                                                    LinearGradientBrush linearGradientBrush = i.OpacityMask as LinearGradientBrush;
+                                                                    LinearGradientBrush? linearGradientBrush = i.OpacityMask as LinearGradientBrush;
 
                                                                     if (linearGradientBrush == null)
                                                                     {
@@ -1180,13 +1180,13 @@ namespace Apricot
                                                                         i.OpacityMask = linearGradientBrush = new LinearGradientBrush(gradientStopCollection, new Point(0.5, 0), new Point(0.5, 1));
                                                                     }
 
-                                                                    Storyboard storyboard;
+                                                                    Storyboard? storyboard;
                                                                     ColorAnimation colorAnimation1 = new ColorAnimation(linearGradientBrush.GradientStops[0].Color, Color.FromArgb(0, 0, 0, 0), TimeSpan.FromMilliseconds(250));
                                                                     ColorAnimation colorAnimation2 = new ColorAnimation(linearGradientBrush.GradientStops[1].Color, Color.FromArgb(0, 0, 0, 0), TimeSpan.FromMilliseconds(250));
                                                                     SineEase sineEase1 = new SineEase();
                                                                     SineEase sineEase2 = new SineEase();
 
-                                                                    if (a.imageStoryboardDictionary.TryGetValue(i, out storyboard))
+                                                                    if (a.imageStoryboardDictionary!.TryGetValue(i, out storyboard))
                                                                     {
                                                                         storyboard.Stop(i);
                                                                         a.imageStoryboardDictionary[i] = storyboard = new Storyboard();
@@ -1212,7 +1212,7 @@ namespace Apricot
                                                                             storyboard.Remove(i);
                                                                             a.imageStoryboardDictionary.Remove(i);
                                                                         }
-                                                                    });
+                                                                    }!);
                                                                     storyboard.Children.Add(colorAnimation1);
                                                                     storyboard.Children.Add(colorAnimation2);
 
@@ -1231,7 +1231,7 @@ namespace Apricot
 
                                     if (nextLinkedListNode.Value.Item1.HasTypes)
                                     {
-                                        childMenuItem.IsChecked = nextLinkedListNode.Value.Item1.Types.Contains(childMenuItem.Header as string);
+                                        childMenuItem.IsChecked = nextLinkedListNode.Value.Item1.Types.Contains((childMenuItem.Header as string)!);
                                     }
                                     else
                                     {
@@ -1254,8 +1254,8 @@ namespace Apricot
 
                                         foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                                         {
-                                            System.Configuration.Configuration config1 = null;
-                                            string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                                            System.Configuration.Configuration? config1 = null;
+                                            string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
                                             FontFamily fontFamily;
                                             double fontSize;
                                             FontStretch fontStretch;
@@ -1293,7 +1293,7 @@ namespace Apricot
 
                                                 if (config1.AppSettings.Settings["FontSize"] != null && config1.AppSettings.Settings["FontSize"].Value.Length > 0)
                                                 {
-                                                    fontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
+                                                    fontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1302,7 +1302,7 @@ namespace Apricot
 
                                                 if (config1.AppSettings.Settings["FontStretch"] != null && config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
                                                 {
-                                                    fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
+                                                    fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1311,7 +1311,7 @@ namespace Apricot
 
                                                 if (config1.AppSettings.Settings["FontStyle"] != null && config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
                                                 {
-                                                    fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
+                                                    fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1320,7 +1320,7 @@ namespace Apricot
 
                                                 if (config1.AppSettings.Settings["FontWeight"] != null && config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
                                                 {
-                                                    fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
+                                                    fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1329,7 +1329,7 @@ namespace Apricot
 
                                                 if (config1.AppSettings.Settings["TextColor"] != null && config1.AppSettings.Settings["TextColor"].Value.Length > 0)
                                                 {
-                                                    foregroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
+                                                    foregroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1364,7 +1364,7 @@ namespace Apricot
                                                 {
                                                     if (config2.AppSettings.Settings["FontSize"] != null && config2.AppSettings.Settings["FontSize"].Value.Length > 0)
                                                     {
-                                                        fontSize = (double)new FontSizeConverter().ConvertFromString(config2.AppSettings.Settings["FontSize"].Value);
+                                                        fontSize = (double)new FontSizeConverter().ConvertFromString(config2.AppSettings.Settings["FontSize"].Value)!;
                                                     }
                                                     else
                                                     {
@@ -1373,7 +1373,7 @@ namespace Apricot
                                                 }
                                                 else if (config1.AppSettings.Settings["FontSize"].Value.Length > 0)
                                                 {
-                                                    fontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
+                                                    fontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1384,7 +1384,7 @@ namespace Apricot
                                                 {
                                                     if (config2.AppSettings.Settings["FontStretch"] != null && config2.AppSettings.Settings["FontStretch"].Value.Length > 0)
                                                     {
-                                                        fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config2.AppSettings.Settings["FontStretch"].Value);
+                                                        fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config2.AppSettings.Settings["FontStretch"].Value)!;
                                                     }
                                                     else
                                                     {
@@ -1393,7 +1393,7 @@ namespace Apricot
                                                 }
                                                 else if (config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
                                                 {
-                                                    fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
+                                                    fontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1404,7 +1404,7 @@ namespace Apricot
                                                 {
                                                     if (config2.AppSettings.Settings["FontStyle"] != null && config2.AppSettings.Settings["FontStyle"].Value.Length > 0)
                                                     {
-                                                        fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config2.AppSettings.Settings["FontStyle"].Value);
+                                                        fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config2.AppSettings.Settings["FontStyle"].Value)!;
                                                     }
                                                     else
                                                     {
@@ -1413,7 +1413,7 @@ namespace Apricot
                                                 }
                                                 else if (config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
                                                 {
-                                                    fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
+                                                    fontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1424,7 +1424,7 @@ namespace Apricot
                                                 {
                                                     if (config2.AppSettings.Settings["FontWeight"] != null && config2.AppSettings.Settings["FontWeight"].Value.Length > 0)
                                                     {
-                                                        fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config2.AppSettings.Settings["FontWeight"].Value);
+                                                        fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config2.AppSettings.Settings["FontWeight"].Value)!;
                                                     }
                                                     else
                                                     {
@@ -1433,7 +1433,7 @@ namespace Apricot
                                                 }
                                                 else if (config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
                                                 {
-                                                    fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
+                                                    fontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1444,7 +1444,7 @@ namespace Apricot
                                                 {
                                                     if (config2.AppSettings.Settings["TextColor"] != null && config2.AppSettings.Settings["TextColor"].Value.Length > 0)
                                                     {
-                                                        foregroundColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["TextColor"].Value);
+                                                        foregroundColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["TextColor"].Value)!;
                                                     }
                                                     else
                                                     {
@@ -1453,7 +1453,7 @@ namespace Apricot
                                                 }
                                                 else if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
                                                 {
-                                                    foregroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
+                                                    foregroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value)!;
                                                 }
                                                 else
                                                 {
@@ -1528,11 +1528,11 @@ namespace Apricot
                             }
                         }
 
-                        MenuItem unselectedMenuItem = characterMenuItemList.Find(delegate (MenuItem menuItem)
+                        MenuItem? unselectedMenuItem = characterMenuItemList.Find(delegate (MenuItem menuItem)
                         {
                             if (tuple1.Item1.Equals(menuItem.Header as string) && !menuItem.IsChecked && !menuItem.HasItems)
                             {
-                                Tuple<string, string> tuple2 = menuItem.Tag as Tuple<string, string>;
+                                Tuple<string, string?>? tuple2 = menuItem.Tag as Tuple<string, string?>;
 
                                 return tuple2 != null && tuple1.Item2.Equals(tuple2.Item1) && (tuple1.Item3 == null && tuple2.Item2 == null || tuple1.Item3 != null && tuple2.Item2 != null && tuple1.Item3.Equals(tuple2.Item2));
                             }
@@ -1544,10 +1544,10 @@ namespace Apricot
                         {
                             unselectedMenuItem = new MenuItem();
                             unselectedMenuItem.Header = tuple1.Item1;
-                            unselectedMenuItem.Tag = Tuple.Create<string, string>(tuple1.Item2, tuple1.Item3);
+                            unselectedMenuItem.Tag = Tuple.Create<string, string?>(tuple1.Item2, tuple1.Item3);
                             unselectedMenuItem.Click += new RoutedEventHandler(delegate
                             {
-                                Tuple<string, string> tuple2 = unselectedMenuItem.Tag as Tuple<string, string>;
+                                Tuple<string, string?>? tuple2 = unselectedMenuItem.Tag as Tuple<string, string?>;
 
                                 if (tuple2 != null)
                                 {
@@ -1555,7 +1555,7 @@ namespace Apricot
 
                                     if (tuple2.Item2 == null)
                                     {
-                                        FileStream fs = null;
+                                        FileStream? fs = null;
 
                                         try
                                         {
@@ -1563,7 +1563,7 @@ namespace Apricot
 
                                             StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
 
-                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                             {
                                                 stringBuilder.Append(Path.DirectorySeparatorChar);
                                             }
@@ -1594,7 +1594,7 @@ namespace Apricot
                                     }
                                     else
                                     {
-                                        FileStream fs = null;
+                                        FileStream? fs = null;
 
                                         try
                                         {
@@ -1606,7 +1606,7 @@ namespace Apricot
 
                                                 StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
 
-                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                                if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                                 {
                                                     stringBuilder.Append(Path.DirectorySeparatorChar);
                                                 }
@@ -1615,7 +1615,7 @@ namespace Apricot
 
                                                 foreach (ZipArchiveEntry zipArchiveEntry in from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.Equals(tuple2.Item2) select zipArchiveEntry)
                                                 {
-                                                    Stream stream = null;
+                                                    Stream? stream = null;
 
                                                     try
                                                     {
@@ -1676,7 +1676,7 @@ namespace Apricot
 
                         foreach (Control control in sourcesMenuItem.Items)
                         {
-                            MenuItem menuItem = control as MenuItem;
+                            MenuItem? menuItem = control as MenuItem;
 
                             if (menuItem != null)
                             {
@@ -1697,9 +1697,9 @@ namespace Apricot
 
                                 if (lpwstr != IntPtr.Zero)
                                 {
-                                    Uri uri;
+                                    Uri? uri;
 
-                                    if (Uri.TryCreate(System.Runtime.InteropServices.Marshal.PtrToStringUni(lpwstr).Trim(), UriKind.Absolute, out uri))
+                                    if (Uri.TryCreate(System.Runtime.InteropServices.Marshal.PtrToStringUni(lpwstr)!.Trim(), UriKind.Absolute, out uri))
                                     {
                                         MenuItem sourceMenuItem = new MenuItem();
                                         MenuItem addMenuItem = new MenuItem();
@@ -1713,7 +1713,7 @@ namespace Apricot
                                         addMenuItem.Header = Apricot.Resources.Add;
                                         addMenuItem.Click += new RoutedEventHandler(delegate
                                         {
-                                            Uri u = sourceMenuItem.Tag as Uri;
+                                            Uri? u = sourceMenuItem.Tag as Uri;
 
                                             if (u != null)
                                             {
@@ -1737,7 +1737,7 @@ namespace Apricot
                         });
                         sourceList.ForEach(delegate (Source source)
                         {
-                            MenuItem sourceMenuItem = sourceMenuItemList.Find(delegate (MenuItem menuItem)
+                            MenuItem? sourceMenuItem = sourceMenuItemList.Find(delegate (MenuItem menuItem)
                             {
                                 return source == menuItem.Tag;
                             });
@@ -1753,7 +1753,7 @@ namespace Apricot
                                 removeMenuItem.Header = Apricot.Resources.Remove;
                                 removeMenuItem.Click += new RoutedEventHandler(delegate
                                 {
-                                    Source s = sourceMenuItem.Tag as Source;
+                                    Source? s = sourceMenuItem.Tag as Source;
 
                                     if (s != null)
                                     {
@@ -1774,7 +1774,7 @@ namespace Apricot
                     }
                     else
                     {
-                        MenuItem sourceMenuItem = null;
+                        MenuItem? sourceMenuItem = null;
 
                         sourcesMenuItem.Items.Clear();
 
@@ -1788,9 +1788,9 @@ namespace Apricot
 
                                 if (lpwstr != IntPtr.Zero)
                                 {
-                                    Uri uri;
+                                    Uri? uri;
 
-                                    if (Uri.TryCreate(System.Runtime.InteropServices.Marshal.PtrToStringUni(lpwstr).Trim(), UriKind.Absolute, out uri))
+                                    if (Uri.TryCreate(System.Runtime.InteropServices.Marshal.PtrToStringUni(lpwstr)!.Trim(), UriKind.Absolute, out uri))
                                     {
                                         sourceMenuItem = new MenuItem();
                                         sourceMenuItem.Header = uri.ToString();
@@ -1818,7 +1818,7 @@ namespace Apricot
                             addMenuItem.Header = Apricot.Resources.Add;
                             addMenuItem.Click += new RoutedEventHandler(delegate
                             {
-                                Uri u = sourceMenuItem.Tag as Uri;
+                                Uri? u = sourceMenuItem.Tag as Uri;
 
                                 if (u != null)
                                 {
@@ -1834,8 +1834,8 @@ namespace Apricot
 
             if (this == Application.Current.MainWindow)
             {
-                System.Configuration.Configuration config1 = null;
-                string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                System.Configuration.Configuration? config1 = null;
+                string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
 
                 if (Directory.Exists(directory))
                 {
@@ -2060,7 +2060,7 @@ namespace Apricot
             }
             else
             {
-                Agent agent = Application.Current.MainWindow as Agent;
+                Agent? agent = Application.Current.MainWindow as Agent;
 
                 if (agent != null)
                 {
@@ -2116,7 +2116,7 @@ namespace Apricot
         {
             base.OnSourceInitialized(e);
 
-            System.Windows.Interop.HwndSource hwndSource = PresentationSource.FromVisual(this) as System.Windows.Interop.HwndSource;
+            System.Windows.Interop.HwndSource? hwndSource = PresentationSource.FromVisual(this) as System.Windows.Interop.HwndSource;
 
             if (hwndSource != null)
             {
@@ -2179,11 +2179,11 @@ namespace Apricot
                     {
                         Storyboard storyboard1 = new Storyboard();
                         DoubleAnimation doubleAnimation1 = new DoubleAnimation(this.Opacity, 0, TimeSpan.FromMilliseconds(500));
-                        DoubleAnimation doubleAnimation2 = new DoubleAnimation(this.balloon.Opacity, 0, TimeSpan.FromMilliseconds(500));
+                        DoubleAnimation doubleAnimation2 = new DoubleAnimation(this.balloon!.Opacity, 0, TimeSpan.FromMilliseconds(500));
                         SineEase sineEase1 = new SineEase();
                         SineEase sineEase2 = new SineEase();
 
-                        foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary)
+                        foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary!)
                         {
                             kvp.Key.Stop(kvp.Value);
                         }
@@ -2205,7 +2205,7 @@ namespace Apricot
 
                                 Hide();
                             }
-                        });
+                        }!);
                         storyboard1.Children.Add(doubleAnimation1);
                         storyboard1.Children.Add(doubleAnimation2);
 
@@ -2218,17 +2218,17 @@ namespace Apricot
 
                         foreach (Window window in this.OwnedWindows)
                         {
-                            Agent agent = window as Agent;
+                            Agent? agent = window as Agent;
 
                             if (agent != null)
                             {
                                 Storyboard storyboard2 = new Storyboard();
                                 DoubleAnimation doubleAnimation3 = new DoubleAnimation(agent.Opacity, 0, TimeSpan.FromMilliseconds(500));
-                                DoubleAnimation doubleAnimation4 = new DoubleAnimation(agent.balloon.Opacity, 0, TimeSpan.FromMilliseconds(500));
+                                DoubleAnimation doubleAnimation4 = new DoubleAnimation(agent.balloon!.Opacity, 0, TimeSpan.FromMilliseconds(500));
                                 SineEase sineEase3 = new SineEase();
                                 SineEase sineEase4 = new SineEase();
 
-                                foreach (KeyValuePair<Storyboard, Window> kvp in agent.fadeStoryboardDictionary)
+                                foreach (KeyValuePair<Storyboard, Window> kvp in agent.fadeStoryboardDictionary!)
                                 {
                                     kvp.Key.Stop(kvp.Value);
                                 }
@@ -2249,7 +2249,7 @@ namespace Apricot
                                         agent.fadeStoryboardDictionary.Remove(storyboard2);
                                         agent.Hide();
                                     }
-                                });
+                                }!);
                                 storyboard2.Children.Add(doubleAnimation3);
                                 storyboard2.Children.Add(doubleAnimation4);
 
@@ -2266,7 +2266,7 @@ namespace Apricot
                     }
                     else
                     {
-                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                        foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                         {
                             this.Canvas.Width = character.Size.Width;
                             this.Canvas.Height = character.Size.Height;
@@ -2279,11 +2279,11 @@ namespace Apricot
 
                         Storyboard storyboard1 = new Storyboard();
                         DoubleAnimation doubleAnimation1 = new DoubleAnimation(this.Opacity, this.opacity, TimeSpan.FromMilliseconds(500));
-                        DoubleAnimation doubleAnimation2 = new DoubleAnimation(this.balloon.Opacity, 1, TimeSpan.FromMilliseconds(500));
+                        DoubleAnimation doubleAnimation2 = new DoubleAnimation(this.balloon!.Opacity, 1, TimeSpan.FromMilliseconds(500));
                         SineEase sineEase1 = new SineEase();
                         SineEase sineEase2 = new SineEase();
 
-                        foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary)
+                        foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary!)
                         {
                             kvp.Key.Stop(kvp.Value);
                         }
@@ -2304,7 +2304,7 @@ namespace Apricot
                                 storyboard1.Remove(this);
                                 this.fadeStoryboardDictionary.Remove(storyboard1);
                             }
-                        });
+                        }!);
                         storyboard1.Children.Add(doubleAnimation1);
                         storyboard1.Children.Add(doubleAnimation2);
 
@@ -2317,11 +2317,11 @@ namespace Apricot
 
                         foreach (Window window in this.OwnedWindows)
                         {
-                            Agent agent = window as Agent;
+                            Agent? agent = window as Agent;
 
                             if (agent != null)
                             {
-                                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select character)
+                                foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(agent.characterName) select character)
                                 {
                                     agent.Width = character.Size.Width * agent.ZoomScaleTransform.ScaleX;
                                     agent.Height = character.Size.Height * agent.ZoomScaleTransform.ScaleY;
@@ -2331,11 +2331,11 @@ namespace Apricot
 
                                 Storyboard storyboard2 = new Storyboard();
                                 DoubleAnimation doubleAnimation3 = new DoubleAnimation(agent.Opacity, agent.opacity, TimeSpan.FromMilliseconds(500));
-                                DoubleAnimation doubleAnimation4 = new DoubleAnimation(agent.balloon.Opacity, 1, TimeSpan.FromMilliseconds(500));
+                                DoubleAnimation doubleAnimation4 = new DoubleAnimation(agent.balloon!.Opacity, 1, TimeSpan.FromMilliseconds(500));
                                 SineEase sineEase3 = new SineEase();
                                 SineEase sineEase4 = new SineEase();
 
-                                foreach (KeyValuePair<Storyboard, Window> kvp in agent.fadeStoryboardDictionary)
+                                foreach (KeyValuePair<Storyboard, Window> kvp in agent.fadeStoryboardDictionary!)
                                 {
                                     kvp.Key.Stop(kvp.Value);
                                 }
@@ -2356,7 +2356,7 @@ namespace Apricot
                                         storyboard2.Remove(agent);
                                         agent.fadeStoryboardDictionary.Remove(storyboard2);
                                     }
-                                });
+                                }!);
                                 storyboard2.Children.Add(doubleAnimation3);
                                 storyboard2.Children.Add(doubleAnimation4);
 
@@ -2393,9 +2393,9 @@ namespace Apricot
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            this.balloon.Owner = this;
+            this.balloon!.Owner = this;
 
-            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+            foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
             {
                 Point point = new Point(character.Location.X + character.BaseLocation.X, character.Location.Y + character.BaseLocation.Y);
 
@@ -2406,11 +2406,11 @@ namespace Apricot
                 }
                 else
                 {
-                    Agent agent = Application.Current.MainWindow as Agent;
+                    Agent? agent = Application.Current.MainWindow as Agent;
 
                     if (agent != null)
                     {
-                        foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
+                        foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(agent.characterName) select c)
                         {
                             this.Left = agent.Left - c.Location.X - c.BaseLocation.X + point.X;
                             this.Top = agent.Top - c.Location.Y - c.BaseLocation.Y + point.Y;
@@ -2440,23 +2440,23 @@ namespace Apricot
             {
                 this.LayoutRoot.Width = this.LayoutRoot.Height = this.Canvas.Width = this.Canvas.Height = 0;
                 this.Canvas.Children.Clear();
-                this.balloon.Hide();
+                this.balloon!.Hide();
             }
         }
 
         public void Switch(IEnumerable<Character> characters)
         {
-            Agent agent = Application.Current.MainWindow as Agent;
+            Agent? agent = Application.Current.MainWindow as Agent;
 
             if (agent != null)
             {
                 Storyboard storyboard = new Storyboard();
                 DoubleAnimation doubleAnimation1 = new DoubleAnimation(agent.Opacity, 0, TimeSpan.FromMilliseconds(500));
-                DoubleAnimation doubleAnimation2 = new DoubleAnimation(agent.balloon.Opacity, 0, TimeSpan.FromMilliseconds(500));
+                DoubleAnimation doubleAnimation2 = new DoubleAnimation(agent.balloon!.Opacity, 0, TimeSpan.FromMilliseconds(500));
                 SineEase sineEase1 = new SineEase();
                 SineEase sineEase2 = new SineEase();
 
-                foreach (KeyValuePair<Storyboard, Window> kvp in agent.fadeStoryboardDictionary)
+                foreach (KeyValuePair<Storyboard, Window> kvp in agent.fadeStoryboardDictionary!)
                 {
                     kvp.Key.Stop(kvp.Value);
                 }
@@ -2477,7 +2477,7 @@ namespace Apricot
                         bool isCleared;
                         bool isOwner = true;
                         Nullable<Point> point = null;
-                        string directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                        string directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
                         foreach (Nullable<Point> p in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select new Nullable<Point>(new Point(agent.Left - character.Location.X - character.BaseLocation.X, agent.Top - character.Location.Y - character.BaseLocation.Y)))
                         {
@@ -2498,7 +2498,7 @@ namespace Apricot
                             agent.mirrorStoryboard = null;
                         }
 
-                        foreach (KeyValuePair<Image, Storyboard> kvp in agent.imageStoryboardDictionary)
+                        foreach (KeyValuePair<Image, Storyboard> kvp in agent.imageStoryboardDictionary!)
                         {
                             kvp.Value.Remove(kvp.Key);
                         }
@@ -2512,13 +2512,13 @@ namespace Apricot
                         {
                             if (window != agent)
                             {
-                                Agent a = window as Agent;
+                                Agent? a = window as Agent;
 
                                 if (a != null)
                                 {
                                     a.Owner = null;
                                     a.LayoutRoot.Width = a.LayoutRoot.Height = a.Canvas.Width = a.Canvas.Height = 0;
-                                    a.balloon.Hide();
+                                    a.balloon!.Hide();
                                     a.Close();
                                 }
                             }
@@ -2526,7 +2526,7 @@ namespace Apricot
 
                         foreach (Character character in Script.Instance.Characters.ToArray())
                         {
-                            nameList.Add(character.Name);
+                            nameList.Add(character.Name!);
                             Script.Instance.Characters.Remove(character);
                         }
 
@@ -2535,7 +2535,7 @@ namespace Apricot
                             isCleared = true;
                             nameList.ForEach(delegate (string name)
                             {
-                                Sequence sequence;
+                                Sequence? sequence;
 
                                 if (Script.Instance.TryDequeue(name, out sequence))
                                 {
@@ -2563,7 +2563,7 @@ namespace Apricot
                             }
                             else
                             {
-                                string path1 = Path.Combine(directory, character.Script);
+                                string path1 = Path.Combine(directory, character.Script!);
 
                                 if (!pathList.Exists(delegate (string path2)
                                 {
@@ -2572,7 +2572,7 @@ namespace Apricot
                                         return path1.Equals(path2);
                                     }
 
-                                    return character.Script.Equals(path2);
+                                    return character.Script!.Equals(path2);
                                 }))
                                 {
                                     pathList.Add(path1);
@@ -2587,11 +2587,11 @@ namespace Apricot
                             Script.Instance.Parse(path);
                         });
 
-                        agent.cachedBitmapImageDictionary.Clear();
-                        agent.cachedMotionList.Clear();
+                        agent.cachedBitmapImageDictionary!.Clear();
+                        agent.cachedMotionList!.Clear();
                         agent.Render();
-                        agent.queue.Clear();
-                        agent.motionQueue.Clear();
+                        agent.queue!.Clear();
+                        agent.motionQueue!.Clear();
                         agent.isFirst = true;
                         agent.isLast = false;
                         agent.balloon.Messages.Clear();
@@ -2630,7 +2630,7 @@ namespace Apricot
                             }
                             else
                             {
-                                Agent a = new Agent(character.Name);
+                                Agent a = new Agent(character.Name!);
 
                                 a.Owner = agent;
                                 a.Show();
@@ -2641,7 +2641,7 @@ namespace Apricot
                         Script.Instance.Tick(DateTime.Today);
                         Script.Instance.Update(true);
                     }
-                });
+                }!);
                 storyboard.Children.Add(doubleAnimation1);
                 storyboard.Children.Add(doubleAnimation2);
 
@@ -2653,12 +2653,12 @@ namespace Apricot
                 {
                     if (window != agent)
                     {
-                        Agent a = window as Agent;
+                        Agent? a = window as Agent;
 
                         if (a != null)
                         {
                             DoubleAnimation da1 = new DoubleAnimation(a.Opacity, 0, TimeSpan.FromMilliseconds(500));
-                            DoubleAnimation da2 = new DoubleAnimation(a.balloon.Opacity, 0, TimeSpan.FromMilliseconds(500));
+                            DoubleAnimation da2 = new DoubleAnimation(a.balloon!.Opacity, 0, TimeSpan.FromMilliseconds(500));
                             SineEase se1 = new SineEase();
                             SineEase se2 = new SineEase();
 
@@ -2701,24 +2701,24 @@ namespace Apricot
         {
             base.OnLocationChanged(e);
 
-            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+            foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
             {
                 if (this == Application.Current.MainWindow)
                 {
                     character.Location = new Character.Point<double>(this.Left - (this.Left - character.Location.X - character.BaseLocation.X) - character.BaseLocation.X, this.Top - (this.Top - character.Location.Y - character.BaseLocation.Y) - character.BaseLocation.Y);
 
-                    this.balloon.Left = this.Left + (this.Width - this.balloon.Width) / 2;
+                    this.balloon!.Left = this.Left + (this.Width - this.balloon.Width) / 2;
                     this.balloon.Top = this.Top - this.balloon.Height + character.Origin.Y * this.ZoomScaleTransform.ScaleY;
 
                     foreach (Window window in Application.Current.Windows)
                     {
                         if (this != window)
                         {
-                            Agent agent = window as Agent;
+                            Agent? agent = window as Agent;
 
                             if (agent != null)
                             {
-                                foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
+                                foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(agent.characterName) select c)
                                 {
                                     c.Location = new Character.Point<double>(agent.Left - this.Left - c.BaseLocation.X, agent.Top - this.Top - c.BaseLocation.Y);
                                 }
@@ -2734,15 +2734,15 @@ namespace Apricot
                 }
                 else
                 {
-                    Agent agent = Application.Current.MainWindow as Agent;
+                    Agent? agent = Application.Current.MainWindow as Agent;
 
                     if (agent != null)
                     {
-                        foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
+                        foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(agent.characterName) select c)
                         {
                             character.Location = new Character.Point<double>(this.Left - (agent.Left - c.Location.X - c.BaseLocation.X) - character.BaseLocation.X, this.Top - (agent.Top - c.Location.Y - c.BaseLocation.Y) - character.BaseLocation.Y);
 
-                            this.balloon.Left = this.Left + (this.Width - this.balloon.Width) / 2;
+                            this.balloon!.Left = this.Left + (this.Width - this.balloon.Width) / 2;
                             this.balloon.Top = this.Top - this.balloon.Height + character.Origin.Y * this.ZoomScaleTransform.ScaleY;
                         }
 
@@ -2763,15 +2763,15 @@ namespace Apricot
         {
             foreach (Window window in Application.Current.Windows)
             {
-                Agent agent = window as Agent;
+                Agent? agent = window as Agent;
 
                 if (agent != null)
                 {
-                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select character)
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(agent.characterName) select character)
                     {
                         agent.Width = character.Size.Width * agent.ZoomScaleTransform.ScaleX;
                         agent.Height = character.Size.Height * agent.ZoomScaleTransform.ScaleY;
-                        agent.balloon.Left = agent.Left + (agent.Width - agent.balloon.Width) / 2;
+                        agent.balloon!.Left = agent.Left + (agent.Width - agent.balloon.Width) / 2;
                         agent.balloon.Top = agent.Top - agent.balloon.Height + character.Origin.Y * agent.ZoomScaleTransform.ScaleY;
                         agent.SizeToContent = SizeToContent.WidthAndHeight;
                     }
@@ -2785,7 +2785,7 @@ namespace Apricot
 
             if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
-                Agent agent = Application.Current.MainWindow as Agent;
+                Agent? agent = Application.Current.MainWindow as Agent;
 
                 if (agent != null)
                 {
@@ -2809,7 +2809,7 @@ namespace Apricot
                     {
                         agent.scale = scale.Value;
 
-                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select character)
+                        foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(agent.characterName) select character)
                         {
                             Storyboard storyboard = new Storyboard();
                             DoubleAnimation doubleAnimation1 = new DoubleAnimation(agent.ZoomScaleTransform.ScaleX, agent.scale, TimeSpan.FromMilliseconds(500));
@@ -2889,7 +2889,7 @@ namespace Apricot
                                     agent.ZoomScaleTransform.ScaleX = agent.scale;
                                     agent.ZoomScaleTransform.ScaleY = agent.scale;
 
-                                    foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
+                                    foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(agent.characterName) select c)
                                     {
                                         agent.LayoutRoot.Width = c.Size.Width * agent.scale;
                                         agent.LayoutRoot.Height = c.Size.Height * agent.scale;
@@ -2898,7 +2898,7 @@ namespace Apricot
                                     storyboard.Remove(agent.LayoutRoot);
                                     agent.scaleStoryboard = null;
                                 }
-                            });
+                            }!);
                             storyboard.Children.Add(doubleAnimation1);
                             storyboard.Children.Add(doubleAnimation2);
                             storyboard.Children.Add(doubleAnimation3);
@@ -2915,13 +2915,13 @@ namespace Apricot
 
                         foreach (Window window in agent.OwnedWindows)
                         {
-                            Agent a = window as Agent;
+                            Agent? a = window as Agent;
 
                             if (a != null)
                             {
                                 a.scale = agent.scale;
 
-                                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(a.characterName) select character)
+                                foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(a.characterName) select character)
                                 {
                                     Storyboard storyboard = new Storyboard();
                                     DoubleAnimation doubleAnimation1 = new DoubleAnimation(a.ZoomScaleTransform.ScaleX, a.scale, TimeSpan.FromMilliseconds(500));
@@ -3001,7 +3001,7 @@ namespace Apricot
                                             a.ZoomScaleTransform.ScaleX = a.scale;
                                             a.ZoomScaleTransform.ScaleY = a.scale;
 
-                                            foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(a.characterName) select c)
+                                            foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(a.characterName) select c)
                                             {
                                                 a.LayoutRoot.Width = c.Size.Width * a.scale;
                                                 a.LayoutRoot.Height = c.Size.Height * a.scale;
@@ -3010,7 +3010,7 @@ namespace Apricot
                                             storyboard.Remove(a.LayoutRoot);
                                             a.scaleStoryboard = null;
                                         }
-                                    });
+                                    }!);
                                     storyboard.Children.Add(doubleAnimation1);
                                     storyboard.Children.Add(doubleAnimation2);
                                     storyboard.Children.Add(doubleAnimation3);
@@ -3035,7 +3035,7 @@ namespace Apricot
 
                 foreach (Window window in this.OwnedWindows)
                 {
-                    Agent agent = window as Agent;
+                    Agent? agent = window as Agent;
 
                     if (agent != null)
                     {
@@ -3090,11 +3090,11 @@ namespace Apricot
                 {
                     Point point = PointToScreen(e.GetPosition(this));
 
-                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                     {
                         if (Math.Sign(point.X - this.mouseDownPosition.Value.X) > 0 && !character.Mirror || Math.Sign(point.X - this.mouseDownPosition.Value.X) < 0 && character.Mirror)
                         {
-                            LinearGradientBrush linearGradientBrush = this.Canvas.OpacityMask as LinearGradientBrush;
+                            LinearGradientBrush? linearGradientBrush = this.Canvas.OpacityMask as LinearGradientBrush;
                             Storyboard storyboard = new Storyboard();
                             ColorAnimation colorAnimation1 = new ColorAnimation();
                             ColorAnimation colorAnimation2 = new ColorAnimation();
@@ -3146,7 +3146,7 @@ namespace Apricot
                                     storyboard.Remove(this.Canvas);
                                     this.mirrorStoryboard = null;
                                 }
-                            });
+                            }!);
                             storyboard.Children.Add(colorAnimation1);
                             storyboard.Children.Add(colorAnimation2);
 
@@ -3158,7 +3158,7 @@ namespace Apricot
                         }
                         else if (Math.Sign(point.X - this.mouseDownPosition.Value.X) > 0 && character.Mirror || Math.Sign(point.X - this.mouseDownPosition.Value.X) < 0 && !character.Mirror)
                         {
-                            LinearGradientBrush linearGradientBrush = this.Canvas.OpacityMask as LinearGradientBrush;
+                            LinearGradientBrush? linearGradientBrush = this.Canvas.OpacityMask as LinearGradientBrush;
                             Storyboard storyboard = new Storyboard();
                             ColorAnimation colorAnimation1 = new ColorAnimation();
                             ColorAnimation colorAnimation2 = new ColorAnimation();
@@ -3205,7 +3205,7 @@ namespace Apricot
                             {
                                 if (((Clock)s).CurrentState == ClockState.Filling)
                                 {
-                                    foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(this.characterName) select c)
+                                    foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(this.characterName) select c)
                                     {
                                         c.Mirror = !c.Mirror;
 
@@ -3219,7 +3219,7 @@ namespace Apricot
                                         }
                                     }
                                 }
-                            });
+                            }!);
                             colorAnimation3.BeginTime = TimeSpan.FromMilliseconds(500);
                             colorAnimation3.EasingFunction = sineEase3;
                             colorAnimation4.BeginTime = TimeSpan.FromMilliseconds(750);
@@ -3238,7 +3238,7 @@ namespace Apricot
                                     storyboard.Remove(this.Canvas);
                                     this.mirrorStoryboard = null;
                                 }
-                            });
+                            }!);
                             storyboard.Children.Add(colorAnimation1);
                             storyboard.Children.Add(colorAnimation2);
                             storyboard.Children.Add(colorAnimation3);
@@ -3274,30 +3274,30 @@ namespace Apricot
             }
             else if ((Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt)
             {
-                if (this.balloon.Messages.Count > 0)
+                if (this.balloon!.Messages.Count > 0)
                 {
                     List<string> termList = new List<string>();
 
                     foreach (object o in this.balloon.Messages[this.balloon.Messages.Count - 1])
                     {
-                        Entry entry = o as Entry;
+                        Entry? entry = o as Entry;
 
                         if (entry != null)
                         {
-                            termList.Add(entry.Title);
+                            termList.Add(entry.Title!);
                         }
                     }
 
                     if (termList.Count > 0)
                     {
                         HashSet<string> baseDirectoryHashSet = new HashSet<string>();
-                        string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                        string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
                         Dictionary<string, List<Tuple<string, string>>> cachedPathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                         List<Character> cachedCharacterList = new List<Character>();
 
                         foreach (Character character in Script.Instance.Characters)
                         {
-                            string directoryName = Path.GetDirectoryName(Path.IsPathRooted(character.Script) ? character.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), character.Script));
+                            string directoryName = Path.GetDirectoryName(Path.IsPathRooted(character.Script) ? character.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, character.Script!))!;
 
                             if (!baseDirectoryHashSet.Contains(directoryName))
                             {
@@ -3317,7 +3317,7 @@ namespace Apricot
                             {
                                 if (tuple1.Item1)
                                 {
-                                    FileStream fs = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -3332,7 +3332,7 @@ namespace Apricot
                                                 string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                                                 System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
                                                 string key;
-                                                List<Tuple<ZipArchiveEntry, string>> tupleList1;
+                                                List<Tuple<ZipArchiveEntry, string>>? tupleList1;
 
                                                 if (match.Success)
                                                 {
@@ -3368,7 +3368,7 @@ namespace Apricot
                                                 return dictionary;
                                             }).Values)
                                             {
-                                                Tuple<ZipArchiveEntry, string> tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
+                                                Tuple<ZipArchiveEntry, string>? tuple2 = tupleList1.Find(delegate (Tuple<ZipArchiveEntry, string> tuple3)
                                                 {
                                                     return tuple3.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                                 });
@@ -3382,7 +3382,7 @@ namespace Apricot
 
                                                     if (tuple2 != null)
                                                     {
-                                                        Stream stream = null;
+                                                        Stream? stream = null;
                                                         List<Character> tempCharacterList = new List<Character>();
 
                                                         try
@@ -3453,7 +3453,7 @@ namespace Apricot
 
                                                         tempCharacterList.ForEach(delegate (Character character)
                                                         {
-                                                            if (!(from c in Script.Instance.Characters where c.Name.Equals(character.Name) select c).Any())
+                                                            if (!(from c in Script.Instance.Characters where c.Name!.Equals(character.Name) select c).Any())
                                                             {
                                                                 cachedCharacterList.Add(character);
                                                             }
@@ -3462,7 +3462,7 @@ namespace Apricot
                                                 }
                                                 else
                                                 {
-                                                    Stream stream = null;
+                                                    Stream? stream = null;
                                                     List<Character> tempCharacterList = new List<Character>();
 
                                                     try
@@ -3533,7 +3533,7 @@ namespace Apricot
 
                                                     tempCharacterList.ForEach(delegate (Character character)
                                                     {
-                                                        if (!(from c in Script.Instance.Characters where c.Name.Equals(character.Name) select c).Any())
+                                                        if (!(from c in Script.Instance.Characters where c.Name!.Equals(character.Name) select c).Any())
                                                         {
                                                             cachedCharacterList.Add(character);
                                                         }
@@ -3555,7 +3555,7 @@ namespace Apricot
                                     string filename = Path.GetFileNameWithoutExtension(tuple1.Item2);
                                     System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
                                     string key;
-                                    List<Tuple<string, string>> tupleList;
+                                    List<Tuple<string, string>>? tupleList;
 
                                     if (match.Success)
                                     {
@@ -3593,8 +3593,8 @@ namespace Apricot
 
                         foreach (List<Tuple<string, string>> tupleList in cachedPathDictionary.Values)
                         {
-                            Tuple<string, string> tuple1 = null;
-                            Tuple<string, string> tuple2 = null;
+                            Tuple<string, string>? tuple1 = null;
+                            Tuple<string, string>? tuple2 = null;
 
                             tupleList.ForEach(delegate (Tuple<string, string> tuple3)
                             {
@@ -3612,7 +3612,7 @@ namespace Apricot
                             {
                                 if (tuple2 != null)
                                 {
-                                    FileStream fs = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -3665,7 +3665,7 @@ namespace Apricot
                                             character.Size = new Size(width, height);
                                             character.Script = tuple2.Item1;
 
-                                            if (!(from c in Script.Instance.Characters where c.Name.Equals(character.Name) select c).Any())
+                                            if (!(from c in Script.Instance.Characters where c.Name!.Equals(character.Name) select c).Any())
                                             {
                                                 cachedCharacterList.Add(character);
                                             }
@@ -3686,7 +3686,7 @@ namespace Apricot
                             }
                             else
                             {
-                                FileStream fs = null;
+                                FileStream? fs = null;
 
                                 try
                                 {
@@ -3739,7 +3739,7 @@ namespace Apricot
                                         character.Size = new Size(width, height);
                                         character.Script = tuple1.Item1;
 
-                                        if (!(from c in Script.Instance.Characters where c.Name.Equals(character.Name) select c).Any())
+                                        if (!(from c in Script.Instance.Characters where c.Name!.Equals(character.Name) select c).Any())
                                         {
                                             cachedCharacterList.Add(character);
                                         }
@@ -3762,15 +3762,15 @@ namespace Apricot
                         if (cachedCharacterList.Count > 0)
                         {
                             Character character = cachedCharacterList[new Random(Environment.TickCount).Next(cachedCharacterList.Count)];
-                            var query = from sequence in Script.Instance.Sequences where sequence.Owner.Equals(character.Name) select sequence;
+                            var query = from sequence in Script.Instance.Sequences where sequence.Owner!.Equals(character.Name) select sequence;
 
                             if (query.Any())
                             {
-                                Agent agent = new Agent(character.Name);
+                                Agent agent = new Agent(character.Name!);
                                 List<Sequence> preparedSequenceList = new List<Sequence>();
-                                var q = from sequence in query where sequence.Name.Equals("Activate") select sequence;
+                                var q = from sequence in query where sequence.Name!.Equals("Activate") select sequence;
 
-                                foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(this.characterName) select c)
+                                foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(this.characterName) select c)
                                 {
                                     if (c.Mirror)
                                     {
@@ -3805,13 +3805,13 @@ namespace Apricot
 
                                         foreach (Character c in characters)
                                         {
-                                            Sequence sequence;
+                                            Sequence? sequence;
 
-                                            if (Script.Instance.TryDequeue(c.Name, out sequence))
+                                            if (Script.Instance.TryDequeue(c.Name!, out sequence))
                                             {
-                                                if (!character.Name.Equals(c.Name))
+                                                if (!character.Name!.Equals(c.Name))
                                                 {
-                                                    sequenceList.Add(sequence);
+                                                    sequenceList.Add(sequence!);
                                                 }
 
                                                 isCleared = false;
@@ -3820,10 +3820,10 @@ namespace Apricot
                                     } while (!isCleared);
 
                                     Script.Instance.TryEnqueue(sequenceList);
-                                });
+                                }!);
                                 agent.Show();
 
-                                foreach (Sequence sequence in Script.Instance.Prepare(from sequence in query where sequence.Name.Equals("Start") select sequence, null))
+                                foreach (Sequence sequence in Script.Instance.Prepare(from sequence in query where sequence.Name!.Equals("Start") select sequence, null))
                                 {
                                     if (preparedSequenceList.Count == 0)
                                     {
@@ -3860,7 +3860,7 @@ namespace Apricot
 
                 if (query.Any())
                 {
-                    var q = from sequence in Script.Instance.Sequences where sequence.Name.Equals("DoubleClick") && sequence.Owner.Equals(this.characterName) select sequence;
+                    var q = from sequence in Script.Instance.Sequences where sequence.Name!.Equals("DoubleClick") && sequence.Owner!.Equals(this.characterName) select sequence;
 
                     foreach (Motion motion in query)
                     {
@@ -3878,7 +3878,7 @@ namespace Apricot
             {
                 const int WHEEL_DATA = 120;
                 int lines = e.Delta * SystemParameters.WheelScrollLines / WHEEL_DATA;
-                Agent agent = Application.Current.MainWindow as Agent;
+                Agent? agent = Application.Current.MainWindow as Agent;
 
                 if (agent != null)
                 {
@@ -3889,7 +3889,7 @@ namespace Apricot
                         agent.scale = scale;
                     }
 
-                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select character)
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(agent.characterName) select character)
                     {
                         Storyboard storyboard = new Storyboard();
                         DoubleAnimation doubleAnimation1 = new DoubleAnimation(agent.ZoomScaleTransform.ScaleX, agent.scale, TimeSpan.FromMilliseconds(500));
@@ -3969,7 +3969,7 @@ namespace Apricot
                                 agent.ZoomScaleTransform.ScaleX = agent.scale;
                                 agent.ZoomScaleTransform.ScaleY = agent.scale;
 
-                                foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
+                                foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(agent.characterName) select c)
                                 {
                                     agent.LayoutRoot.Width = c.Size.Width * agent.scale;
                                     agent.LayoutRoot.Height = c.Size.Height * agent.scale;
@@ -3978,7 +3978,7 @@ namespace Apricot
                                 storyboard.Remove(agent.LayoutRoot);
                                 agent.scaleStoryboard = null;
                             }
-                        });
+                        }!);
                         storyboard.Children.Add(doubleAnimation1);
                         storyboard.Children.Add(doubleAnimation2);
                         storyboard.Children.Add(doubleAnimation3);
@@ -3995,13 +3995,13 @@ namespace Apricot
 
                     foreach (Window window in agent.OwnedWindows)
                     {
-                        Agent a = window as Agent;
+                        Agent? a = window as Agent;
 
                         if (a != null)
                         {
                             a.scale = agent.scale;
 
-                            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(a.characterName) select character)
+                            foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(a.characterName) select character)
                             {
                                 Storyboard storyboard = new Storyboard();
                                 DoubleAnimation doubleAnimation1 = new DoubleAnimation(a.ZoomScaleTransform.ScaleX, a.scale, TimeSpan.FromMilliseconds(500));
@@ -4081,7 +4081,7 @@ namespace Apricot
                                         a.ZoomScaleTransform.ScaleX = a.scale;
                                         a.ZoomScaleTransform.ScaleY = a.scale;
 
-                                        foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(a.characterName) select c)
+                                        foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(a.characterName) select c)
                                         {
                                             a.LayoutRoot.Width = c.Size.Width * a.scale;
                                             a.LayoutRoot.Height = c.Size.Height * a.scale;
@@ -4090,7 +4090,7 @@ namespace Apricot
                                         storyboard.Remove(a.LayoutRoot);
                                         a.scaleStoryboard = null;
                                     }
-                                });
+                                }!);
                                 storyboard.Children.Add(doubleAnimation1);
                                 storyboard.Children.Add(doubleAnimation2);
                                 storyboard.Children.Add(doubleAnimation3);
@@ -4130,7 +4130,7 @@ namespace Apricot
 
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                string[] data = e.Data.GetData(DataFormats.FileDrop, false) as string[];
+                string[]? data = e.Data.GetData(DataFormats.FileDrop, false) as string[];
 
                 if (data != null)
                 {
@@ -4145,7 +4145,7 @@ namespace Apricot
                                 string filename2 = Path.GetFileNameWithoutExtension(filename1);
                                 System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
                                 string key;
-                                List<Tuple<string, string>> tupleList;
+                                List<Tuple<string, string>>? tupleList;
 
                                 if (match.Success)
                                 {
@@ -4181,7 +4181,7 @@ namespace Apricot
                                 return dictionary;
                             }).Values)
                             {
-                                Tuple<string, string> tuple = tupleList.Find(delegate (Tuple<string, string> t)
+                                Tuple<string, string>? tuple = tupleList.Find(delegate (Tuple<string, string> t)
                                 {
                                     return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                 });
@@ -4195,7 +4195,7 @@ namespace Apricot
 
                                     if (tuple != null)
                                     {
-                                        FileStream fs = null;
+                                        FileStream? fs = null;
 
                                         try
                                         {
@@ -4203,7 +4203,7 @@ namespace Apricot
 
                                             StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
 
-                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                            if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                             {
                                                 stringBuilder.Append(Path.DirectorySeparatorChar);
                                             }
@@ -4235,7 +4235,7 @@ namespace Apricot
                                 }
                                 else
                                 {
-                                    FileStream fs = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -4243,7 +4243,7 @@ namespace Apricot
 
                                         StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
 
-                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                         {
                                             stringBuilder.Append(Path.DirectorySeparatorChar);
                                         }
@@ -4280,9 +4280,9 @@ namespace Apricot
 
                             if (extension.Equals(".opml", StringComparison.OrdinalIgnoreCase))
                             {
-                                Task.Factory.StartNew<List<Source>>(delegate (object state)
+                                Task.Factory.StartNew<List<Source>?>(delegate (object state)
                                 {
-                                    FileStream fs = null;
+                                    FileStream? fs = null;
                                     List<Source> sourceList = new List<Source>();
 
                                     try
@@ -4291,8 +4291,8 @@ namespace Apricot
 
                                         foreach (XElement element in (System.Collections.IEnumerable)XDocument.Load(fs).XPathEvaluate("/opml/body//outline[@xmlUrl]"))
                                         {
-                                            string title = null;
-                                            Uri xmlUrl = null;
+                                            string? title = null;
+                                            Uri? xmlUrl = null;
 
                                             foreach (XAttribute attribute in element.Attributes())
                                             {
@@ -4307,7 +4307,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            sourceList.Add(new Source(title, xmlUrl));
+                                            sourceList.Add(new Source(title!, xmlUrl!));
                                         }
                                     }
                                     catch
@@ -4323,7 +4323,7 @@ namespace Apricot
                                     }
 
                                     return sourceList;
-                                }, s).ContinueWith(delegate (Task<List<Source>> task)
+                                }!, s).ContinueWith(delegate (Task<List<Source>?> task)
                                 {
                                     if (task.Result != null)
                                     {
@@ -4336,7 +4336,7 @@ namespace Apricot
                             }
                             else if (extension.Equals(".xml", StringComparison.OrdinalIgnoreCase))
                             {
-                                FileStream fs = null;
+                                FileStream? fs = null;
 
                                 try
                                 {
@@ -4344,7 +4344,7 @@ namespace Apricot
 
                                     StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
 
-                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                    if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                     {
                                         stringBuilder.Append(Path.DirectorySeparatorChar);
                                     }
@@ -4375,7 +4375,7 @@ namespace Apricot
                             }
                             else if (extension.Equals(".zip", StringComparison.OrdinalIgnoreCase))
                             {
-                                FileStream fs = null;
+                                FileStream? fs = null;
 
                                 try
                                 {
@@ -4387,7 +4387,7 @@ namespace Apricot
 
                                         StringBuilder stringBuilder = new StringBuilder(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
 
-                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location).Length - 1)
+                                        if (Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.LastIndexOf(Path.DirectorySeparatorChar) != Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!.Length - 1)
                                         {
                                             stringBuilder.Append(Path.DirectorySeparatorChar);
                                         }
@@ -4399,7 +4399,7 @@ namespace Apricot
                                             string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
                                             System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(filename, "^(.+?)\\.([a-z]{2,3})$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
                                             string key;
-                                            List<Tuple<ZipArchiveEntry, string>> tupleList;
+                                            List<Tuple<ZipArchiveEntry, string>>? tupleList;
 
                                             if (match.Success)
                                             {
@@ -4435,7 +4435,7 @@ namespace Apricot
                                             return dictionary;
                                         }).Values)
                                         {
-                                            Tuple<ZipArchiveEntry, string> tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
+                                            Tuple<ZipArchiveEntry, string>? tuple = tupleList.Find(delegate (Tuple<ZipArchiveEntry, string> t)
                                             {
                                                 return t.Item2.Equals(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName);
                                             });
@@ -4449,7 +4449,7 @@ namespace Apricot
 
                                                 if (tuple != null)
                                                 {
-                                                    Stream stream = null;
+                                                    Stream? stream = null;
 
                                                     try
                                                     {
@@ -4480,7 +4480,7 @@ namespace Apricot
                                             }
                                             else
                                             {
-                                                Stream stream = null;
+                                                Stream? stream = null;
 
                                                 try
                                                 {
@@ -4542,7 +4542,7 @@ namespace Apricot
                 int versionMajor = Environment.OSVersion.Version.Major;
                 int versionMinor = Environment.OSVersion.Version.Minor;
                 double version = versionMajor + (double)versionMinor / 10;
-                string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
 
                 if (version > 6.1)
                 {
@@ -4556,7 +4556,7 @@ namespace Apricot
 
                     if (result == APPMODEL_ERROR_NO_PACKAGE)
                     {
-                        System.Configuration.Configuration config = null;
+                        System.Configuration.Configuration? config = null;
 
                         if (Directory.Exists(directory))
                         {
@@ -4576,7 +4576,7 @@ namespace Apricot
                             config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
                         }
 
-                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                        foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                         {
                             if (config.AppSettings.Settings["Left"] == null)
                             {
@@ -4658,7 +4658,7 @@ namespace Apricot
 
                                 System.Configuration.Configuration config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
 
-                                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                                foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                                 {
                                     if (config.AppSettings.Settings["Left"] == null)
                                     {
@@ -4732,7 +4732,7 @@ namespace Apricot
 
                                 System.Configuration.Configuration config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
 
-                                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                                foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                                 {
                                     if (config.AppSettings.Settings["Left"] == null)
                                     {
@@ -4814,7 +4814,7 @@ namespace Apricot
 
                             System.Configuration.Configuration config = System.Configuration.ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, System.Configuration.ConfigurationUserLevel.None);
 
-                            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                            foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                             {
                                 if (config.AppSettings.Settings["Left"] == null)
                                 {
@@ -4891,7 +4891,7 @@ namespace Apricot
                 }
                 else
                 {
-                    System.Configuration.Configuration config = null;
+                    System.Configuration.Configuration? config = null;
 
                     if (Directory.Exists(directory))
                     {
@@ -4911,7 +4911,7 @@ namespace Apricot
                         config = System.Configuration.ConfigurationManager.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel.None);
                     }
 
-                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                     {
                         if (config.AppSettings.Settings["Left"] == null)
                         {
@@ -5006,7 +5006,7 @@ namespace Apricot
                     if (lpwstr != IntPtr.Zero)
                     {
                         const int maxLength = 100;
-                        string text = System.Runtime.InteropServices.Marshal.PtrToStringUni(lpwstr).Trim();
+                        string text = System.Runtime.InteropServices.Marshal.PtrToStringUni(lpwstr)!.Trim();
 
                         if (text.Length > maxLength)
                         {
@@ -5015,13 +5015,13 @@ namespace Apricot
 
                         if (text.Length > 0)
                         {
-                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("DrawClipboard") select sequence, text).Aggregate<Sequence, List<Sequence>>(new List<Sequence>(), (preparedSequenceList, sequence) =>
+                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name!.Equals("DrawClipboard") select sequence, text).Aggregate<Sequence, List<Sequence>>(new List<Sequence>(), (preparedSequenceList, sequence) =>
                             {
                                 System.Collections.ArrayList arrayList = new System.Collections.ArrayList();
 
                                 foreach (object o in sequence)
                                 {
-                                    Message message = o as Message;
+                                    Message? message = o as Message;
 
                                     if (message == null)
                                     {
@@ -5087,7 +5087,7 @@ namespace Apricot
 
                                                 if (m3.Success)
                                                 {
-                                                    Uri uri;
+                                                    Uri? uri;
 
                                                     if (Uri.TryCreate(m3.Value, UriKind.RelativeOrAbsolute, out uri))
                                                     {
@@ -5179,21 +5179,21 @@ namespace Apricot
 
         private void Render()
         {
-            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+            foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
             {
                 Queue<Image> imageQueue = new Queue<Image>(this.Canvas.Children.Cast<Image>());
                 int index = 0;
                 bool updateLayoutRequired = false;
 
-                this.cachedMotionList.ForEach(delegate (Motion motion)
+                this.cachedMotionList!.ForEach(delegate (Motion motion)
                 {
-                    Image image = null;
+                    Image? image = null;
                     Queue<Image> queue = new Queue<Image>();
 
                     while (imageQueue.Count > 0)
                     {
                         Image i = imageQueue.Dequeue();
-                        Motion m = i.Tag as Motion;
+                        Motion? m = i.Tag as Motion;
 
                         if (m != null && motion.ZIndex == m.ZIndex && String.Equals(motion.Type, m.Type))
                         {
@@ -5211,13 +5211,13 @@ namespace Apricot
                     {
                         if (motion.Current.Opacity > 0)
                         {
-                            List<string> typeList = null;
+                            List<string?>? typeList = null;
                             bool isVisible;
-                            BitmapImage bitmapImage;
+                            BitmapImage? bitmapImage;
 
                             if (motion.Type == null)
                             {
-                                typeList = new List<string>();
+                                typeList = new List<string?>();
                                 this.cachedMotionList.ForEach(delegate (Motion m)
                                 {
                                     if (m.ZIndex == motion.ZIndex)
@@ -5231,10 +5231,10 @@ namespace Apricot
                             {
                                 if (character.HasTypes)
                                 {
-                                    typeList = new List<string>();
+                                    typeList = new List<string?>();
                                     this.cachedMotionList.ForEach(delegate (Motion m)
                                     {
-                                        if (m.ZIndex == motion.ZIndex && character.Types.Contains(m.Type))
+                                        if (m.ZIndex == motion.ZIndex && m.Type != null && character.Types.Contains(m.Type))
                                         {
                                             typeList.Add(m.Type);
                                         }
@@ -5248,8 +5248,13 @@ namespace Apricot
                             }
                             else if (character.HasTypes)
                             {
-                                isVisible = !typeList.Exists(delegate (string type)
+                                isVisible = !typeList.Exists(delegate (string? type)
                                 {
+                                    if (type == null)
+                                    {
+                                        return false;
+                                    }
+
                                     return character.Types.Contains(type);
                                 });
                             }
@@ -5263,7 +5268,7 @@ namespace Apricot
                             image.VerticalAlignment = VerticalAlignment.Top;
                             image.HorizontalAlignment = HorizontalAlignment.Left;
 
-                            if (this.cachedBitmapImageDictionary.TryGetValue(Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), motion.Current.Path) : Path.Combine(Path.GetDirectoryName(character.Script), motion.Current.Path), out bitmapImage))
+                            if (this.cachedBitmapImageDictionary!.TryGetValue(Path.GetExtension(character.Script!).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script)!, Path.GetFileNameWithoutExtension(character.Script!), motion.Current.Path!) : Path.Combine(Path.GetDirectoryName(character.Script)!, motion.Current.Path!), out bitmapImage))
                             {
                                 image.Source = bitmapImage;
 
@@ -5325,9 +5330,9 @@ namespace Apricot
                     }
                     else if (motion.Current.Opacity > 0)
                     {
-                        BitmapImage bitmapImage;
+                        BitmapImage? bitmapImage;
 
-                        if (this.cachedBitmapImageDictionary.TryGetValue(Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), motion.Current.Path) : Path.Combine(Path.GetDirectoryName(character.Script), motion.Current.Path), out bitmapImage))
+                        if (this.cachedBitmapImageDictionary!.TryGetValue(Path.GetExtension(character.Script!).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script)!, Path.GetFileNameWithoutExtension(character.Script!), motion.Current.Path!) : Path.Combine(Path.GetDirectoryName(character.Script)!, motion.Current.Path!), out bitmapImage))
                         {
                             image.Source = bitmapImage;
 
@@ -5379,12 +5384,12 @@ namespace Apricot
 
                         if (image.OpacityMask == null)
                         {
-                            List<string> typeList = null;
+                            List<string?>? typeList = null;
                             bool isVisible;
 
                             if (motion.Type == null)
                             {
-                                typeList = new List<string>();
+                                typeList = new List<string?>();
                                 this.cachedMotionList.ForEach(delegate (Motion m)
                                 {
                                     if (m.ZIndex == motion.ZIndex)
@@ -5398,10 +5403,10 @@ namespace Apricot
                             {
                                 if (character.HasTypes)
                                 {
-                                    typeList = new List<string>();
+                                    typeList = new List<string?>();
                                     this.cachedMotionList.ForEach(delegate (Motion m)
                                     {
-                                        if (m.ZIndex == motion.ZIndex && character.Types.Contains(m.Type))
+                                        if (m.ZIndex == motion.ZIndex && m.Type != null && character.Types.Contains(m.Type))
                                         {
                                             typeList.Add(m.Type);
                                         }
@@ -5415,8 +5420,13 @@ namespace Apricot
                             }
                             else if (character.HasTypes)
                             {
-                                isVisible = !typeList.Exists(delegate (string type)
+                                isVisible = !typeList.Exists(delegate (string? type)
                                 {
+                                    if (type == null)
+                                    {
+                                        return false;
+                                    }
+
                                     return character.Types.Contains(type);
                                 });
                             }
@@ -5465,17 +5475,17 @@ namespace Apricot
 
         private void Run()
         {
-            bool isReady = this.IsVisible && !this.balloon.IsVisible;
-            System.Collections.ObjectModel.Collection<Motion> motionCollection = null;
+            bool isReady = this.IsVisible && !this.balloon!.IsVisible;
+            System.Collections.ObjectModel.Collection<Motion>? motionCollection = null;
             bool closeRequired = false;
 
-            if (isReady && this.queue.Count == 0 && this.motionQueue.Count == 0 && !this.isLast)
+            if (isReady && this.queue!.Count == 0 && this.motionQueue!.Count == 0 && !this.isLast)
             {
-                Sequence sequence;
+                Sequence? sequence;
 
-                if (Script.Instance.TryDequeue(this.characterName, out sequence))
+                if (Script.Instance.TryDequeue(this.characterName!, out sequence))
                 {
-                    if (sequence.Name == null && !sequence.Any())
+                    if (sequence!.Name == null && !sequence.Any())
                     {
                         if (this.isFirst)
                         {
@@ -5515,27 +5525,27 @@ namespace Apricot
                 }
             }
 
-            if (this.queue.Count > 0)
+            if (this.queue!.Count > 0)
             {
                 if (this.queue.Peek() is Message)
                 {
-                    if (!this.balloon.IsVisible)
+                    if (!this.balloon!.IsVisible)
                     {
-                        this.balloon.Show((Message)this.queue.Dequeue());
+                        this.balloon.Show((Message)this.queue.Dequeue()!);
                     }
                 }
                 else if (this.queue.Peek() is System.Collections.ObjectModel.Collection<Motion>)
                 {
-                    if (this.motionQueue.Count == 0)
+                    if (this.motionQueue!.Count == 0)
                     {
-                        motionCollection = (System.Collections.ObjectModel.Collection<Motion>)this.queue.Dequeue();
+                        motionCollection = (System.Collections.ObjectModel.Collection<Motion>)this.queue.Dequeue()!;
                     }
                 }
                 else if (this.queue.Peek() is Sound)
                 {
-                    Sound sound = (Sound)this.queue.Dequeue();
+                    Sound sound = (Sound)this.queue.Dequeue()!;
 
-                    if (this.IsVisible && !String.IsNullOrEmpty(sound.Path) && !this.isMute)
+                    if (this.IsVisible && !String.IsNullOrEmpty(sound.Path!) && !this.isMute)
                     {
                         foreach (var v in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select new { character.Script, sound.Path })
                         {
@@ -5543,17 +5553,17 @@ namespace Apricot
                             {
                                 Task.Factory.StartNew(delegate
                                 {
-                                    FileStream fs = null;
-                                    Stream s = null;
+                                    FileStream? fs = null;
+                                    Stream? s = null;
 
                                     try
                                     {
-                                        fs = new FileStream(Path.IsPathRooted(v.Script) ? v.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), v.Script), FileMode.Open, FileAccess.Read, FileShare.Read);
+                                        fs = new FileStream(Path.IsPathRooted(v.Script) ? v.Script : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, v.Script), FileMode.Open, FileAccess.Read, FileShare.Read);
 
                                         using (ZipArchive zipArchive = new ZipArchive(fs))
                                         {
                                             fs = null;
-                                            s = zipArchive.GetEntry(v.Path).Open();
+                                            s = zipArchive.GetEntry(v.Path)!.Open();
 
                                             using (System.Media.SoundPlayer soundPlayer = new System.Media.SoundPlayer(s))
                                             {
@@ -5583,12 +5593,12 @@ namespace Apricot
                                 {
                                     string path = (string)state;
 
-                                    using (System.Media.SoundPlayer soundPlayer = new System.Media.SoundPlayer(Path.IsPathRooted(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), path)))
+                                    using (System.Media.SoundPlayer soundPlayer = new System.Media.SoundPlayer(Path.IsPathRooted(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, path)))
                                     {
                                         soundPlayer.Load();
                                         soundPlayer.PlaySync();
                                     }
-                                }, Path.Combine(Path.GetDirectoryName(v.Script), v.Path));
+                                }!, Path.Combine(Path.GetDirectoryName(v.Script)!, v.Path));
                             }
                         }
                     }
@@ -5597,9 +5607,9 @@ namespace Apricot
 
             if (motionCollection == null)
             {
-                if (!this.isLast && this.motionQueue.Count == 0)
+                if (!this.isLast && this.motionQueue!.Count == 0)
                 {
-                    this.cachedMotionList.ForEach(delegate (Motion motion)
+                    this.cachedMotionList!.ForEach(delegate (Motion motion)
                     {
                         if (motion.Repeats)
                         {
@@ -5612,16 +5622,16 @@ namespace Apricot
             {
                 foreach (Motion motion in motionCollection)
                 {
-                    this.motionQueue.Enqueue(motion);
+                    this.motionQueue!.Enqueue(motion);
                 }
             }
 
-            if (this.motionQueue.Count > 0)
+            if (this.motionQueue!.Count > 0)
             {
                 Queue<Motion> q = new Queue<Motion>(this.motionQueue);
                 List<Motion> motionList1 = new List<Motion>();
 
-                if (this.cachedMotionList.Count == 0)
+                if (this.cachedMotionList!.Count == 0)
                 {
                     int minZIndex = Int32.MaxValue;
                     int maxZIndex = Int32.MinValue;
@@ -5651,7 +5661,7 @@ namespace Apricot
 
                         motionList1.ForEach(delegate (Motion motion)
                         {
-                            List<Motion> motionList2;
+                            List<Motion>? motionList2;
 
                             if (motion.ZIndex < minZIndex)
                             {
@@ -5673,29 +5683,29 @@ namespace Apricot
 
                             foreach (string path in from sprite in motion.Sprites where !String.IsNullOrEmpty(sprite.Path) select sprite.Path)
                             {
-                                string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), path) : Path.Combine(Path.GetDirectoryName(character.Script), path);
+                                string key = Path.GetExtension(character.Script!).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script)!, Path.GetFileNameWithoutExtension(character.Script)!, path) : Path.Combine(Path.GetDirectoryName(character.Script)!, path);
 
-                                if (!dictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
+                                if (!dictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary!.ContainsKey(key))
                                 {
                                     dictionary.Add(key, Tuple.Create<string, MemoryStream>(path, new MemoryStream()));
                                 }
                             }
                         });
 
-                        contentList.Add(Tuple.Create<string, Dictionary<string, Tuple<string, MemoryStream>>>(character.Script, dictionary));
+                        contentList.Add(Tuple.Create<string, Dictionary<string, Tuple<string, MemoryStream>>>(character.Script!, dictionary));
                     }
 
                     Task.Factory.StartNew(delegate
                     {
                         contentList.ForEach(delegate (Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>> tuple1)
                         {
-                            string path = Path.IsPathRooted(tuple1.Item1) ? tuple1.Item1 : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), tuple1.Item1);
+                            string path = Path.IsPathRooted(tuple1.Item1) ? tuple1.Item1 : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, tuple1.Item1);
 
                             if (Path.GetExtension(tuple1.Item1).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                             {
                                 foreach (Tuple<string, MemoryStream> tuple2 in tuple1.Item2.Values)
                                 {
-                                    FileStream fs = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -5705,7 +5715,7 @@ namespace Apricot
                                         {
                                             fs = null;
 
-                                            ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(tuple2.Item1);
+                                            ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(tuple2.Item1)!;
 
                                             using (Stream stream = zipArchiveEntry.Open())
                                             {
@@ -5734,7 +5744,7 @@ namespace Apricot
                             {
                                 foreach (Tuple<string, MemoryStream> tuple2 in tuple1.Item2.Values)
                                 {
-                                    using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(path), tuple2.Item1), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(path)!, tuple2.Item1), FileMode.Open, FileAccess.Read, FileShare.Read))
                                     {
                                         byte[] buffer = new byte[fs.Length];
                                         int bytesRead;
@@ -5755,9 +5765,9 @@ namespace Apricot
                         {
                             foreach (KeyValuePair<string, Tuple<string, MemoryStream>> kvp in tuple1.Item2)
                             {
-                                BitmapImage bitmapImage;
+                                BitmapImage? bitmapImage;
 
-                                if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
+                                if (!this.cachedBitmapImageDictionary!.TryGetValue(kvp.Key, out bitmapImage))
                                 {
                                     try
                                     {
@@ -5785,7 +5795,7 @@ namespace Apricot
 
                         for (int i = minZIndex; i <= maxZIndex; i++)
                         {
-                            List<Motion> motionList2;
+                            List<Motion>? motionList2;
 
                             if (motionDictionary.TryGetValue(i, out motionList2))
                             {
@@ -5802,7 +5812,7 @@ namespace Apricot
                         DoubleAnimation doubleAnimation1 = new DoubleAnimation(0, this.opacity, TimeSpan.FromMilliseconds(500));
                         SineEase sineEase1 = new SineEase();
 
-                        foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary)
+                        foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary!)
                         {
                             kvp.Key.Stop(kvp.Value);
                         }
@@ -5831,7 +5841,7 @@ namespace Apricot
                                     animationHashSet.Add(doubleAnimation1);
                                 }
                             }
-                        });
+                        }!);
 
                         storyboard1.Children.Add(doubleAnimation1);
 
@@ -5840,7 +5850,7 @@ namespace Apricot
                         this.fadeStoryboardDictionary.Add(storyboard1, this);
                         this.BeginStoryboard(storyboard1, HandoffBehavior.SnapshotAndReplace, true);
 
-                        if (this.balloon.Opacity != 1)
+                        if (this.balloon!.Opacity != 1)
                         {
                             Storyboard storyboard2 = new Storyboard();
                             DoubleAnimation doubleAnimation2 = new DoubleAnimation(this.balloon.Opacity, 1, TimeSpan.FromMilliseconds(500));
@@ -5868,7 +5878,7 @@ namespace Apricot
                                         animationHashSet.Add(doubleAnimation2);
                                     }
                                 }
-                            });
+                            }!);
 
                             storyboard2.Children.Add(doubleAnimation2);
 
@@ -5943,9 +5953,9 @@ namespace Apricot
 
                             foreach (string path in from sprite in motion.Sprites where !String.IsNullOrEmpty(sprite.Path) select sprite.Path)
                             {
-                                string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), path) : Path.Combine(Path.GetDirectoryName(character.Script), path);
+                                string key = Path.GetExtension(character.Script)!.Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script)!, Path.GetFileNameWithoutExtension(character.Script)!, path) : Path.Combine(Path.GetDirectoryName(character.Script)!, path);
 
-                                if (!dictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary.ContainsKey(key))
+                                if (!dictionary.ContainsKey(key) && !this.cachedBitmapImageDictionary!.ContainsKey(key))
                                 {
                                     dictionary.Add(key, Tuple.Create<string, MemoryStream>(path, new MemoryStream()));
                                 }
@@ -5957,20 +5967,20 @@ namespace Apricot
                             }
                         });
 
-                        contentList.Add(Tuple.Create<string, Dictionary<string, Tuple<string, MemoryStream>>>(character.Script, dictionary));
+                        contentList.Add(Tuple.Create<string, Dictionary<string, Tuple<string, MemoryStream>>>(character.Script!, dictionary));
                     }
 
                     Task.Factory.StartNew(delegate
                     {
                         contentList.ForEach(delegate (Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>> tuple1)
                         {
-                            string path = Path.IsPathRooted(tuple1.Item1) ? tuple1.Item1 : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), tuple1.Item1);
+                            string path = Path.IsPathRooted(tuple1.Item1) ? tuple1.Item1 : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, tuple1.Item1);
 
                             if (Path.GetExtension(tuple1.Item1).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                             {
                                 foreach (Tuple<string, MemoryStream> tuple2 in tuple1.Item2.Values)
                                 {
-                                    FileStream fs = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -5980,7 +5990,7 @@ namespace Apricot
                                         {
                                             fs = null;
 
-                                            ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(tuple2.Item1);
+                                            ZipArchiveEntry zipArchiveEntry = zipArchive.GetEntry(tuple2.Item1)!;
 
                                             using (Stream stream = zipArchiveEntry.Open())
                                             {
@@ -6009,7 +6019,7 @@ namespace Apricot
                             {
                                 foreach (Tuple<string, MemoryStream> tuple2 in tuple1.Item2.Values)
                                 {
-                                    using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(path), tuple2.Item1), FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    using (FileStream fs = new FileStream(Path.Combine(Path.GetDirectoryName(path)!, tuple2.Item1), FileMode.Open, FileAccess.Read, FileShare.Read))
                                     {
                                         byte[] buffer = new byte[fs.Length];
                                         int bytesRead;
@@ -6036,9 +6046,9 @@ namespace Apricot
                         {
                             foreach (KeyValuePair<string, Tuple<string, MemoryStream>> kvp in tuple1.Item2)
                             {
-                                BitmapImage bitmapImage;
+                                BitmapImage? bitmapImage;
 
-                                if (!this.cachedBitmapImageDictionary.TryGetValue(kvp.Key, out bitmapImage))
+                                if (!this.cachedBitmapImageDictionary!.TryGetValue(kvp.Key, out bitmapImage))
                                 {
                                     try
                                     {
@@ -6095,7 +6105,7 @@ namespace Apricot
 
                                 foreach (string path in from sprite in motion.Sprites where !String.IsNullOrEmpty(sprite.Path) select sprite.Path)
                                 {
-                                    string key = Path.GetExtension(character.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script), Path.GetFileNameWithoutExtension(character.Script), path) : Path.Combine(Path.GetDirectoryName(character.Script), path);
+                                    string key = Path.GetExtension(character.Script)!.Equals(".zip", StringComparison.OrdinalIgnoreCase) ? Path.Combine(Path.GetDirectoryName(character.Script)!, Path.GetFileNameWithoutExtension(character.Script)!, path) : Path.Combine(Path.GetDirectoryName(character.Script)!, path);
 
                                     if (!keyHashSet.Contains(key))
                                     {
@@ -6108,7 +6118,7 @@ namespace Apricot
                             });
                         }
 
-                        foreach (string s in (from s in this.cachedBitmapImageDictionary.Keys where !keyHashSet.Contains(s) select s).ToArray())
+                        foreach (string s in (from s in this.cachedBitmapImageDictionary!.Keys where !keyHashSet.Contains(s) select s).ToArray())
                         {
                             this.cachedBitmapImageDictionary.Remove(s);
                         }
@@ -6128,9 +6138,9 @@ namespace Apricot
 
                             motionList2.ForEach(delegate (Motion m1)
                             {
-                                Motion motion = null;
-                                Motion nextMotion = null;
-                                Motion m2 = motionList3.Find(delegate (Motion m)
+                                Motion? motion = null;
+                                Motion? nextMotion = null;
+                                Motion? m2 = motionList3.Find(delegate (Motion m)
                                 {
                                     return String.Equals(m.Type, m1.Type);
                                 });
@@ -6203,7 +6213,7 @@ namespace Apricot
 
             if (this.isLast && this.queue.Count == 0)
             {
-                if (this.balloon.IsVisible)
+                if (this.balloon!.IsVisible)
                 {
                     Task.Factory.StartNew(delegate
                     {
@@ -6225,7 +6235,7 @@ namespace Apricot
                     DoubleAnimation doubleAnimation = new DoubleAnimation(this.Opacity, 0, TimeSpan.FromMilliseconds(500));
                     SineEase sineEase = new SineEase();
 
-                    foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary)
+                    foreach (KeyValuePair<Storyboard, Window> kvp in this.fadeStoryboardDictionary!)
                     {
                         kvp.Key.Stop(kvp.Value);
                     }
@@ -6259,7 +6269,7 @@ namespace Apricot
                             {
                                 foreach (Window window in Application.Current.Windows)
                                 {
-                                    Agent agent = window as Agent;
+                                    Agent? agent = window as Agent;
 
                                     if (agent != null && agent.Opacity > 0 || window as Balloon == null && window.Owner != null)
                                     {
@@ -6283,7 +6293,7 @@ namespace Apricot
                             this.LayoutRoot.Width = this.LayoutRoot.Height = this.Canvas.Width = this.Canvas.Height = 0;
                             Close();
                         }
-                    });
+                    }!);
 
                     storyboard.Children.Add(doubleAnimation);
 
@@ -6341,7 +6351,7 @@ namespace Apricot
                 {
                     foreach (Window window in Application.Current.Windows)
                     {
-                        Agent agent = window as Agent;
+                        Agent? agent = window as Agent;
 
                         if (agent != null && agent.Opacity > 0 || window as Balloon == null && window.Owner != null)
                         {
@@ -6386,7 +6396,7 @@ namespace Apricot
 
                 if (isRunning)
                 {
-                    if (switchDictionary.Count > 0 && this.cachedMotionList.TrueForAll(delegate (Motion motion)
+                    if (switchDictionary.Count > 0 && this.cachedMotionList!.TrueForAll(delegate (Motion motion)
                     {
                         return motion.Position == motion.Sprites.Count - 1;
                     }))
@@ -6414,7 +6424,7 @@ namespace Apricot
                     else
                     {
                         spriteList.Clear();
-                        this.cachedMotionList.ForEach(delegate (Motion motion)
+                        this.cachedMotionList!.ForEach(delegate (Motion motion)
                         {
                             int skipFrames;
                             long frames = currentFrame;
@@ -6436,10 +6446,10 @@ namespace Apricot
                 else
                 {
                     spriteList.Clear();
-                    this.cachedMotionList.ForEach(delegate (Motion motion)
+                    this.cachedMotionList!.ForEach(delegate (Motion motion)
                     {
                         long frames;
-                        Motion m;
+                        Motion? m;
 
                         if (switchDictionary.TryGetValue(motion, out m))
                         {
@@ -6558,7 +6568,7 @@ namespace Apricot
             window.Background = Brushes.Transparent;
             window.Loaded += new RoutedEventHandler(delegate
             {
-                ScaleTransform scaleTransform = contentControl.RenderTransform as ScaleTransform;
+                ScaleTransform? scaleTransform = contentControl.RenderTransform as ScaleTransform;
                 Storyboard storyboard = new Storyboard();
                 DoubleAnimation doubleAnimation1 = new DoubleAnimation(contentControl.Opacity, 1, TimeSpan.FromMilliseconds(500));
                 DoubleAnimation doubleAnimation2 = new DoubleAnimation(1.5, 1, TimeSpan.FromMilliseconds(500));
@@ -6618,7 +6628,7 @@ namespace Apricot
                     {
                         window.Close();
                     }
-                });
+                }!);
 
                 Storyboard.SetTarget(doubleAnimation1, contentControl);
                 Storyboard.SetTarget(doubleAnimation2, contentControl);

@@ -1,15 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Globalization;
 using System.IO;
-using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Threading;
 using Windows.Devices.Geolocation;
+using Microsoft.Extensions.DependencyInjection;
 using Apricot;
 
 namespace Weather
@@ -17,9 +17,9 @@ namespace Weather
     [System.Composition.Export(typeof(IExtension))]
     public class WeatherExtension : IExtension
     {
-        private readonly string apiKey = "YOUR_API_KEY";
-        private Geolocator geolocator = null;
-        private DispatcherTimer timer = null;
+        private readonly string apiKey = null;
+        private Geolocator? geolocator = null;
+        private DispatcherTimer? timer = null;
 
         public WeatherExtension()
         {
@@ -32,7 +32,7 @@ namespace Weather
             {
                 if (this.geolocator.LocationStatus == PositionStatus.Ready && this.timer.IsEnabled)
                 {
-                    Geoposition geoposition;
+                    Geoposition? geoposition;
 
                     try
                     {
@@ -53,11 +53,11 @@ namespace Weather
 
         public async void Attach()
         {
-            this.timer.Start();
-            
-            if (this.geolocator.LocationStatus == PositionStatus.Ready)
+            this.timer!.Start();
+
+            if (this.geolocator!.LocationStatus == PositionStatus.Ready)
             {
-                Geoposition geoposition;
+                Geoposition? geoposition;
 
                 try
                 {
@@ -77,210 +77,202 @@ namespace Weather
 
         public void Detach()
         {
-            this.timer.Stop();
+            this.timer!.Stop();
         }
 
         private async void Update(Geocoordinate geocoordinate)
         {
-            Configuration config1 = null;
-            var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly().GetName().Name);
-            var webRequest = WebRequest.Create(new Uri(String.Format("https://api.openweathermap.org/data/2.5/weather?lat={0}&lon={1}&APPID={2}", Utility.UrlEncode(geocoordinate.Point.Position.Latitude.ToString(CultureInfo.InvariantCulture)), Utility.UrlEncode(geocoordinate.Point.Position.Longitude.ToString(CultureInfo.InvariantCulture)), this.apiKey)));
-            Queue<string> queue;
-
-            if (Directory.Exists(directory))
+            if (this.apiKey != null)
             {
-                var filename = Path.GetFileName(Assembly.GetEntryAssembly().Location);
+                Configuration? config1 = null;
+                var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Assembly.GetEntryAssembly()!.GetName().Name!);
+                var httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
+                Queue<string>? queue;
 
-                foreach (var s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly))
+                if (Directory.Exists(directory))
                 {
-                    if (filename.Equals(Path.GetFileNameWithoutExtension(s)))
+                    var filename = Path.GetFileName(Assembly.GetEntryAssembly()!.Location);
+
+                    foreach (var s in Directory.EnumerateFiles(directory, "*.config", SearchOption.TopDirectoryOnly))
                     {
-                        var exeConfigurationFileMap = new ExeConfigurationFileMap();
-
-                        exeConfigurationFileMap.ExeConfigFilename = s;
-                        config1 = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None);
-                    }
-                }
-            }
-
-            if (config1 == null)
-            {
-                config1 = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-                if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                {
-                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                }
-
-                if (config1.AppSettings.Settings["UserAgent"] != null)
-                {
-                    var httpWebRequest = webRequest as HttpWebRequest;
-
-                    if (httpWebRequest != null)
-                    {
-                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                    }
-                }
-            }
-            else
-            {
-                var config2 = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-                if (config1.AppSettings.Settings["Timeout"] == null)
-                {
-                    if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
-                    {
-                        webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                    }
-                }
-                else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
-                {
-                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
-                }
-
-                if (config1.AppSettings.Settings["UserAgent"] == null)
-                {
-                    if (config2.AppSettings.Settings["UserAgent"] != null)
-                    {
-                        var httpWebRequest = webRequest as HttpWebRequest;
-
-                        if (httpWebRequest != null)
+                        if (filename.Equals(Path.GetFileNameWithoutExtension(s)))
                         {
-                            httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
+                            var exeConfigurationFileMap = new ExeConfigurationFileMap();
+
+                            exeConfigurationFileMap.ExeConfigFilename = s;
+                            config1 = ConfigurationManager.OpenMappedExeConfiguration(exeConfigurationFileMap, ConfigurationUserLevel.None);
                         }
+                    }
+                }
+
+                if (config1 == null)
+                {
+                    config1 = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+
+                    if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                    {
+                        httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
+                    }
+
+                    if (config1.AppSettings.Settings["UserAgent"] != null)
+                    {
+                        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                     }
                 }
                 else
                 {
-                    var httpWebRequest = webRequest as HttpWebRequest;
+                    var config2 = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
-                    if (httpWebRequest != null)
+                    if (config1.AppSettings.Settings["Timeout"] == null)
                     {
-                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
+                        if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
+                        {
+                            httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
+                        }
+                    }
+                    else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
+                    {
+                        httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
+                    }
+
+                    if (config1.AppSettings.Settings["UserAgent"] == null)
+                    {
+                        if (config2.AppSettings.Settings["UserAgent"] != null)
+                        {
+                            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config2.AppSettings.Settings["UserAgent"].Value);
+                        }
+                    }
+                    else
+                    {
+                        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                     }
                 }
-            }
 
-            try
-            {
-                queue = await Task.Factory.StartNew<Queue<string>>(delegate (object state)
+                try
                 {
-                    Queue<string> q = null;
-
-                    if (NetworkInterface.GetIsNetworkAvailable())
+                    queue = await Task.Factory.StartNew<Queue<string>>(delegate (object? state)
                     {
-                        WebRequest request = (WebRequest)state;
-                        WebResponse response = null;
-                        Stream s = null;
-                        StreamReader sr = null;
+                        Queue<string>? q = null;
 
-                        try
+                        if (NetworkInterface.GetIsNetworkAvailable())
                         {
-                            response = request.GetResponse();
-                            s = response.GetResponseStream();
-                            sr = new StreamReader(s);
-                            s = null;
+                            HttpClient client = (HttpClient)state!;
+                            HttpResponseMessage? response = null;
+                            Stream? s = null;
+                            StreamReader? sr = null;
 
-                            var jsonDictionary = Json.JsonDecode(sr.ReadToEnd()) as Dictionary<string, object>;
-
-                            if (jsonDictionary != null)
+                            try
                             {
-                                object weather;
+                                response = client.Send(new HttpRequestMessage(HttpMethod.Get, new Uri(String.Format("https://api.openweathermap.org/data/2.5/weather?lat={0}&lon={1}&APPID={2}", Utility.UrlEncode(geocoordinate.Point.Position.Latitude.ToString(CultureInfo.InvariantCulture)), Utility.UrlEncode(geocoordinate.Point.Position.Longitude.ToString(CultureInfo.InvariantCulture)), this.apiKey))));
 
-                                if (jsonDictionary.TryGetValue("weather", out weather))
+                                if (response.IsSuccessStatusCode)
                                 {
-                                    var weathers = weather as object[];
+                                    s = response.Content.ReadAsStream();
+                                    sr = new StreamReader(s);
+                                    s = null;
 
-                                    if (weathers != null)
+                                    var jsonDictionary = Json.JsonDecode(sr.ReadToEnd()) as Dictionary<string, object>;
+
+                                    if (jsonDictionary != null)
                                     {
-                                        var nowDateTime = DateTime.Now;
+                                        object? weather;
 
-                                        q = new Queue<string>();
-
-                                        foreach (object o1 in weathers)
+                                        if (jsonDictionary.TryGetValue("weather", out weather))
                                         {
-                                            var dictionary = o1 as Dictionary<string, object>;
+                                            var weathers = weather as object[];
 
-                                            if (dictionary != null)
+                                            if (weathers != null)
                                             {
-                                                object o2;
+                                                var nowDateTime = DateTime.Now;
 
-                                                if (dictionary.TryGetValue("id", out o2))
+                                                q = new Queue<string>();
+
+                                                foreach (object o1 in weathers)
                                                 {
-                                                    if (o2 is double)
+                                                    var dictionary = o1 as Dictionary<string, object>;
+
+                                                    if (dictionary != null)
                                                     {
-                                                        var digit = Convert.ToInt32(o2);
+                                                        object? o2;
 
-                                                        if (digit == 701)
+                                                        if (dictionary.TryGetValue("id", out o2))
                                                         {
-                                                            q.Enqueue("Mist");
-                                                        }
-                                                        else if (digit == 711)
-                                                        {
-                                                            q.Enqueue("Smoke");
-                                                        }
-                                                        else if (digit == 721)
-                                                        {
-                                                            q.Enqueue("Haze");
-                                                        }
-                                                        else if (digit == 731)
-                                                        {
-                                                            q.Enqueue("Dust");
-                                                        }
-                                                        else if (digit == 741)
-                                                        {
-                                                            q.Enqueue("Fog");
-                                                        }
-                                                        else if (digit == 800)
-                                                        {
-                                                            if (nowDateTime.Hour > 6 && nowDateTime.Hour <= 18)
+                                                            if (o2 is double)
                                                             {
-                                                                q.Enqueue("Sunny");
-                                                            }
-                                                            else
-                                                            {
-                                                                q.Enqueue("Clear");
-                                                            }
-                                                        }
-                                                        else if (digit >= 801 && digit <= 803)
-                                                        {
-                                                            q.Enqueue("Cloudy");
-                                                        }
-                                                        else if (digit == 804)
-                                                        {
-                                                            q.Enqueue("Overcast");
-                                                        }
-                                                        else if (digit == 900)
-                                                        {
-                                                            q.Enqueue("Tornado");
-                                                        }
-                                                        else if (digit == 905)
-                                                        {
-                                                            q.Enqueue("Windy");
-                                                        }
-                                                        else if (digit == 906)
-                                                        {
-                                                            q.Enqueue("Hail");
-                                                        }
-                                                        else
-                                                        {
-                                                            var i = digit / 100;
+                                                                var digit = Convert.ToInt32(o2);
 
-                                                            if (i == 2)
-                                                            {
-                                                                q.Enqueue("Thunderstorm");
-                                                            }
-                                                            else if (i == 3)
-                                                            {
-                                                                q.Enqueue("Drizzle");
-                                                            }
-                                                            else if (i == 5)
-                                                            {
-                                                                q.Enqueue("Rain");
-                                                            }
-                                                            else if (i == 6)
-                                                            {
-                                                                q.Enqueue("Snow");
+                                                                if (digit == 701)
+                                                                {
+                                                                    q.Enqueue("Mist");
+                                                                }
+                                                                else if (digit == 711)
+                                                                {
+                                                                    q.Enqueue("Smoke");
+                                                                }
+                                                                else if (digit == 721)
+                                                                {
+                                                                    q.Enqueue("Haze");
+                                                                }
+                                                                else if (digit == 731)
+                                                                {
+                                                                    q.Enqueue("Dust");
+                                                                }
+                                                                else if (digit == 741)
+                                                                {
+                                                                    q.Enqueue("Fog");
+                                                                }
+                                                                else if (digit == 800)
+                                                                {
+                                                                    if (nowDateTime.Hour > 6 && nowDateTime.Hour <= 18)
+                                                                    {
+                                                                        q.Enqueue("Sunny");
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        q.Enqueue("Clear");
+                                                                    }
+                                                                }
+                                                                else if (digit >= 801 && digit <= 803)
+                                                                {
+                                                                    q.Enqueue("Cloudy");
+                                                                }
+                                                                else if (digit == 804)
+                                                                {
+                                                                    q.Enqueue("Overcast");
+                                                                }
+                                                                else if (digit == 900)
+                                                                {
+                                                                    q.Enqueue("Tornado");
+                                                                }
+                                                                else if (digit == 905)
+                                                                {
+                                                                    q.Enqueue("Windy");
+                                                                }
+                                                                else if (digit == 906)
+                                                                {
+                                                                    q.Enqueue("Hail");
+                                                                }
+                                                                else
+                                                                {
+                                                                    var i = digit / 100;
+
+                                                                    if (i == 2)
+                                                                    {
+                                                                        q.Enqueue("Thunderstorm");
+                                                                    }
+                                                                    else if (i == 3)
+                                                                    {
+                                                                        q.Enqueue("Drizzle");
+                                                                    }
+                                                                    else if (i == 5)
+                                                                    {
+                                                                        q.Enqueue("Rain");
+                                                                    }
+                                                                    else if (i == 6)
+                                                                    {
+                                                                        q.Enqueue("Snow");
+                                                                    }
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -290,49 +282,49 @@ namespace Weather
                                     }
                                 }
                             }
+                            finally
+                            {
+                                if (sr != null)
+                                {
+                                    sr.Close();
+                                }
+
+                                if (s != null)
+                                {
+                                    s.Close();
+                                }
+
+                                if (response != null)
+                                {
+                                    response.Dispose();
+                                }
+                            }
                         }
-                        finally
-                        {
-                            if (sr != null)
-                            {
-                                sr.Close();
-                            }
 
-                            if (s != null)
-                            {
-                                s.Close();
-                            }
-
-                            if (response != null)
-                            {
-                                response.Close();
-                            }
-                        }
-                    }
-
-                    return q;
-                }, webRequest, TaskCreationOptions.LongRunning);
-            }
-            catch
-            {
-                queue = null;
-            }
-            
-            if (queue != null)
-            {
-                var sequenceList = new List<Sequence>();
-
-                foreach (var sequence in Script.Instance.Sequences)
+                        return q!;
+                    }, httpClient, TaskCreationOptions.LongRunning);
+                }
+                catch
                 {
-                    if (sequence.Name.Equals("Weather"))
-                    {
-                        sequenceList.Add(sequence);
-                    }
+                    queue = null;
                 }
 
-                while (queue.Count > 0)
+                if (queue != null)
                 {
-                    Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, queue.Dequeue()));
+                    var sequenceList = new List<Sequence>();
+
+                    foreach (var sequence in Script.Instance.Sequences)
+                    {
+                        if (sequence.Name!.Equals("Weather"))
+                        {
+                            sequenceList.Add(sequence);
+                        }
+                    }
+
+                    while (queue.Count > 0)
+                    {
+                        Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, queue.Dequeue()));
+                    }
                 }
             }
         }
@@ -366,7 +358,7 @@ namespace Weather
         /// </summary>
         /// <param name="json">A JSON string.</param>
         /// <returns>An ArrayList, a Hashtable, a double, a string, null, true, or false</returns>
-        public static object JsonDecode(string json)
+        public static object? JsonDecode(string json)
         {
             bool success = true;
 
@@ -379,7 +371,7 @@ namespace Weather
         /// <param name="json">A JSON string.</param>
         /// <param name="success">Successful parse?</param>
         /// <returns>An ArrayList, a Hashtable, a double, a string, null, true, or false</returns>
-        public static object JsonDecode(string json, ref bool success)
+        public static object? JsonDecode(string json, ref bool success)
         {
             success = true;
 
@@ -387,7 +379,7 @@ namespace Weather
             {
                 char[] charArray = json.ToCharArray();
                 int index = 0;
-                object value = ParseValue(charArray, ref index, ref success);
+                object? value = ParseValue(charArray, ref index, ref success);
                 return value;
             }
             else
@@ -401,7 +393,7 @@ namespace Weather
         /// </summary>
         /// <param name="json">A Hashtable / ArrayList</param>
         /// <returns>A JSON encoded string, or null if object 'json' is not serializable</returns>
-        public static string JsonEncode(object json)
+        public static string? JsonEncode(object json)
         {
             StringBuilder builder = new StringBuilder();
             bool success = SerializeValue(json, builder);
@@ -409,7 +401,7 @@ namespace Weather
             return (success ? builder.ToString() : null);
         }
 
-        protected static Dictionary<string, object> ParseObject(char[] json, ref int index, ref bool success)
+        protected static Dictionary<string, object>? ParseObject(char[] json, ref int index, ref bool success)
         {
             Dictionary<string, object> table = new Dictionary<string, object>();
             int token;
@@ -442,7 +434,7 @@ namespace Weather
                 else
                 {
                     // name
-                    string name = ParseString(json, ref index, ref success);
+                    string? name = ParseString(json, ref index, ref success);
 
                     if (!success)
                     {
@@ -461,7 +453,7 @@ namespace Weather
                     }
 
                     // value
-                    object value = ParseValue(json, ref index, ref success);
+                    object? value = ParseValue(json, ref index, ref success);
 
                     if (!success)
                     {
@@ -470,14 +462,14 @@ namespace Weather
                         return null;
                     }
 
-                    table.Add(name, value);
+                    table.Add(name!, value!);
                 }
             }
 
             return table;
         }
 
-        protected static object[] ParseArray(char[] json, ref int index, ref bool success)
+        protected static object[]? ParseArray(char[] json, ref int index, ref bool success)
         {
             List<object> array = new List<object>();
 
@@ -508,21 +500,21 @@ namespace Weather
                 }
                 else
                 {
-                    object value = ParseValue(json, ref index, ref success);
+                    object? value = ParseValue(json, ref index, ref success);
 
                     if (!success)
                     {
                         return null;
                     }
 
-                    array.Add(value);
+                    array.Add(value!);
                 }
             }
 
             return array.ToArray();
         }
 
-        protected static object ParseValue(char[] json, ref int index, ref bool success)
+        protected static object? ParseValue(char[] json, ref int index, ref bool success)
         {
             switch (LookAhead(json, index))
             {
@@ -551,7 +543,7 @@ namespace Weather
             return null;
         }
 
-        protected static string ParseString(char[] json, ref int index, ref bool success)
+        protected static string? ParseString(char[] json, ref int index, ref bool success)
         {
             StringBuilder s = new StringBuilder();
             char c;

@@ -18,12 +18,12 @@ namespace Apricot
     {
         private bool sessionEnding = false;
         [System.Composition.ImportMany]
-        public IEnumerable<IExtension> Extensions { get; set; }
+        public IEnumerable<IExtension>? Extensions { get; set; }
 
         public App()
         {
-            Configuration config1 = null;
-            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            Configuration? config1 = null;
+            string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
 
             if (Directory.Exists(directory))
             {
@@ -47,7 +47,7 @@ namespace Apricot
                     ScriptOptions scriptOptions = ScriptOptions.Default.WithReferences(System.Reflection.Assembly.GetExecutingAssembly());
                     List<Task<ScriptState<object>>> taskList = new List<Task<ScriptState<object>>>();
 
-                    foreach (string filename in Directory.EnumerateFiles(Path.IsPathRooted(config1.AppSettings.Settings["Scripts"].Value) ? config1.AppSettings.Settings["Scripts"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
+                    foreach (string filename in Directory.EnumerateFiles(Path.IsPathRooted(config1.AppSettings.Settings["Scripts"].Value) ? config1.AppSettings.Settings["Scripts"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config1.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
                     {
                         using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
                         using (StreamReader sr = new StreamReader(fs))
@@ -63,7 +63,7 @@ namespace Apricot
                 {
                     List<System.Reflection.Assembly> assemblyList = new List<System.Reflection.Assembly>();
 
-                    foreach (string filename in Directory.EnumerateFiles(Path.IsPathRooted(config1.AppSettings.Settings["Extensions"].Value) ? config1.AppSettings.Settings["Extensions"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
+                    foreach (string filename in Directory.EnumerateFiles(Path.IsPathRooted(config1.AppSettings.Settings["Extensions"].Value) ? config1.AppSettings.Settings["Extensions"].Value : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config1.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
                     {
                         assemblyList.Add(System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(filename));
                     }
@@ -122,7 +122,7 @@ namespace Apricot
                             ScriptOptions scriptOptions = ScriptOptions.Default.WithReferences(System.Reflection.Assembly.GetExecutingAssembly());
                             List<Task<ScriptState<object>>> taskList = new List<Task<ScriptState<object>>>();
 
-                            foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
+                            foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config2.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
                             {
                                 using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
                                 using (StreamReader sr = new StreamReader(fs))
@@ -157,7 +157,7 @@ namespace Apricot
                     ScriptOptions scriptOptions = ScriptOptions.Default.WithReferences(System.Reflection.Assembly.GetExecutingAssembly());
                     List<Task<ScriptState<object>>> taskList = new List<Task<ScriptState<object>>>();
 
-                    foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
+                    foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config1.AppSettings.Settings["Scripts"].Value), "*.csx", SearchOption.TopDirectoryOnly))
                     {
                         using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
                         using (StreamReader sr = new StreamReader(fs))
@@ -186,7 +186,7 @@ namespace Apricot
                         {
                             string path = Path.Combine(directory, config2.AppSettings.Settings["Extensions"].Value);
 
-                            foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
+                            foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config2.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
                             {
                                 assemblyList.Add(System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(filename));
                             }
@@ -231,7 +231,7 @@ namespace Apricot
                     {
                         string path = Path.Combine(directory, config1.AppSettings.Settings["Extensions"].Value);
 
-                        foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
+                        foreach (string filename in Directory.EnumerateFiles(Directory.Exists(path) ? path : Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config1.AppSettings.Settings["Extensions"].Value), "*.dll", SearchOption.TopDirectoryOnly))
                         {
                             assemblyList.Add(System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(filename));
                         }
@@ -267,13 +267,13 @@ namespace Apricot
         {
             base.OnStartup(e);
 
-            Agent agent = null;
+            Agent? agent = null;
 
             Script.Instance.Load();
 
             foreach (Character character in Script.Instance.Characters)
             {
-                Agent a = new Agent(character.Name);
+                Agent a = new Agent(character.Name!);
 
                 if (agent == null)
                 {
@@ -338,7 +338,7 @@ namespace Apricot
         public static extern int GetCurrentPackageFullName(ref int packageFullNameLength, System.Text.StringBuilder packageFullName);
 
         [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
-        public static extern IntPtr ShellExecute(IntPtr hwnd, string lpOperation, string lpFile, string lpParameters, string lpDirectory, int nShowCmd);
+        public static extern IntPtr ShellExecute(IntPtr hwnd, string lpOperation, string lpFile, string? lpParameters, string? lpDirectory, int nShowCmd);
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +16,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Apricot
 {
@@ -34,14 +36,14 @@ namespace Apricot
         private readonly Color backgroundColor = Colors.Black;
         private readonly Color textColor = Colors.White;
         private readonly Color linkColor = Colors.Blue;
-        private readonly Brush textBrush = null;
-        private readonly Brush linkBrush = null;
+        private readonly Brush? textBrush = null;
+        private readonly Brush? linkBrush = null;
         private readonly Size maxMessageSize = new Size(0, 0);
-        private DispatcherTimer messageTypeTimer = null;
-        private DispatcherTimer waitTimer = null;
-        private DispatcherTimer switchTimer = null;
+        private DispatcherTimer? messageTypeTimer = null;
+        private DispatcherTimer? waitTimer = null;
+        private DispatcherTimer? switchTimer = null;
         private TimeSpan lastRenderingTime = TimeSpan.Zero;
-        private List<double> frameRateList = null;
+        private List<double>? frameRateList = null;
         private double sourceScaleX;
         private double sourceScaleY;
         private double targetScaleX;
@@ -50,34 +52,34 @@ namespace Apricot
         private double targetOpacity;
         private Nullable<int> historyPoint = null;
         private Nullable<int> nextHistoryPoint = null;
-        private Collection<Message> messageCollection = null;
-        private StringBuilder messageBuffer = null;
+        private Collection<Message>? messageCollection = null;
+        private StringBuilder? messageBuffer = null;
         private int targetMessageLength = 0;
         private int randomMessageLength = 0;
-        private System.Collections.ArrayList inlineList = null;
-        private Dictionary<int, double> embedColorStepDictionary = null;
-        private Dictionary<int, double> embedScrollStepDictionary = null;
-        private HashSet<int> embedIsScrollableHashSet = null;
-        private Dictionary<int, double> attachmentFadeStepDictionary = null;
-        private Dictionary<int, double> attachmentImageLoadingStepDictionary = null;
-        private Dictionary<int, double> attachmentImageSlideStepDictionary = null;
-        private Dictionary<int, double> attachmentImagePopupStepDictionary = null;
-        private Dictionary<int, double> attachmentHighlightStepDictionary = null;
-        private Dictionary<int, double> attachmentEnableStepDictionary = null;
-        private Dictionary<int, double> attachmentFilterStepDictionary = null;
-        private Dictionary<int, double> attachmentScrollStepDictionary = null;
-        private HashSet<int> attachmentIsScrollableHashSet = null;
-        private Dictionary<int, BitmapImage> attachmentImageDictionary = null;
-        private Dictionary<Uri, BitmapImage> imageDictionary = null;
-        private HashSet<Uri> imageUriHashSet = null;
-        private Dictionary<int, Image> cachedInlineImageDictionary = null;
-        private Dictionary<int, Image> cachedAttachmentThumbnailImageDictionary = null;
-        private Dictionary<int, Image> cachedAttachmentTextImageDictionary = null;
-        private Canvas cachedCounterCanvas = null;
-        private Dictionary<int, Image> cachedTitleImageDictionary = null;
-        private Dictionary<int, Image> cachedSubtitleImageDictionary = null;
-        private Dictionary<int, Image> cachedAuthorImageDictionary = null;
-        private Dictionary<int, Image> cachedTagImageDictionary = null;
+        private System.Collections.ArrayList? inlineList = null;
+        private Dictionary<int, double>? embedColorStepDictionary = null;
+        private Dictionary<int, double>? embedScrollStepDictionary = null;
+        private HashSet<int>? embedIsScrollableHashSet = null;
+        private Dictionary<int, double>? attachmentFadeStepDictionary = null;
+        private Dictionary<int, double>? attachmentImageLoadingStepDictionary = null;
+        private Dictionary<int, double>? attachmentImageSlideStepDictionary = null;
+        private Dictionary<int, double>? attachmentImagePopupStepDictionary = null;
+        private Dictionary<int, double>? attachmentHighlightStepDictionary = null;
+        private Dictionary<int, double>? attachmentEnableStepDictionary = null;
+        private Dictionary<int, double>? attachmentFilterStepDictionary = null;
+        private Dictionary<int, double>? attachmentScrollStepDictionary = null;
+        private HashSet<int>? attachmentIsScrollableHashSet = null;
+        private Dictionary<int, BitmapImage>? attachmentImageDictionary = null;
+        private Dictionary<Uri, BitmapImage?>? imageDictionary = null;
+        private HashSet<Uri>? imageUriHashSet = null;
+        private Dictionary<int, Image>? cachedInlineImageDictionary = null;
+        private Dictionary<int, Image>? cachedAttachmentThumbnailImageDictionary = null;
+        private Dictionary<int, Image>? cachedAttachmentTextImageDictionary = null;
+        private Canvas? cachedCounterCanvas = null;
+        private Dictionary<int, Image>? cachedTitleImageDictionary = null;
+        private Dictionary<int, Image>? cachedSubtitleImageDictionary = null;
+        private Dictionary<int, Image>? cachedAuthorImageDictionary = null;
+        private Dictionary<int, Image>? cachedTagImageDictionary = null;
         private bool isReady = false;
         private bool isPinned = false;
         private Size sourceSize = new Size(0, 0);
@@ -95,11 +97,11 @@ namespace Apricot
         private Nullable<double> titleScrollStep = null;
         private Nullable<double> subtitleScrollStep = null;
         private Nullable<double> authorScrollStep = null;
-        private Dictionary<int, double> tagScrollStepDictionary = null;
+        private Dictionary<int, double>? tagScrollStepDictionary = null;
         private bool titleIsScrollable = false;
         private bool subtitleIsScrollable = false;
         private bool authorIsScrollable = false;
-        private HashSet<int> tagIsScrollableHashSet = null;
+        private HashSet<int>? tagIsScrollableHashSet = null;
         private Nullable<double> counterScrollStep = null;
         private Nullable<double> inspectorFadeStep = null;
         private double imageLoadStep = 0;
@@ -118,12 +120,12 @@ namespace Apricot
         private bool enableFilter = false;
         private double minScore = 0;
         private double maxScore = 0;
-        private Queue<double> thresholdQueue = null;
+        private Queue<double>? thresholdQueue = null;
         private double thresholdScore = 0;
         private double previousThresholdScore = 0;
         private double nextThresholdScore = 0;
         private bool isReversed = false;
-        private Queue<double> scrollQueue = null;
+        private Queue<double>? scrollQueue = null;
         private double sourceScrollPosition = 0;
         private double targetScrollPosition = 0;
         private double scrollIndexStep = 0;
@@ -133,24 +135,24 @@ namespace Apricot
         private Nullable<int> hoverIndex = null;
         private Nullable<int> selectedIndex = null;
         private Nullable<double> selectedPosition = null;
-        private Queue<double> selectedPositionQueue = null;
-        private Entry inspectorEntry = null;
-        private Entry previousInspectorEntry = null;
-        private Entry nextInspectorEntry = null;
-        private Queue<int> circulationQueue = null;
+        private Queue<double>? selectedPositionQueue = null;
+        private Entry? inspectorEntry = null;
+        private Entry? previousInspectorEntry = null;
+        private Entry? nextInspectorEntry = null;
+        private Queue<int>? circulationQueue = null;
         private int previousCirculationIndex = 0;
         private int nextCirculationIndex = 0;
         private double circulationStep = 0;
         private Nullable<Point> mouseDownPosition = null;
-        private Queue<Uri> imageUriQueue = null;
-        private Uri imageUri = null;
-        private BitmapImage cachedBitmapImage = null;
+        private Queue<Uri>? imageUriQueue = null;
+        private Uri? imageUri = null;
+        private BitmapImage? cachedBitmapImage = null;
 
         public Collection<Message> Messages
         {
             get
             {
-                return this.messageCollection;
+                return this.messageCollection!;
             }
         }
 
@@ -189,18 +191,18 @@ namespace Apricot
             this.selectedPositionQueue = new Queue<double>();
             this.circulationQueue = new Queue<int>();
             this.imageUriQueue = new Queue<Uri>();
-            this.imageDictionary = new Dictionary<Uri, BitmapImage>();
+            this.imageDictionary = new Dictionary<Uri, BitmapImage?>();
             this.imageUriHashSet = new HashSet<Uri>();
             this.messageTypeTimer = new DispatcherTimer(DispatcherPriority.Normal);
-            this.messageTypeTimer.Tick += new EventHandler(this.OnTick);
+            this.messageTypeTimer.Tick += new EventHandler(this.OnTick!);
             this.waitTimer = new DispatcherTimer(DispatcherPriority.Normal);
-            this.waitTimer.Tick += new EventHandler(this.OnTick);
+            this.waitTimer.Tick += new EventHandler(this.OnTick!);
             this.switchTimer = new DispatcherTimer(DispatcherPriority.Normal);
-            this.switchTimer.Tick += new EventHandler(this.OnTick);
+            this.switchTimer.Tick += new EventHandler(this.OnTick!);
             this.switchTimer.Interval = TimeSpan.FromSeconds(3);
 
-            System.Configuration.Configuration config1 = null;
-            string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            System.Configuration.Configuration? config1 = null;
+            string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
 
             if (Directory.Exists(directory))
             {
@@ -231,22 +233,22 @@ namespace Apricot
 
                 if (config1.AppSettings.Settings["FontSize"] != null && config1.AppSettings.Settings["FontSize"].Value.Length > 0)
                 {
-                    this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
+                    this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value)!;
                 }
 
                 if (config1.AppSettings.Settings["FontStretch"] != null && config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
                 {
-                    this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
+                    this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value)!;
                 }
 
                 if (config1.AppSettings.Settings["FontStyle"] != null && config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
                 {
-                    this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
+                    this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value)!;
                 }
 
                 if (config1.AppSettings.Settings["FontWeight"] != null && config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
                 {
-                    this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
+                    this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value)!;
                 }
 
                 if (config1.AppSettings.Settings["LineLength"] != null && config1.AppSettings.Settings["LineLength"].Value.Length > 0)
@@ -288,7 +290,7 @@ namespace Apricot
                 {
                     BitmapImage bi = new BitmapImage();
 
-                    using (FileStream fs = new FileStream(System.IO.Path.IsPathRooted(config1.AppSettings.Settings["BackgroundImage"].Value) ? config1.AppSettings.Settings["BackgroundImage"].Value : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(System.IO.Path.IsPathRooted(config1.AppSettings.Settings["BackgroundImage"].Value) ? config1.AppSettings.Settings["BackgroundImage"].Value : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config1.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         bi.BeginInit();
                         bi.StreamSource = fs;
@@ -374,48 +376,48 @@ namespace Apricot
                 {
                     if (config2.AppSettings.Settings["FontSize"] != null && config2.AppSettings.Settings["FontSize"].Value.Length > 0)
                     {
-                        this.FontSize = (double)new FontSizeConverter().ConvertFromString(config2.AppSettings.Settings["FontSize"].Value);
+                        this.FontSize = (double)new FontSizeConverter().ConvertFromString(config2.AppSettings.Settings["FontSize"].Value)!;
                     }
                 }
                 else if (config1.AppSettings.Settings["FontSize"].Value.Length > 0)
                 {
-                    this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value);
+                    this.FontSize = (double)new FontSizeConverter().ConvertFromString(config1.AppSettings.Settings["FontSize"].Value)!;
                 }
 
                 if (config1.AppSettings.Settings["FontStretch"] == null)
                 {
                     if (config2.AppSettings.Settings["FontStretch"] != null && config2.AppSettings.Settings["FontStretch"].Value.Length > 0)
                     {
-                        this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config2.AppSettings.Settings["FontStretch"].Value);
+                        this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config2.AppSettings.Settings["FontStretch"].Value)!;
                     }
                 }
                 else if (config1.AppSettings.Settings["FontStretch"].Value.Length > 0)
                 {
-                    this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value);
+                    this.FontStretch = (FontStretch)new FontStretchConverter().ConvertFromString(config1.AppSettings.Settings["FontStretch"].Value)!;
                 }
 
                 if (config1.AppSettings.Settings["FontStyle"] == null)
                 {
                     if (config2.AppSettings.Settings["FontStyle"] != null && config2.AppSettings.Settings["FontStyle"].Value.Length > 0)
                     {
-                        this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config2.AppSettings.Settings["FontStyle"].Value);
+                        this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config2.AppSettings.Settings["FontStyle"].Value)!;
                     }
                 }
                 else if (config1.AppSettings.Settings["FontStyle"].Value.Length > 0)
                 {
-                    this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value);
+                    this.FontStyle = (FontStyle)new FontStyleConverter().ConvertFromString(config1.AppSettings.Settings["FontStyle"].Value)!;
                 }
 
                 if (config1.AppSettings.Settings["FontWeight"] == null)
                 {
                     if (config2.AppSettings.Settings["FontWeight"] != null && config2.AppSettings.Settings["FontWeight"].Value.Length > 0)
                     {
-                        this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config2.AppSettings.Settings["FontWeight"].Value);
+                        this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config2.AppSettings.Settings["FontWeight"].Value)!;
                     }
                 }
                 else if (config1.AppSettings.Settings["FontWeight"].Value.Length > 0)
                 {
-                    this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value);
+                    this.FontWeight = (FontWeight)new FontWeightConverter().ConvertFromString(config1.AppSettings.Settings["FontWeight"].Value)!;
                 }
 
                 if (config1.AppSettings.Settings["LineLength"] == null)
@@ -495,7 +497,7 @@ namespace Apricot
                         {
                             string path = System.IO.Path.Combine(directory, config2.AppSettings.Settings["BackgroundImage"].Value);
 
-                            using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                            using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config2.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                             {
                                 bi.BeginInit();
                                 bi.StreamSource = fs;
@@ -539,7 +541,7 @@ namespace Apricot
                     {
                         string path = System.IO.Path.Combine(directory, config1.AppSettings.Settings["BackgroundImage"].Value);
 
-                        using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
+                        using (FileStream fs = new FileStream(File.Exists(path) ? path : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config1.AppSettings.Settings["BackgroundImage"].Value), FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
                             bi.BeginInit();
                             bi.StreamSource = fs;
@@ -627,7 +629,7 @@ namespace Apricot
             Canvas.SetTop(this.CloseImage, 8);
             Canvas.SetTop(this.BackImage, 7);
 
-            CompositionTarget.Rendering += new EventHandler(this.OnRendering);
+            CompositionTarget.Rendering += new EventHandler(this.OnRendering!);
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -651,7 +653,7 @@ namespace Apricot
             if (!(bool)e.NewValue)
             {
                 this.lastRenderingTime = TimeSpan.Zero;
-                this.frameRateList.Clear();
+                this.frameRateList!.Clear();
                 this.historyPoint = null;
                 this.nextHistoryPoint = null;
                 this.isReady = false;
@@ -671,14 +673,14 @@ namespace Apricot
                 this.enableFilter = false;
                 this.minScore = 0;
                 this.maxScore = 0;
-                this.thresholdQueue.Clear();
+                this.thresholdQueue!.Clear();
                 this.thresholdScore = 0;
                 this.previousThresholdScore = 0;
                 this.nextThresholdScore = 0;
                 this.thresholdScoreStep = 0;
                 this.isReversed = false;
-                this.scrollQueue.Clear();
-                this.selectedPositionQueue.Clear();
+                this.scrollQueue!.Clear();
+                this.selectedPositionQueue!.Clear();
                 this.sourceScrollPosition = 0;
                 this.targetScrollPosition = 0;
                 this.scrollIndexStep = 0;
@@ -700,11 +702,11 @@ namespace Apricot
                 this.titleScrollStep = null;
                 this.subtitleScrollStep = null;
                 this.authorScrollStep = null;
-                this.tagScrollStepDictionary.Clear();
+                this.tagScrollStepDictionary!.Clear();
                 this.titleIsScrollable = false;
                 this.subtitleIsScrollable = false;
                 this.authorIsScrollable = false;
-                this.tagIsScrollableHashSet.Clear();
+                this.tagIsScrollableHashSet!.Clear();
                 this.counterScrollStep = null;
                 this.inspectorFadeStep = null;
                 this.imageLoadStep = 0;
@@ -715,41 +717,41 @@ namespace Apricot
                 this.inspectorEntry = null;
                 this.previousInspectorEntry = null;
                 this.nextInspectorEntry = null;
-                this.circulationQueue.Clear();
+                this.circulationQueue!.Clear();
                 this.previousCirculationIndex = 0;
                 this.nextCirculationIndex = 0;
                 this.circulationStep = 0;
                 this.mouseDownPosition = null;
-                this.imageUriQueue.Clear();
+                this.imageUriQueue!.Clear();
                 this.imageUri = null;
                 this.cachedBitmapImage = null;
                 this.messageBuffer = new StringBuilder();
                 this.targetMessageLength = 0;
                 this.randomMessageLength = 0;
-                this.inlineList.Clear();
-                this.embedColorStepDictionary.Clear();
-                this.embedScrollStepDictionary.Clear();
-                this.embedIsScrollableHashSet.Clear();
-                this.attachmentFadeStepDictionary.Clear();
-                this.attachmentImageLoadingStepDictionary.Clear();
-                this.attachmentImageSlideStepDictionary.Clear();
-                this.attachmentImagePopupStepDictionary.Clear();
-                this.attachmentHighlightStepDictionary.Clear();
-                this.attachmentEnableStepDictionary.Clear();
-                this.attachmentFilterStepDictionary.Clear();
-                this.attachmentScrollStepDictionary.Clear();
-                this.attachmentIsScrollableHashSet.Clear();
-                this.attachmentImageDictionary.Clear();
-                this.cachedInlineImageDictionary.Clear();
-                this.cachedAttachmentThumbnailImageDictionary.Clear();
-                this.cachedAttachmentTextImageDictionary.Clear();
+                this.inlineList!.Clear();
+                this.embedColorStepDictionary!.Clear();
+                this.embedScrollStepDictionary!.Clear();
+                this.embedIsScrollableHashSet!.Clear();
+                this.attachmentFadeStepDictionary!.Clear();
+                this.attachmentImageLoadingStepDictionary!.Clear();
+                this.attachmentImageSlideStepDictionary!.Clear();
+                this.attachmentImagePopupStepDictionary!.Clear();
+                this.attachmentHighlightStepDictionary!.Clear();
+                this.attachmentEnableStepDictionary!.Clear();
+                this.attachmentFilterStepDictionary!.Clear();
+                this.attachmentScrollStepDictionary!.Clear();
+                this.attachmentIsScrollableHashSet!.Clear();
+                this.attachmentImageDictionary!.Clear();
+                this.cachedInlineImageDictionary!.Clear();
+                this.cachedAttachmentThumbnailImageDictionary!.Clear();
+                this.cachedAttachmentTextImageDictionary!.Clear();
                 this.cachedCounterCanvas = null;
-                this.cachedTitleImageDictionary.Clear();
-                this.cachedSubtitleImageDictionary.Clear();
-                this.cachedAuthorImageDictionary.Clear();
-                this.cachedTagImageDictionary.Clear();
-                this.imageDictionary.Clear();
-                this.imageUriHashSet.Clear();
+                this.cachedTitleImageDictionary!.Clear();
+                this.cachedSubtitleImageDictionary!.Clear();
+                this.cachedAuthorImageDictionary!.Clear();
+                this.cachedTagImageDictionary!.Clear();
+                this.imageDictionary!.Clear();
+                this.imageUriHashSet!.Clear();
                 this.Width = this.Height = 0;
                 this.Canvas.Width = this.Canvas.Height = Double.NaN;
                 this.Canvas.Opacity = 0;
@@ -798,9 +800,9 @@ namespace Apricot
                 this.InspectorImage.Width = this.InspectorImage.Height = Double.NaN;
                 this.InspectorImage.Source = null;
                 this.InspectorImage.Opacity = 0;
-                this.waitTimer.Stop();
-                this.messageTypeTimer.Stop();
-                this.switchTimer.Stop();
+                this.waitTimer!.Stop();
+                this.messageTypeTimer!.Stop();
+                this.switchTimer!.Stop();
             }
         }
 
@@ -810,7 +812,7 @@ namespace Apricot
 
             if (e.Key == Key.Up)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     if (this.enableFilter)
                     {
@@ -822,12 +824,12 @@ namespace Apricot
 
                             if (this.nextThresholdScore - interval < this.minScore)
                             {
-                                this.thresholdQueue.Enqueue(this.minScore - this.nextThresholdScore);
+                                this.thresholdQueue!.Enqueue(this.minScore - this.nextThresholdScore);
                                 this.nextThresholdScore = this.minScore;
                             }
                             else
                             {
-                                this.thresholdQueue.Enqueue(-interval);
+                                this.thresholdQueue!.Enqueue(-interval);
                                 this.nextThresholdScore -= interval;
                             }
                         }
@@ -836,18 +838,18 @@ namespace Apricot
                     {
                         if (this.selectedPosition.HasValue)
                         {
-                            this.selectedPositionQueue.Enqueue(-1);
+                            this.selectedPositionQueue!.Enqueue(-1);
                         }
                         else
                         {
-                            this.scrollQueue.Enqueue(-1);
+                            this.scrollQueue!.Enqueue(-1);
                         }
                     }
                 }
             }
             else if (e.Key == Key.Down)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     if (this.enableFilter)
                     {
@@ -859,12 +861,12 @@ namespace Apricot
 
                             if (this.nextThresholdScore + interval > this.maxScore)
                             {
-                                this.thresholdQueue.Enqueue(this.maxScore - this.nextThresholdScore);
+                                this.thresholdQueue!.Enqueue(this.maxScore - this.nextThresholdScore);
                                 this.nextThresholdScore = this.maxScore;
                             }
                             else
                             {
-                                this.thresholdQueue.Enqueue(interval);
+                                this.thresholdQueue!.Enqueue(interval);
                                 this.nextThresholdScore += interval;
                             }
                         }
@@ -873,39 +875,39 @@ namespace Apricot
                     {
                         if (this.selectedPosition.HasValue)
                         {
-                            this.selectedPositionQueue.Enqueue(1);
+                            this.selectedPositionQueue!.Enqueue(1);
                         }
                         else
                         {
-                            this.scrollQueue.Enqueue(1);
+                            this.scrollQueue!.Enqueue(1);
                         }
                     }
                 }
             }
             else if (e.Key == Key.PageUp)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     if (this.selectedPosition.HasValue)
                     {
                         if (this.targetScrollPosition > 0 && this.targetScrollPosition < this.numberOfLines)
                         {
-                            this.selectedPositionQueue.Enqueue(-this.targetScrollPosition);
+                            this.selectedPositionQueue!.Enqueue(-this.targetScrollPosition);
                         }
                         else
                         {
-                            this.selectedPositionQueue.Enqueue(-this.numberOfLines);
+                            this.selectedPositionQueue!.Enqueue(-this.numberOfLines);
                         }
                     }
                     else
                     {
-                        this.scrollQueue.Enqueue(-this.numberOfLines);
+                        this.scrollQueue!.Enqueue(-this.numberOfLines);
                     }
                 }
             }
             else if (e.Key == Key.PageDown || e.Key == Key.Space)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     double lines = this.numberOfLines;
 
@@ -923,14 +925,14 @@ namespace Apricot
 
                             foreach (object o in message)
                             {
-                                string inline = o as string;
-                                Brush brush = this.textBrush;
+                                string? inline = o as string;
+                                Brush? brush = this.textBrush;
                                 Dictionary<int, int> dictionary = new Dictionary<int, int>();
                                 StringBuilder lineStringBuilder = new StringBuilder();
 
                                 if (inline == null)
                                 {
-                                    Entry entry = o as Entry;
+                                    Entry? entry = o as Entry;
 
                                     if (entry == null)
                                     {
@@ -943,12 +945,12 @@ namespace Apricot
                                     }
                                 }
 
-                                foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline, @"[\p{IsBasicLatin}-[\s]]+\s?"))
+                                foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline!, @"[\p{IsBasicLatin}-[\s]]+\s?"))
                                 {
                                     dictionary.Add(match.Index, match.Length);
                                 }
 
-                                for (int i = 0; i < inline.Length; i++)
+                                for (int i = 0; i < inline!.Length; i++)
                                 {
                                     int length;
 
@@ -1010,17 +1012,17 @@ namespace Apricot
                             lines = messageLines + this.selectedPosition.Value - this.targetScrollPosition + message.Attachments.Count - (this.selectedPosition.Value + this.numberOfLines);
                         }
 
-                        this.selectedPositionQueue.Enqueue(lines);
+                        this.selectedPositionQueue!.Enqueue(lines);
                     }
                     else
                     {
-                        this.scrollQueue.Enqueue(lines);
+                        this.scrollQueue!.Enqueue(lines);
                     }
                 }
             }
             else if (e.Key == Key.Home)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     if (this.selectedPosition.HasValue)
                     {
@@ -1033,14 +1035,14 @@ namespace Apricot
 
                         foreach (object o in message)
                         {
-                            string inline = o as string;
-                            Brush brush = this.textBrush;
+                            string? inline = o as string;
+                            Brush? brush = this.textBrush;
                             Dictionary<int, int> dictionary = new Dictionary<int, int>();
                             StringBuilder lineStringBuilder = new StringBuilder();
 
                             if (inline == null)
                             {
-                                Entry entry = o as Entry;
+                                Entry? entry = o as Entry;
 
                                 if (entry == null)
                                 {
@@ -1053,12 +1055,12 @@ namespace Apricot
                                 }
                             }
 
-                            foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline, @"[\p{IsBasicLatin}-[\s]]+\s?"))
+                            foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline!, @"[\p{IsBasicLatin}-[\s]]+\s?"))
                             {
                                 dictionary.Add(match.Index, match.Length);
                             }
 
-                            for (int i = 0; i < inline.Length; i++)
+                            for (int i = 0; i < inline!.Length; i++)
                             {
                                 int length;
 
@@ -1117,17 +1119,17 @@ namespace Apricot
                             messageLines++;
                         }
 
-                        this.selectedPositionQueue.Enqueue(-(messageLines + this.selectedPosition.Value));
+                        this.selectedPositionQueue!.Enqueue(-(messageLines + this.selectedPosition.Value));
                     }
                     else
                     {
-                        this.scrollQueue.Enqueue(-this.targetScrollPosition);
+                        this.scrollQueue!.Enqueue(-this.targetScrollPosition);
                     }
                 }
             }
             else if (e.Key == Key.End)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     Message message = this.messageCollection[this.historyPoint.Value];
                     double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
@@ -1138,14 +1140,14 @@ namespace Apricot
 
                     foreach (object o in message)
                     {
-                        string inline = o as string;
-                        Brush brush = this.textBrush;
+                        string? inline = o as string;
+                        Brush? brush = this.textBrush;
                         Dictionary<int, int> dictionary = new Dictionary<int, int>();
                         StringBuilder lineStringBuilder = new StringBuilder();
 
                         if (inline == null)
                         {
-                            Entry entry = o as Entry;
+                            Entry? entry = o as Entry;
 
                             if (entry == null)
                             {
@@ -1158,12 +1160,12 @@ namespace Apricot
                             }
                         }
 
-                        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline, @"[\p{IsBasicLatin}-[\s]]+\s?"))
+                        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline!, @"[\p{IsBasicLatin}-[\s]]+\s?"))
                         {
                             dictionary.Add(match.Index, match.Length);
                         }
 
-                        for (int i = 0; i < inline.Length; i++)
+                        for (int i = 0; i < inline!.Length; i++)
                         {
                             int length;
 
@@ -1227,11 +1229,11 @@ namespace Apricot
 
                     if (this.selectedPosition.HasValue)
                     {
-                        this.selectedPositionQueue.Enqueue(messageLines + message.Attachments.Count - this.selectedPosition.Value);
+                        this.selectedPositionQueue!.Enqueue(messageLines + message.Attachments.Count - this.selectedPosition.Value);
                     }
                     else
                     {
-                        this.scrollQueue.Enqueue(messageLines + message.Attachments.Count - this.targetScrollPosition);
+                        this.scrollQueue!.Enqueue(messageLines + message.Attachments.Count - this.targetScrollPosition);
                     }
                 }
             }
@@ -1250,10 +1252,10 @@ namespace Apricot
             }
             else if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == (ModifierKeys.Control | ModifierKeys.Shift) && !this.enableFilter)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     Message message = this.messageCollection[this.historyPoint.Value];
-                    var query = from entry in message.Attachments where entry.Score.HasValue select entry.Score.Value;
+                    var query = from entry in message.Attachments where entry.Score.HasValue select entry.Score!.Value;
 
                     if (query.Any())
                     {
@@ -1344,7 +1346,7 @@ namespace Apricot
             {
                 this.imageIsHover = true;
 
-                if (this.switchTimer.IsEnabled && this.inspectorEntry != null)
+                if (this.switchTimer!.IsEnabled && this.inspectorEntry != null)
                 {
                     bool stopRequired = true;
 
@@ -1419,7 +1421,7 @@ namespace Apricot
             else
             {
                 this.isPinned = true;
-                this.waitTimer.Stop();
+                this.waitTimer!.Stop();
             }
         }
 
@@ -1449,7 +1451,7 @@ namespace Apricot
             {
                 this.imageIsHover = false;
 
-                if (!this.switchTimer.IsEnabled && this.inspectorEntry != null && this.inspectorEntry.HasMultipleImages)
+                if (!this.switchTimer!.IsEnabled && this.inspectorEntry != null && this.inspectorEntry.HasMultipleImages)
                 {
                     this.switchTimer.Start();
                 }
@@ -1458,13 +1460,13 @@ namespace Apricot
             {
                 this.isPinned = false;
 
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
-                    this.waitTimer.Interval = this.messageCollection[this.historyPoint.Value].Duration;
+                    this.waitTimer!.Interval = this.messageCollection[this.historyPoint.Value].Duration;
                 }
                 else
                 {
-                    this.waitTimer.Interval = TimeSpan.Zero;
+                    this.waitTimer!.Interval = TimeSpan.Zero;
                 }
 
                 this.waitTimer.Start();
@@ -1477,7 +1479,7 @@ namespace Apricot
 
             if (e.OriginalSource == this.UpImage)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     if (this.enableFilter)
                     {
@@ -1489,12 +1491,12 @@ namespace Apricot
 
                             if (this.nextThresholdScore - interval < this.minScore)
                             {
-                                this.thresholdQueue.Enqueue(this.minScore - this.nextThresholdScore);
+                                this.thresholdQueue!.Enqueue(this.minScore - this.nextThresholdScore);
                                 this.nextThresholdScore = this.minScore;
                             }
                             else
                             {
-                                this.thresholdQueue.Enqueue(-interval);
+                                this.thresholdQueue!.Enqueue(-interval);
                                 this.nextThresholdScore -= interval;
                             }
                         }
@@ -1503,18 +1505,18 @@ namespace Apricot
                     {
                         if (this.selectedPosition.HasValue)
                         {
-                            this.selectedPositionQueue.Enqueue(-1);
+                            this.selectedPositionQueue!.Enqueue(-1);
                         }
                         else
                         {
-                            this.scrollQueue.Enqueue(-1);
+                            this.scrollQueue!.Enqueue(-1);
                         }
                     }
                 }
             }
             else if (e.OriginalSource == this.DownImage)
             {
-                if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+                if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
                 {
                     if (this.enableFilter)
                     {
@@ -1526,12 +1528,12 @@ namespace Apricot
 
                             if (this.nextThresholdScore + interval > this.maxScore)
                             {
-                                this.thresholdQueue.Enqueue(this.maxScore - this.nextThresholdScore);
+                                this.thresholdQueue!.Enqueue(this.maxScore - this.nextThresholdScore);
                                 this.nextThresholdScore = this.maxScore;
                             }
                             else
                             {
-                                this.thresholdQueue.Enqueue(interval);
+                                this.thresholdQueue!.Enqueue(interval);
                                 this.nextThresholdScore += interval;
                             }
                         }
@@ -1540,11 +1542,11 @@ namespace Apricot
                     {
                         if (this.selectedPosition.HasValue)
                         {
-                            this.selectedPositionQueue.Enqueue(1);
+                            this.selectedPositionQueue!.Enqueue(1);
                         }
                         else
                         {
-                            this.scrollQueue.Enqueue(1);
+                            this.scrollQueue!.Enqueue(1);
                         }
                     }
                 }
@@ -1557,14 +1559,14 @@ namespace Apricot
 
             if (e.OriginalSource == this.InspectorImage)
             {
-                if (this.inspectorEntry.Image != null)
+                if (this.inspectorEntry!.Image != null)
                 {
                     if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control && this.inspectorEntry.HasMultipleImages)
                     {
                         this.inspectorEntry.NextImage();
                     }
 
-                    if (!this.imageUriHashSet.Contains(this.inspectorEntry.Image))
+                    if (!this.imageUriHashSet!.Contains(this.inspectorEntry.Image))
                     {
                         this.imageUriHashSet.Add(this.inspectorEntry.Image);
                     }
@@ -1578,7 +1580,7 @@ namespace Apricot
                         UpdateImage(this.inspectorEntry.Image, false);
                     }
 
-                    this.imageUriQueue.Enqueue(this.inspectorEntry.Image);
+                    this.imageUriQueue!.Enqueue(this.inspectorEntry.Image);
                 }
             }
             else if (e.OriginalSource == this.CloseImage)
@@ -1589,7 +1591,7 @@ namespace Apricot
                 this.sourceScaleY = this.ScaleTransform.ScaleY;
                 this.targetScaleX = this.targetScaleY = 0;
                 this.popupStep = 0;
-                this.waitTimer.Stop();
+                this.waitTimer!.Stop();
             }
             else if (e.OriginalSource == this.BackImage)
             {
@@ -1610,7 +1612,7 @@ namespace Apricot
             const int WHEEL_DATA = 120;
             int lines = e.Delta * SystemParameters.WheelScrollLines / WHEEL_DATA;
 
-            if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+            if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
             {
                 if (this.enableFilter)
                 {
@@ -1624,12 +1626,12 @@ namespace Apricot
 
                             if (this.nextThresholdScore - interval < this.minScore)
                             {
-                                this.thresholdQueue.Enqueue(this.minScore - this.nextThresholdScore);
+                                this.thresholdQueue!.Enqueue(this.minScore - this.nextThresholdScore);
                                 this.nextThresholdScore = this.minScore;
                             }
                             else
                             {
-                                this.thresholdQueue.Enqueue(-interval);
+                                this.thresholdQueue!.Enqueue(-interval);
                                 this.nextThresholdScore -= interval;
                             }
                         }
@@ -1639,12 +1641,12 @@ namespace Apricot
 
                             if (this.nextThresholdScore + interval > this.maxScore)
                             {
-                                this.thresholdQueue.Enqueue(this.maxScore - this.nextThresholdScore);
+                                this.thresholdQueue!.Enqueue(this.maxScore - this.nextThresholdScore);
                                 this.nextThresholdScore = this.maxScore;
                             }
                             else
                             {
-                                this.thresholdQueue.Enqueue(interval);
+                                this.thresholdQueue!.Enqueue(interval);
                                 this.nextThresholdScore += interval;
                             }
                         }
@@ -1654,11 +1656,11 @@ namespace Apricot
                 {
                     if (this.selectedPosition.HasValue)
                     {
-                        this.selectedPositionQueue.Enqueue(-lines);
+                        this.selectedPositionQueue!.Enqueue(-lines);
                     }
                     else
                     {
-                        this.scrollQueue.Enqueue(-lines);
+                        this.scrollQueue!.Enqueue(-lines);
                     }
                 }
             }
@@ -1672,9 +1674,9 @@ namespace Apricot
 
         private void OnManipulationDelta(object sender, ManipulationDeltaEventArgs e)
         {
-            if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+            if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
             {
-                this.scrollQueue.Enqueue(-e.DeltaManipulation.Translation.Y / this.lineHeight);
+                this.scrollQueue!.Enqueue(-e.DeltaManipulation.Translation.Y / this.lineHeight);
             }
 
             e.Handled = true;
@@ -1702,7 +1704,7 @@ namespace Apricot
 
         public void Show(Message message)
         {
-            var query = from entry in message.Attachments where entry.Score.HasValue select entry.Score.Value;
+            var query = from entry in message.Attachments where entry.Score.HasValue select entry.Score!.Value;
             bool isRecyclable = true;
 
             if (query.Any())
@@ -1752,7 +1754,7 @@ namespace Apricot
                 }
             }
 
-            this.messageCollection.Add(message);
+            this.messageCollection!.Add(message);
 
             if (this.messageCollection.Count > this.maxHistory)
             {
@@ -1766,7 +1768,7 @@ namespace Apricot
 
                     foreach (object o in m)
                     {
-                        Entry entry = o as Entry;
+                        Entry? entry = o as Entry;
 
                         if (entry != null)
                         {
@@ -1822,7 +1824,7 @@ namespace Apricot
 
             foreach (object o in message)
             {
-                Entry entry = o as Entry;
+                Entry? entry = o as Entry;
 
                 if (entry != null)
                 {
@@ -1866,7 +1868,7 @@ namespace Apricot
 
                     foreach (object o in m)
                     {
-                        Entry entry = o as Entry;
+                        Entry? entry = o as Entry;
 
                         if (entry != null)
                         {
@@ -2005,7 +2007,7 @@ namespace Apricot
 
         public void Back()
         {
-            if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value > 0)
+            if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value > 0)
             {
                 this.nextHistoryPoint = new Nullable<int>(this.historyPoint.Value - 1);
                 this.messageIsScrollable = false;
@@ -2027,12 +2029,12 @@ namespace Apricot
                 this.popupStep = 0;
                 this.waitTimer.Stop();
             }
-            else if (sender == this.messageTypeTimer && this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
+            else if (sender == this.messageTypeTimer && this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count)
             {
                 Message message = this.messageCollection[this.historyPoint.Value];
                 bool stopRequired = true;
 
-                if (this.messageBuffer.Length < this.targetMessageLength)
+                if (this.messageBuffer!.Length < this.targetMessageLength)
                 {
                     int index = this.messageBuffer.Length;
                     string text = message.Text;
@@ -2169,14 +2171,14 @@ namespace Apricot
                 {
                     this.inspectorEntry.NextImage();
 
-                    if (!this.imageDictionary.ContainsKey(this.inspectorEntry.Image) && !this.imageUriHashSet.Contains(this.inspectorEntry.Image))
+                    if (!this.imageDictionary!.ContainsKey(this.inspectorEntry!.Image!) && !this.imageUriHashSet!.Contains(this.inspectorEntry.Image!))
                     {
-                        this.imageUriHashSet.Add(this.inspectorEntry.Image);
+                        this.imageUriHashSet.Add(this.inspectorEntry.Image!);
 
-                        UpdateImage(this.inspectorEntry.Image, false);
+                        UpdateImage(this.inspectorEntry.Image!, false);
                     }
 
-                    this.imageUriQueue.Enqueue(this.inspectorEntry.Image);
+                    this.imageUriQueue!.Enqueue(this.inspectorEntry.Image!);
                 }
 
                 foreach (string tag in this.inspectorEntry.Tags)
@@ -2192,7 +2194,7 @@ namespace Apricot
 
                     if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
                     {
-                        this.circulationQueue.Enqueue(1);
+                        this.circulationQueue!.Enqueue(1);
 
                         break;
                     }
@@ -2226,7 +2228,7 @@ namespace Apricot
 
                     if (isCirculatable)
                     {
-                        this.circulationQueue.Enqueue(1);
+                        this.circulationQueue!.Enqueue(1);
 
                         break;
                     }
@@ -2250,7 +2252,7 @@ namespace Apricot
 
                 if (frameRate >= 1)
                 {
-                    this.frameRateList.Add(frameRate > this.frameRate / 10 ? frameRate : this.frameRate / 10);
+                    this.frameRateList!.Add(frameRate > this.frameRate / 10 ? frameRate : this.frameRate / 10);
 
                     double averageFrameRate = this.frameRateList.Average();
                     int limit = (int)Math.Round(averageFrameRate);
@@ -2264,7 +2266,7 @@ namespace Apricot
                     {
                         bool isReady = this.isReady;
 
-                        if (this.messageCollection.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count && this.targetSize.Width == this.Canvas.Width && this.targetSize.Height == this.Canvas.Height && this.inspectorFadeStep == null && this.inspectorEntry != this.nextInspectorEntry && this.nextInspectorEntry == null)
+                        if (this.messageCollection!.Count > 0 && this.historyPoint.HasValue && this.historyPoint.Value < this.messageCollection.Count && this.targetSize.Width == this.Canvas.Width && this.targetSize.Height == this.Canvas.Height && this.inspectorFadeStep == null && this.inspectorEntry != this.nextInspectorEntry && this.nextInspectorEntry == null)
                         {
                             Size size = GetBalloonSize(this.messageCollection[this.historyPoint.Value], ref this.messageIsScrollable);
 
@@ -2418,14 +2420,14 @@ namespace Apricot
 
                                     foreach (object o in this.messageCollection[this.historyPoint.Value])
                                     {
-                                        string inline = o as string;
-                                        Brush brush = this.textBrush;
+                                        string? inline = o as string;
+                                        Brush? brush = this.textBrush;
                                         Dictionary<int, int> dictionary = new Dictionary<int, int>();
                                         StringBuilder lineStringBuilder = new StringBuilder();
 
                                         if (inline == null)
                                         {
-                                            Entry entry = o as Entry;
+                                            Entry? entry = o as Entry;
 
                                             if (entry == null)
                                             {
@@ -2438,12 +2440,12 @@ namespace Apricot
                                             }
                                         }
 
-                                        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline, @"[\p{IsBasicLatin}-[\s]]+\s?"))
+                                        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline!, @"[\p{IsBasicLatin}-[\s]]+\s?"))
                                         {
                                             dictionary.Add(match.Index, match.Length);
                                         }
 
-                                        for (int i = 0; i < inline.Length; i++)
+                                        for (int i = 0; i < inline!.Length; i++)
                                         {
                                             int length;
 
@@ -2524,23 +2526,23 @@ namespace Apricot
 
                                     return pointList;
                                 });
-                                bool isTyped = (isReady && this.nextHistoryPoint.HasValue ? this.messageCollection[this.historyPoint.Value].Cast<object>() : this.messageCollection[this.historyPoint.Value].Cast<object>().Concat(new object[] { null })).SequenceEqual(this.inlineList.Cast<object>());
+                                bool isTyped = (isReady && this.nextHistoryPoint.HasValue ? this.messageCollection[this.historyPoint.Value].Cast<object>() : this.messageCollection[this.historyPoint.Value].Cast<object?>().Concat(new object?[] { null })).SequenceEqual(this.inlineList!.Cast<object?>());
                                 bool isFragmented = false;
                                 bool isScrolled = false;
                                 int paddingLines = 0;
                                 bool waitRequired = false;
                                 bool updateLayoutRequired = false;
 
-                                if (isReady && this.nextHistoryPoint.HasValue && this.targetMessageLength != 0 && this.embedColorStepDictionary.Count == 0)
+                                if (isReady && this.nextHistoryPoint.HasValue && this.targetMessageLength != 0 && this.embedColorStepDictionary!.Count == 0)
                                 {
                                     this.targetMessageLength = 0;
-                                    this.messageTypeTimer.Interval = TimeSpan.FromSeconds(1 / this.messageCollection[this.historyPoint.Value].Speed / 2);
+                                    this.messageTypeTimer!.Interval = TimeSpan.FromSeconds(1 / this.messageCollection[this.historyPoint.Value].Speed / 2);
                                     this.messageTypeTimer.Start();
                                 }
                                 else if ((!isReady || !this.nextHistoryPoint.HasValue) && this.targetMessageLength != this.messageCollection[this.historyPoint.Value].Text.Length)
                                 {
                                     this.targetMessageLength = this.messageCollection[this.historyPoint.Value].Text.Length;
-                                    this.messageTypeTimer.Interval = TimeSpan.FromSeconds(1 / this.messageCollection[this.historyPoint.Value].Speed);
+                                    this.messageTypeTimer!.Interval = TimeSpan.FromSeconds(1 / this.messageCollection[this.historyPoint.Value].Speed);
                                     this.messageTypeTimer.Start();
                                 }
 
@@ -2548,7 +2550,7 @@ namespace Apricot
                                 {
                                     Nullable<double> totalSelectedPosition = null;
 
-                                    if (this.selectedPositionQueue.Count > 0)
+                                    if (this.selectedPositionQueue!.Count > 0)
                                     {
                                         double position = 0;
 
@@ -2560,7 +2562,7 @@ namespace Apricot
                                         totalSelectedPosition = new Nullable<double>(position);
                                     }
 
-                                    if (totalSelectedPosition.HasValue || this.scrollQueue.Count > 0)
+                                    if (totalSelectedPosition.HasValue || this.scrollQueue!.Count > 0)
                                     {
                                         int messageLines = inlinePointList.Value.Aggregate<Point, HashSet<double>>(new HashSet<double>(), (hashSet, point) =>
                                         {
@@ -2575,7 +2577,7 @@ namespace Apricot
                                         double position = this.targetScrollPosition;
                                         bool isCountable = false;
 
-                                        while (this.scrollQueue.Count > 0)
+                                        while (this.scrollQueue!.Count > 0)
                                         {
                                             this.targetScrollPosition += this.scrollQueue.Dequeue();
                                         }
@@ -2701,7 +2703,7 @@ namespace Apricot
                                     }
                                 }
 
-                                if (isFragmented || !isTyped || isReady && this.nextHistoryPoint.HasValue || this.embedColorStepDictionary.Values.Any(step => isReady && this.nextHistoryPoint.HasValue && step > 0 || (!isReady || !this.nextHistoryPoint.HasValue) && step < 1) || this.embedIsScrollableHashSet.Count > 0 || this.embedScrollStepDictionary.Count > 0 || this.hoverEmbeddedIndex.HasValue && this.embedIsScrollableHashSet.Count == 0 && this.embedScrollStepDictionary.Count == 0)
+                                if (isFragmented || !isTyped || isReady && this.nextHistoryPoint.HasValue || this.embedColorStepDictionary!.Values.Any(step => isReady && this.nextHistoryPoint.HasValue && step > 0 || (!isReady || !this.nextHistoryPoint.HasValue) && step < 1) || this.embedIsScrollableHashSet!.Count > 0 || this.embedScrollStepDictionary!.Count > 0 || this.hoverEmbeddedIndex.HasValue && this.embedIsScrollableHashSet.Count == 0 && this.embedScrollStepDictionary.Count == 0)
                                 {
                                     List<char> charList = new List<char>();
                                     Random random = new Random(Environment.TickCount);
@@ -2771,7 +2773,7 @@ namespace Apricot
                                         int index = 0;
                                         StringBuilder stringBuilder = new StringBuilder();
 
-                                        this.inlineList.Clear();
+                                        this.inlineList!.Clear();
 
                                         if (!isTyped && (!isReady || !this.nextHistoryPoint.HasValue))
                                         {
@@ -2780,11 +2782,11 @@ namespace Apricot
 
                                         foreach (object o in this.messageCollection[this.historyPoint.Value])
                                         {
-                                            string s = o as string;
+                                            string? s = o as string;
 
                                             if (s == null)
                                             {
-                                                Entry entry = o as Entry;
+                                                Entry? entry = o as Entry;
 
                                                 if (entry == null)
                                                 {
@@ -2798,7 +2800,7 @@ namespace Apricot
 
                                             if (s != null)
                                             {
-                                                if (index + s.Length > this.messageBuffer.Length)
+                                                if (index + s.Length > this.messageBuffer!.Length)
                                                 {
                                                     if (this.messageBuffer.Length > index)
                                                     {
@@ -2818,7 +2820,7 @@ namespace Apricot
                                             }
                                         }
 
-                                        if (randomStringBuilder.Length > this.messageBuffer.Length)
+                                        if (randomStringBuilder.Length > this.messageBuffer!.Length)
                                         {
                                             stringBuilder.Append(randomStringBuilder.ToString().Substring(this.messageBuffer.Length, randomStringBuilder.Length - this.messageBuffer.Length));
                                             waitRequired = false;
@@ -2839,11 +2841,11 @@ namespace Apricot
                                     this.ScrollCanvas.Height = this.lineHeight * actualLines;
                                     this.MessageCanvas.Height = this.lineHeight * (this.counterScrollStep.HasValue ? actualLines + paddingLines + 1 : actualLines + paddingLines);
 
-                                    foreach (object obj in this.inlineList)
+                                    foreach (object obj in this.inlineList!)
                                     {
-                                        string inline = null;
-                                        Entry entry = null;
-                                        Brush brush = this.textBrush;
+                                        string? inline = null;
+                                        Entry? entry = null;
+                                        Brush? brush = this.textBrush;
                                         Nullable<double> scrollStep = null;
                                         bool isMutable = false;
 
@@ -2860,13 +2862,13 @@ namespace Apricot
                                             entry = (Entry)obj;
                                             inline = entry.Title;
 
-                                            if (this.embedIsScrollableHashSet.Contains(inlineIndex1))
+                                            if (this.embedIsScrollableHashSet!.Contains(inlineIndex1))
                                             {
                                                 isScrollable = true;
                                                 this.embedIsScrollableHashSet.Remove(inlineIndex1);
                                             }
 
-                                            if (this.embedScrollStepDictionary.TryGetValue(inlineIndex1, out step1))
+                                            if (this.embedScrollStepDictionary!.TryGetValue(inlineIndex1, out step1))
                                             {
                                                 if (step1 == 1 && isScrollable)
                                                 {
@@ -2912,7 +2914,7 @@ namespace Apricot
                                                 }
                                             }
 
-                                            if (this.embedColorStepDictionary.TryGetValue(inlineIndex1, out step2))
+                                            if (this.embedColorStepDictionary!.TryGetValue(inlineIndex1, out step2))
                                             {
                                                 if (isReady && this.nextHistoryPoint.HasValue)
                                                 {
@@ -3123,9 +3125,9 @@ namespace Apricot
                                                     if (entry == null)
                                                     {
                                                         int key = isMutable ? -inlineIndex2 - 1 : inlineIndex2;
-                                                        Image image;
+                                                        Image? image;
 
-                                                        if (this.cachedInlineImageDictionary.TryGetValue(key, out image))
+                                                        if (this.cachedInlineImageDictionary!.TryGetValue(key, out image))
                                                         {
                                                             double width = Math.Ceiling(list[i].Value.Width) - Math.Floor(list[i].Value.OverhangLeading) - Math.Floor(list[i].Value.OverhangTrailing);
                                                             double height = list[i].Value.OverhangAfter > 0 ? list[i].Value.Height + list[i].Value.OverhangAfter : list[i].Value.Height;
@@ -3147,7 +3149,7 @@ namespace Apricot
                                                             image.Width = width;
                                                             image.Height = height;
 
-                                                            Canvas canvas = image.Parent as Canvas;
+                                                            Canvas? canvas = image.Parent as Canvas;
 
                                                             if (canvas != null)
                                                             {
@@ -3228,9 +3230,9 @@ namespace Apricot
                                                     }
                                                     else
                                                     {
-                                                        Image image;
+                                                        Image? image;
 
-                                                        if (this.cachedInlineImageDictionary.TryGetValue(inlineIndex2, out image))
+                                                        if (this.cachedInlineImageDictionary!.TryGetValue(inlineIndex2, out image))
                                                         {
                                                             if (isMutable)
                                                             {
@@ -3331,14 +3333,14 @@ namespace Apricot
                                                                 image.Width = maxWidth + width1;
                                                                 image.Height = height;
 
-                                                                TranslateTransform translateTransform = image.RenderTransform as TranslateTransform;
+                                                                TranslateTransform? translateTransform = image.RenderTransform as TranslateTransform;
 
                                                                 if (translateTransform != null)
                                                                 {
                                                                     translateTransform.X = scrollStep.HasValue ? -maxWidth * Math.Sin(scrollStep.Value / 2 * Math.PI) : 0;
                                                                 }
 
-                                                                Canvas canvas = image.Parent as Canvas;
+                                                                Canvas? canvas = image.Parent as Canvas;
 
                                                                 if (canvas != null)
                                                                 {
@@ -3354,7 +3356,7 @@ namespace Apricot
                                                             }
                                                             else
                                                             {
-                                                                TranslateTransform translateTransform = image.RenderTransform as TranslateTransform;
+                                                                TranslateTransform? translateTransform = image.RenderTransform as TranslateTransform;
 
                                                                 if (translateTransform != null)
                                                                 {
@@ -3424,7 +3426,7 @@ namespace Apricot
                                                                     }
                                                                 }
 
-                                                                Canvas canvas = image.Parent as Canvas;
+                                                                Canvas? canvas = image.Parent as Canvas;
 
                                                                 if (canvas != null)
                                                                 {
@@ -3577,7 +3579,7 @@ namespace Apricot
                                                             });
                                                             image.MouseLeftButtonUp += new MouseButtonEventHandler(delegate (object s, MouseButtonEventArgs mbea)
                                                             {
-                                                                if (this.hoverEmbeddedIndex.HasValue && !this.embedIsScrollableHashSet.Contains(this.hoverEmbeddedIndex.Value))
+                                                                if (this.hoverEmbeddedIndex.HasValue && !this.embedIsScrollableHashSet!.Contains(this.hoverEmbeddedIndex.Value))
                                                                 {
                                                                     this.embedIsScrollableHashSet.Add(this.hoverEmbeddedIndex.Value);
                                                                 }
@@ -3586,14 +3588,14 @@ namespace Apricot
                                                                 {
                                                                     if (entry.Resource == null)
                                                                     {
-                                                                        Script.Instance.Search(entry.Title);
+                                                                        Script.Instance.Search(entry.Title!);
                                                                     }
                                                                     else
                                                                     {
                                                                         Task.Factory.StartNew(delegate (object state)
                                                                         {
                                                                             NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
-                                                                        }, entry.Resource.ToString());
+                                                                        }!, entry.Resource.ToString());
                                                                     }
                                                                 }
                                                                 else
@@ -3630,7 +3632,7 @@ namespace Apricot
                                     foreach (KeyValuePair<int, Canvas> kvp in (from kvp in this.cachedInlineImageDictionary let canvas = kvp.Value.Parent as Canvas where canvas != null && !hashSet.Contains(canvas) select new KeyValuePair<int, Canvas>(kvp.Key, canvas)).ToArray())
                                     {
                                         this.MessageCanvas.Children.Remove(kvp.Value);
-                                        this.cachedInlineImageDictionary.Remove(kvp.Key);
+                                        this.cachedInlineImageDictionary!.Remove(kvp.Key);
                                     }
                                 }
 
@@ -3638,7 +3640,7 @@ namespace Apricot
                                 {
                                     waitRequired = false;
 
-                                    if ((isTyped || isReady && this.nextHistoryPoint.HasValue) && (isFragmented || isReady && this.nextHistoryPoint.HasValue && this.attachmentFadeStepDictionary.Values.Any(step => step > 0) || this.attachmentFadeStepDictionary.Count == 0 || this.attachmentFadeStepDictionary.Values.Any(step => step < 1) || this.messageCollection[this.historyPoint.Value].Attachments.Where((entry, i) =>
+                                    if ((isTyped || isReady && this.nextHistoryPoint.HasValue) && (isFragmented || isReady && this.nextHistoryPoint.HasValue && this.attachmentFadeStepDictionary!.Values.Any(step => step > 0) || this.attachmentFadeStepDictionary!.Count == 0 || this.attachmentFadeStepDictionary.Values.Any(step => step < 1) || this.messageCollection[this.historyPoint.Value].Attachments.Where((entry, i) =>
                                     {
                                         double fadeStep;
 
@@ -3654,7 +3656,7 @@ namespace Apricot
 
                                             if (!entry.ReadOnly)
                                             {
-                                                if (this.attachmentEnableStepDictionary.TryGetValue(i, out enableStep))
+                                                if (this.attachmentEnableStepDictionary!.TryGetValue(i, out enableStep))
                                                 {
                                                     if (entry.Enabled)
                                                     {
@@ -3677,7 +3679,7 @@ namespace Apricot
                                                 {
                                                     double filterStep;
 
-                                                    if (this.attachmentFilterStepDictionary.TryGetValue(i, out filterStep))
+                                                    if (this.attachmentFilterStepDictionary!.TryGetValue(i, out filterStep))
                                                     {
                                                         if (filterStep < 1)
                                                         {
@@ -3689,7 +3691,7 @@ namespace Apricot
                                                         return true;
                                                     }
                                                 }
-                                                else if (this.attachmentFilterStepDictionary.ContainsKey(i))
+                                                else if (this.attachmentFilterStepDictionary!.ContainsKey(i))
                                                 {
                                                     return true;
                                                 }
@@ -3704,7 +3706,7 @@ namespace Apricot
                                             {
                                                 double highlightStep;
 
-                                                if (this.attachmentHighlightStepDictionary.TryGetValue(i, out highlightStep))
+                                                if (this.attachmentHighlightStepDictionary!.TryGetValue(i, out highlightStep))
                                                 {
                                                     if (highlightStep < 1)
                                                     {
@@ -3716,14 +3718,14 @@ namespace Apricot
                                                     return true;
                                                 }
                                             }
-                                            else if (this.attachmentHighlightStepDictionary.ContainsKey(i))
+                                            else if (this.attachmentHighlightStepDictionary!.ContainsKey(i))
                                             {
                                                 return true;
                                             }
                                         }
 
                                         return false;
-                                    }).Any() || !this.attachmentsAreHover && this.selectedPosition.HasValue && this.attachmentHighlightStepDictionary.Count == 0 || this.attachmentImageLoadingStepDictionary.Count > 0 || this.attachmentImagePopupStepDictionary.Count > 0 || this.attachmentIsScrollableHashSet.Count > 0 || this.attachmentScrollStepDictionary.Count > 0 || this.hoverIndex.HasValue && this.attachmentIsScrollableHashSet.Count == 0 && this.attachmentScrollStepDictionary.Count == 0))
+                                    }).Any() || !this.attachmentsAreHover && this.selectedPosition.HasValue && this.attachmentHighlightStepDictionary!.Count == 0 || this.attachmentImageLoadingStepDictionary!.Count > 0 || this.attachmentImagePopupStepDictionary!.Count > 0 || this.attachmentIsScrollableHashSet!.Count > 0 || this.attachmentScrollStepDictionary!.Count > 0 || this.hoverIndex.HasValue && this.attachmentIsScrollableHashSet.Count == 0 && this.attachmentScrollStepDictionary.Count == 0))
                                     {
                                         const int leftMargin = 25;
                                         const int rightMargin = 3;
@@ -3759,7 +3761,7 @@ namespace Apricot
                                         int length = maxLines - usedLines + paddingLines;
                                         bool imageIsUpdating = false;
                                         bool isImcomplete = false;
-                                        int canvasIndex = this.cachedInlineImageDictionary.Count;
+                                        int canvasIndex = this.cachedInlineImageDictionary!.Count;
                                         double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
                                         HashSet<UIElement> hashSet = new HashSet<UIElement>();
 
@@ -3784,7 +3786,7 @@ namespace Apricot
                                                 {
                                                     double step;
 
-                                                    if (this.attachmentFadeStepDictionary.TryGetValue(i - 1, out step) && Math.Sin(step / 2 * Math.PI) >= 0.5)
+                                                    if (this.attachmentFadeStepDictionary!.TryGetValue(i - 1, out step) && Math.Sin(step / 2 * Math.PI) >= 0.5)
                                                     {
                                                         isStepping = true;
                                                     }
@@ -3794,7 +3796,7 @@ namespace Apricot
                                                     isStepping = true;
                                                 }
 
-                                                if (this.attachmentFadeStepDictionary.TryGetValue(i, out fadeStep))
+                                                if (this.attachmentFadeStepDictionary!.TryGetValue(i, out fadeStep))
                                                 {
                                                     if (isReady && this.nextHistoryPoint.HasValue)
                                                     {
@@ -3845,7 +3847,7 @@ namespace Apricot
                                                     this.attachmentFadeStepDictionary.Add(i, 0);
                                                 }
                                             }
-                                            else if (this.attachmentFadeStepDictionary.TryGetValue(i, out fadeStep) && isReady && this.nextHistoryPoint.HasValue)
+                                            else if (this.attachmentFadeStepDictionary!.TryGetValue(i, out fadeStep) && isReady && this.nextHistoryPoint.HasValue)
                                             {
                                                 fadeStep -= 1 / (averageFrameRate / 4);
 
@@ -3882,7 +3884,7 @@ namespace Apricot
 
                                                 if (!attachmentEntry.ReadOnly)
                                                 {
-                                                    if (this.attachmentEnableStepDictionary.TryGetValue(i, out enableStep))
+                                                    if (this.attachmentEnableStepDictionary!.TryGetValue(i, out enableStep))
                                                     {
                                                         if (attachmentEntry.Enabled)
                                                         {
@@ -3935,7 +3937,7 @@ namespace Apricot
                                                     {
                                                         double filterStep;
 
-                                                        if (!this.attachmentFilterStepDictionary.TryGetValue(i, out filterStep))
+                                                        if (!this.attachmentFilterStepDictionary!.TryGetValue(i, out filterStep))
                                                         {
                                                             this.attachmentFilterStepDictionary.Add(i, 0);
                                                         }
@@ -3958,7 +3960,7 @@ namespace Apricot
                                                     {
                                                         double filterStep;
 
-                                                        if (this.attachmentFilterStepDictionary.TryGetValue(i, out filterStep))
+                                                        if (this.attachmentFilterStepDictionary!.TryGetValue(i, out filterStep))
                                                         {
                                                             if (filterStep > 0)
                                                             {
@@ -3984,7 +3986,7 @@ namespace Apricot
                                                 {
                                                     double highlightStep;
 
-                                                    if (!this.attachmentHighlightStepDictionary.TryGetValue(i, out highlightStep))
+                                                    if (!this.attachmentHighlightStepDictionary!.TryGetValue(i, out highlightStep))
                                                     {
                                                         this.attachmentHighlightStepDictionary.Add(i, 0);
                                                     }
@@ -4007,7 +4009,7 @@ namespace Apricot
                                                 {
                                                     double highlightStep;
 
-                                                    if (this.attachmentHighlightStepDictionary.TryGetValue(i, out highlightStep))
+                                                    if (this.attachmentHighlightStepDictionary!.TryGetValue(i, out highlightStep))
                                                     {
                                                         if (highlightStep > 0)
                                                         {
@@ -4039,9 +4041,9 @@ namespace Apricot
 
                                                     if (attachmentEntry.Image != null && !imageIsUpdating)
                                                     {
-                                                        if (!this.imageDictionary.ContainsKey(attachmentEntry.Image))
+                                                        if (!this.imageDictionary!.ContainsKey(attachmentEntry.Image))
                                                         {
-                                                            if (!this.imageUriHashSet.Contains(attachmentEntry.Image))
+                                                            if (!this.imageUriHashSet!.Contains(attachmentEntry.Image))
                                                             {
                                                                 this.imageUriHashSet.Add(attachmentEntry.Image);
 
@@ -4055,17 +4057,17 @@ namespace Apricot
 
                                                 if (attachmentEntry.Image != null)
                                                 {
-                                                    BitmapImage bitmapImage;
-                                                    BitmapImage previousBitmapImage;
+                                                    BitmapImage? bitmapImage;
+                                                    BitmapImage? previousBitmapImage;
 
-                                                    if (this.imageDictionary.TryGetValue(attachmentEntry.Image, out bitmapImage))
+                                                    if (this.imageDictionary!.TryGetValue(attachmentEntry.Image, out bitmapImage))
                                                     {
-                                                        if (this.attachmentImageDictionary.TryGetValue(i, out previousBitmapImage) && bitmapImage != previousBitmapImage && this.attachmentImageSlideStepDictionary.TryGetValue(i, out slideStep) && slideStep == 1)
+                                                        if (this.attachmentImageDictionary!.TryGetValue(i, out previousBitmapImage) && bitmapImage != previousBitmapImage && this.attachmentImageSlideStepDictionary!.TryGetValue(i, out slideStep) && slideStep == 1)
                                                         {
                                                             this.attachmentImageSlideStepDictionary[i] = 0;
                                                         }
                                                     }
-                                                    else if (this.attachmentImageDictionary.TryGetValue(i, out previousBitmapImage))
+                                                    else if (this.attachmentImageDictionary!.TryGetValue(i, out previousBitmapImage))
                                                     {
                                                         bitmapImage = previousBitmapImage;
                                                     }
@@ -4076,7 +4078,7 @@ namespace Apricot
                                                     }
                                                     else
                                                     {
-                                                        if (!this.attachmentImageSlideStepDictionary.TryGetValue(i, out slideStep))
+                                                        if (!this.attachmentImageSlideStepDictionary!.TryGetValue(i, out slideStep))
                                                         {
                                                             this.attachmentImageSlideStepDictionary.Add(i, 0);
                                                         }
@@ -4114,7 +4116,7 @@ namespace Apricot
 
                                                 if (isLoading)
                                                 {
-                                                    if (this.attachmentImageLoadingStepDictionary.TryGetValue(i, out loadStep))
+                                                    if (this.attachmentImageLoadingStepDictionary!.TryGetValue(i, out loadStep))
                                                     {
                                                         loadStep += 1 / (averageFrameRate / 2);
 
@@ -4130,14 +4132,14 @@ namespace Apricot
                                                         this.attachmentImageLoadingStepDictionary.Add(i, 0);
                                                     }
                                                 }
-                                                else if (this.attachmentImageLoadingStepDictionary.ContainsKey(i))
+                                                else if (this.attachmentImageLoadingStepDictionary!.ContainsKey(i))
                                                 {
                                                     this.attachmentImageLoadingStepDictionary.Remove(i);
                                                 }
 
                                                 if (isHover)
                                                 {
-                                                    if (!this.attachmentImagePopupStepDictionary.TryGetValue(i, out popupStep))
+                                                    if (!this.attachmentImagePopupStepDictionary!.TryGetValue(i, out popupStep))
                                                     {
                                                         this.attachmentImagePopupStepDictionary.Add(i, 0);
                                                     }
@@ -4155,7 +4157,7 @@ namespace Apricot
                                                         popupStepIsUpdated = true;
                                                     }
                                                 }
-                                                else if (this.attachmentImagePopupStepDictionary.TryGetValue(i, out popupStep))
+                                                else if (this.attachmentImagePopupStepDictionary!.TryGetValue(i, out popupStep))
                                                 {
                                                     popupStep -= 1 / (averageFrameRate / 4);
 
@@ -4172,13 +4174,13 @@ namespace Apricot
                                                     popupStepIsUpdated = true;
                                                 }
 
-                                                if (this.attachmentIsScrollableHashSet.Contains(i))
+                                                if (this.attachmentIsScrollableHashSet!.Contains(i))
                                                 {
                                                     isScrollable = true;
                                                     this.attachmentIsScrollableHashSet.Remove(i);
                                                 }
 
-                                                if (this.attachmentScrollStepDictionary.TryGetValue(i, out scrollStep1))
+                                                if (this.attachmentScrollStepDictionary!.TryGetValue(i, out scrollStep1))
                                                 {
                                                     if (scrollStep1 == 1 && isScrollable)
                                                     {
@@ -4226,22 +4228,22 @@ namespace Apricot
 
                                                 if (offset <= i && i < offset + length)
                                                 {
-                                                    Image attachmentThumbnailImage;
+                                                    Image? attachmentThumbnailImage;
                                                     Size imageSize = new Size(8, 8);
                                                     double popupMargin = Math.Round(((this.lineHeight - imageSize.Height) / 2 < 4 ? (this.lineHeight - imageSize.Height) / 2 : 4) * Math.Sin(popupStep / 2 * Math.PI));
                                                     Rect imageRect = new Rect(nextRect.X - (imageSize.Width + 9) - popupMargin, nextRect.Y + (nextRect.Height - imageSize.Height) / 2 - popupMargin, imageSize.Width + popupMargin * 2, imageSize.Height + popupMargin * 2);
 
                                                     if (!String.IsNullOrEmpty(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title))
                                                     {
-                                                        Image attachmentTextImage;
+                                                        Image? attachmentTextImage;
 
-                                                        if (this.cachedAttachmentTextImageDictionary.TryGetValue(i, out attachmentTextImage))
+                                                        if (this.cachedAttachmentTextImageDictionary!.TryGetValue(i, out attachmentTextImage))
                                                         {
-                                                            Canvas attachmentCanvas = attachmentTextImage.Parent as Canvas;
+                                                            Canvas? attachmentCanvas = attachmentTextImage.Parent as Canvas;
 
                                                             if (attachmentCanvas != null)
                                                             {
-                                                                TranslateTransform translateTransform = attachmentTextImage.RenderTransform as TranslateTransform;
+                                                                TranslateTransform? translateTransform = attachmentTextImage.RenderTransform as TranslateTransform;
 
                                                                 if (translateTransform != null)
                                                                 {
@@ -4338,7 +4340,7 @@ namespace Apricot
                                                                         Task.Factory.StartNew(delegate (object state)
                                                                         {
                                                                             NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
-                                                                        }, attachmentEntry.Resource.ToString());
+                                                                        }!, attachmentEntry.Resource.ToString());
                                                                     }
                                                                     else if (!String.IsNullOrEmpty(attachmentEntry.Title))
                                                                     {
@@ -4352,11 +4354,11 @@ namespace Apricot
                                                                             {
                                                                                 foreach (object o in this.messageCollection[this.historyPoint.Value])
                                                                                 {
-                                                                                    Entry e1 = o as Entry;
+                                                                                    Entry? e1 = o as Entry;
 
                                                                                     if (e1 != null)
                                                                                     {
-                                                                                        string term = e1.Title;
+                                                                                        string term = e1.Title!;
                                                                                         string attribute = attachmentEntry.Title;
                                                                                         bool isNewWord = true;
                                                                                         List<Word> wordList = new List<Word>();
@@ -4399,11 +4401,11 @@ namespace Apricot
                                                                             {
                                                                                 foreach (object o in this.messageCollection[this.historyPoint.Value])
                                                                                 {
-                                                                                    Entry e1 = o as Entry;
+                                                                                    Entry? e1 = o as Entry;
 
                                                                                     if (e1 != null)
                                                                                     {
-                                                                                        string term = e1.Title;
+                                                                                        string term = e1.Title!;
                                                                                         string attribute = attachmentEntry.Title;
                                                                                         bool isNewWord = true;
                                                                                         List<Word> wordList = new List<Word>();
@@ -4471,7 +4473,7 @@ namespace Apricot
                                                         canvasIndex++;
                                                     }
 
-                                                    if (this.cachedAttachmentThumbnailImageDictionary.TryGetValue(i, out attachmentThumbnailImage))
+                                                    if (this.cachedAttachmentThumbnailImageDictionary!.TryGetValue(i, out attachmentThumbnailImage))
                                                     {
                                                         if (attachmentEntry.Image == null)
                                                         {
@@ -4523,8 +4525,8 @@ namespace Apricot
                                                         {
                                                             if (attachmentThumbnailImage.Source == null || slideStepIsUpdated || isLoading || popupStepIsUpdated)
                                                             {
-                                                                BitmapImage attachedBitmapImage;
-                                                                BitmapImage previousAttachedBitmapImage;
+                                                                BitmapImage? attachedBitmapImage;
+                                                                BitmapImage? previousAttachedBitmapImage;
                                                                 Pen pen = new Pen(Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Brushes.Black : Brushes.White, 1);
                                                                 DrawingGroup dg = new DrawingGroup();
                                                                 DrawingContext dc = dg.Open();
@@ -4539,14 +4541,14 @@ namespace Apricot
 
                                                                 dc.PushGuidelineSet(gs1);
 
-                                                                if (this.imageDictionary.TryGetValue(attachmentEntry.Image, out attachedBitmapImage))
+                                                                if (this.imageDictionary!.TryGetValue(attachmentEntry.Image, out attachedBitmapImage))
                                                                 {
-                                                                    if (this.attachmentImageDictionary.TryGetValue(i, out previousAttachedBitmapImage) && attachedBitmapImage == null)
+                                                                    if (this.attachmentImageDictionary!.TryGetValue(i, out previousAttachedBitmapImage) && attachedBitmapImage == null)
                                                                     {
                                                                         attachedBitmapImage = previousAttachedBitmapImage;
                                                                     }
                                                                 }
-                                                                else if (this.attachmentImageDictionary.TryGetValue(i, out previousAttachedBitmapImage))
+                                                                else if (this.attachmentImageDictionary!.TryGetValue(i, out previousAttachedBitmapImage))
                                                                 {
                                                                     attachedBitmapImage = previousAttachedBitmapImage;
                                                                 }
@@ -4701,8 +4703,8 @@ namespace Apricot
                                                         }
                                                         else
                                                         {
-                                                            BitmapImage attachedBitmapImage;
-                                                            BitmapImage previousAttachedBitmapImage;
+                                                            BitmapImage? attachedBitmapImage;
+                                                            BitmapImage? previousAttachedBitmapImage;
 
                                                             gs1.GuidelinesX.Add(0);
                                                             gs1.GuidelinesX.Add(imageRect.Width);
@@ -4711,14 +4713,14 @@ namespace Apricot
 
                                                             dc.PushGuidelineSet(gs1);
 
-                                                            if (this.imageDictionary.TryGetValue(attachmentEntry.Image, out attachedBitmapImage))
+                                                            if (this.imageDictionary!.TryGetValue(attachmentEntry.Image, out attachedBitmapImage))
                                                             {
-                                                                if (this.attachmentImageDictionary.TryGetValue(i, out previousAttachedBitmapImage) && attachedBitmapImage == null)
+                                                                if (this.attachmentImageDictionary!.TryGetValue(i, out previousAttachedBitmapImage) && attachedBitmapImage == null)
                                                                 {
                                                                     attachedBitmapImage = previousAttachedBitmapImage;
                                                                 }
                                                             }
-                                                            else if (this.attachmentImageDictionary.TryGetValue(i, out previousAttachedBitmapImage))
+                                                            else if (this.attachmentImageDictionary!.TryGetValue(i, out previousAttachedBitmapImage))
                                                             {
                                                                 attachedBitmapImage = previousAttachedBitmapImage;
                                                             }
@@ -4853,7 +4855,7 @@ namespace Apricot
                                                                     Task.Factory.StartNew(delegate (object state)
                                                                     {
                                                                         NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
-                                                                    }, attachmentEntry.Resource.ToString());
+                                                                    }!, attachmentEntry.Resource.ToString());
                                                                 }
                                                                 else if (!String.IsNullOrEmpty(attachmentEntry.Title))
                                                                 {
@@ -4867,11 +4869,11 @@ namespace Apricot
                                                                         {
                                                                             foreach (object o in this.messageCollection[this.historyPoint.Value])
                                                                             {
-                                                                                Entry e1 = o as Entry;
+                                                                                Entry? e1 = o as Entry;
 
                                                                                 if (e1 != null)
                                                                                 {
-                                                                                    string term = e1.Title;
+                                                                                    string term = e1.Title!;
                                                                                     string attribute = attachmentEntry.Title;
                                                                                     bool isNewWord = true;
                                                                                     List<Word> wordList = new List<Word>();
@@ -4914,11 +4916,11 @@ namespace Apricot
                                                                         {
                                                                             foreach (object o in this.messageCollection[this.historyPoint.Value])
                                                                             {
-                                                                                Entry e1 = o as Entry;
+                                                                                Entry? e1 = o as Entry;
 
                                                                                 if (e1 != null)
                                                                                 {
-                                                                                    string term = e1.Title;
+                                                                                    string term = e1.Title!;
                                                                                     string attribute = attachmentEntry.Title;
                                                                                     bool isNewWord = true;
                                                                                     List<Word> wordList = new List<Word>();
@@ -5013,13 +5015,13 @@ namespace Apricot
                                         foreach (KeyValuePair<int, Image> kvp in (from kvp in this.cachedAttachmentThumbnailImageDictionary where !hashSet.Contains(kvp.Value) select kvp).ToArray())
                                         {
                                             this.MessageCanvas.Children.Remove(kvp.Value);
-                                            this.cachedAttachmentThumbnailImageDictionary.Remove(kvp.Key);
+                                            this.cachedAttachmentThumbnailImageDictionary!.Remove(kvp.Key);
                                         }
 
                                         foreach (KeyValuePair<int, Canvas> kvp in (from kvp in this.cachedAttachmentTextImageDictionary let canvas = kvp.Value.Parent as Canvas where canvas != null && !hashSet.Contains(kvp.Value.Parent) select new KeyValuePair<int, Canvas>(kvp.Key, canvas)).ToArray())
                                         {
                                             this.MessageCanvas.Children.Remove(kvp.Value);
-                                            this.cachedAttachmentTextImageDictionary.Remove(kvp.Key);
+                                            this.cachedAttachmentTextImageDictionary!.Remove(kvp.Key);
                                         }
                                     }
                                 }
@@ -5288,7 +5290,7 @@ namespace Apricot
 
                                 if (this.enableFilter && this.filterStep.HasValue)
                                 {
-                                    if (this.previousThresholdScore == this.thresholdScore && this.thresholdQueue.Count > 0)
+                                    if (this.previousThresholdScore == this.thresholdScore && this.thresholdQueue!.Count > 0)
                                     {
                                         do
                                         {
@@ -5704,19 +5706,19 @@ namespace Apricot
 
                                             if (this.inspectorEntry.Image != null)
                                             {
-                                                if (!this.imageDictionary.ContainsKey(this.inspectorEntry.Image) && !this.imageUriHashSet.Contains(this.inspectorEntry.Image))
+                                                if (!this.imageDictionary!.ContainsKey(this.inspectorEntry.Image) && !this.imageUriHashSet!.Contains(this.inspectorEntry.Image))
                                                 {
                                                     this.imageUriHashSet.Add(this.inspectorEntry.Image);
 
                                                     UpdateImage(this.inspectorEntry.Image, false);
                                                 }
 
-                                                this.imageUriQueue.Enqueue(this.inspectorEntry.Image);
+                                                this.imageUriQueue!.Enqueue(this.inspectorEntry.Image);
                                             }
 
                                             if (this.inspectorEntry.HasMultipleImages)
                                             {
-                                                this.switchTimer.Start();
+                                                this.switchTimer!.Start();
                                             }
                                             else
                                             {
@@ -5736,7 +5738,7 @@ namespace Apricot
 
                                                     if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
                                                     {
-                                                        this.switchTimer.Start();
+                                                        this.switchTimer!.Start();
 
                                                         break;
                                                     }
@@ -5747,7 +5749,7 @@ namespace Apricot
 
                                                         if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
                                                         {
-                                                            this.switchTimer.Start();
+                                                            this.switchTimer!.Start();
 
                                                             break;
                                                         }
@@ -5756,19 +5758,19 @@ namespace Apricot
 
                                                         if (lineStringBuilder.ToString().EndsWith(Environment.NewLine, StringComparison.Ordinal))
                                                         {
-                                                            this.switchTimer.Start();
+                                                            this.switchTimer!.Start();
 
                                                             break;
                                                         }
                                                         else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                                         {
-                                                            this.switchTimer.Start();
+                                                            this.switchTimer!.Start();
 
                                                             break;
                                                         }
                                                     }
 
-                                                    if (this.switchTimer.IsEnabled)
+                                                    if (this.switchTimer!.IsEnabled)
                                                     {
                                                         break;
                                                     }
@@ -5812,26 +5814,26 @@ namespace Apricot
                                             this.imageSlideStep = 0;
                                             this.imagePopupStep = 0;
                                             this.imageBlinkStep = 0;
-                                            this.imageUriQueue.Clear();
+                                            this.imageUriQueue!.Clear();
                                             this.imageUri = null;
                                             this.cachedBitmapImage = null;
                                             this.titleScrollStep = null;
                                             this.subtitleScrollStep = null;
                                             this.authorScrollStep = null;
-                                            this.tagScrollStepDictionary.Clear();
+                                            this.tagScrollStepDictionary!.Clear();
                                             this.titleIsScrollable = false;
                                             this.subtitleIsScrollable = false;
                                             this.authorIsScrollable = false;
-                                            this.tagIsScrollableHashSet.Clear();
-                                            this.circulationQueue.Clear();
+                                            this.tagIsScrollableHashSet!.Clear();
+                                            this.circulationQueue!.Clear();
                                             this.previousCirculationIndex = 0;
                                             this.nextCirculationIndex = 0;
                                             this.circulationStep = 0;
                                             this.mouseDownPosition = null;
-                                            this.cachedTitleImageDictionary.Clear();
-                                            this.cachedSubtitleImageDictionary.Clear();
-                                            this.cachedAuthorImageDictionary.Clear();
-                                            this.cachedTagImageDictionary.Clear();
+                                            this.cachedTitleImageDictionary!.Clear();
+                                            this.cachedSubtitleImageDictionary!.Clear();
+                                            this.cachedAuthorImageDictionary!.Clear();
+                                            this.cachedTagImageDictionary!.Clear();
                                             this.inspectorFadeStep = null;
                                             this.InspectorCanvas.Visibility = this.InspectorImage.Visibility = Visibility.Collapsed;
                                             this.InspectorCanvas.Width = this.InspectorCanvas.Height = this.InspectorImage.Width = this.InspectorImage.Height = Double.NaN;
@@ -5839,7 +5841,7 @@ namespace Apricot
                                             this.InspectorCanvas.Background = null;
                                             this.InspectorCanvas.Opacity = this.InspectorImage.Opacity = 0;
                                             this.InspectorCanvas.Children.Clear();
-                                            this.switchTimer.Stop();
+                                            this.switchTimer!.Stop();
                                         }
                                         else
                                         {
@@ -5855,9 +5857,9 @@ namespace Apricot
                                     bool isLoading = false;
                                     bool isPopupping = false;
                                     bool isBlinking = false;
-                                    BitmapImage bitmapImage;
+                                    BitmapImage? bitmapImage;
 
-                                    if (this.previousCirculationIndex == this.nextCirculationIndex && this.circulationQueue.Count > 0)
+                                    if (this.previousCirculationIndex == this.nextCirculationIndex && this.circulationQueue!.Count > 0)
                                     {
                                         do
                                         {
@@ -5961,7 +5963,7 @@ namespace Apricot
 
                                     if (this.inspectorEntry == this.nextInspectorEntry)
                                     {
-                                        if (this.imageUriQueue.Count > 0 && (this.imageSlideStep == 0 || this.imageSlideStep == 1))
+                                        if (this.imageUriQueue!.Count > 0 && (this.imageSlideStep == 0 || this.imageSlideStep == 1))
                                         {
                                             this.imageUri = this.imageUriQueue.Dequeue();
                                             this.imageSlideStep = 0;
@@ -5983,7 +5985,7 @@ namespace Apricot
                                                 isSliding = true;
                                             }
                                         }
-                                        else if (this.imageDictionary.TryGetValue(this.imageUri, out bitmapImage))
+                                        else if (this.imageDictionary!.TryGetValue(this.imageUri, out bitmapImage))
                                         {
                                             if (this.cachedBitmapImage != bitmapImage)
                                             {
@@ -6178,7 +6180,7 @@ namespace Apricot
                                         Canvas.SetTop(this.InspectorCanvas, Canvas.GetTop(this.ScrollCanvas) + this.ScrollCanvas.Height);
                                     }
 
-                                    if (this.InspectorCanvas.Children.Count == 0 || this.titleIsHover && !this.titleIsScrollable && this.titleScrollStep == null || this.titleIsScrollable || this.titleScrollStep.HasValue || this.subtitleIsHover && !this.subtitleIsScrollable && this.subtitleScrollStep == null || this.subtitleIsScrollable || this.subtitleScrollStep.HasValue || this.authorIsHover && !this.authorIsScrollable && this.authorScrollStep == null || this.authorIsScrollable || this.authorScrollStep.HasValue || isCirculating || this.hoverTagIndex.HasValue && this.tagIsScrollableHashSet.Count == 0 && this.tagScrollStepDictionary.Count == 0 || this.tagIsScrollableHashSet.Count > 0 || this.tagScrollStepDictionary.Count > 0)
+                                    if (this.InspectorCanvas.Children.Count == 0 || this.titleIsHover && !this.titleIsScrollable && this.titleScrollStep == null || this.titleIsScrollable || this.titleScrollStep.HasValue || this.subtitleIsHover && !this.subtitleIsScrollable && this.subtitleScrollStep == null || this.subtitleIsScrollable || this.subtitleScrollStep.HasValue || this.authorIsHover && !this.authorIsScrollable && this.authorScrollStep == null || this.authorIsScrollable || this.authorScrollStep.HasValue || isCirculating || this.hoverTagIndex.HasValue && this.tagIsScrollableHashSet!.Count == 0 && this.tagScrollStepDictionary!.Count == 0 || this.tagIsScrollableHashSet!.Count > 0 || this.tagScrollStepDictionary!.Count > 0)
                                     {
                                         const double space = 10;
                                         Rect imageRect = new Rect(8, 0, 32, 32);
@@ -6186,7 +6188,7 @@ namespace Apricot
                                         double baseY = imageRect.Height / 2;
                                         Point offsetPoint = new Point(16 + imageRect.Width, baseY);
                                         Point nextPoint = new Point(0, 0);
-                                        string title = String.IsNullOrEmpty(this.inspectorEntry.Title) && this.inspectorEntry.Resource != null ? this.inspectorEntry.Resource.ToString() : this.inspectorEntry.Title;
+                                        string title = String.IsNullOrEmpty(this.inspectorEntry.Title) && this.inspectorEntry.Resource != null ? this.inspectorEntry.Resource.ToString() : this.inspectorEntry.Title!;
                                         bool isEmpty = this.InspectorCanvas.Children.Count == 0;
                                         Size size = new Size(this.baseWidth - 12, this.Canvas.Height - Canvas.GetTop(this.ScrollCanvas) - this.ScrollCanvas.Height - this.baseFooterHeight + 12);
                                         double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
@@ -6355,11 +6357,11 @@ namespace Apricot
 
                                             for (int i = 0; i < list.Count; i++)
                                             {
-                                                Image image;
+                                                Image? image;
 
-                                                if (this.cachedTitleImageDictionary.TryGetValue(i, out image))
+                                                if (this.cachedTitleImageDictionary!.TryGetValue(i, out image))
                                                 {
-                                                    TranslateTransform translateTransform = image.RenderTransform as TranslateTransform;
+                                                    TranslateTransform? translateTransform = image.RenderTransform as TranslateTransform;
 
                                                     if (translateTransform != null)
                                                     {
@@ -6587,7 +6589,7 @@ namespace Apricot
                                                                 Task.Factory.StartNew(delegate (object state)
                                                                 {
                                                                     NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
-                                                                }, this.inspectorEntry.Resource.ToString());
+                                                                }!, this.inspectorEntry.Resource.ToString());
                                                             }
                                                         }
 
@@ -6730,11 +6732,11 @@ namespace Apricot
 
                                             for (int i = 0; i < list.Count; i++)
                                             {
-                                                Image image;
+                                                Image? image;
 
-                                                if (this.cachedSubtitleImageDictionary.TryGetValue(i, out image))
+                                                if (this.cachedSubtitleImageDictionary!.TryGetValue(i, out image))
                                                 {
-                                                    TranslateTransform translateTransform = image.RenderTransform as TranslateTransform;
+                                                    TranslateTransform? translateTransform = image.RenderTransform as TranslateTransform;
 
                                                     if (translateTransform != null)
                                                     {
@@ -6942,7 +6944,7 @@ namespace Apricot
                                                         Task.Factory.StartNew(delegate (object state)
                                                         {
                                                             NativeMethods.ShellExecute(IntPtr.Zero, "open", (string)state, null, null, 1);
-                                                        }, this.inspectorEntry.Resource.GetLeftPart(UriPartial.Authority).ToString());
+                                                        }!, this.inspectorEntry.Resource.GetLeftPart(UriPartial.Authority).ToString());
 
                                                         mbea.Handled = true;
                                                     });
@@ -7085,11 +7087,11 @@ namespace Apricot
 
                                             for (int i = 0; i < list.Count; i++)
                                             {
-                                                Image image;
+                                                Image? image;
 
-                                                if (this.cachedAuthorImageDictionary.TryGetValue(i, out image))
+                                                if (this.cachedAuthorImageDictionary!.TryGetValue(i, out image))
                                                 {
-                                                    TranslateTransform translateTransform = image.RenderTransform as TranslateTransform;
+                                                    TranslateTransform? translateTransform = image.RenderTransform as TranslateTransform;
 
                                                     if (translateTransform != null)
                                                     {
@@ -7538,7 +7540,7 @@ namespace Apricot
                                             });
                                         }
 
-                                        for (int tagIndex = 0, innerTagIndex = 0, lines = 0, canvasIndex = this.InspectorCanvas.Children.Count - this.cachedTagImageDictionary.Count; tagIndex < this.inspectorEntry.Tags.Count; tagIndex++)
+                                        for (int tagIndex = 0, innerTagIndex = 0, lines = 0, canvasIndex = this.InspectorCanvas.Children.Count - this.cachedTagImageDictionary!.Count; tagIndex < this.inspectorEntry.Tags.Count; tagIndex++)
                                         {
                                             string tag = this.inspectorEntry.Tags[tagIndex];
                                             List<KeyValuePair<double, FormattedText>> list = new List<KeyValuePair<double, FormattedText>>();
@@ -7608,13 +7610,13 @@ namespace Apricot
                                                 nextPoint.X += space + Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace);
                                             }
 
-                                            if (this.tagIsScrollableHashSet.Contains(tagIndex))
+                                            if (this.tagIsScrollableHashSet!.Contains(tagIndex))
                                             {
                                                 isScrollable = true;
                                                 this.tagIsScrollableHashSet.Remove(tagIndex);
                                             }
 
-                                            if (this.tagScrollStepDictionary.TryGetValue(tagIndex, out step))
+                                            if (this.tagScrollStepDictionary!.TryGetValue(tagIndex, out step))
                                             {
                                                 if (step == 1 && isScrollable)
                                                 {
@@ -7662,13 +7664,13 @@ namespace Apricot
 
                                             for (int i = 0; i < list.Count; i++)
                                             {
-                                                Image image;
+                                                Image? image;
 
                                                 if (this.cachedTagImageDictionary.TryGetValue(innerTagIndex, out image))
                                                 {
                                                     if (Math.Min(this.previousCirculationIndex, this.nextCirculationIndex) <= lines && lines <= Math.Max(this.previousCirculationIndex, this.nextCirculationIndex))
                                                     {
-                                                        TranslateTransform translateTransform1 = image.RenderTransform as TranslateTransform;
+                                                        TranslateTransform? translateTransform1 = image.RenderTransform as TranslateTransform;
 
                                                         if (translateTransform1 != null)
                                                         {
@@ -7728,11 +7730,11 @@ namespace Apricot
                                                             }
                                                         }
 
-                                                        Canvas canvas1 = image.Parent as Canvas;
+                                                        Canvas? canvas1 = image.Parent as Canvas;
 
                                                         if (canvas1 != null)
                                                         {
-                                                            Canvas canvas2 = canvas1.Parent as Canvas;
+                                                            Canvas? canvas2 = canvas1.Parent as Canvas;
 
                                                             if (canvas2 != null)
                                                             {
@@ -7752,7 +7754,7 @@ namespace Apricot
                                                                         }
                                                                     }
 
-                                                                    TranslateTransform translateTransform2 = canvas2.RenderTransform as TranslateTransform;
+                                                                    TranslateTransform? translateTransform2 = canvas2.RenderTransform as TranslateTransform;
 
                                                                     if (translateTransform2 != null)
                                                                     {
@@ -7766,15 +7768,15 @@ namespace Apricot
                                                     }
                                                     else
                                                     {
-                                                        Canvas canvas1 = image.Parent as Canvas;
+                                                        Canvas? canvas1 = image.Parent as Canvas;
 
                                                         if (canvas1 != null)
                                                         {
-                                                            Canvas canvas2 = canvas1.Parent as Canvas;
+                                                            Canvas? canvas2 = canvas1.Parent as Canvas;
 
                                                             if (canvas2 != null)
                                                             {
-                                                                Canvas canvas3 = canvas2.Parent as Canvas;
+                                                                Canvas? canvas3 = canvas2.Parent as Canvas;
 
                                                                 if (canvas3 != null)
                                                                 {
@@ -7963,7 +7965,7 @@ namespace Apricot
 
                                                         if (lines > 0)
                                                         {
-                                                            this.switchTimer.Stop();
+                                                            this.switchTimer!.Stop();
                                                         }
                                                     });
                                                     image.MouseLeave += new MouseEventHandler(delegate
@@ -7972,7 +7974,7 @@ namespace Apricot
 
                                                         if (lines > 0)
                                                         {
-                                                            this.switchTimer.Start();
+                                                            this.switchTimer!.Start();
                                                         }
                                                     });
                                                     image.MouseLeftButtonDown += new MouseButtonEventHandler(delegate (object s, MouseButtonEventArgs mbea)
@@ -7992,11 +7994,11 @@ namespace Apricot
 
                                                             if (Math.Sign(point.Y - this.mouseDownPosition.Value.Y) > 0)
                                                             {
-                                                                this.circulationQueue.Enqueue(-1);
+                                                                this.circulationQueue!.Enqueue(-1);
                                                             }
                                                             else if (Math.Sign(point.Y - this.mouseDownPosition.Value.Y) < 0)
                                                             {
-                                                                this.circulationQueue.Enqueue(1);
+                                                                this.circulationQueue!.Enqueue(1);
                                                             }
 
                                                             this.mouseDownPosition = null;
@@ -8298,9 +8300,9 @@ namespace Apricot
                                             }
                                             else
                                             {
-                                                BitmapImage bi;
+                                                BitmapImage? bi;
 
-                                                if (this.imageDictionary.TryGetValue(this.imageUri, out bi))
+                                                if (this.imageDictionary!.TryGetValue(this.imageUri, out bi))
                                                 {
                                                     if (bi == this.cachedBitmapImage && bi != null)
                                                     {
@@ -8434,58 +8436,58 @@ namespace Apricot
                                     }
                                 }
 
-                                if (isReady && this.nextHistoryPoint.HasValue && this.inlineList.Count == 0 && this.messageBuffer.Length == 0 && this.randomMessageLength == 0 && this.attachmentFadeStepDictionary.Values.All(step => step == 0) && this.filterStep == null && this.scrollStep == null && this.liftStep == null && this.counterScrollStep == null && this.inspectorEntry == null)
+                                if (isReady && this.nextHistoryPoint.HasValue && this.inlineList!.Count == 0 && this.messageBuffer!.Length == 0 && this.randomMessageLength == 0 && this.attachmentFadeStepDictionary!.Values.All(step => step == 0) && this.filterStep == null && this.scrollStep == null && this.liftStep == null && this.counterScrollStep == null && this.inspectorEntry == null)
                                 {
                                     this.isReady = false;
                                     this.hoverEmbeddedIndex = null;
                                     this.enableFilter = false;
                                     this.minScore = 0;
                                     this.maxScore = 0;
-                                    this.thresholdQueue.Clear();
+                                    this.thresholdQueue!.Clear();
                                     this.thresholdScore = 0;
                                     this.previousThresholdScore = 0;
                                     this.nextThresholdScore = 0;
                                     this.thresholdScoreStep = 0;
                                     this.isReversed = false;
-                                    this.scrollQueue.Clear();
-                                    this.selectedPositionQueue.Clear();
+                                    this.scrollQueue!.Clear();
+                                    this.selectedPositionQueue!.Clear();
                                     this.sourceScrollPosition = this.targetScrollPosition = 0;
                                     this.scrollIndexStep = 0;
                                     this.hoverIndex = null;
                                     this.selectedIndex = null;
                                     this.selectedPosition = null;
-                                    this.embedColorStepDictionary.Clear();
-                                    this.embedScrollStepDictionary.Clear();
-                                    this.embedIsScrollableHashSet.Clear();
+                                    this.embedColorStepDictionary!.Clear();
+                                    this.embedScrollStepDictionary!.Clear();
+                                    this.embedIsScrollableHashSet!.Clear();
                                     this.attachmentFadeStepDictionary.Clear();
-                                    this.attachmentImageLoadingStepDictionary.Clear();
-                                    this.attachmentImageSlideStepDictionary.Clear();
-                                    this.attachmentImagePopupStepDictionary.Clear();
-                                    this.attachmentHighlightStepDictionary.Clear();
-                                    this.attachmentEnableStepDictionary.Clear();
-                                    this.attachmentFilterStepDictionary.Clear();
-                                    this.attachmentScrollStepDictionary.Clear();
-                                    this.attachmentIsScrollableHashSet.Clear();
-                                    this.attachmentImageDictionary.Clear();
-                                    this.cachedInlineImageDictionary.Clear();
-                                    this.cachedAttachmentThumbnailImageDictionary.Clear();
-                                    this.cachedAttachmentTextImageDictionary.Clear();
-                                    this.imageDictionary.Clear();
-                                    this.imageUriHashSet.Clear();
+                                    this.attachmentImageLoadingStepDictionary!.Clear();
+                                    this.attachmentImageSlideStepDictionary!.Clear();
+                                    this.attachmentImagePopupStepDictionary!.Clear();
+                                    this.attachmentHighlightStepDictionary!.Clear();
+                                    this.attachmentEnableStepDictionary!.Clear();
+                                    this.attachmentFilterStepDictionary!.Clear();
+                                    this.attachmentScrollStepDictionary!.Clear();
+                                    this.attachmentIsScrollableHashSet!.Clear();
+                                    this.attachmentImageDictionary!.Clear();
+                                    this.cachedInlineImageDictionary!.Clear();
+                                    this.cachedAttachmentThumbnailImageDictionary!.Clear();
+                                    this.cachedAttachmentTextImageDictionary!.Clear();
+                                    this.imageDictionary!.Clear();
+                                    this.imageUriHashSet!.Clear();
                                     this.TranslateTransform.X = this.TranslateTransform.Y = 0;
                                     this.ScrollCanvas.Width = this.ScrollCanvas.Height = Double.NaN;
                                     this.MessageCanvas.Width = this.MessageCanvas.Height = Double.NaN;
-                                    this.waitTimer.Stop();
-                                    this.messageTypeTimer.Stop();
+                                    this.waitTimer!.Stop();
+                                    this.messageTypeTimer!.Stop();
                                 }
 
-                                if (waitRequired && !this.isPinned && this.targetOpacity > 0 && this.targetScaleX > 0 && this.targetScaleY > 0 && !this.waitTimer.IsEnabled)
+                                if (waitRequired && !this.isPinned && this.targetOpacity > 0 && this.targetScaleX > 0 && this.targetScaleY > 0 && !this.waitTimer!.IsEnabled)
                                 {
                                     this.waitTimer.Interval = this.messageCollection[this.historyPoint.Value].Duration;
                                     this.waitTimer.Start();
                                 }
                             }
-                            else if (!this.isPinned && this.targetOpacity > 0 && this.targetScaleX > 0 && this.targetScaleY > 0 && !this.waitTimer.IsEnabled)
+                            else if (!this.isPinned && this.targetOpacity > 0 && this.targetScaleX > 0 && this.targetScaleY > 0 && !this.waitTimer!.IsEnabled)
                             {
                                 this.waitTimer.Interval = TimeSpan.Zero;
                                 this.waitTimer.Start();
@@ -9001,14 +9003,14 @@ namespace Apricot
 
             foreach (object o in message)
             {
-                string inline = o as string;
-                Brush brush = this.textBrush;
+                string? inline = o as string;
+                Brush? brush = this.textBrush;
                 Dictionary<int, int> dictionary = new Dictionary<int, int>();
                 StringBuilder lineStringBuilder = new StringBuilder();
 
                 if (inline == null)
                 {
-                    Entry entry = o as Entry;
+                    Entry? entry = o as Entry;
 
                     if (entry == null)
                     {
@@ -9021,12 +9023,12 @@ namespace Apricot
                     }
                 }
 
-                foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline, @"[\p{IsBasicLatin}-[\s]]+\s?"))
+                foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(inline!, @"[\p{IsBasicLatin}-[\s]]+\s?"))
                 {
                     dictionary.Add(match.Index, match.Length);
                 }
 
-                for (int i = 0; i < inline.Length; i++)
+                for (int i = 0; i < inline!.Length; i++)
                 {
                     int length;
 
@@ -9130,7 +9132,7 @@ namespace Apricot
             const double space = 10;
             Size imageSize = new Size(32, 32);
             Size iconSize = new Size(6, 6);
-            string title = String.IsNullOrEmpty(entry.Title) && entry.Resource != null ? entry.Resource.ToString() : entry.Title;
+            string title = String.IsNullOrEmpty(entry.Title) && entry.Resource != null ? entry.Resource.ToString() : entry.Title!;
             Size inspectorSize = new Size(this.baseWidth - 12, imageSize.Height / 2);
             double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
@@ -9385,7 +9387,7 @@ namespace Apricot
 
             foreach (Entry entry in from entry in entries where entry.Score.HasValue select entry)
             {
-                if (!scoreList.Contains(entry.Score.Value))
+                if (!scoreList.Contains(entry.Score!.Value))
                 {
                     if (reverse && entry.Score < threshold)
                     {
@@ -9435,8 +9437,8 @@ namespace Apricot
         {
             if (uri.IsAbsoluteUri)
             {
-                System.Configuration.Configuration config1 = null;
-                string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+                System.Configuration.Configuration? config1 = null;
+                string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
 
                 if (Directory.Exists(directory))
                 {
@@ -9464,7 +9466,7 @@ namespace Apricot
                             if (match.Success)
                             {
                                 MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
-                                BitmapImage bi = null;
+                                BitmapImage? bi = null;
 
                                 try
                                 {
@@ -9484,9 +9486,9 @@ namespace Apricot
                                     ms.Close();
                                 }
 
-                                if (this.imageUriHashSet.Contains(uri))
+                                if (this.imageUriHashSet!.Contains(uri))
                                 {
-                                    if (this.imageDictionary.ContainsKey(uri))
+                                    if (this.imageDictionary!.ContainsKey(uri))
                                     {
                                         this.imageDictionary[uri] = bi;
                                     }
@@ -9499,41 +9501,36 @@ namespace Apricot
                         }
                         else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                         {
-                            WebRequest webRequest = WebRequest.Create(uri);
+                            HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
 
                             if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                             {
-                                webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                             }
 
                             if (config1.AppSettings.Settings["UserAgent"] != null)
                             {
-                                HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                if (httpWebRequest != null)
-                                {
-                                    httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                }
+                                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                             }
 
-                            Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                            Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                             {
-                                MemoryStream ms = null;
+                                MemoryStream? ms = null;
 
                                 if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                                 {
-                                    WebRequest request = (WebRequest)state;
-                                    WebResponse response = null;
-                                    Stream s = null;
-                                    BufferedStream bs = null;
+                                    Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                                    HttpResponseMessage? response = null;
+                                    Stream? s = null;
+                                    BufferedStream? bs = null;
 
                                     try
                                     {
-                                        response = request.GetResponse();
+                                        response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
 
-                                        if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                        if (response.IsSuccessStatusCode && System.Text.RegularExpressions.Regex.IsMatch(response.Content.Headers.ContentType!.MediaType!, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                         {
-                                            s = response.GetResponseStream();
+                                            s = response.Content.ReadAsStream();
                                             bs = new BufferedStream(s);
                                             s = null;
                                             ms = new MemoryStream();
@@ -9570,15 +9567,15 @@ namespace Apricot
 
                                         if (response != null)
                                         {
-                                            response.Close();
+                                            response.Dispose();
                                         }
                                     }
                                 }
 
                                 return ms;
-                            }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                            }!, Tuple.Create<HttpClient, Uri>(httpClient, uri), TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                             {
-                                BitmapImage bi = null;
+                                BitmapImage? bi = null;
 
                                 if (task.Result != null)
                                 {
@@ -9601,9 +9598,9 @@ namespace Apricot
                                     }
                                 }
 
-                                if (this.imageUriHashSet.Contains(uri))
+                                if (this.imageUriHashSet!.Contains(uri))
                                 {
-                                    if (this.imageDictionary.ContainsKey(uri))
+                                    if (this.imageDictionary!.ContainsKey(uri))
                                     {
                                         this.imageDictionary[uri] = bi;
                                     }
@@ -9617,7 +9614,7 @@ namespace Apricot
                     }
                     else
                     {
-                        System.Security.Cryptography.SHA512CryptoServiceProvider sha512 = new System.Security.Cryptography.SHA512CryptoServiceProvider();
+                        System.Security.Cryptography.SHA512 sha512 = System.Security.Cryptography.SHA512.Create();
                         StringBuilder stringBuilder = new StringBuilder();
 
                         foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
@@ -9629,15 +9626,15 @@ namespace Apricot
 
                         if (stringBuilder.ToString().IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) < 0)
                         {
-                            string path1 = System.IO.Path.IsPathRooted(config1.AppSettings.Settings["Cache"].Value) ? config1.AppSettings.Settings["Cache"].Value : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config1.AppSettings.Settings["Cache"].Value);
+                            string path1 = System.IO.Path.IsPathRooted(config1.AppSettings.Settings["Cache"].Value) ? config1.AppSettings.Settings["Cache"].Value : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config1.AppSettings.Settings["Cache"].Value);
                             string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
 
                             if (!ignoreCache && File.Exists(path2))
                             {
-                                Task.Factory.StartNew<MemoryStream>(delegate
+                                Task.Factory.StartNew<MemoryStream?>(delegate
                                 {
-                                    MemoryStream ms = null;
-                                    FileStream fs = null;
+                                    MemoryStream? ms = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -9671,9 +9668,9 @@ namespace Apricot
                                     }
 
                                     return ms;
-                                }).ContinueWith(delegate (Task<MemoryStream> task)
+                                }).ContinueWith(delegate (Task<MemoryStream?> task)
                                 {
-                                    BitmapImage bi = null;
+                                    BitmapImage? bi = null;
 
                                     if (task.Result != null)
                                     {
@@ -9696,9 +9693,9 @@ namespace Apricot
                                         }
                                     }
 
-                                    if (this.imageUriHashSet.Contains(uri))
+                                    if (this.imageUriHashSet!.Contains(uri))
                                     {
-                                        if (this.imageDictionary.ContainsKey(uri))
+                                        if (this.imageDictionary!.ContainsKey(uri))
                                         {
                                             this.imageDictionary[uri] = bi;
                                         }
@@ -9717,10 +9714,10 @@ namespace Apricot
                                 {
                                     byte[] bytes = Convert.FromBase64String(match.Groups[1].Value);
 
-                                    Task.Factory.StartNew<MemoryStream>(delegate
+                                    Task.Factory.StartNew<MemoryStream?>(delegate
                                     {
-                                        FileStream fs = null;
-                                        MemoryStream ms = null;
+                                        FileStream? fs = null;
+                                        MemoryStream? ms = null;
 
                                         try
                                         {
@@ -9765,9 +9762,9 @@ namespace Apricot
                                         }
 
                                         return ms;
-                                    }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                    }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                                     {
-                                        BitmapImage bi = null;
+                                        BitmapImage? bi = null;
 
                                         if (task.Result != null)
                                         {
@@ -9790,9 +9787,9 @@ namespace Apricot
                                             }
                                         }
 
-                                        if (this.imageUriHashSet.Contains(uri))
+                                        if (this.imageUriHashSet!.Contains(uri))
                                         {
-                                            if (this.imageDictionary.ContainsKey(uri))
+                                            if (this.imageDictionary!.ContainsKey(uri))
                                             {
                                                 this.imageDictionary[uri] = bi;
                                             }
@@ -9806,42 +9803,37 @@ namespace Apricot
                             }
                             else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                             {
-                                WebRequest webRequest = WebRequest.Create(uri);
+                                HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
 
                                 if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
-                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                 }
 
                                 if (config1.AppSettings.Settings["UserAgent"] != null)
                                 {
-                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                    if (httpWebRequest != null)
-                                    {
-                                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                    }
+                                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                                 }
 
-                                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                                 {
-                                    MemoryStream ms = null;
+                                    MemoryStream? ms = null;
 
                                     if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                                     {
-                                        WebRequest request = (WebRequest)state;
-                                        WebResponse response = null;
-                                        Stream s = null;
-                                        BufferedStream bs = null;
-                                        FileStream fs = null;
+                                        Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                                        HttpResponseMessage? response = null;
+                                        Stream? s = null;
+                                        BufferedStream? bs = null;
+                                        FileStream? fs = null;
 
                                         try
                                         {
-                                            response = request.GetResponse();
+                                            response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
 
-                                            if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                            if (response.IsSuccessStatusCode && System.Text.RegularExpressions.Regex.IsMatch(response.Content.Headers.ContentType!.MediaType!, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                             {
-                                                s = response.GetResponseStream();
+                                                s = response.Content.ReadAsStream();
                                                 bs = new BufferedStream(s);
                                                 s = null;
 
@@ -9901,15 +9893,15 @@ namespace Apricot
 
                                             if (response != null)
                                             {
-                                                response.Close();
+                                                response.Dispose();
                                             }
                                         }
                                     }
 
                                     return ms;
-                                }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                }!, Tuple.Create<HttpClient, Uri>(httpClient, uri), TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                                 {
-                                    BitmapImage bi = null;
+                                    BitmapImage? bi = null;
 
                                     if (task.Result != null)
                                     {
@@ -9932,9 +9924,9 @@ namespace Apricot
                                         }
                                     }
 
-                                    if (this.imageUriHashSet.Contains(uri))
+                                    if (this.imageUriHashSet!.Contains(uri))
                                     {
-                                        if (this.imageDictionary.ContainsKey(uri))
+                                        if (this.imageDictionary!.ContainsKey(uri))
                                         {
                                             this.imageDictionary[uri] = bi;
                                         }
@@ -9953,7 +9945,7 @@ namespace Apricot
                             if (match.Success)
                             {
                                 MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
-                                BitmapImage bi = null;
+                                BitmapImage? bi = null;
 
                                 try
                                 {
@@ -9973,9 +9965,9 @@ namespace Apricot
                                     ms.Close();
                                 }
 
-                                if (this.imageUriHashSet.Contains(uri))
+                                if (this.imageUriHashSet!.Contains(uri))
                                 {
-                                    if (this.imageDictionary.ContainsKey(uri))
+                                    if (this.imageDictionary!.ContainsKey(uri))
                                     {
                                         this.imageDictionary[uri] = bi;
                                     }
@@ -9988,41 +9980,36 @@ namespace Apricot
                         }
                         else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                         {
-                            WebRequest webRequest = WebRequest.Create(uri);
+                            HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
 
                             if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                             {
-                                webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                             }
 
                             if (config1.AppSettings.Settings["UserAgent"] != null)
                             {
-                                HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                if (httpWebRequest != null)
-                                {
-                                    httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                }
+                                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                             }
 
-                            Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                            Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                             {
-                                MemoryStream ms = null;
+                                MemoryStream? ms = null;
 
                                 if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                                 {
-                                    WebRequest request = (WebRequest)state;
-                                    WebResponse response = null;
-                                    Stream s = null;
-                                    BufferedStream bs = null;
+                                    Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                                    HttpResponseMessage? response = null;
+                                    Stream? s = null;
+                                    BufferedStream? bs = null;
 
                                     try
                                     {
-                                        response = request.GetResponse();
+                                        response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
 
-                                        if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                        if (response.IsSuccessStatusCode && System.Text.RegularExpressions.Regex.IsMatch(response.Content.Headers.ContentType!.MediaType!, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                         {
-                                            s = response.GetResponseStream();
+                                            s = response.Content.ReadAsStream();
                                             bs = new BufferedStream(s);
                                             s = null;
                                             ms = new MemoryStream();
@@ -10059,15 +10046,15 @@ namespace Apricot
 
                                         if (response != null)
                                         {
-                                            response.Close();
+                                            response.Dispose();
                                         }
                                     }
                                 }
 
                                 return ms;
-                            }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                            }!, Tuple.Create<HttpClient, Uri>(httpClient, uri), TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                             {
-                                BitmapImage bi = null;
+                                BitmapImage? bi = null;
 
                                 if (task.Result != null)
                                 {
@@ -10090,9 +10077,9 @@ namespace Apricot
                                     }
                                 }
 
-                                if (this.imageUriHashSet.Contains(uri))
+                                if (this.imageUriHashSet!.Contains(uri))
                                 {
-                                    if (this.imageDictionary.ContainsKey(uri))
+                                    if (this.imageDictionary!.ContainsKey(uri))
                                     {
                                         this.imageDictionary[uri] = bi;
                                     }
@@ -10120,7 +10107,7 @@ namespace Apricot
                                 if (match.Success)
                                 {
                                     MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
-                                    BitmapImage bi = null;
+                                    BitmapImage? bi = null;
 
                                     try
                                     {
@@ -10140,9 +10127,9 @@ namespace Apricot
                                         ms.Close();
                                     }
 
-                                    if (this.imageUriHashSet.Contains(uri))
+                                    if (this.imageUriHashSet!.Contains(uri))
                                     {
-                                        if (this.imageDictionary.ContainsKey(uri))
+                                        if (this.imageDictionary!.ContainsKey(uri))
                                         {
                                             this.imageDictionary[uri] = bi;
                                         }
@@ -10155,41 +10142,36 @@ namespace Apricot
                             }
                             else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                             {
-                                WebRequest webRequest = WebRequest.Create(uri);
+                                HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
 
                                 if (config1.AppSettings.Settings["Timeout"] != null && config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
-                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                 }
 
                                 if (config1.AppSettings.Settings["UserAgent"] != null)
                                 {
-                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                    if (httpWebRequest != null)
-                                    {
-                                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                    }
+                                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                                 }
 
-                                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                                 {
-                                    MemoryStream ms = null;
+                                    MemoryStream? ms = null;
 
                                     if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                                     {
-                                        WebRequest request = (WebRequest)state;
-                                        WebResponse response = null;
-                                        Stream s = null;
-                                        BufferedStream bs = null;
+                                        Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                                        HttpResponseMessage? response = null;
+                                        Stream? s = null;
+                                        BufferedStream? bs = null;
 
                                         try
                                         {
-                                            response = request.GetResponse();
+                                            response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
 
-                                            if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                            if (response.IsSuccessStatusCode && System.Text.RegularExpressions.Regex.IsMatch(response.Content.Headers.ContentType!.MediaType!, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                             {
-                                                s = response.GetResponseStream();
+                                                s = response.Content.ReadAsStream();
                                                 bs = new BufferedStream(s);
                                                 s = null;
                                                 ms = new MemoryStream();
@@ -10226,15 +10208,15 @@ namespace Apricot
 
                                             if (response != null)
                                             {
-                                                response.Close();
+                                                response.Dispose();
                                             }
                                         }
                                     }
 
                                     return ms;
-                                }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                }!, Tuple.Create<HttpClient, Uri>(httpClient, uri), TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                                 {
-                                    BitmapImage bi = null;
+                                    BitmapImage? bi = null;
 
                                     if (task.Result != null)
                                     {
@@ -10257,9 +10239,9 @@ namespace Apricot
                                         }
                                     }
 
-                                    if (this.imageUriHashSet.Contains(uri))
+                                    if (this.imageUriHashSet!.Contains(uri))
                                     {
-                                        if (this.imageDictionary.ContainsKey(uri))
+                                        if (this.imageDictionary!.ContainsKey(uri))
                                         {
                                             this.imageDictionary[uri] = bi;
                                         }
@@ -10273,7 +10255,7 @@ namespace Apricot
                         }
                         else
                         {
-                            System.Security.Cryptography.SHA512CryptoServiceProvider sha512 = new System.Security.Cryptography.SHA512CryptoServiceProvider();
+                            System.Security.Cryptography.SHA512 sha512 = System.Security.Cryptography.SHA512.Create();
                             StringBuilder stringBuilder = new StringBuilder();
 
                             foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
@@ -10289,17 +10271,17 @@ namespace Apricot
 
                                 if (!Directory.Exists(path1))
                                 {
-                                    path1 = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Cache"].Value);
+                                    path1 = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config2.AppSettings.Settings["Cache"].Value);
                                 }
 
                                 string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
 
                                 if (!ignoreCache && File.Exists(path2))
                                 {
-                                    Task.Factory.StartNew<MemoryStream>(delegate
+                                    Task.Factory.StartNew<MemoryStream?>(delegate
                                     {
-                                        MemoryStream ms = null;
-                                        FileStream fs = null;
+                                        MemoryStream? ms = null;
+                                        FileStream? fs = null;
 
                                         try
                                         {
@@ -10333,9 +10315,9 @@ namespace Apricot
                                         }
 
                                         return ms;
-                                    }).ContinueWith(delegate (Task<MemoryStream> task)
+                                    }).ContinueWith(delegate (Task<MemoryStream?> task)
                                     {
-                                        BitmapImage bi = null;
+                                        BitmapImage? bi = null;
 
                                         if (task.Result != null)
                                         {
@@ -10358,9 +10340,9 @@ namespace Apricot
                                             }
                                         }
 
-                                        if (this.imageUriHashSet.Contains(uri))
+                                        if (this.imageUriHashSet!.Contains(uri))
                                         {
-                                            if (this.imageDictionary.ContainsKey(uri))
+                                            if (this.imageDictionary!.ContainsKey(uri))
                                             {
                                                 this.imageDictionary[uri] = bi;
                                             }
@@ -10379,10 +10361,10 @@ namespace Apricot
                                     {
                                         byte[] bytes = Convert.FromBase64String(match.Groups[1].Value);
 
-                                        Task.Factory.StartNew<MemoryStream>(delegate
+                                        Task.Factory.StartNew<MemoryStream?>(delegate
                                         {
-                                            FileStream fs = null;
-                                            MemoryStream ms = null;
+                                            FileStream? fs = null;
+                                            MemoryStream? ms = null;
 
                                             try
                                             {
@@ -10427,9 +10409,9 @@ namespace Apricot
                                             }
 
                                             return ms;
-                                        }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                        }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                                         {
-                                            BitmapImage bi = null;
+                                            BitmapImage? bi = null;
 
                                             if (task.Result != null)
                                             {
@@ -10452,9 +10434,9 @@ namespace Apricot
                                                 }
                                             }
 
-                                            if (this.imageUriHashSet.Contains(uri))
+                                            if (this.imageUriHashSet!.Contains(uri))
                                             {
-                                                if (this.imageDictionary.ContainsKey(uri))
+                                                if (this.imageDictionary!.ContainsKey(uri))
                                                 {
                                                     this.imageDictionary[uri] = bi;
                                                 }
@@ -10468,61 +10450,51 @@ namespace Apricot
                                 }
                                 else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                                 {
-                                    WebRequest webRequest = WebRequest.Create(uri);
+                                    HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
 
                                     if (config1.AppSettings.Settings["Timeout"] == null)
                                     {
                                         if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                                         {
-                                            webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                            httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                         }
                                     }
                                     else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                                     {
-                                        webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                        httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                     }
 
                                     if (config1.AppSettings.Settings["UserAgent"] == null)
                                     {
                                         if (config2.AppSettings.Settings["UserAgent"] != null)
                                         {
-                                            HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                            if (httpWebRequest != null)
-                                            {
-                                                httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
-                                            }
+                                            httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config2.AppSettings.Settings["UserAgent"].Value);
                                         }
                                     }
                                     else
                                     {
-                                        HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                        if (httpWebRequest != null)
-                                        {
-                                            httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                        }
+                                        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                                     }
 
-                                    Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                    Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                                     {
-                                        MemoryStream ms = null;
+                                        MemoryStream? ms = null;
 
                                         if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                                         {
-                                            WebRequest request = (WebRequest)state;
-                                            WebResponse response = null;
-                                            Stream s = null;
-                                            BufferedStream bs = null;
-                                            FileStream fs = null;
+                                            Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                                            HttpResponseMessage? response = null;
+                                            Stream? s = null;
+                                            BufferedStream? bs = null;
+                                            FileStream? fs = null;
 
                                             try
                                             {
-                                                response = request.GetResponse();
+                                                response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
 
-                                                if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                                if (response.IsSuccessStatusCode && System.Text.RegularExpressions.Regex.IsMatch(response.Content.Headers.ContentType!.MediaType!, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                                 {
-                                                    s = response.GetResponseStream();
+                                                    s = response.Content.ReadAsStream();
                                                     bs = new BufferedStream(s);
                                                     s = null;
 
@@ -10582,15 +10554,15 @@ namespace Apricot
 
                                                 if (response != null)
                                                 {
-                                                    response.Close();
+                                                    response.Dispose();
                                                 }
                                             }
                                         }
 
                                         return ms;
-                                    }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                    }!, Tuple.Create<HttpClient, Uri>(httpClient, uri), TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                                     {
-                                        BitmapImage bi = null;
+                                        BitmapImage? bi = null;
 
                                         if (task.Result != null)
                                         {
@@ -10613,9 +10585,9 @@ namespace Apricot
                                             }
                                         }
 
-                                        if (this.imageUriHashSet.Contains(uri))
+                                        if (this.imageUriHashSet!.Contains(uri))
                                         {
-                                            if (this.imageDictionary.ContainsKey(uri))
+                                            if (this.imageDictionary!.ContainsKey(uri))
                                             {
                                                 this.imageDictionary[uri] = bi;
                                             }
@@ -10634,7 +10606,7 @@ namespace Apricot
                                 if (match.Success)
                                 {
                                     MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
-                                    BitmapImage bi = null;
+                                    BitmapImage? bi = null;
 
                                     try
                                     {
@@ -10654,9 +10626,9 @@ namespace Apricot
                                         ms.Close();
                                     }
 
-                                    if (this.imageUriHashSet.Contains(uri))
+                                    if (this.imageUriHashSet!.Contains(uri))
                                     {
-                                        if (this.imageDictionary.ContainsKey(uri))
+                                        if (this.imageDictionary!.ContainsKey(uri))
                                         {
                                             this.imageDictionary[uri] = bi;
                                         }
@@ -10669,60 +10641,50 @@ namespace Apricot
                             }
                             else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                             {
-                                WebRequest webRequest = WebRequest.Create(uri);
+                                HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
 
                                 if (config1.AppSettings.Settings["Timeout"] == null)
                                 {
                                     if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                                     {
-                                        webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                        httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                     }
                                 }
                                 else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
-                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                 }
 
                                 if (config1.AppSettings.Settings["UserAgent"] != null)
                                 {
                                     if (config2.AppSettings.Settings["UserAgent"] != null)
                                     {
-                                        HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                        if (httpWebRequest != null)
-                                        {
-                                            httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
-                                        }
+                                        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config2.AppSettings.Settings["UserAgent"].Value);
                                     }
                                 }
                                 else
                                 {
-                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                    if (httpWebRequest != null)
-                                    {
-                                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                    }
+                                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                                 }
 
-                                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                                 {
-                                    MemoryStream ms = null;
+                                    MemoryStream? ms = null;
 
                                     if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                                     {
-                                        WebRequest request = (WebRequest)state;
-                                        WebResponse response = null;
-                                        Stream s = null;
-                                        BufferedStream bs = null;
+                                        Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                                        HttpResponseMessage? response = null;
+                                        Stream? s = null;
+                                        BufferedStream? bs = null;
 
                                         try
                                         {
-                                            response = request.GetResponse();
+                                            response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
 
-                                            if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                            if (response.IsSuccessStatusCode && System.Text.RegularExpressions.Regex.IsMatch(response.Content.Headers.ContentType!.MediaType!, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                             {
-                                                s = response.GetResponseStream();
+                                                s = response.Content.ReadAsStream();
                                                 bs = new BufferedStream(s);
                                                 s = null;
                                                 ms = new MemoryStream();
@@ -10759,15 +10721,15 @@ namespace Apricot
 
                                             if (response != null)
                                             {
-                                                response.Close();
+                                                response.Dispose();
                                             }
                                         }
                                     }
 
                                     return ms;
-                                }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                }!, Tuple.Create<HttpClient, Uri>(httpClient, uri), TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                                 {
-                                    BitmapImage bi = null;
+                                    BitmapImage? bi = null;
 
                                     if (task.Result != null)
                                     {
@@ -10790,9 +10752,9 @@ namespace Apricot
                                         }
                                     }
 
-                                    if (this.imageUriHashSet.Contains(uri))
+                                    if (this.imageUriHashSet!.Contains(uri))
                                     {
-                                        if (this.imageDictionary.ContainsKey(uri))
+                                        if (this.imageDictionary!.ContainsKey(uri))
                                         {
                                             this.imageDictionary[uri] = bi;
                                         }
@@ -10807,7 +10769,7 @@ namespace Apricot
                     }
                     else
                     {
-                        System.Security.Cryptography.SHA512CryptoServiceProvider sha512 = new System.Security.Cryptography.SHA512CryptoServiceProvider();
+                        System.Security.Cryptography.SHA512 sha512 = System.Security.Cryptography.SHA512.Create();
                         StringBuilder stringBuilder = new StringBuilder();
 
                         foreach (byte b in sha512.ComputeHash(Encoding.UTF8.GetBytes(uri.AbsoluteUri)))
@@ -10823,17 +10785,17 @@ namespace Apricot
 
                             if (!Directory.Exists(path1))
                             {
-                                path1 = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), config2.AppSettings.Settings["Cache"].Value);
+                                path1 = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!, config2.AppSettings.Settings["Cache"].Value);
                             }
 
                             string path2 = System.IO.Path.Combine(path1, stringBuilder.ToString());
 
                             if (!ignoreCache && File.Exists(path2))
                             {
-                                Task.Factory.StartNew<MemoryStream>(delegate
+                                Task.Factory.StartNew<MemoryStream?>(delegate
                                 {
-                                    MemoryStream ms = null;
-                                    FileStream fs = null;
+                                    MemoryStream? ms = null;
+                                    FileStream? fs = null;
 
                                     try
                                     {
@@ -10867,9 +10829,9 @@ namespace Apricot
                                     }
 
                                     return ms;
-                                }).ContinueWith(delegate (Task<MemoryStream> task)
+                                }).ContinueWith(delegate (Task<MemoryStream?> task)
                                 {
-                                    BitmapImage bi = null;
+                                    BitmapImage? bi = null;
 
                                     if (task.Result != null)
                                     {
@@ -10892,9 +10854,9 @@ namespace Apricot
                                         }
                                     }
 
-                                    if (this.imageUriHashSet.Contains(uri))
+                                    if (this.imageUriHashSet!.Contains(uri))
                                     {
-                                        if (this.imageDictionary.ContainsKey(uri))
+                                        if (this.imageDictionary!.ContainsKey(uri))
                                         {
                                             this.imageDictionary[uri] = bi;
                                         }
@@ -10913,10 +10875,10 @@ namespace Apricot
                                 {
                                     byte[] bytes = Convert.FromBase64String(match.Groups[1].Value);
 
-                                    Task.Factory.StartNew<MemoryStream>(delegate
+                                    Task.Factory.StartNew<MemoryStream?>(delegate
                                     {
-                                        FileStream fs = null;
-                                        MemoryStream ms = null;
+                                        FileStream? fs = null;
+                                        MemoryStream? ms = null;
 
                                         try
                                         {
@@ -10961,9 +10923,9 @@ namespace Apricot
                                         }
 
                                         return ms;
-                                    }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                    }, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                                     {
-                                        BitmapImage bi = null;
+                                        BitmapImage? bi = null;
 
                                         if (task.Result != null)
                                         {
@@ -10986,9 +10948,9 @@ namespace Apricot
                                             }
                                         }
 
-                                        if (this.imageUriHashSet.Contains(uri))
+                                        if (this.imageUriHashSet!.Contains(uri))
                                         {
-                                            if (this.imageDictionary.ContainsKey(uri))
+                                            if (this.imageDictionary!.ContainsKey(uri))
                                             {
                                                 this.imageDictionary[uri] = bi;
                                             }
@@ -11002,61 +10964,48 @@ namespace Apricot
                             }
                             else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                             {
-                                WebRequest webRequest = WebRequest.Create(uri);
+                                HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
 
                                 if (config1.AppSettings.Settings["Timeout"] == null)
                                 {
                                     if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                                     {
-                                        webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                        httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                     }
                                 }
                                 else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
-                                    webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                 }
 
                                 if (config1.AppSettings.Settings["UserAgent"] == null)
                                 {
-                                    if (config2.AppSettings.Settings["UserAgent"] != null)
-                                    {
-                                        HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                        if (httpWebRequest != null)
-                                        {
-                                            httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
-                                        }
-                                    }
+                                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config2.AppSettings.Settings["UserAgent"].Value);
                                 }
                                 else
                                 {
-                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                    if (httpWebRequest != null)
-                                    {
-                                        httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                    }
+                                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                                 }
 
-                                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                                Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                                 {
-                                    MemoryStream ms = null;
+                                    MemoryStream? ms = null;
 
                                     if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                                     {
-                                        WebRequest request = (WebRequest)state;
-                                        WebResponse response = null;
-                                        Stream s = null;
-                                        BufferedStream bs = null;
-                                        FileStream fs = null;
+                                        Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                                        HttpResponseMessage? response = null;
+                                        Stream? s = null;
+                                        BufferedStream? bs = null;
+                                        FileStream? fs = null;
 
                                         try
                                         {
-                                            response = request.GetResponse();
+                                            response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
 
-                                            if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                            if (response.IsSuccessStatusCode && System.Text.RegularExpressions.Regex.IsMatch(response.Content.Headers.ContentType!.MediaType!, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                             {
-                                                s = response.GetResponseStream();
+                                                s = response.Content.ReadAsStream();
                                                 bs = new BufferedStream(s);
                                                 s = null;
 
@@ -11116,15 +11065,15 @@ namespace Apricot
 
                                             if (response != null)
                                             {
-                                                response.Close();
+                                                response.Dispose();
                                             }
                                         }
                                     }
 
                                     return ms;
-                                }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                                }!, Tuple.Create<HttpClient, Uri>(httpClient, uri), TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                                 {
-                                    BitmapImage bi = null;
+                                    BitmapImage? bi = null;
 
                                     if (task.Result != null)
                                     {
@@ -11147,9 +11096,9 @@ namespace Apricot
                                         }
                                     }
 
-                                    if (this.imageUriHashSet.Contains(uri))
+                                    if (this.imageUriHashSet!.Contains(uri))
                                     {
-                                        if (this.imageDictionary.ContainsKey(uri))
+                                        if (this.imageDictionary!.ContainsKey(uri))
                                         {
                                             this.imageDictionary[uri] = bi;
                                         }
@@ -11168,7 +11117,7 @@ namespace Apricot
                             if (match.Success)
                             {
                                 MemoryStream ms = new MemoryStream(Convert.FromBase64String(match.Groups[1].Value));
-                                BitmapImage bi = null;
+                                BitmapImage? bi = null;
 
                                 try
                                 {
@@ -11188,9 +11137,9 @@ namespace Apricot
                                     ms.Close();
                                 }
 
-                                if (this.imageUriHashSet.Contains(uri))
+                                if (this.imageUriHashSet!.Contains(uri))
                                 {
-                                    if (this.imageDictionary.ContainsKey(uri))
+                                    if (this.imageDictionary!.ContainsKey(uri))
                                     {
                                         this.imageDictionary[uri] = bi;
                                     }
@@ -11203,60 +11152,50 @@ namespace Apricot
                         }
                         else if (uri.Scheme.Equals(Uri.UriSchemeFile) || uri.Scheme.Equals(Uri.UriSchemeFtp) || uri.Scheme.Equals(Uri.UriSchemeHttp) || uri.Scheme.Equals(Uri.UriSchemeHttps))
                         {
-                            WebRequest webRequest = WebRequest.Create(uri);
+                            HttpClient httpClient = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>().CreateClient();
 
                             if (config1.AppSettings.Settings["Timeout"] == null)
                             {
                                 if (config2.AppSettings.Settings["Timeout"] != null && config2.AppSettings.Settings["Timeout"].Value.Length > 0)
                                 {
-                                    webRequest.Timeout = Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                    httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config2.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                                 }
                             }
                             else if (config1.AppSettings.Settings["Timeout"].Value.Length > 0)
                             {
-                                webRequest.Timeout = Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture);
+                                httpClient.Timeout = TimeSpan.FromMilliseconds(Int32.Parse(config1.AppSettings.Settings["Timeout"].Value, CultureInfo.InvariantCulture));
                             }
 
                             if (config1.AppSettings.Settings["UserAgent"] == null)
                             {
                                 if (config2.AppSettings.Settings["UserAgent"] != null)
                                 {
-                                    HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                    if (httpWebRequest != null)
-                                    {
-                                        httpWebRequest.UserAgent = config2.AppSettings.Settings["UserAgent"].Value;
-                                    }
+                                    httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config2.AppSettings.Settings["UserAgent"].Value);
                                 }
                             }
                             else
                             {
-                                HttpWebRequest httpWebRequest = webRequest as HttpWebRequest;
-
-                                if (httpWebRequest != null)
-                                {
-                                    httpWebRequest.UserAgent = config1.AppSettings.Settings["UserAgent"].Value;
-                                }
+                                httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", config1.AppSettings.Settings["UserAgent"].Value);
                             }
 
-                            Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                            Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                             {
-                                MemoryStream ms = null;
+                                MemoryStream? ms = null;
 
                                 if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                                 {
-                                    WebRequest request = (WebRequest)state;
-                                    WebResponse response = null;
-                                    Stream s = null;
-                                    BufferedStream bs = null;
+                                    Tuple<HttpClient, Uri> tuple = (Tuple<HttpClient, Uri>)state;
+                                    HttpResponseMessage? response = null;
+                                    Stream? s = null;
+                                    BufferedStream? bs = null;
 
                                     try
                                     {
-                                        response = request.GetResponse();
+                                        response = tuple.Item1.Send(new HttpRequestMessage(HttpMethod.Get, tuple.Item2));
 
-                                        if (System.Text.RegularExpressions.Regex.IsMatch(response.ContentType, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                        if (response.IsSuccessStatusCode && System.Text.RegularExpressions.Regex.IsMatch(response.Content.Headers.ContentType!.MediaType!, "image/((x-)?bmp|gif|jpeg|png|tiff(-fx)?)", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                                         {
-                                            s = response.GetResponseStream();
+                                            s = response.Content.ReadAsStream();
                                             bs = new BufferedStream(s);
                                             s = null;
                                             ms = new MemoryStream();
@@ -11293,15 +11232,15 @@ namespace Apricot
 
                                         if (response != null)
                                         {
-                                            response.Close();
+                                            response.Dispose();
                                         }
                                     }
                                 }
 
                                 return ms;
-                            }, webRequest, TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream> task)
+                            }!, Tuple.Create<HttpClient, Uri>(httpClient, uri), TaskCreationOptions.LongRunning).ContinueWith(delegate (Task<MemoryStream?> task)
                             {
-                                BitmapImage bi = null;
+                                BitmapImage? bi = null;
 
                                 if (task.Result != null)
                                 {
@@ -11324,9 +11263,9 @@ namespace Apricot
                                     }
                                 }
 
-                                if (this.imageUriHashSet.Contains(uri))
+                                if (this.imageUriHashSet!.Contains(uri))
                                 {
-                                    if (this.imageDictionary.ContainsKey(uri))
+                                    if (this.imageDictionary!.ContainsKey(uri))
                                     {
                                         this.imageDictionary[uri] = bi;
                                     }
@@ -11342,10 +11281,10 @@ namespace Apricot
             }
             else
             {
-                Task.Factory.StartNew<MemoryStream>(delegate (object state)
+                Task.Factory.StartNew<MemoryStream?>(delegate (object state)
                 {
-                    MemoryStream ms = null;
-                    FileStream fs = null;
+                    MemoryStream? ms = null;
+                    FileStream? fs = null;
 
                     try
                     {
@@ -11379,9 +11318,9 @@ namespace Apricot
                     }
 
                     return ms;
-                }, uri.ToString()).ContinueWith(delegate (Task<MemoryStream> task)
+                }!, uri.ToString()).ContinueWith(delegate (Task<MemoryStream?> task)
                 {
-                    BitmapImage bi = null;
+                    BitmapImage? bi = null;
 
                     if (task.Result != null)
                     {
@@ -11404,9 +11343,9 @@ namespace Apricot
                         }
                     }
 
-                    if (this.imageUriHashSet.Contains(uri))
+                    if (this.imageUriHashSet!.Contains(uri))
                     {
-                        if (this.imageDictionary.ContainsKey(uri))
+                        if (this.imageDictionary!.ContainsKey(uri))
                         {
                             this.imageDictionary[uri] = bi;
                         }

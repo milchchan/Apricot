@@ -10,17 +10,17 @@ namespace Apricot
     {
         private bool isEnabled = true;
         private bool isReadOnly = true;
-        private Uri resource = null;
-        private string title = null;
-        private string description = null;
-        private string author = null;
+        private Uri? resource = null;
+        private string? title = null;
+        private string? description = null;
+        private string? author = null;
         private DateTime createdDateTime = new DateTime(0);
         private DateTime modifiedDateTime = new DateTime(0);
-        private Uri imageUri = null;
-        private Queue<Uri> imageUriQueue = null;
+        private Uri? imageUri = null;
+        private Queue<Uri>? imageUriQueue = null;
         private Nullable<double> score = null;
-        private Collection<string> tagCollection = null;
-        private Collection<Entry> similarEntryCollection = null;
+        private Collection<string>? tagCollection = null;
+        private Collection<Entry>? similarEntryCollection = null;
 
         public bool Enabled
         {
@@ -46,7 +46,7 @@ namespace Apricot
             }
         }
 
-        public Uri Resource
+        public Uri? Resource
         {
             get
             {
@@ -58,7 +58,7 @@ namespace Apricot
             }
         }
 
-        public string Title
+        public string? Title
         {
             get
             {
@@ -70,7 +70,7 @@ namespace Apricot
             }
         }
 
-        public string Description
+        public string? Description
         {
             get
             {
@@ -83,7 +83,7 @@ namespace Apricot
             }
         }
 
-        public string Author
+        public string? Author
         {
             get
             {
@@ -119,7 +119,7 @@ namespace Apricot
             }
         }
 
-        public Uri Image
+        public Uri? Image
         {
             get
             {
@@ -147,7 +147,7 @@ namespace Apricot
         {
             get
             {
-                return this.tagCollection.Count > 0;
+                return this.tagCollection!.Count > 0;
             }
         }
 
@@ -155,7 +155,7 @@ namespace Apricot
         {
             get
             {
-                return this.tagCollection;
+                return this.tagCollection!;
             }
             set
             {
@@ -167,7 +167,7 @@ namespace Apricot
         {
             get
             {
-                return this.similarEntryCollection.Count > 0;
+                return this.similarEntryCollection!.Count > 0;
             }
         }
 
@@ -175,7 +175,7 @@ namespace Apricot
         {
             get
             {
-                return similarEntryCollection;
+                return similarEntryCollection!;
             }
             set
             {
@@ -227,7 +227,7 @@ namespace Apricot
             {
                 if (match.Groups[1].Value.Length > 0)
                 {
-                    Uri uri;
+                    Uri? uri;
 
                     if (Uri.TryCreate(match.Groups[1].Value, UriKind.RelativeOrAbsolute, out uri) && !uriList.Contains(uri))
                     {

@@ -6,12 +6,12 @@ namespace Apricot
 {
     public class Sprite
     {
-        private string path = null;
+        private string? path = null;
         private Point location = new Point(0, 0);
         private Size size = Size.Empty;
         private double opacity = 1;
 
-        public string Path
+        public string? Path
         {
             get
             {
@@ -59,7 +59,7 @@ namespace Apricot
             }
         }
 
-        public Sprite(string path)
+        public Sprite(string? path)
         {
             this.path = path;
         }
