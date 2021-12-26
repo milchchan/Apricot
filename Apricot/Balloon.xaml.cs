@@ -34,10 +34,8 @@ namespace Apricot
         private readonly double lineHeight = 0;
         private readonly int maxHistory = 10;
         private readonly Color backgroundColor = Colors.Black;
-        private readonly Color textColor = Colors.White;
-        private readonly Color linkColor = Colors.Blue;
-        private readonly Brush? textBrush = null;
-        private readonly Brush? linkBrush = null;
+        private readonly SolidColorBrush? foregroundBrush = null;
+        private readonly SolidColorBrush? accentBrush = null;
         private readonly Size maxMessageSize = new Size(0, 0);
         private DispatcherTimer? messageTypeTimer = null;
         private DispatcherTimer? waitTimer = null;
@@ -314,34 +312,34 @@ namespace Apricot
                     this.InnerPath.Fill = imageBrush;
                 }
 
-                if (config1.AppSettings.Settings["TextColor"] != null && config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                if (config1.AppSettings.Settings["ForegroundColor"] != null && config1.AppSettings.Settings["ForegroundColor"].Value.Length > 0)
                 {
-                    this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
-                    this.textBrush = new SolidColorBrush(this.textColor);
+                    this.foregroundBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["ForegroundColor"].Value));
                 }
                 else
                 {
-                    this.textBrush = new SolidColorBrush(this.textColor);
+                    this.foregroundBrush = new SolidColorBrush(Colors.White);
                 }
 
-                if (this.textBrush.CanFreeze)
+                if (this.foregroundBrush.CanFreeze)
                 {
-                    this.textBrush.Freeze();
+                    this.foregroundBrush.Freeze();
                 }
 
-                if (config1.AppSettings.Settings["LinkColor"] != null && config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                if (config1.AppSettings.Settings["AccentColor"] != null && config1.AppSettings.Settings["AccentColor"].Value.Length > 0)
                 {
-                    this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
-                    this.linkBrush = new SolidColorBrush(this.linkColor);
+                    this.accentBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["AccentColor"].Value));
                 }
                 else
                 {
-                    this.linkBrush = new SolidColorBrush(this.linkColor);
+                    byte[] bytes = BitConverter.GetBytes(NativeMethods.GetImmersiveColorFromColorSetEx(NativeMethods.GetImmersiveUserColorSetPreference(false, false), NativeMethods.GetImmersiveColorTypeFromName(System.Runtime.InteropServices.Marshal.StringToHGlobalUni("ImmersiveSystemAccent")), false, 0));
+
+                    this.accentBrush = new SolidColorBrush(Color.FromArgb(bytes[3], bytes[0], bytes[1], bytes[2]));
                 }
 
-                if (this.linkBrush.CanFreeze)
+                if (this.accentBrush.CanFreeze)
                 {
-                    this.linkBrush.Freeze();
+                    this.accentBrush.Freeze();
                 }
             }
             else
@@ -566,58 +564,58 @@ namespace Apricot
                     this.InnerPath.Fill = imageBrush;
                 }
 
-                if (config1.AppSettings.Settings["TextColor"] == null)
+                if (config1.AppSettings.Settings["ForegroundColor"] == null)
                 {
-                    if (config2.AppSettings.Settings["TextColor"] != null && config2.AppSettings.Settings["TextColor"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["ForegroundColor"] != null && config2.AppSettings.Settings["ForegroundColor"].Value.Length > 0)
                     {
-                        this.textColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["TextColor"].Value);
-                        this.textBrush = new SolidColorBrush(this.textColor);
+                        this.foregroundBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["ForegroundColor"].Value));
                     }
                     else
                     {
-                        this.textBrush = new SolidColorBrush(this.textColor);
+                        this.foregroundBrush = new SolidColorBrush(Colors.White);
                     }
                 }
-                else if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                else if (config1.AppSettings.Settings["ForegroundColor"].Value.Length > 0)
                 {
-                    this.textColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value);
-                    this.textBrush = new SolidColorBrush(this.textColor);
+                    this.foregroundBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["ForegroundColor"].Value));
                 }
                 else
                 {
-                    this.textBrush = new SolidColorBrush(this.textColor);
+                    this.foregroundBrush = new SolidColorBrush(Colors.White);
                 }
 
-                if (this.textBrush.CanFreeze)
+                if (this.foregroundBrush.CanFreeze)
                 {
-                    this.textBrush.Freeze();
+                    this.foregroundBrush.Freeze();
                 }
 
-                if (config1.AppSettings.Settings["LinkColor"] == null)
+                if (config1.AppSettings.Settings["AccentColor"] == null)
                 {
-                    if (config2.AppSettings.Settings["LinkColor"] != null && config2.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                    if (config2.AppSettings.Settings["AccentColor"] != null && config2.AppSettings.Settings["AccentColor"].Value.Length > 0)
                     {
-                        this.linkColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["LinkColor"].Value);
-                        this.linkBrush = new SolidColorBrush(this.linkColor);
+                        this.accentBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["AccentColor"].Value));
                     }
                     else
                     {
-                        this.linkBrush = new SolidColorBrush(this.linkColor);
+                        byte[] bytes = BitConverter.GetBytes(NativeMethods.GetImmersiveColorFromColorSetEx(NativeMethods.GetImmersiveUserColorSetPreference(false, false), NativeMethods.GetImmersiveColorTypeFromName(System.Runtime.InteropServices.Marshal.StringToHGlobalUni("ImmersiveSystemAccent")), false, 0));
+
+                        this.accentBrush = new SolidColorBrush(Color.FromArgb(bytes[3], bytes[0], bytes[1], bytes[2]));
                     }
                 }
-                else if (config1.AppSettings.Settings["LinkColor"].Value.Length > 0)
+                else if (config1.AppSettings.Settings["AccentColor"].Value.Length > 0)
                 {
-                    this.linkColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["LinkColor"].Value);
-                    this.linkBrush = new SolidColorBrush(this.linkColor);
+                    this.accentBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["AccentColor"].Value));
                 }
                 else
                 {
-                    this.linkBrush = new SolidColorBrush(this.linkColor);
+                    byte[] bytes = BitConverter.GetBytes(NativeMethods.GetImmersiveColorFromColorSetEx(NativeMethods.GetImmersiveUserColorSetPreference(false, false), NativeMethods.GetImmersiveColorTypeFromName(System.Runtime.InteropServices.Marshal.StringToHGlobalUni("ImmersiveSystemAccent")), false, 0));
+
+                    this.accentBrush = new SolidColorBrush(Color.FromArgb(bytes[3], bytes[0], bytes[1], bytes[2]));
                 }
 
-                if (this.linkBrush.CanFreeze)
+                if (this.accentBrush.CanFreeze)
                 {
-                    this.linkBrush.Freeze();
+                    this.accentBrush.Freeze();
                 }
             }
 
@@ -926,7 +924,7 @@ namespace Apricot
                             foreach (object o in message)
                             {
                                 string? inline = o as string;
-                                Brush? brush = this.textBrush;
+                                Brush? brush = this.foregroundBrush;
                                 Dictionary<int, int> dictionary = new Dictionary<int, int>();
                                 StringBuilder lineStringBuilder = new StringBuilder();
 
@@ -941,7 +939,7 @@ namespace Apricot
                                     else
                                     {
                                         inline = entry.Title;
-                                        brush = this.linkBrush;
+                                        brush = this.accentBrush;
                                     }
                                 }
 
@@ -1036,7 +1034,7 @@ namespace Apricot
                         foreach (object o in message)
                         {
                             string? inline = o as string;
-                            Brush? brush = this.textBrush;
+                            Brush? brush = this.foregroundBrush;
                             Dictionary<int, int> dictionary = new Dictionary<int, int>();
                             StringBuilder lineStringBuilder = new StringBuilder();
 
@@ -1051,7 +1049,7 @@ namespace Apricot
                                 else
                                 {
                                     inline = entry.Title;
-                                    brush = this.linkBrush;
+                                    brush = this.accentBrush;
                                 }
                             }
 
@@ -1141,7 +1139,7 @@ namespace Apricot
                     foreach (object o in message)
                     {
                         string? inline = o as string;
-                        Brush? brush = this.textBrush;
+                        Brush? brush = this.foregroundBrush;
                         Dictionary<int, int> dictionary = new Dictionary<int, int>();
                         StringBuilder lineStringBuilder = new StringBuilder();
 
@@ -1156,7 +1154,7 @@ namespace Apricot
                             else
                             {
                                 inline = entry.Title;
-                                brush = this.linkBrush;
+                                brush = this.accentBrush;
                             }
                         }
 
@@ -1366,7 +1364,7 @@ namespace Apricot
                                 dictionary.Add(match.Index, match.Length);
                             }
 
-                            if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
+                            if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
                             {
                                 stopRequired = false;
 
@@ -1377,7 +1375,7 @@ namespace Apricot
                             {
                                 int length;
 
-                                if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
+                                if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
                                 {
                                     stopRequired = false;
 
@@ -1392,7 +1390,7 @@ namespace Apricot
 
                                     break;
                                 }
-                                else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                                else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                 {
                                     stopRequired = false;
 
@@ -1407,7 +1405,7 @@ namespace Apricot
 
                             if (lineStringBuilder.Length > 0)
                             {
-                                x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
+                                x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                             }
                         }
                     }
@@ -2192,7 +2190,7 @@ namespace Apricot
                         dictionary.Add(match.Index, match.Length);
                     }
 
-                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
+                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
                     {
                         this.circulationQueue!.Enqueue(1);
 
@@ -2203,7 +2201,7 @@ namespace Apricot
                     {
                         int length;
 
-                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
+                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
                         {
                             isCirculatable = true;
 
@@ -2218,7 +2216,7 @@ namespace Apricot
 
                             break;
                         }
-                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                         {
                             isCirculatable = true;
 
@@ -2235,7 +2233,7 @@ namespace Apricot
 
                     if (lineStringBuilder.Length > 0)
                     {
-                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
+                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                     }
                 }
             }
@@ -2421,7 +2419,7 @@ namespace Apricot
                                     foreach (object o in this.messageCollection[this.historyPoint.Value])
                                     {
                                         string? inline = o as string;
-                                        Brush? brush = this.textBrush;
+                                        Brush? brush = this.foregroundBrush;
                                         Dictionary<int, int> dictionary = new Dictionary<int, int>();
                                         StringBuilder lineStringBuilder = new StringBuilder();
 
@@ -2436,7 +2434,7 @@ namespace Apricot
                                             else
                                             {
                                                 inline = entry.Title;
-                                                brush = this.linkBrush;
+                                                brush = this.accentBrush;
                                             }
                                         }
 
@@ -2845,7 +2843,7 @@ namespace Apricot
                                     {
                                         string? inline = null;
                                         Entry? entry = null;
-                                        Brush? brush = this.textBrush;
+                                        Brush? brush = this.foregroundBrush;
                                         Nullable<double> scrollStep = null;
                                         bool isMutable = false;
 
@@ -2931,7 +2929,7 @@ namespace Apricot
                                                     }
                                                     else if (step2 < 1)
                                                     {
-                                                        brush = new SolidColorBrush(Color.FromArgb((byte)(this.textColor.A + (this.linkColor.A - this.textColor.A) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.textColor.R + (this.linkColor.R - this.textColor.R) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.textColor.G + (this.linkColor.G - this.textColor.G) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.textColor.B + (this.linkColor.B - this.textColor.B) * Math.Sin(step2 / 2 * Math.PI))));
+                                                        brush = new SolidColorBrush(Color.FromArgb((byte)(this.foregroundBrush!.Color.A + (this.accentBrush!.Color.A - this.foregroundBrush.Color.A) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.foregroundBrush.Color.R + (this.accentBrush.Color.R - this.foregroundBrush.Color.R) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.foregroundBrush.Color.G + (this.accentBrush.Color.G - this.foregroundBrush.Color.G) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.foregroundBrush.Color.B + (this.accentBrush.Color.B - this.foregroundBrush.Color.B) * Math.Sin(step2 / 2 * Math.PI))));
 
                                                         if (brush.CanFreeze)
                                                         {
@@ -2943,7 +2941,7 @@ namespace Apricot
                                                     }
                                                     else
                                                     {
-                                                        brush = this.linkBrush;
+                                                        brush = this.accentBrush;
                                                     }
                                                 }
                                                 else if (step2 < 1)
@@ -2952,13 +2950,13 @@ namespace Apricot
 
                                                     if (step2 >= 1)
                                                     {
-                                                        brush = this.linkBrush;
+                                                        brush = this.accentBrush;
                                                         isMutable = true;
                                                         this.embedColorStepDictionary[inlineIndex1] = 1;
                                                     }
                                                     else
                                                     {
-                                                        brush = new SolidColorBrush(Color.FromArgb((byte)(this.textColor.A + (this.linkColor.A - this.textColor.A) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.textColor.R + (this.linkColor.R - this.textColor.R) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.textColor.G + (this.linkColor.G - this.textColor.G) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.textColor.B + (this.linkColor.B - this.textColor.B) * Math.Sin(step2 / 2 * Math.PI))));
+                                                        brush = new SolidColorBrush(Color.FromArgb((byte)(this.foregroundBrush!.Color.A + (this.accentBrush!.Color.A - this.foregroundBrush.Color.A) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.foregroundBrush.Color.R + (this.accentBrush.Color.R - this.foregroundBrush.Color.R) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.foregroundBrush.Color.G + (this.accentBrush.Color.G - this.foregroundBrush.Color.G) * Math.Sin(step2 / 2 * Math.PI)), (byte)(this.foregroundBrush.Color.B + (this.accentBrush.Color.B - this.foregroundBrush.Color.B) * Math.Sin(step2 / 2 * Math.PI))));
 
                                                         if (brush.CanFreeze)
                                                         {
@@ -2971,7 +2969,7 @@ namespace Apricot
                                                 }
                                                 else
                                                 {
-                                                    brush = this.linkBrush;
+                                                    brush = this.accentBrush;
                                                 }
                                             }
                                             else
@@ -3176,7 +3174,7 @@ namespace Apricot
                                                             dc.DrawText(list[i].Value, new Point(-Math.Floor(list[i].Value.OverhangLeading), 0));
                                                             dc.Close();
 
-                                                            dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                            dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                             dropShadowEffect.BlurRadius = 1;
                                                             dropShadowEffect.Direction = 270;
                                                             dropShadowEffect.ShadowDepth = 1;
@@ -3528,7 +3526,7 @@ namespace Apricot
                                                             dc.DrawText(list[i].Value, new Point(maxWidth - Math.Floor(list[i].Value.OverhangLeading), 0));
                                                             dc.Close();
 
-                                                            dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                            dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                             dropShadowEffect.BlurRadius = 1;
                                                             dropShadowEffect.Direction = 270;
                                                             dropShadowEffect.ShadowDepth = 1;
@@ -4247,7 +4245,7 @@ namespace Apricot
 
                                                                 if (translateTransform != null)
                                                                 {
-                                                                    FormattedText formattedText = new FormattedText(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                                    FormattedText formattedText = new FormattedText(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                                     translateTransform.X = scrollStep2.HasValue ? -(formattedText.WidthIncludingTrailingWhitespace > formattedText.Width ? Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace) - Math.Floor(formattedText.OverhangLeading) : formattedText.OverhangTrailing < 0 ? Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing) : Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading)) * Math.Sin(scrollStep2.Value / 2 * Math.PI) : 0;
                                                                 }
@@ -4263,7 +4261,7 @@ namespace Apricot
                                                         else
                                                         {
                                                             int index = i;
-                                                            FormattedText formattedText = new FormattedText(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                            FormattedText formattedText = new FormattedText(String.IsNullOrEmpty(attachmentEntry.Title) && attachmentEntry.Resource != null ? attachmentEntry.Resource.ToString() : attachmentEntry.Title, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
                                                             double width1 = formattedText.WidthIncludingTrailingWhitespace > formattedText.Width ? Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace) - Math.Floor(formattedText.OverhangLeading) : formattedText.OverhangTrailing < 0 ? Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing) : Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading);
                                                             double width2 = Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing);
                                                             double height = formattedText.OverhangAfter > 0 ? formattedText.Height + formattedText.OverhangAfter : formattedText.Height;
@@ -4277,7 +4275,7 @@ namespace Apricot
                                                             dc.DrawText(formattedText, new Point(width1 - Math.Floor(formattedText.OverhangLeading), 0));
                                                             dc.Close();
 
-                                                            dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                            dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                             dropShadowEffect.BlurRadius = 1;
                                                             dropShadowEffect.Direction = 270;
                                                             dropShadowEffect.ShadowDepth = 1;
@@ -5059,7 +5057,7 @@ namespace Apricot
 
                                     if (this.cachedCounterCanvas == null)
                                     {
-                                        FormattedText formattedText = new FormattedText(this.messageCollection[this.historyPoint.Value].Attachments.Count.ToString(CultureInfo.CurrentCulture), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                                        FormattedText formattedText = new FormattedText(this.messageCollection[this.historyPoint.Value].Attachments.Count.ToString(CultureInfo.CurrentCulture), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
                                         double width = Math.Ceiling(formattedText.Width) - Math.Floor(formattedText.OverhangLeading) - Math.Floor(formattedText.OverhangTrailing);
                                         double height = formattedText.OverhangAfter > 0 ? formattedText.Height + formattedText.OverhangAfter : formattedText.Height;
                                         DropShadowEffect dropShadowEffect = new DropShadowEffect();
@@ -5087,7 +5085,7 @@ namespace Apricot
 
                                         RenderOptions.SetClearTypeHint(image, ClearTypeHint.Enabled);
 
-                                        dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                        dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                         dropShadowEffect.BlurRadius = 1;
                                         dropShadowEffect.Direction = 270;
                                         dropShadowEffect.ShadowDepth = 1;
@@ -5581,7 +5579,7 @@ namespace Apricot
                                         {
                                             Color color = Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
 
-                                            pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.linkColor.A - color.A) * Math.Sin(this.upBlinkStep * Math.PI)), (byte)(color.R + (this.linkColor.R - color.R) * Math.Sin(this.upBlinkStep * Math.PI)), (byte)(color.G + (this.linkColor.G - color.G) * Math.Sin(this.upBlinkStep * Math.PI)), (byte)(color.B + (this.linkColor.B - color.B) * Math.Sin(this.upBlinkStep * Math.PI))));
+                                            pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.accentBrush!.Color.A - color.A) * Math.Sin(this.upBlinkStep * Math.PI)), (byte)(color.R + (this.accentBrush.Color.R - color.R) * Math.Sin(this.upBlinkStep * Math.PI)), (byte)(color.G + (this.accentBrush.Color.G - color.G) * Math.Sin(this.upBlinkStep * Math.PI)), (byte)(color.B + (this.accentBrush.Color.B - color.B) * Math.Sin(this.upBlinkStep * Math.PI))));
                                         }
                                     }
                                     else
@@ -5635,7 +5633,7 @@ namespace Apricot
                                         {
                                             Color color = Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
 
-                                            pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.linkColor.A - color.A) * Math.Sin(this.downBlinkStep * Math.PI)), (byte)(color.R + (this.linkColor.R - color.R) * Math.Sin(this.downBlinkStep * Math.PI)), (byte)(color.G + (this.linkColor.G - color.G) * Math.Sin(this.downBlinkStep * Math.PI)), (byte)(color.B + (this.linkColor.B - color.B) * Math.Sin(this.downBlinkStep * Math.PI))));
+                                            pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.accentBrush!.Color.A - color.A) * Math.Sin(this.downBlinkStep * Math.PI)), (byte)(color.R + (this.accentBrush.Color.R - color.R) * Math.Sin(this.downBlinkStep * Math.PI)), (byte)(color.G + (this.accentBrush.Color.G - color.G) * Math.Sin(this.downBlinkStep * Math.PI)), (byte)(color.B + (this.accentBrush.Color.B - color.B) * Math.Sin(this.downBlinkStep * Math.PI))));
                                         }
                                     }
                                     else
@@ -5736,7 +5734,7 @@ namespace Apricot
                                                         dictionary.Add(match.Index, match.Length);
                                                     }
 
-                                                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
+                                                    if (x + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && x != 0)
                                                     {
                                                         this.switchTimer!.Start();
 
@@ -5747,7 +5745,7 @@ namespace Apricot
                                                     {
                                                         int length;
 
-                                                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
+                                                        if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74 && lineStringBuilder.Length > 0)
                                                         {
                                                             this.switchTimer!.Start();
 
@@ -5762,7 +5760,7 @@ namespace Apricot
 
                                                             break;
                                                         }
-                                                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                                                        else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                                         {
                                                             this.switchTimer!.Start();
 
@@ -5777,7 +5775,7 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
+                                                        x += space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
                                                     }
                                                 }
                                             }
@@ -5880,7 +5878,7 @@ namespace Apricot
                                             foreach (string tag in this.inspectorEntry.Tags)
                                             {
                                                 Dictionary<int, int> dictionary = new Dictionary<int, int>();
-                                                FormattedText formattedText = new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                FormattedText formattedText = new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
                                                 StringBuilder lineStringBuilder = new StringBuilder();
 
                                                 foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(tag, @"[\p{IsBasicLatin}-[\s]]+\s?"))
@@ -5892,7 +5890,7 @@ namespace Apricot
                                                 {
                                                     int length;
 
-                                                    if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                                                    if (dictionary.TryGetValue(i, out length) && x + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                                     {
                                                         lineStringBuilder.Clear();
                                                         x = 0;
@@ -5913,7 +5911,7 @@ namespace Apricot
                                                         x = 0;
                                                         lines++;
                                                     }
-                                                    else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
+                                                    else if (lineStringBuilder.Length > 0 && x + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > this.baseWidth - 74)
                                                     {
                                                         if (lineStringBuilder.Length - 1 > 0)
                                                         {
@@ -5927,7 +5925,7 @@ namespace Apricot
 
                                                 if (lineStringBuilder.Length > 0)
                                                 {
-                                                    double width = space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
+                                                    double width = space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace);
 
                                                     if (x + width > this.baseWidth - 74)
                                                     {
@@ -6214,11 +6212,11 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), title.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth && !isReseted)
+                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), title.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth && !isReseted)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                         list.Add(new KeyValuePair<double, FormattedText>(y, formattedText));
 
@@ -6242,7 +6240,7 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                         list.Add(new KeyValuePair<double, FormattedText>(y, formattedText));
 
@@ -6259,11 +6257,11 @@ namespace Apricot
                                                     y += lineHeight;
                                                     isBreaked = true;
                                                 }
-                                                else if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth)
+                                                else if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth)
                                                 {
                                                     if (lineStringBuilder.Length - 1 > 0)
                                                     {
-                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                        FormattedText formattedText = new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                         list.Add(new KeyValuePair<double, FormattedText>(y, formattedText));
 
@@ -6288,7 +6286,7 @@ namespace Apricot
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                 list.Add(new KeyValuePair<double, FormattedText>(y, formattedText));
 
@@ -6382,7 +6380,7 @@ namespace Apricot
 
                                                             if (sb.Length > 0)
                                                             {
-                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                                 if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                 {
@@ -6445,7 +6443,7 @@ namespace Apricot
 
                                                     if (sb.Length > 0)
                                                     {
-                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                         height = Math.Max(height, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -6511,7 +6509,7 @@ namespace Apricot
                                                     dc.DrawText(list[i].Value, new Point(maxWidth - Math.Floor(list[i].Value.OverhangLeading), 0));
                                                     dc.Close();
 
-                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                     dropShadowEffect.BlurRadius = 1;
                                                     dropShadowEffect.Direction = 270;
                                                     dropShadowEffect.ShadowDepth = 1;
@@ -6669,16 +6667,16 @@ namespace Apricot
 
                                                 lineStringBuilder.Append(authority[i]);
 
-                                                if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
+                                                if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
                                                 {
-                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip));
+                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip));
                                                     lineStringBuilder.Remove(0, safeLineLength);
                                                 }
                                             }
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip));
+                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip));
                                             }
 
                                             if (this.subtitleScrollStep.HasValue)
@@ -6757,7 +6755,7 @@ namespace Apricot
 
                                                             if (sb.Length > 0)
                                                             {
-                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                                 if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                 {
@@ -6820,7 +6818,7 @@ namespace Apricot
 
                                                     if (sb.Length > 0)
                                                     {
-                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                         height = Math.Max(height, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -6886,7 +6884,7 @@ namespace Apricot
                                                     dc.DrawText(list[i], new Point(maxWidth - Math.Floor(list[i].OverhangLeading), 0));
                                                     dc.Close();
 
-                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                     dropShadowEffect.BlurRadius = 1;
                                                     dropShadowEffect.Direction = 270;
                                                     dropShadowEffect.ShadowDepth = 1;
@@ -6981,11 +6979,11 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), this.inspectorEntry.Author.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
+                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), this.inspectorEntry.Author.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip)));
                                                     }
 
                                                     lineStringBuilder.Clear();
@@ -7002,7 +7000,7 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length);
                                                     }
 
@@ -7010,11 +7008,11 @@ namespace Apricot
                                                     height1 += this.lineHeight;
                                                     isBreaked = true;
                                                 }
-                                                else if (lineStringBuilder.Length > 0 && Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
+                                                else if (lineStringBuilder.Length > 0 && Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length - 1 > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length - 1);
                                                     }
 
@@ -7026,7 +7024,7 @@ namespace Apricot
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
+                                                list.Add(new KeyValuePair<double, FormattedText>(y, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip)));
                                                 height1 += this.lineHeight;
                                                 isBreaked = false;
                                             }
@@ -7112,7 +7110,7 @@ namespace Apricot
 
                                                             if (sb.Length > 0)
                                                             {
-                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                                FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                                 if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                 {
@@ -7175,7 +7173,7 @@ namespace Apricot
 
                                                     if (sb.Length > 0)
                                                     {
-                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                         height2 = Math.Max(height2, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -7241,7 +7239,7 @@ namespace Apricot
                                                     dc.DrawText(list[i].Value, new Point(maxWidth - Math.Floor(list[i].Value.OverhangLeading), 0));
                                                     dc.Close();
 
-                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                     dropShadowEffect.BlurRadius = 1;
                                                     dropShadowEffect.Direction = 270;
                                                     dropShadowEffect.ShadowDepth = 1;
@@ -7331,11 +7329,11 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), modified.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
+                                                if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), modified.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
+                                                        list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip));
                                                     }
 
                                                     lineStringBuilder.Clear();
@@ -7345,16 +7343,16 @@ namespace Apricot
 
                                                 lineStringBuilder.Append(modified[i]);
 
-                                                if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
+                                                if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
                                                 {
-                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
+                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip));
                                                     lineStringBuilder.Remove(0, safeLineLength);
                                                 }
                                             }
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
+                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip));
                                             }
 
                                             list.ForEach(delegate (FormattedText formattedText)
@@ -7373,7 +7371,7 @@ namespace Apricot
                                                     dc.DrawText(formattedText, new Point(-Math.Floor(formattedText.OverhangLeading), 0));
                                                     dc.Close();
 
-                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                     dropShadowEffect.BlurRadius = 1;
                                                     dropShadowEffect.Direction = 270;
                                                     dropShadowEffect.ShadowDepth = 1;
@@ -7435,16 +7433,16 @@ namespace Apricot
 
                                                 lineStringBuilder.Append(score[i]);
 
-                                                if (space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
+                                                if (space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && safeLineLength > 0)
                                                 {
-                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
+                                                    list.Add(new FormattedText(lineStringBuilder.ToString().Substring(0, safeLineLength), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip));
                                                     lineStringBuilder.Remove(0, safeLineLength);
                                                 }
                                             }
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip));
+                                                list.Add(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip));
                                             }
 
                                             list.ForEach(delegate (FormattedText formattedText)
@@ -7463,7 +7461,7 @@ namespace Apricot
                                                     dc.DrawText(formattedText, new Point(-Math.Floor(formattedText.OverhangLeading), 0));
                                                     dc.Close();
 
-                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                     dropShadowEffect.BlurRadius = 1;
                                                     dropShadowEffect.Direction = 270;
                                                     dropShadowEffect.ShadowDepth = 1;
@@ -7555,7 +7553,7 @@ namespace Apricot
                                                 dictionary.Add(match.Index, match.Length);
                                             }
 
-                                            if (nextPoint.X + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && nextPoint.X != 0)
+                                            if (nextPoint.X + space + Math.Ceiling(new FormattedText(tag, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth && nextPoint.X != 0)
                                             {
                                                 nextPoint.X = 0;
                                                 lines++;
@@ -7565,11 +7563,11 @@ namespace Apricot
                                             {
                                                 int length;
 
-                                                if (dictionary.TryGetValue(i, out length) && nextPoint.X + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
+                                                if (dictionary.TryGetValue(i, out length) && nextPoint.X + space + Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), tag.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip)));
                                                     }
 
                                                     lineStringBuilder.Clear();
@@ -7584,17 +7582,17 @@ namespace Apricot
 
                                                     if (lineStringBuilder.Length > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length);
                                                     }
 
                                                     nextPoint.X = 0;
                                                 }
-                                                else if (lineStringBuilder.Length > 0 && nextPoint.X + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
+                                                else if (lineStringBuilder.Length > 0 && nextPoint.X + space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > textWidth)
                                                 {
                                                     if (lineStringBuilder.Length - 1 > 0)
                                                     {
-                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip)));
+                                                        list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, new FormattedText(lineStringBuilder.ToString().Substring(0, lineStringBuilder.Length - 1), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip)));
                                                         lineStringBuilder.Remove(0, lineStringBuilder.Length - 1);
                                                     }
 
@@ -7604,7 +7602,7 @@ namespace Apricot
 
                                             if (lineStringBuilder.Length > 0)
                                             {
-                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                FormattedText formattedText = new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                 list.Add(new KeyValuePair<double, FormattedText>(nextPoint.X, formattedText));
                                                 nextPoint.X += space + Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace);
@@ -7691,7 +7689,7 @@ namespace Apricot
 
                                                                 if (sb.Length > 0)
                                                                 {
-                                                                    FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                                    FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                                     if (ft.WidthIncludingTrailingWhitespace > ft.Width)
                                                                     {
@@ -7817,7 +7815,7 @@ namespace Apricot
 
                                                     if (sb.Length > 0)
                                                     {
-                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip);
+                                                        FormattedText ft = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip);
 
                                                         height = Math.Max(height, ft.OverhangAfter > 0 ? ft.Height + ft.OverhangAfter : ft.Height);
 
@@ -7919,7 +7917,7 @@ namespace Apricot
                                                     Canvas.SetLeft(canvas2, 0);
                                                     Canvas.SetTop(canvas2, 0);
 
-                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.textColor.R, this.textColor.G), this.textColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+                                                    dropShadowEffect.Color = Math.Max(Math.Max(this.foregroundBrush!.Color.R, this.foregroundBrush.Color.G), this.foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
                                                     dropShadowEffect.BlurRadius = 1;
                                                     dropShadowEffect.Direction = 270;
                                                     dropShadowEffect.ShadowDepth = 1;
@@ -8147,7 +8145,7 @@ namespace Apricot
                                             {
                                                 Color color = Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
 
-                                                pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.linkColor.A - color.A) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.R + (this.linkColor.R - color.R) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.G + (this.linkColor.G - color.G) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.B + (this.linkColor.B - color.B) * Math.Sin(this.imageBlinkStep * Math.PI))));
+                                                pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.accentBrush!.Color.A - color.A) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.R + (this.accentBrush.Color.R - color.R) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.G + (this.accentBrush.Color.G - color.G) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.B + (this.accentBrush.Color.B - color.B) * Math.Sin(this.imageBlinkStep * Math.PI))));
                                             }
                                             else
                                             {
@@ -8259,7 +8257,7 @@ namespace Apricot
                                             {
                                                 Color color = Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
 
-                                                pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.linkColor.A - color.A) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.R + (this.linkColor.R - color.R) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.G + (this.linkColor.G - color.G) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.B + (this.linkColor.B - color.B) * Math.Sin(this.imageBlinkStep * Math.PI))));
+                                                pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.accentBrush!.Color.A - color.A) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.R + (this.accentBrush.Color.R - color.R) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.G + (this.accentBrush.Color.G - color.G) * Math.Sin(this.imageBlinkStep * Math.PI)), (byte)(color.B + (this.accentBrush.Color.B - color.B) * Math.Sin(this.imageBlinkStep * Math.PI))));
                                             }
                                             else
                                             {
@@ -8620,7 +8618,7 @@ namespace Apricot
                                 {
                                     Color color = Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
 
-                                    pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.linkColor.A - color.A) * Math.Sin(this.backBlinkStep * Math.PI)), (byte)(color.R + (this.linkColor.R - color.R) * Math.Sin(this.backBlinkStep * Math.PI)), (byte)(color.G + (this.linkColor.G - color.G) * Math.Sin(this.backBlinkStep * Math.PI)), (byte)(color.B + (this.linkColor.B - color.B) * Math.Sin(this.backBlinkStep * Math.PI))));
+                                    pen.Brush = new SolidColorBrush(Color.FromArgb((byte)(color.A + (this.accentBrush!.Color.A - color.A) * Math.Sin(this.backBlinkStep * Math.PI)), (byte)(color.R + (this.accentBrush.Color.R - color.R) * Math.Sin(this.backBlinkStep * Math.PI)), (byte)(color.G + (this.accentBrush.Color.G - color.G) * Math.Sin(this.backBlinkStep * Math.PI)), (byte)(color.B + (this.accentBrush.Color.B - color.B) * Math.Sin(this.backBlinkStep * Math.PI))));
                                 }
                             }
                             else
@@ -9004,7 +9002,7 @@ namespace Apricot
             foreach (object o in message)
             {
                 string? inline = o as string;
-                Brush? brush = this.textBrush;
+                Brush? brush = this.foregroundBrush;
                 Dictionary<int, int> dictionary = new Dictionary<int, int>();
                 StringBuilder lineStringBuilder = new StringBuilder();
 
@@ -9019,7 +9017,7 @@ namespace Apricot
                     else
                     {
                         inline = entry.Title;
-                        brush = this.linkBrush;
+                        brush = this.accentBrush;
                     }
                 }
 
@@ -9155,7 +9153,7 @@ namespace Apricot
                 {
                     int length;
 
-                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), title.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth && !isReseted)
+                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), title.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth && !isReseted)
                     {
                         lineStringBuilder.Clear();
                         lines++;
@@ -9177,7 +9175,7 @@ namespace Apricot
                         isBreaked = true;
                         isReseted = true;
                     }
-                    else if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth)
+                    else if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > titleWidth)
                     {
                         if (lineStringBuilder.Length - 1 > 0)
                         {
@@ -9214,7 +9212,7 @@ namespace Apricot
 
                     lineStringBuilder.Append(authority[i]);
 
-                    if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         if (safeLineLength > 0)
                         {
@@ -9249,7 +9247,7 @@ namespace Apricot
                 {
                     int length;
 
-                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), entry.Author.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), entry.Author.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         lineStringBuilder.Clear();
                         lines++;
@@ -9270,7 +9268,7 @@ namespace Apricot
                         lines++;
                         isBreaked = true;
                     }
-                    else if (lineStringBuilder.Length > 0 && Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.linkBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    else if (lineStringBuilder.Length > 0 && Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.accentBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         if (lineStringBuilder.Length - 1 > 0)
                         {
@@ -9306,7 +9304,7 @@ namespace Apricot
                 {
                     int length;
 
-                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), modified.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (dictionary.TryGetValue(i, out length) && Math.Ceiling(new FormattedText(String.Concat(lineStringBuilder.ToString(), modified.Substring(i, length)), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         lineStringBuilder.Clear();
                         lines++;
@@ -9316,7 +9314,7 @@ namespace Apricot
 
                     lineStringBuilder.Append(modified[i]);
 
-                    if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         if (safeLineLength > 0)
                         {
@@ -9347,7 +9345,7 @@ namespace Apricot
 
                     lineStringBuilder.Append(score[i]);
 
-                    if (space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.textBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
+                    if (space + Math.Ceiling(new FormattedText(lineStringBuilder.ToString(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch), this.FontSize, this.foregroundBrush, pixelsPerDip).WidthIncludingTrailingWhitespace) > inspectorSize.Width - 30 - imageSize.Width)
                     {
                         if (safeLineLength > 0)
                         {

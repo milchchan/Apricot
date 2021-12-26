@@ -372,5 +372,14 @@ namespace Apricot
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
         public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        [System.Runtime.InteropServices.DllImport("Uxtheme.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto, EntryPoint = "#95")]
+        public static extern int GetImmersiveColorFromColorSetEx(int dwImmersiveColorSet, int dwImmersiveColorType, bool bIgnoreHighContrast, int dwHighContrastCacheMode);
+
+        [System.Runtime.InteropServices.DllImport("Uxtheme.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto, EntryPoint = "#96")]
+        public static extern int GetImmersiveColorTypeFromName(IntPtr pName);
+
+        [System.Runtime.InteropServices.DllImport("Uxtheme.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto, EntryPoint = "#98")]
+        public static extern int GetImmersiveUserColorSetPreference(bool bForceCheckRegistry, bool bSkipCheckOnFail);
     }
 }
