@@ -29,6 +29,6 @@ To build Apricot, run .NET Core CLI command.
 * Generating messages based on machine leraning
 * Describing an character using flexible character markup language
 
-Please see https://www.kawatan.net/ for more information.
+Please see https://milchchan.com/ for more information.
 
-![Footer](https://user-images.githubusercontent.com/246691/73124056-fb03ba00-3fd9-11ea-9483-edca9ed336cc.png)
+![Footer](https://user-images.githubusercontent.com/246691/149443218-0a299598-eb7e-44bf-b3b1-6e16cf37ae8b.png)
