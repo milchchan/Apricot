@@ -17,7 +17,7 @@ namespace Weather
     [System.Composition.Export(typeof(IExtension))]
     public class WeatherExtension : IExtension
     {
-        private readonly string apiKey = null;
+        private readonly string? apiKey = null;
         private Geolocator? geolocator = null;
         private DispatcherTimer? timer = null;
 
