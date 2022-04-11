@@ -66,7 +66,7 @@ namespace Apricot
             this.imageStoryboardDictionary = new Dictionary<Image, Storyboard>();
             this.queue = new System.Collections.Queue();
             this.motionQueue = new Queue<Motion>();
-            this.baseDateTime = DateTime.Now;
+            this.baseDateTime = DateTime.UtcNow;
             this.ContextMenu = new ContextMenu();
 
             MenuItem opacityMenuItem = new MenuItem();
@@ -415,7 +415,7 @@ namespace Apricot
                     string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
                     Dictionary<string, List<Tuple<string, string>>> pathDictionary = new Dictionary<string, List<Tuple<string, string>>>();
                     List<Tuple<string, string, string?>> namePathList = new List<Tuple<string, string, string?>>();
-                    bool likeRequired = (DateTime.Now - this.baseDateTime).TotalMinutes / 30 >= 1 ? true : false;
+                    bool likeRequired = (DateTime.UtcNow - this.baseDateTime).TotalMinutes >= 1;
 
                     foreach (Character character in Script.Instance.Characters)
                     {
@@ -1250,7 +1250,7 @@ namespace Apricot
                                     menuItem.Header = Apricot.Resources.Like;
                                     menuItem.Click += new RoutedEventHandler(delegate
                                     {
-                                        this.baseDateTime = this.baseDateTime.AddMinutes(30);
+                                        this.baseDateTime = DateTime.UtcNow;
 
                                         foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
                                         {
@@ -1261,8 +1261,9 @@ namespace Apricot
                                             FontStretch fontStretch;
                                             FontStyle fontStyle;
                                             FontWeight fontWeight;
-                                            Color foregroundColor;
+                                            Color backgroundColor;
                                             SolidColorBrush backgroundBrush;
+                                            SolidColorBrush foregroundBrush;
                                             Geometry starGeometry = CreateStarGeometry(new Rect(0, 0, 8, 8));
 
                                             if (Directory.Exists(directory))
@@ -1327,13 +1328,13 @@ namespace Apricot
                                                     fontWeight = this.FontWeight;
                                                 }
 
-                                                if (config1.AppSettings.Settings["TextColor"] != null && config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                                                if (config1.AppSettings.Settings["BackgroundColor"] != null && config1.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
                                                 {
-                                                    foregroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value)!;
+                                                    backgroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["BackgroundColor"].Value)!;
                                                 }
                                                 else
                                                 {
-                                                    foregroundColor = Colors.White;
+                                                    backgroundColor = Colors.Black;
                                                 }
                                             }
                                             else
@@ -1440,46 +1441,50 @@ namespace Apricot
                                                     fontWeight = this.FontWeight;
                                                 }
 
-                                                if (config1.AppSettings.Settings["TextColor"] == null)
+                                                if (config1.AppSettings.Settings["BackgroundColor"] == null)
                                                 {
-                                                    if (config2.AppSettings.Settings["TextColor"] != null && config2.AppSettings.Settings["TextColor"].Value.Length > 0)
+                                                    if (config2.AppSettings.Settings["BackgroundColor"] != null && config2.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
                                                     {
-                                                        foregroundColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["TextColor"].Value)!;
+                                                        backgroundColor = (Color)ColorConverter.ConvertFromString(config2.AppSettings.Settings["BackgroundColor"].Value)!;
                                                     }
                                                     else
                                                     {
-                                                        foregroundColor = Colors.White;
+                                                        backgroundColor = Colors.Black;
                                                     }
                                                 }
-                                                else if (config1.AppSettings.Settings["TextColor"].Value.Length > 0)
+                                                else if (config1.AppSettings.Settings["BackgroundColor"].Value.Length > 0)
                                                 {
-                                                    foregroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["TextColor"].Value)!;
+                                                    backgroundColor = (Color)ColorConverter.ConvertFromString(config1.AppSettings.Settings["BackgroundColor"].Value)!;
                                                 }
                                                 else
                                                 {
-                                                    foregroundColor = Colors.White;
+                                                    backgroundColor = Colors.Black;
                                                 }
                                             }
 
                                             character.Likes += 1;
 
                                             Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("Like") && sequence.Owner.Equals(this.characterName) select sequence, character.Likes.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("Charge") && sequence.Owner.Equals(this.characterName) select sequence, ((int)((DateTime.Now - this.baseDateTime).TotalMinutes / 30)).ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
-                                            if (Math.Max(Math.Max(foregroundColor.R, foregroundColor.G), foregroundColor.B) > Byte.MaxValue / 2)
-                                            {
-                                                backgroundBrush = new SolidColorBrush(Colors.Black);
-                                            }
-                                            else
-                                            {
-                                                backgroundBrush = new SolidColorBrush(Colors.White);
-                                            }
-
-                                            backgroundBrush.Opacity = 0.75;
+                                            backgroundBrush = new SolidColorBrush(Color.FromArgb((byte)(backgroundColor.A * 75 / 100), backgroundColor.R, backgroundColor.G, backgroundColor.B));
 
                                             if (backgroundBrush.CanFreeze)
                                             {
                                                 backgroundBrush.Freeze();
+                                            }
+
+                                            if (Math.Max(Math.Max(backgroundColor.R, backgroundColor.G), backgroundColor.B) > Byte.MaxValue / 2)
+                                            {
+                                                foregroundBrush = new SolidColorBrush(Colors.Black);
+                                            }
+                                            else
+                                            {
+                                                foregroundBrush = new SolidColorBrush(Colors.White);
+                                            }
+
+                                            if (foregroundBrush.CanFreeze)
+                                            {
+                                                foregroundBrush.Freeze();
                                             }
 
                                             if (starGeometry.CanFreeze)
@@ -1487,7 +1492,7 @@ namespace Apricot
                                                 starGeometry.Freeze();
                                             }
 
-                                            CreateHudWindow(backgroundBrush, foregroundColor, starGeometry, fontFamily, fontSize, fontStretch, fontStyle, fontWeight, character.Likes.ToString(System.Globalization.CultureInfo.CurrentCulture)).Show();
+                                            CreateHudWindow(foregroundBrush, backgroundBrush, starGeometry, fontFamily, fontSize, fontStretch, fontStyle, fontWeight, character.Likes.ToString(System.Globalization.CultureInfo.CurrentCulture)).Show();
                                         }
                                     });
 
@@ -3762,15 +3767,16 @@ namespace Apricot
                         if (cachedCharacterList.Count > 0)
                         {
                             Character character = cachedCharacterList[new Random(Environment.TickCount).Next(cachedCharacterList.Count)];
-                            var query = from sequence in Script.Instance.Sequences where sequence.Owner!.Equals(character.Name) select sequence;
-
-                            if (query.Any())
+                            var characters = from c in Script.Instance.Characters where c.Name!.Equals(this.characterName) select c;
+                            var sequences = from sequence in Script.Instance.Sequences where sequence.Owner!.Equals(character.Name) select sequence;
+                            
+                            if (characters.All<Character>(x => x.Likes > 0) && sequences.Any())
                             {
                                 Agent agent = new Agent(character.Name!);
                                 List<Sequence> preparedSequenceList = new List<Sequence>();
-                                var q = from sequence in query where sequence.Name!.Equals("Activate") select sequence;
+                                var q = from sequence in sequences where sequence.Name!.Equals("Activate") select sequence;
 
-                                foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(this.characterName) select c)
+                                foreach (Character c in characters)
                                 {
                                     if (c.Mirror)
                                     {
@@ -3782,6 +3788,7 @@ namespace Apricot
                                     }
 
                                     character.Mirror = !c.Mirror;
+                                    character.Likes -= 1;
 
                                     foreach (string type in c.Types)
                                     {
@@ -3823,7 +3830,7 @@ namespace Apricot
                                 }!);
                                 agent.Show();
 
-                                foreach (Sequence sequence in Script.Instance.Prepare(from sequence in query where sequence.Name!.Equals("Start") select sequence, null))
+                                foreach (Sequence sequence in Script.Instance.Prepare(from sequence in sequences where sequence.Name!.Equals("Start") select sequence, null))
                                 {
                                     if (preparedSequenceList.Count == 0)
                                     {
@@ -6538,7 +6545,7 @@ namespace Apricot
             }
         }
 
-        private Window CreateHudWindow(Brush backgroundBrush, Color foregroundColor, Geometry geometry, FontFamily fontFamily, double fontSize, FontStretch fontStretch, FontStyle fontStyle, FontWeight fontWeight, string text)
+        private Window CreateHudWindow(SolidColorBrush foregroundBrush, SolidColorBrush backgroundBrush, Geometry geometry, FontFamily fontFamily, double fontSize, FontStretch fontStretch, FontStyle fontStyle, FontWeight fontWeight, string text)
         {
             Window window = new Window();
             ContentControl contentControl = new ContentControl();
@@ -6547,13 +6554,7 @@ namespace Apricot
             System.Windows.Shapes.Path path = new System.Windows.Shapes.Path();
             Border border2 = new Border();
             Label label = new Label();
-            SolidColorBrush foregroundBrush = new SolidColorBrush(foregroundColor);
             DropShadowEffect dropShadowEffect = new DropShadowEffect();
-
-            if (foregroundBrush.CanFreeze)
-            {
-                foregroundBrush.Freeze();
-            }
 
             window.Owner = this;
             window.Title = this.Title;
@@ -6685,7 +6686,7 @@ namespace Apricot
             border2.Background = Brushes.Transparent;
 
             dropShadowEffect.BlurRadius = 1;
-            dropShadowEffect.Color = Math.Max(Math.Max(foregroundColor.R, foregroundColor.G), foregroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
+            dropShadowEffect.Color = Math.Max(Math.Max(foregroundBrush.Color.R, foregroundBrush.Color.G), foregroundBrush.Color.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White;
             dropShadowEffect.Direction = 270;
             dropShadowEffect.Opacity = 0.5;
             dropShadowEffect.ShadowDepth = 1;
