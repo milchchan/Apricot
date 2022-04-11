@@ -318,7 +318,7 @@ namespace Apricot
                 }
                 else
                 {
-                    this.foregroundBrush = new SolidColorBrush(Colors.White);
+                    this.foregroundBrush = new SolidColorBrush(Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White);
                 }
 
                 if (this.foregroundBrush.CanFreeze)
@@ -572,7 +572,7 @@ namespace Apricot
                     }
                     else
                     {
-                        this.foregroundBrush = new SolidColorBrush(Colors.White);
+                        this.foregroundBrush = new SolidColorBrush(Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White);
                     }
                 }
                 else if (config1.AppSettings.Settings["ForegroundColor"].Value.Length > 0)
@@ -581,7 +581,7 @@ namespace Apricot
                 }
                 else
                 {
-                    this.foregroundBrush = new SolidColorBrush(Colors.White);
+                    this.foregroundBrush = new SolidColorBrush(Math.Max(Math.Max(this.backgroundColor.R, this.backgroundColor.G), this.backgroundColor.B) > Byte.MaxValue / 2 ? Colors.Black : Colors.White);
                 }
 
                 if (this.foregroundBrush.CanFreeze)
@@ -4390,6 +4390,11 @@ namespace Apricot
                                                                                         {
                                                                                             Script.Instance.Words.Remove(word);
                                                                                         });
+
+                                                                                        foreach (Character character in Script.Instance.Characters)
+                                                                                        {
+                                                                                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name!.Equals("Unlock") && sequence.Owner!.Equals(character.Name) select sequence, Script.Instance.Words.Count.ToString(CultureInfo.InvariantCulture)));
+                                                                                        }
                                                                                     }
                                                                                 }
 
@@ -4437,6 +4442,11 @@ namespace Apricot
                                                                                         {
                                                                                             Script.Instance.Words.Remove(word);
                                                                                         });
+
+                                                                                        foreach (Character character in Script.Instance.Characters)
+                                                                                        {
+                                                                                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name!.Equals("Unlock") && sequence.Owner!.Equals(character.Name) select sequence, Script.Instance.Words.Count.ToString(CultureInfo.InvariantCulture)));
+                                                                                        }
                                                                                     }
                                                                                 }
 
@@ -4905,6 +4915,11 @@ namespace Apricot
                                                                                     {
                                                                                         Script.Instance.Words.Remove(word);
                                                                                     });
+
+                                                                                    foreach (Character character in Script.Instance.Characters)
+                                                                                    {
+                                                                                        Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name!.Equals("Unlock") && sequence.Owner!.Equals(character.Name) select sequence, Script.Instance.Words.Count.ToString(CultureInfo.InvariantCulture)));
+                                                                                    }
                                                                                 }
                                                                             }
 
@@ -4952,6 +4967,11 @@ namespace Apricot
                                                                                     {
                                                                                         Script.Instance.Words.Remove(word);
                                                                                     });
+
+                                                                                    foreach (Character character in Script.Instance.Characters)
+                                                                                    {
+                                                                                        Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name!.Equals("Unlock") && sequence.Owner!.Equals(character.Name) select sequence, Script.Instance.Words.Count.ToString(CultureInfo.InvariantCulture)));
+                                                                                    }
                                                                                 }
                                                                             }
 
