@@ -129,7 +129,7 @@ namespace Apricot
 
                     foreach (Character character in this.characterCollection)
                     {
-                        TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name!.Equals("Like") && sequence.Owner!.Equals(character.Name) select sequence, character.Likes.ToString(CultureInfo.InvariantCulture)));
+                        TryEnqueue(Prepare(from sequence in this.sequenceCollection where sequence.Name!.Equals("Unlock") && sequence.Owner!.Equals(character.Name) select sequence, this.wordCollection!.Count.ToString(CultureInfo.InvariantCulture)));
                     }
                 }
                 else
