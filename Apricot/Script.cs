@@ -4930,7 +4930,7 @@ namespace Apricot
                 {
                     queue.Enqueue(ParseMessage(xmlNode));
                 }
-                else if (xmlNode.Name.Equals("motion"))
+                else if (xmlNode.Name.Equals("animation") || xmlNode.Name.Equals("motion"))
                 {
                     queue.Enqueue(ParseMotion(xmlNode, cachedSpriteList));
                 }
