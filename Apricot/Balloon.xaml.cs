@@ -2290,7 +2290,7 @@ namespace Apricot
                             this.historyPoint = this.nextHistoryPoint;
                             this.nextHistoryPoint = null;
 
-                            var query = from entry in message.Attachments where entry.Score.HasValue select entry.Score.Value;
+                            var query = from entry in message.Attachments where entry.Score.HasValue select entry.Score!.Value;
 
                             if (query.Any())
                             {
@@ -4361,9 +4361,9 @@ namespace Apricot
                                                                                         bool isNewWord = true;
                                                                                         List<Word> wordList = new List<Word>();
 
-                                                                                        foreach (Word word in from word in Script.Instance.Words where word.Name.Equals(term) select word)
+                                                                                        foreach (Word word in from word in Script.Instance.Words where word.Name!.Equals(term) select word)
                                                                                         {
-                                                                                            if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title)) && !word.Attributes.Contains(attribute))
+                                                                                            if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title!)) && !word.Attributes.Contains(attribute))
                                                                                             {
                                                                                                 word.Attributes.Add(attribute);
                                                                                             }
@@ -4413,9 +4413,9 @@ namespace Apricot
                                                                                         bool isNewWord = true;
                                                                                         List<Word> wordList = new List<Word>();
 
-                                                                                        foreach (Word word in from word in Script.Instance.Words where word.Name.Equals(term) select word)
+                                                                                        foreach (Word word in from word in Script.Instance.Words where word.Name!.Equals(term) select word)
                                                                                         {
-                                                                                            if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title)))
+                                                                                            if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title!)))
                                                                                             {
                                                                                                 word.Attributes.Remove(attribute);
                                                                                             }
@@ -4886,9 +4886,9 @@ namespace Apricot
                                                                                     bool isNewWord = true;
                                                                                     List<Word> wordList = new List<Word>();
 
-                                                                                    foreach (Word word in from word in Script.Instance.Words where word.Name.Equals(term) select word)
+                                                                                    foreach (Word word in from word in Script.Instance.Words where word.Name!.Equals(term) select word)
                                                                                     {
-                                                                                        if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title)) && !word.Attributes.Contains(attribute))
+                                                                                        if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title!)) && !word.Attributes.Contains(attribute))
                                                                                         {
                                                                                             word.Attributes.Add(attribute);
                                                                                         }
@@ -4938,9 +4938,9 @@ namespace Apricot
                                                                                     bool isNewWord = true;
                                                                                     List<Word> wordList = new List<Word>();
 
-                                                                                    foreach (Word word in from word in Script.Instance.Words where word.Name.Equals(term) select word)
+                                                                                    foreach (Word word in from word in Script.Instance.Words where word.Name!.Equals(term) select word)
                                                                                     {
-                                                                                        if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title)))
+                                                                                        if (this.messageCollection[this.historyPoint.Value].Attachments.Any(e2 => word.Attributes.Contains(e2.Title!)))
                                                                                         {
                                                                                             word.Attributes.Remove(attribute);
                                                                                         }

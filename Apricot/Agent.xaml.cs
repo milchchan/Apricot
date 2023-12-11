@@ -194,7 +194,7 @@ namespace Apricot
                         {
                             agent.scale = (double)menuItem.Tag;
 
-                            foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select character)
+                            foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(agent.characterName) select character)
                             {
                                 Storyboard storyboard = new Storyboard();
                                 DoubleAnimation doubleAnimation1 = new DoubleAnimation(agent.ZoomScaleTransform.ScaleX, agent.scale, TimeSpan.FromMilliseconds(500));
@@ -274,7 +274,7 @@ namespace Apricot
                                         agent.ZoomScaleTransform.ScaleX = agent.scale;
                                         agent.ZoomScaleTransform.ScaleY = agent.scale;
 
-                                        foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(agent.characterName) select c)
+                                        foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(agent.characterName) select c)
                                         {
                                             agent.LayoutRoot.Width = c.Size.Width * agent.scale;
                                             agent.LayoutRoot.Height = c.Size.Height * agent.scale;
@@ -1021,7 +1021,7 @@ namespace Apricot
 
                                         if (tag != null)
                                         {
-                                            foreach (Character c in from c in Script.Instance.Characters where c.Name.Equals(tag) select c)
+                                            foreach (Character c in from c in Script.Instance.Characters where c.Name!.Equals(tag) select c)
                                             {
                                                 foreach (Window window in Application.Current.Windows)
                                                 {
@@ -1064,12 +1064,12 @@ namespace Apricot
 
                                                             if (motion != null)
                                                             {
-                                                                List<string>? typeList = null;
+                                                                List<string?>? typeList = null;
                                                                 bool isVisible;
 
                                                                 if (motion.Type == null)
                                                                 {
-                                                                    typeList = new List<string>();
+                                                                    typeList = new List<string?>();
                                                                     a.cachedMotionList!.ForEach(delegate (Motion m)
                                                                     {
                                                                         if (m.ZIndex == motion.ZIndex)
@@ -1083,10 +1083,10 @@ namespace Apricot
                                                                 {
                                                                     if (c.HasTypes)
                                                                     {
-                                                                        typeList = new List<string>();
+                                                                        typeList = new List<string?>();
                                                                         a.cachedMotionList!.ForEach(delegate (Motion m)
                                                                         {
-                                                                            if (m.ZIndex == motion.ZIndex && c.Types.Contains(m.Type))
+                                                                            if (m.Type != null && m.ZIndex == motion.ZIndex && c.Types.Contains(m.Type))
                                                                             {
                                                                                 typeList.Add(m.Type);
                                                                             }
@@ -1100,9 +1100,9 @@ namespace Apricot
                                                                 }
                                                                 else if (c.HasTypes)
                                                                 {
-                                                                    isVisible = !typeList.Exists(delegate (string t)
+                                                                    isVisible = !typeList.Exists(delegate (string? t)
                                                                     {
-                                                                        return c.Types.Contains(t);
+                                                                        return t == null ? false : c.Types.Contains(t);
                                                                     });
                                                                 }
                                                                 else
@@ -1252,7 +1252,7 @@ namespace Apricot
                                     {
                                         this.baseDateTime = DateTime.UtcNow;
 
-                                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                                        foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                                         {
                                             System.Configuration.Configuration? config1 = null;
                                             string directory = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!);
@@ -1464,7 +1464,7 @@ namespace Apricot
 
                                             character.Likes += 1;
 
-                                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name.Equals("Like") && sequence.Owner.Equals(this.characterName) select sequence, character.Likes.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name!.Equals("Like") && sequence.Owner!.Equals(this.characterName) select sequence, character.Likes.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
                                             backgroundBrush = new SolidColorBrush(Color.FromArgb((byte)(backgroundColor.A * 75 / 100), backgroundColor.R, backgroundColor.G, backgroundColor.B));
 
@@ -1752,7 +1752,7 @@ namespace Apricot
                                 MenuItem removeMenuItem = new MenuItem();
 
                                 sourceMenuItem = new MenuItem();
-                                sourceMenuItem.Header = String.IsNullOrEmpty(source.Name) ? source.Location.ToString() : source.Name;
+                                sourceMenuItem.Header = String.IsNullOrEmpty(source.Name) ? source.Location!.ToString() : source.Name;
                                 sourceMenuItem.Tag = source;
 
                                 removeMenuItem.Header = Apricot.Resources.Remove;
@@ -1770,7 +1770,7 @@ namespace Apricot
                             }
                             else
                             {
-                                sourceMenuItem.Header = String.IsNullOrEmpty(source.Name) ? source.Location.ToString() : source.Name;
+                                sourceMenuItem.Header = String.IsNullOrEmpty(source.Name) ? source.Location!.ToString() : source.Name;
                                 sourceMenuItemList.Remove(sourceMenuItem);
                             }
 
@@ -2101,7 +2101,7 @@ namespace Apricot
             this.balloon.Title = this.Title;
             this.balloon.SizeChanged += new SizeChangedEventHandler(delegate (object s, SizeChangedEventArgs e)
             {
-                foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                 {
                     this.balloon.Left = this.Left + (this.Width - e.NewSize.Width) / 2;
                     this.balloon.Top = this.Top - e.NewSize.Height + character.Origin.Y * this.ZoomScaleTransform.ScaleY;
@@ -2484,7 +2484,7 @@ namespace Apricot
                         Nullable<Point> point = null;
                         string directory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
 
-                        foreach (Nullable<Point> p in from character in Script.Instance.Characters where character.Name.Equals(agent.characterName) select new Nullable<Point>(new Point(agent.Left - character.Location.X - character.BaseLocation.X, agent.Top - character.Location.Y - character.BaseLocation.Y)))
+                        foreach (Nullable<Point> p in from character in Script.Instance.Characters where character.Name!.Equals(agent.characterName) select new Nullable<Point>(new Point(agent.Left - character.Location.X - character.BaseLocation.X, agent.Top - character.Location.Y - character.BaseLocation.Y)))
                         {
                             point = p;
                         }
@@ -5554,7 +5554,7 @@ namespace Apricot
 
                     if (this.IsVisible && !String.IsNullOrEmpty(sound.Path!) && !this.isMute)
                     {
-                        foreach (var v in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select new { character.Script, sound.Path })
+                        foreach (var v in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select new { character.Script, sound.Path })
                         {
                             if (Path.GetExtension(v.Script).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                             {
@@ -5662,7 +5662,7 @@ namespace Apricot
                         }
                     } while (q.Count > 0);
 
-                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                     {
                         Dictionary<string, Tuple<string, MemoryStream>> dictionary = new Dictionary<string, Tuple<string, MemoryStream>>();
 
@@ -5937,7 +5937,7 @@ namespace Apricot
                     List<Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>>> contentList = new List<Tuple<string, Dictionary<string, Tuple<string, MemoryStream>>>>();
                     HashSet<string> keyHashSet = new HashSet<string>();
 
-                    foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                    foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                     {
                         Dictionary<string, Tuple<string, MemoryStream>> dictionary = new Dictionary<string, Tuple<string, MemoryStream>>();
 
@@ -6081,7 +6081,7 @@ namespace Apricot
                             }
                         });
 
-                        foreach (Character character in from character in Script.Instance.Characters where character.Name.Equals(this.characterName) select character)
+                        foreach (Character character in from character in Script.Instance.Characters where character.Name!.Equals(this.characterName) select character)
                         {
                             this.cachedMotionList.ForEach(delegate (Motion motion)
                             {
@@ -6089,7 +6089,7 @@ namespace Apricot
                                 {
                                     if (character.HasTypes)
                                     {
-                                        if (!character.Types.Contains(motion.Type))
+                                        if (motion.Type == null || !character.Types.Contains(motion.Type))
                                         {
                                             return;
                                         }
