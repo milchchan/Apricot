@@ -4911,7 +4911,7 @@ namespace Apricot
             {
                 if (xmlNode.Name.Equals("sequence"))
                 {
-                    queue.Enqueue(ParseSequence(xmlNode, character, cachedSpriteList, cachedSoundList));
+                    queue.Enqueue(ParseSequence(xmlNode, character));
                 }
                 else if (xmlNode.Name.Equals("message"))
                 {
