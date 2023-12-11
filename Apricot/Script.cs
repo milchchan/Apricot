@@ -4078,8 +4078,6 @@ namespace Apricot
 
                         HashSet<string> characterNameHashSet = new HashSet<string>();
                         LinkedList<Character> characterLinkedList = new LinkedList<Character>(this.characterCollection!);
-                        List<Sprite> cachedSpriteList = new List<Sprite>();
-                        List<Sound> cachedSoundList = new List<Sound>();
                         Dictionary<string, HashSet<string>> motionTypeDictionary = new Dictionary<string, HashSet<string>>();
 
                         foreach (List<Tuple<ZipArchiveEntry, string>> tupleList in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
@@ -4184,7 +4182,7 @@ namespace Apricot
                                             {
                                                 if (sequenceNode.Name.Equals("sequence"))
                                                 {
-                                                    Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+                                                    Sequence sequence = ParseSequence(sequenceNode, character);
 
                                                     sequenceList.Add(sequence);
                                                     this.sequenceCollection.Add(sequence);
@@ -4321,7 +4319,7 @@ namespace Apricot
                                         {
                                             if (sequenceNode.Name.Equals("sequence"))
                                             {
-                                                Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+                                                Sequence sequence = ParseSequence(sequenceNode, character);
 
                                                 sequenceList.Add(sequence);
                                                 this.sequenceCollection.Add(sequence);
@@ -4448,8 +4446,6 @@ namespace Apricot
                     {
                         HashSet<string> characterNameHashSet = new HashSet<string>();
                         LinkedList<Character> characterLinkedList = new LinkedList<Character>(this.characterCollection!);
-                        List<Sprite> cachedSpriteList = new List<Sprite>();
-                        List<Sound> cachedSoundList = new List<Sound>();
                         Dictionary<string, HashSet<string>> motionTypeDictionary = new Dictionary<string, HashSet<string>>();
 
                         xmlNodeList.ForEach(delegate (XmlNode xmlNode)
@@ -4476,7 +4472,7 @@ namespace Apricot
                             {
                                 if (sequenceNode.Name.Equals("sequence"))
                                 {
-                                    Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+                                    Sequence sequence = ParseSequence(sequenceNode, character);
 
                                     sequenceList.Add(sequence);
                                     this.sequenceCollection.Add(sequence);
@@ -4617,9 +4613,6 @@ namespace Apricot
                             {
                                 fs = null;
 
-                                List<Sprite> cachedSpriteList = new List<Sprite>();
-                                List<Sound> cachedSoundList = new List<Sound>();
-
                                 foreach (List<Tuple<ZipArchiveEntry, string>> tupleList1 in (from zipArchiveEntry in zipArchive.Entries where zipArchiveEntry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) select zipArchiveEntry).Aggregate<ZipArchiveEntry, Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>>(new Dictionary<string, List<Tuple<ZipArchiveEntry, string>>>(), delegate (Dictionary<string, List<Tuple<ZipArchiveEntry, string>>> dictionary, ZipArchiveEntry zipArchiveEntry)
                                 {
                                     string filename = Path.GetFileNameWithoutExtension(zipArchiveEntry.FullName);
@@ -4691,7 +4684,7 @@ namespace Apricot
                                                             {
                                                                 if (sequenceNode.Name.Equals("sequence"))
                                                                 {
-                                                                    Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+                                                                    Sequence sequence = ParseSequence(sequenceNode, character);
 
                                                                     sequenceList.Add(sequence);
                                                                     this.sequenceCollection.Add(sequence);
@@ -4713,7 +4706,7 @@ namespace Apricot
                                                     {
                                                         if (sequenceNode.Name.Equals("sequence"))
                                                         {
-                                                            Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+                                                            Sequence sequence = ParseSequence(sequenceNode, character);
 
                                                             sequenceList.Add(sequence);
                                                             this.sequenceCollection.Add(sequence);
@@ -4798,9 +4791,6 @@ namespace Apricot
 
                         if (xmlDocument.DocumentElement!.Name.Equals("script"))
                         {
-                            List<Sprite> cachedSpriteList = new List<Sprite>();
-                            List<Sound> cachedSoundList = new List<Sound>();
-
                             foreach (XmlNode xmlNode in xmlDocument.DocumentElement.ChildNodes)
                             {
                                 if (xmlNode.Name.Equals("character"))
@@ -4815,7 +4805,7 @@ namespace Apricot
                                         {
                                             if (sequenceNode.Name.Equals("sequence"))
                                             {
-                                                Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+                                                Sequence sequence = ParseSequence(sequenceNode, character);
 
                                                 sequenceList.Add(sequence);
                                                 this.sequenceCollection.Add(sequence);
@@ -4827,9 +4817,6 @@ namespace Apricot
                         }
                         else if (xmlDocument.DocumentElement.Name.Equals("character"))
                         {
-                            List<Sprite> cachedSpriteList = new List<Sprite>();
-                            List<Sound> cachedSoundList = new List<Sound>();
-
                             Character character = ParseCharacter(xmlDocument.DocumentElement);
 
                             if (!(from c in this.characterCollection where c.Name!.Equals(character.Name) select c).Any())
@@ -4840,7 +4827,7 @@ namespace Apricot
                                 {
                                     if (sequenceNode.Name.Equals("sequence"))
                                     {
-                                        Sequence sequence = ParseSequence(sequenceNode, character, cachedSpriteList, cachedSoundList);
+                                        Sequence sequence = ParseSequence(sequenceNode, character);
 
                                         sequenceList.Add(sequence);
                                         this.sequenceCollection.Add(sequence);
@@ -4902,7 +4889,7 @@ namespace Apricot
             return character;
         }
 
-        private Sequence ParseSequence(XmlNode sequenceNode, Character character, List<Sprite> cachedSpriteList, List<Sound> cachedSoundList)
+        private Sequence ParseSequence(XmlNode sequenceNode, Character character)
         {
             Sequence sequence = new Sequence();
             System.Collections.Queue queue = new System.Collections.Queue();
@@ -4932,11 +4919,11 @@ namespace Apricot
                 }
                 else if (xmlNode.Name.Equals("animation") || xmlNode.Name.Equals("motion"))
                 {
-                    queue.Enqueue(ParseMotion(xmlNode, cachedSpriteList));
+                    queue.Enqueue(ParseMotion(xmlNode));
                 }
                 else if (xmlNode.Name.Equals("sound"))
                 {
-                    queue.Enqueue(ParseSound(xmlNode, cachedSoundList));
+                    queue.Enqueue(ParseSound(xmlNode));
                 }
             }
 
@@ -5117,7 +5104,7 @@ namespace Apricot
             return message;
         }
 
-        private Motion ParseMotion(XmlNode motionNode, List<Sprite> cachedSpriteList)
+        private Motion ParseMotion(XmlNode motionNode)
         {
             Motion motion = new Motion();
             int iterations = 1;
@@ -5181,68 +5168,29 @@ namespace Apricot
                         }
                     }
 
-                    Sprite? sprite = cachedSpriteList.Find(delegate (Sprite s)
+                    Sprite sprite = new Sprite(xmlNode.InnerText);
+
+                    if (x.HasValue || y.HasValue)
                     {
-                        if (s.Location.X == (x.HasValue ? x.Value : 0) && s.Location.Y == (y.HasValue ? y.Value : 0) && s.Opacity == (opacity.HasValue ? opacity.Value : 1) && xmlNode.InnerText.Equals(s.Path))
-                        {
-                            if (s.Size.IsEmpty)
-                            {
-                                if (!width.HasValue && !height.HasValue)
-                                {
-                                    return true;
-                                }
-                            }
-                            else
-                            {
-                                if (width.HasValue && height.HasValue)
-                                {
-                                    if (s.Size.Width == width.Value && s.Size.Height == height.Value)
-                                    {
-                                        return true;
-                                    }
-                                }
-                                else if (width.HasValue && s.Size.Width == width.Value && Double.IsNaN(s.Size.Height))
-                                {
-                                    return true;
-                                }
-                                else if (height.HasValue && Double.IsNaN(s.Size.Width) && s.Size.Height == height.Value)
-                                {
-                                    return true;
-                                }
-                            }
-                        }
+                        sprite.Location = new System.Windows.Point(x.HasValue ? x.Value : 0, y.HasValue ? y.Value : 0);
+                    }
 
-                        return false;
-                    });
-
-                    if (sprite == null)
+                    if (width.HasValue && height.HasValue)
                     {
-                        sprite = new Sprite(xmlNode.InnerText);
+                        sprite.Size = new System.Windows.Size(width.Value, height.Value);
+                    }
+                    else if (width.HasValue)
+                    {
+                        sprite.Size = new System.Windows.Size(width.Value, Double.NaN);
+                    }
+                    else if (height.HasValue)
+                    {
+                        sprite.Size = new System.Windows.Size(Double.NaN, height.Value);
+                    }
 
-                        if (x.HasValue || y.HasValue)
-                        {
-                            sprite.Location = new System.Windows.Point(x.HasValue ? x.Value : 0, y.HasValue ? y.Value : 0);
-                        }
-
-                        if (width.HasValue && height.HasValue)
-                        {
-                            sprite.Size = new System.Windows.Size(width.Value, height.Value);
-                        }
-                        else if (width.HasValue)
-                        {
-                            sprite.Size = new System.Windows.Size(width.Value, Double.NaN);
-                        }
-                        else if (height.HasValue)
-                        {
-                            sprite.Size = new System.Windows.Size(Double.NaN, height.Value);
-                        }
-
-                        if (opacity.HasValue)
-                        {
-                            sprite.Opacity = opacity.Value;
-                        }
-
-                        cachedSpriteList.Add(sprite);
+                    if (opacity.HasValue)
+                    {
+                        sprite.Opacity = opacity.Value;
                     }
                     
                     spriteList.Add(sprite);
@@ -5260,21 +5208,9 @@ namespace Apricot
             return motion;
         }
 
-        private Sound ParseSound(XmlNode soundNode, List<Sound> cachedSoundList)
+        private Sound ParseSound(XmlNode soundNode)
         {
-            Sound? sound = cachedSoundList.Find(delegate (Sound s)
-            {
-                return soundNode.InnerText.Equals(s.Path);
-            });
-
-            if (sound == null)
-            {
-                sound = new Sound(soundNode.InnerText);
-
-                cachedSoundList.Add(sound);
-            }
-
-            return sound;
+            return new Sound(soundNode.InnerText);
         }
 
         public void Update()
