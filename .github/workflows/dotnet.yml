@@ -12,11 +12,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
+    - uses: actions/checkout@v3
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 8.0.x
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
@@ -24,10 +24,10 @@ jobs:
 #    - name: Test
 #      run: dotnet test Apricot/Apricot.csproj --no-build --verbosity normal
     - name: Publish
-      run: dotnet publish Apricot/Apricot.csproj --configuration Release --framework net6.0-windows10.0.17763.0 --output Apricot/bin/Release/net6.0-windows10.0.17763.0/win10-x64/publish/ --runtime win10-x64 --self-contained true
+      run: dotnet publish Apricot/Apricot.csproj --configuration Release --framework net8.0-windows10.0.17763.0 --output Apricot/bin/Release/net8.0-windows10.0.17763.0/win10-x64/publish/ --runtime win10-x64 --self-contained true
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2.3.0
       with:
         name: Apricot-win-x64
-        path: Apricot/bin/Release/net6.0-windows10.0.17763.0/win10-x64/publish/
+        path: Apricot/bin/Release/net8.0-windows10.0.17763.0/win10-x64/publish/
         retention-days: 30
