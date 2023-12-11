@@ -5,6 +5,7 @@
     <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
+    <UseRidGraph>true</UseRidGraph>
     <ApplicationIcon>Apricot.ico</ApplicationIcon>
     <Authors>Masaaki Kawata</Authors>
   </PropertyGroup>
