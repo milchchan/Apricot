@@ -1464,7 +1464,7 @@ namespace Apricot
 
                                             character.Likes += 1;
 
-                                            Script.Instance.TryEnqueue(Script.Instance.Prepare(from sequence in Script.Instance.Sequences where sequence.Name!.Equals("Like") && sequence.Owner!.Equals(this.characterName) select sequence, character.Likes.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                                            Script.Instance.Run(from sequence in Script.Instance.Sequences where sequence.Name!.Equals("Like") && sequence.Owner!.Equals(this.characterName) select sequence, character.Likes.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
                                             backgroundBrush = new SolidColorBrush(Color.FromArgb((byte)(backgroundColor.A * 75 / 100), backgroundColor.R, backgroundColor.G, backgroundColor.B));
 
@@ -3871,7 +3871,7 @@ namespace Apricot
 
                     foreach (Motion motion in query)
                     {
-                        Script.Instance.TryEnqueue(Script.Instance.Prepare(q, motion.Current.Path));
+                        Script.Instance.Run(q, motion.Current.Path);
                     }
                 }
             }

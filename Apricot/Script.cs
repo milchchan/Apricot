@@ -5743,6 +5743,11 @@ namespace Apricot
             }
         }
 
+        public void Run(IEnumerable<Sequence> sequences, string? state)
+        {
+            TryEnqueue(Prepare(sequences, state));
+        }
+
         public IEnumerable<Sequence> Prepare(IEnumerable<Sequence> sequences, string? state)
         {
             return Prepare(sequences, state, delegate (IEnumerable<Sequence> collection)

@@ -323,7 +323,7 @@ namespace Weather
 
                     while (queue.Count > 0)
                     {
-                        Script.Instance.TryEnqueue(Script.Instance.Prepare(sequenceList, queue.Dequeue()));
+                        Script.Instance.Run(sequenceList, queue.Dequeue());
                     }
                 }
             }
