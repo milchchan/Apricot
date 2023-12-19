@@ -27,7 +27,7 @@ namespace Weather
             this.timer.Interval = TimeSpan.FromMinutes(15);
             this.timer.Tick += new EventHandler(async (sender, args) =>
             {
-                if (this.geolocator.LocationStatus == PositionStatus.Ready && this.timer.IsEnabled)
+                if (this.geolocator!.LocationStatus == PositionStatus.Ready && this.timer.IsEnabled)
                 {
                     Geoposition? geoposition;
 
