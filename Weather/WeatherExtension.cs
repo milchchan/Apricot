@@ -23,9 +23,6 @@ namespace Weather
 
         public WeatherExtension()
         {
-            this.geolocator = new Geolocator();
-            this.geolocator.MovementThreshold = 1000;
-            this.geolocator.PositionChanged += this.PositionChanged;
             this.timer = new DispatcherTimer(DispatcherPriority.Background);
             this.timer.Interval = TimeSpan.FromMinutes(15);
             this.timer.Tick += new EventHandler(async (sender, args) =>
@@ -53,31 +50,43 @@ namespace Weather
 
         public async void Attach()
         {
-            this.timer!.Start();
+            var accessStatus = await Geolocator.RequestAccessAsync();
 
-            if (this.geolocator!.LocationStatus == PositionStatus.Ready)
+            if (accessStatus == GeolocationAccessStatus.Allowed)
             {
-                Geoposition? geoposition;
+                this.geolocator = new Geolocator();
+                this.geolocator.MovementThreshold = 1000;
+                this.geolocator.PositionChanged += this.PositionChanged;
+                
+                if (this.geolocator.LocationStatus == PositionStatus.Ready)
+                {
+                    Geoposition? geoposition;
+    
+                    try
+                    {
+                        geoposition = await this.geolocator.GetGeopositionAsync();
+                    }
+                    catch
+                    {
+                        geoposition = null;
+                    }
+    
+                    if (geoposition != null && geoposition.Coordinate.Accuracy <= 1000)
+                    {
+                        Update(geoposition.Coordinate);
+                    }
+                }
 
-                try
-                {
-                    geoposition = await this.geolocator.GetGeopositionAsync();
-                }
-                catch
-                {
-                    geoposition = null;
-                }
-
-                if (geoposition != null && geoposition.Coordinate.Accuracy <= 1000)
-                {
-                    Update(geoposition.Coordinate);
-                }
+                this.timer!.Start();
             }
         }
 
         public void Detach()
         {
-            this.timer!.Stop();
+            if (this.timer!.IsEnabled)
+            {
+                this.timer.Stop();
+            }
         }
 
         private async void Update(Geocoordinate geocoordinate)
