@@ -12,9 +12,9 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
     - name: Restore dependencies
@@ -26,7 +26,7 @@ jobs:
     - name: Publish
       run: dotnet publish Apricot/Apricot.csproj --configuration Release --framework net8.0-windows10.0.17763.0 --output Apricot/bin/Release/net8.0-windows10.0.17763.0/win10-x64/publish/ --runtime win10-x64 --self-contained true
     - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Apricot-win-x64
         path: Apricot/bin/Release/net8.0-windows10.0.17763.0/win10-x64/publish/
