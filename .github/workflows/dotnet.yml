@@ -20,14 +20,14 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build Apricot/Apricot.csproj --no-restore --configuration Release
+      run: dotnet build Windows/Apricot/Apricot.csproj --no-restore --configuration Release
 #    - name: Test
-#      run: dotnet test Apricot/Apricot.csproj --no-build --verbosity normal
+#      run: dotnet test Windows/Apricot/Apricot.csproj --no-build --verbosity normal
     - name: Publish
-      run: dotnet publish Apricot/Apricot.csproj --configuration Release --framework net8.0-windows10.0.17763.0 --output Apricot/bin/Release/net8.0-windows10.0.17763.0/win10-x64/publish/ --runtime win10-x64 --self-contained true
+      run: dotnet publish Windows/Apricot/Apricot.csproj --configuration Release --framework net8.0-windows10.0.17763.0 --output Windows/Apricot/bin/Release/net8.0-windows10.0.17763.0/win10-x64/publish/ --runtime win10-x64 --self-contained true
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
       with:
         name: Apricot-win-x64
-        path: Apricot/bin/Release/net8.0-windows10.0.17763.0/win10-x64/publish/
+        path: Windows/Apricot/bin/Release/net8.0-windows10.0.17763.0/win10-x64/publish/
         retention-days: 30
