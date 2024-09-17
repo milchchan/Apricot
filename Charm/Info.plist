@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.widgetkit-extension</string>
+	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>din-2014_extra-light.otf</string>
+		<string>din-2014_light.otf</string>
+		<string>din-2014_regular.otf</string>
+		<string>din-2014_demi.otf</string>
+		<string>din-2014_bold.otf</string>
+		<string>din-2014_extra-bold.otf</string>
+	</array>
+</dict>
+</plist>
