@@ -1972,7 +1972,10 @@ struct Stage: UIViewRepresentable {
                         self.learn(words: [word])
                     }
                     
-                    self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape)
+                    Task {
+                        await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape)
+                    }
+                    
                     self.parent.prompt = (previous: word, next: (name, word, false, letterSet, CACurrentMediaTime()))
                 }
             }
@@ -2253,7 +2256,7 @@ struct Stage: UIViewRepresentable {
             }
         }
         
-        private func talk(word: Word, intensity: Double, temperature: Double, multiple: Bool) {
+        @MainActor private func talk(word: Word, intensity: Double, temperature: Double, multiple: Bool) {
             Task {
                 var queue = Script.shared.characters
                 
@@ -5381,18 +5384,6 @@ struct TalkIntent: AppIntent {
         Shortcut.shared.type = [String(), self.prompt]
         
         return .result()
-    }
-}
-
-extension UINavigationController: UIGestureRecognizerDelegate {
-    override open func viewDidLoad() {
-        super.viewDidLoad()
-        
-        self.interactivePopGestureRecognizer?.delegate = self
-    }
-    
-    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return self.viewControllers.count > 1
     }
 }
 

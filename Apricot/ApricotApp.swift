@@ -13,7 +13,7 @@ import UIKit
 
 @main
 struct ApricotApp: App {
-    @UIApplicationDelegateAdaptor (AppDelegate.self) var appDelegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.scenePhase) private var scenePhase
     
     var body: some Scene {
