@@ -18,4 +18,4 @@ Download the Apricot free from the App Store and it'll be continuously updated:
 
 ![Screenshot](https://user-images.githubusercontent.com/246691/40046950-1da37be0-5869-11e8-97cb-3e0de44c36e9.png "Screenshot")
 
-<a href='//www.microsoft.com/store/apps/9WZDNCRDT09Q?cid=storebadge&ocid=badge'><img src='https://user-images.githubusercontent.com/246691/96752052-ea695e80-1408-11eb-9c73-0b00d96eb9ac.png' alt='English badge' width='120px' style='width: 120px;'/></a>
+<a href='//www.microsoft.com/store/apps/9WZDNCRDT09Q?cid=storebadge&ocid=badge'><img src='https://user-images.githubusercontent.com/246691/96752052-ea695e80-1408-11eb-9c73-0b00d96eb9ac.png' alt='English badge' height='40px' style='height: 40px;'/></a>
