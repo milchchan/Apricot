@@ -1,13 +1,19 @@
-![Icon](https://github.com/user-attachments/assets/c4599d31-1459-461b-83d4-bf52c994fa62 "Icon")
+![Icon](https://github.com/user-attachments/assets/acea7827-3f7f-41d0-8f39-2b3ddfa8cbac "Icon")
 
 # Apricot
 
-This repository contains Apricot implementation for iOS. Apricot is an interactive, gamified chatbot.
+This repository contains Apricot implementation for iOS and Windows. Apricot is an interactive, gamified chatbot.
 
 ## Installation
 
-![Screenshot](https://github.com/user-attachments/assets/346d2cd1-6124-4798-9d62-ef95dd743af8 "Screenshot")
+![Screenshot](https://github.com/user-attachments/assets/759b68be-2137-4902-9202-c71a15044bec "Screenshot")
 
-Download the Apricot free from the App Store and it'll be continuously updated:
+Download the Apricot for iOS free from the App Store and it'll be continuously updated:
 
-<a href='//apps.apple.com/jp/app/apricot/id6476104729'><img src='https://github.com/user-attachments/assets/056ebcbb-d2ee-494a-bad7-20e36ac9e807' alt='Download on the App Store' width='120px' height='40px' style='width: 120px; height: 40px;'/></a>
+<a href='//apps.apple.com/jp/app/apricot/id6476104729'><img src='https://github.com/user-attachments/assets/e1451b1a-d52c-4e8e-9416-0c48f80b042c' alt='Download on the App Store' width='120px' height='40px' style='width: 120px; height: 40px;'/></a>
+
+![Screenshot](https://user-images.githubusercontent.com/246691/40046950-1da37be0-5869-11e8-97cb-3e0de44c36e9.png "Screenshot")
+
+Download the Apricot for Windows free from the Microsoft Store and it'll be continuously updated:
+
+<a href='//www.microsoft.com/store/apps/9WZDNCRDT09Q?cid=storebadge&ocid=badge'><img src='https://user-images.githubusercontent.com/246691/96752052-ea695e80-1408-11eb-9c73-0b00d96eb9ac.png' alt='English badge' width='284px' height='104px' style='width: 284px; height: 104px;'/></a>
