@@ -15,6 +15,7 @@ protocol AgentDelegate: AnyObject {
     func agentShouldIdle(_ agent: AgentView, by name: String) -> Bool
     func agentDidRender(_ agent: AgentView, image: CGImage, by name: String)
     func agentDidRefresh(_ agent: AgentView, forcibly flag: Bool)
+    func agentDidStop(_ agent: AgentView)
     func agentDidChange(_ agent: AgentView)
     func agentDidLike(_ agent: AgentView, message: Message, with images: [[(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]]?)
 }
@@ -357,6 +358,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
             for i in 0..<characters.count {
                 let character = characters[i]
                 let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets, screen: window.screen)
+                let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
                 var animations: [Animation]? = nil
                 
                 for (key, value) in characterView.types.sorted(by: { $0.value.0 < $1.value.0 }) {
@@ -380,6 +382,18 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                 characterView.transform.tx = offset - interval * Double(i)
                 
                 Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
+                
+                if let date = dateComponents.date {
+                    Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                        if y.name == character.name {
+                            for sequence in y.sequences {
+                                if sequence.name == "Tick" {
+                                    x.append(sequence)
+                                }
+                            }
+                        }
+                    }), state: ISO8601DateFormatter.string(from: date, timeZone: .current, formatOptions: [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime])) { _ in [] }
+                }
                 
                 if let likes {
                     Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
@@ -415,8 +429,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             }
                         }
                     }
-                })) { sequences in
-                    animations = sequences.compactMap({ sequence in
+                })) { x in
+                    var y = x
+                    
+                    animations = x.compactMap({ sequence in
                         for obj in sequence {
                             if let animations = obj as? [Animation] {
                                 return animations
@@ -425,8 +441,9 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         
                         return nil
                     }).first
+                    y.append(Sequence(name: String()))
                     
-                    return sequences
+                    return y
                 }
                 
                 if let animations {
@@ -609,9 +626,6 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         var interval: Double
                         var offset: Double
                         var likes: String? = nil
-                        
-                        self.isRunning = false
-                        
                         let (characters, attributes, guest) = await Task.detached {
                             var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
                             var attributes: [String] = []
@@ -935,6 +949,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         for i in 0..<characters.count {
                             let character = characters[i]
                             let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets, screen: window.screen)
+                            let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
                             var animations: [Animation]? = nil
                             
                             if i > 0 {
@@ -948,6 +963,18 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 Script.shared.characters[i] = (name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences)
                             } else {
                                 Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
+                            }
+                            
+                            if let date = dateComponents.date {
+                                await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                    if y.name == character.name {
+                                        for sequence in y.sequences {
+                                            if sequence.name == "Tick" {
+                                                x.append(sequence)
+                                            }
+                                        }
+                                    }
+                                }), state: ISO8601DateFormatter.string(from: date, timeZone: .current, formatOptions: [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]), words: []) { _ in [] }
                             }
                             
                             if let likes {
@@ -989,8 +1016,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                         }
                                     }
                                 }
-                            }), words: []) { sequences in
-                                animations = sequences.compactMap({ sequence in
+                            }), words: []) { x in
+                                var y = x
+                                
+                                animations = x.compactMap({ sequence in
                                     for obj in sequence {
                                         if let animations = obj as? [Animation] {
                                             return animations
@@ -999,8 +1028,9 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                     
                                     return nil
                                 }).first
+                                y.append(Sequence(name: String()))
                                 
-                                return sequences
+                                return y
                             }
                             
                             if let animations {
@@ -1196,47 +1226,49 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             }
                         }
                         
-                        let (image, _) = characterView.preview(animations: characterView.cachedAnimations, images: &characterView.cachedImages)
-                        
-                        if let image {
-                            let actualScale = scale * self.systemScale
-                            let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / window.screen.scale) * actualScale
-                            let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
+                        if !characterView.cachedAnimations.isEmpty {
+                            let (image, _) = characterView.preview(animations: characterView.cachedAnimations, images: &characterView.cachedImages)
                             
-                            UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
-                            
-                            if let context = UIGraphicsGetCurrentContext() {
-                                if actualScale == floor(actualScale) {
-                                    context.interpolationQuality = .none
-                                    context.setAllowsAntialiasing(false)
-                                } else {
-                                    context.interpolationQuality = .high
-                                    context.setAllowsAntialiasing(true)
-                                }
+                            if let image {
+                                let actualScale = scale * self.systemScale
+                                let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / window.screen.scale) * actualScale
+                                let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
                                 
-                                context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
+                                UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
                                 
-                                if characterView.isMirror {
-                                    context.translateBy(x: imageSize.width, y: imageSize.height)
-                                    context.scaleBy(x: -1.0, y: -1.0)
-                                } else {
-                                    context.translateBy(x: 0, y: imageSize.height)
-                                    context.scaleBy(x: 1.0, y: -1.0)
-                                }
-                                
-                                context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
-                                
-                                if let i = context.makeImage() {
-                                    CATransaction.begin()
-                                    CATransaction.setDisableActions(true)
+                                if let context = UIGraphicsGetCurrentContext() {
+                                    if actualScale == floor(actualScale) {
+                                        context.interpolationQuality = .none
+                                        context.setAllowsAntialiasing(false)
+                                    } else {
+                                        context.interpolationQuality = .high
+                                        context.setAllowsAntialiasing(true)
+                                    }
                                     
-                                    characterView.contentView.layer.contents = i
+                                    context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
                                     
-                                    CATransaction.commit()
+                                    if characterView.isMirror {
+                                        context.translateBy(x: imageSize.width, y: imageSize.height)
+                                        context.scaleBy(x: -1.0, y: -1.0)
+                                    } else {
+                                        context.translateBy(x: 0, y: imageSize.height)
+                                        context.scaleBy(x: 1.0, y: -1.0)
+                                    }
+                                    
+                                    context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
+                                    
+                                    if let i = context.makeImage() {
+                                        CATransaction.begin()
+                                        CATransaction.setDisableActions(true)
+                                        
+                                        characterView.contentView.layer.contents = i
+                                        
+                                        CATransaction.commit()
+                                    }
                                 }
+                                
+                                UIGraphicsEndImageContext()
                             }
-                            
-                            UIGraphicsEndImageContext()
                         }
                     }
                 }
@@ -1610,7 +1642,14 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                     }
                                 }
                             }
-                        }), state: state, words: [])
+                        }), state: state, words: []) { sequences in
+                            Script.shared.queue.insert(contentsOf: sequences.reduce(into: [], { x, y in
+                                y.append(nil)
+                                x.append((characterView.name!, y))
+                            }), at: 0)
+                            
+                            return []
+                        }
                     }
                     
                     break
@@ -2479,9 +2518,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         
                         if characterView.elapsedTime < characterView.maxDuration {
                             if characterView.elapsedTime > 0 {
-                                var moveRequired = true
+                                var indexSet = Set<Int>()
+                                var index = 0
                                 
-                                if characterView.nextAnimations.count > 0 {
+                                if !characterView.nextAnimations.isEmpty {
                                     var isEnded = true
                                     
                                     for animation in characterView.cachedAnimations {
@@ -2494,32 +2534,34 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                     
                                     if isEnded {
                                         for (key, value) in characterView.nextAnimations {
-                                            if let index = characterView.cachedAnimations.firstIndex(where: { $0 === key }) {
+                                            if let i = characterView.cachedAnimations.firstIndex(where: { $0 === key }) {
                                                 value.time = 0.0
-                                                characterView.cachedAnimations[index] = value
+                                                characterView.cachedAnimations[i] = value
+                                                indexSet.insert(i)
                                                 redrawRequired = true
                                             }
                                         }
                                         
                                         characterView.nextAnimations.removeAll()
-                                        moveRequired = false
                                     }
                                 }
                                 
-                                if moveRequired {
-                                    for animation in characterView.cachedAnimations {
+                                for animation in characterView.cachedAnimations {
+                                    if !indexSet.contains(index) {
                                         let previous = animation.current
                                         
                                         animation.time += deltaTime
                                         
+                                        if animation.repeats == 0 && animation.time > animation.duration && characterView.nextAnimations.isEmpty {
+                                            animation.time = animation.time.truncatingRemainder(dividingBy: animation.duration)
+                                        }
+                                        
                                         if previous != animation.current {
-                                            if animation.repeats == 0 && characterView.nextAnimations.count == 0 {
-                                                animation.time = 0.0
-                                            }
-                                            
                                             redrawRequired = true
                                         }
                                     }
+                                    
+                                    index += 1
                                 }
                             } else {
                                 redrawRequired = true
@@ -2952,6 +2994,9 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         let (name, sequence) = Script.shared.queue.removeFirst()
                         
                         if sequence.name == nil {
+                            self.isRunning = false
+                            self.delegate?.agentDidStop(self)
+                            
                             return
                         }
                         
@@ -2963,52 +3008,76 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     } else if !Script.shared.characters.contains(where: { $0.name == Script.shared.queue[0].0 }) {
                         Script.shared.queue.removeFirst()
                     }
-                } else {
-                    if let idleDate = characterView.lastIdleDate {
-                        if Date().timeIntervalSince(idleDate) >= 10.0 {
-                            if let delegate = self.delegate, delegate.agentShouldIdle(self, by: characterView.name!) && (UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0) {
-                                Task {
-                                    await Script.shared.run(name: characterView.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                                        if y.name == characterView.name {
-                                            for sequence in y.sequences {
-                                                if sequence.name == "Idle" {
-                                                    x.append(sequence)
-                                                }
+                } else if let idleDate = characterView.lastIdleDate {
+                    let nowDate = Date()
+                    
+                    if nowDate.timeIntervalSince(idleDate) >= 10.0 {
+                        if let delegate = self.delegate, delegate.agentShouldIdle(self, by: characterView.name!) && (UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0) {
+                            Task {
+                                await Script.shared.run(name: characterView.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                    if y.name == characterView.name {
+                                        for sequence in y.sequences {
+                                            if sequence.name == "Idle" {
+                                                x.append(sequence)
                                             }
                                         }
-                                    }), words: [])
-                                }
+                                    }
+                                }), words: [])
                             }
-                            
-                            characterView.lastIdleDate = nil
                         }
-                    } else {
-                        characterView.lastIdleDate = Date()
                         
-                        if self.characterViews.firstIndex(of: characterView) == 0 {
-                            var isUpdated = true
-                            
-                            if characterView.sprites.count == self.snapshot.0.count {
-                                isUpdated = false
-                                
-                                for i in 0..<characterView.sprites.count {
-                                    if characterView.sprites[i] != self.snapshot.0[i] {
-                                        isUpdated = true
-                                        
-                                        break
+                        characterView.lastIdleDate = nil
+                    } else if nowDate.timeIntervalSince(characterView.lastTickDate) >= 1.0 {
+                        let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: nowDate)
+                        
+                        if dateComponents.minute != Calendar.current.dateComponents([.minute], from: characterView.lastTickDate).minute, let date = dateComponents.date {
+                            Task {
+                                await Script.shared.run(name: characterView.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                    if y.name == characterView.name {
+                                        for sequence in y.sequences {
+                                            if sequence.name == "Tick" {
+                                                x.append(sequence)
+                                            }
+                                        }
                                     }
+                                }), state: ISO8601DateFormatter.string(from: date, timeZone: .current, formatOptions: [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]), words: []) { x in
+                                    var y = x
+                                    
+                                    y.append(Sequence(name: String()))
+                                    
+                                    return y
                                 }
                             }
+                        }
+                        
+                        characterView.lastTickDate = nowDate
+                    }
+                } else {
+                    characterView.lastIdleDate = Date()
+                    
+                    if self.characterViews.firstIndex(of: characterView) == 0 {
+                        var isUpdated = true
+                        
+                        if characterView.sprites.count == self.snapshot.0.count {
+                            isUpdated = false
                             
-                            if isUpdated {
-                                self.snapshot = (characterView.sprites, self.snapshot.1)
-                                
-                                if let image = self.snapshot.1 {
-                                    Task {
-                                        await self.snip(image: image)
-                                        
-                                        WidgetCenter.shared.reloadAllTimelines()
-                                    }
+                            for i in 0..<characterView.sprites.count {
+                                if characterView.sprites[i] != self.snapshot.0[i] {
+                                    isUpdated = true
+                                    
+                                    break
+                                }
+                            }
+                        }
+                        
+                        if isUpdated {
+                            self.snapshot = (characterView.sprites, self.snapshot.1)
+                            
+                            if let image = self.snapshot.1 {
+                                Task {
+                                    await self.snip(image: image)
+                                    
+                                    WidgetCenter.shared.reloadAllTimelines()
                                 }
                             }
                         }
@@ -3019,7 +3088,11 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
             if !characterView.objectQueue.isEmpty {
                 if characterView.objectQueue.first!.1 is Message {
                     if characterView.balloonView!.isHidden {
-                        characterView.show(message: characterView.objectQueue.removeFirst().1 as! Message)
+                        let message = characterView.objectQueue.removeFirst().1 as! Message
+                        
+                        if UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0 {
+                            characterView.show(message: message)
+                        }
                     }
                 } else if characterView.objectQueue.first!.1 is [Animation] {
                     if characterView.animationQueue.isEmpty {
@@ -3030,7 +3103,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                 } else if characterView.objectQueue.first!.1 is Sound {
                     let sound = characterView.objectQueue.removeFirst().1 as! Sound
                     
-                    if let characterPath = characterView.path, let soundPath = sound.path {
+                    if UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0, let characterPath = characterView.path, let soundPath = sound.path {
                         let path = URL(filePath: characterPath).deletingLastPathComponent().appending(path: soundPath, directoryHint: .inferFromPath).path(percentEncoded: false)
                         
                         Task.detached {
@@ -3064,7 +3137,36 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             }
                         }
                     }
-                } else if characterView.balloonView!.isHidden {
+                } else if characterView.objectQueue.first!.1 is Data {
+                    let data = characterView.objectQueue.removeFirst().1 as! Data
+                    
+                    if UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0 {
+                        Task.detached {
+                            if data.count >= 12, let riff = String(data: data[0..<4], encoding: .ascii), riff == "RIFF", let wave = String(data: data[8..<12], encoding: .ascii), wave == "WAVE", let audioPlayer = try? AVAudioPlayer(data: data) {
+                                let audioSession = AVAudioSession.sharedInstance()
+                                var isActivated = true
+                                
+                                if audioSession.category != .ambient {
+                                    do {
+                                        try audioSession.setCategory(.ambient)
+                                        try audioSession.setActive(true)
+                                    } catch {
+                                        isActivated = false
+                                    }
+                                }
+                                
+                                if isActivated {
+                                    await MainActor.run {
+                                        characterView.audioPlayer = audioPlayer
+                                        characterView.audioPlayer!.delegate = characterView
+                                        characterView.audioPlayer!.volume = characterView.isMute ? 0.0 : 1.0
+                                        characterView.audioPlayer!.play()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if characterView.balloonView!.isHidden && characterView.audioPlayer == nil {
                     characterView.objectQueue.removeFirst()
                 }
             }
@@ -3314,18 +3416,98 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             }
                         }
                         
-                        if stageRequired {
-                            characterView.elapsedTime = characterView.maxDuration
-                            characterView.stagingAnimations.append(contentsOf: cachedAnimations)
-                            characterView.isInvalidated = true
+                        if UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0 {
+                            if stageRequired {
+                                characterView.elapsedTime = characterView.maxDuration
+                                characterView.stagingAnimations.append(contentsOf: cachedAnimations)
+                                characterView.isInvalidated = true
+                            } else {
+                                for key in keySet {
+                                    characterView.cachedImages.removeValue(forKey: key)
+                                }
+                                
+                                characterView.elapsedTime = 0.0
+                                characterView.cachedAnimations.removeAll()
+                                characterView.cachedAnimations.append(contentsOf: cachedAnimations)
+                            }
                         } else {
+                            var redrawRequired = false
+                            var indexSet = Set<Int>()
+                            var index = 0
+                            
                             for key in keySet {
                                 characterView.cachedImages.removeValue(forKey: key)
                             }
                             
-                            characterView.elapsedTime = 0.0
+                            characterView.elapsedTime = characterView.maxDuration
                             characterView.cachedAnimations.removeAll()
                             characterView.cachedAnimations.append(contentsOf: cachedAnimations)
+                            
+                            if !characterView.nextAnimations.isEmpty {
+                                for (key, value) in characterView.nextAnimations {
+                                    if let i = characterView.cachedAnimations.firstIndex(where: { $0 === key }) {
+                                        value.time = characterView.maxDuration - characterView.cachedAnimations[i].duration
+                                        
+                                        if value.repeats == 0 && value.time > value.duration {
+                                            value.time = value.time.truncatingRemainder(dividingBy: value.duration)
+                                        }
+                                        
+                                        characterView.cachedAnimations[i] = value
+                                        indexSet.insert(i)
+                                        redrawRequired = true
+                                    }
+                                }
+                                
+                                characterView.nextAnimations.removeAll()
+                            }
+                            
+                            for animation in characterView.cachedAnimations {
+                                if !indexSet.contains(index) {
+                                    let previous = animation.current
+                                    
+                                    animation.time += characterView.maxDuration
+                                    
+                                    if animation.repeats == 0 && animation.time > animation.duration {
+                                        animation.time = animation.time.truncatingRemainder(dividingBy: animation.duration)
+                                    }
+                                    
+                                    if previous != animation.current {
+                                        redrawRequired = true
+                                    }
+                                }
+                                
+                                index += 1
+                            }
+                            
+                            if redrawRequired {
+                                var isDuplicated = false
+                                
+                                if characterView.cachedAnimations.count == characterView.sprites.count {
+                                    isDuplicated = true
+                                    
+                                    for i in 0..<characterView.cachedAnimations.count {
+                                        if characterView.cachedAnimations[i].current != characterView.sprites[i] {
+                                            isDuplicated = false
+                                            
+                                            break
+                                        }
+                                    }
+                                }
+                                
+                                if isDuplicated {
+                                    redrawRequired = false
+                                } else {
+                                    characterView.sprites.removeAll()
+                                    
+                                    for animation in characterView.cachedAnimations {
+                                        characterView.sprites.append(animation.current)
+                                    }
+                                }
+                            }
+                            
+                            if redrawRequired {
+                                characterView.render(animations: characterView.cachedAnimations, images: characterView.cachedImages, deltaTime: 1.0)
+                            }
                         }
                     } else {
                         let paths = imagePaths
@@ -3590,18 +3772,98 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                         }
                                     }
                                     
-                                    if stageRequired {
-                                        characterView.elapsedTime = characterView.maxDuration
-                                        characterView.stagingAnimations.append(contentsOf: cachedAnimations)
-                                        characterView.isInvalidated = true
+                                    if UIDevice.current.orientation.isLandscape || characterViews.firstIndex(of: characterView) == 0 {
+                                        if stageRequired {
+                                            characterView.elapsedTime = characterView.maxDuration
+                                            characterView.stagingAnimations.append(contentsOf: cachedAnimations)
+                                            characterView.isInvalidated = true
+                                        } else {
+                                            for key in keySet {
+                                                characterView.cachedImages.removeValue(forKey: key)
+                                            }
+                                            
+                                            characterView.elapsedTime = 0.0
+                                            characterView.cachedAnimations.removeAll()
+                                            characterView.cachedAnimations.append(contentsOf: cachedAnimations)
+                                        }
                                     } else {
+                                        var redrawRequired = false
+                                        var indexSet = Set<Int>()
+                                        var index = 0
+                                        
                                         for key in keySet {
                                             characterView.cachedImages.removeValue(forKey: key)
                                         }
                                         
-                                        characterView.elapsedTime = 0.0
+                                        characterView.elapsedTime = characterView.maxDuration
                                         characterView.cachedAnimations.removeAll()
                                         characterView.cachedAnimations.append(contentsOf: cachedAnimations)
+                                        
+                                        if !characterView.nextAnimations.isEmpty {
+                                            for (key, value) in characterView.nextAnimations {
+                                                if let i = characterView.cachedAnimations.firstIndex(where: { $0 === key }) {
+                                                    value.time = characterView.maxDuration - characterView.cachedAnimations[i].duration
+                                                    
+                                                    if value.repeats == 0 && value.time > value.duration {
+                                                        value.time = value.time.truncatingRemainder(dividingBy: value.duration)
+                                                    }
+                                                    
+                                                    characterView.cachedAnimations[i] = value
+                                                    indexSet.insert(i)
+                                                    redrawRequired = true
+                                                }
+                                            }
+                                            
+                                            characterView.nextAnimations.removeAll()
+                                        }
+                                        
+                                        for animation in characterView.cachedAnimations {
+                                            if !indexSet.contains(index) {
+                                                let previous = animation.current
+                                                
+                                                animation.time += characterView.maxDuration
+                                                
+                                                if animation.repeats == 0 && animation.time > animation.duration {
+                                                    animation.time = animation.time.truncatingRemainder(dividingBy: animation.duration)
+                                                }
+                                                
+                                                if previous != animation.current {
+                                                    redrawRequired = true
+                                                }
+                                            }
+                                            
+                                            index += 1
+                                        }
+                                        
+                                        if redrawRequired {
+                                            var isDuplicated = false
+                                            
+                                            if characterView.cachedAnimations.count == characterView.sprites.count {
+                                                isDuplicated = true
+                                                
+                                                for i in 0..<characterView.cachedAnimations.count {
+                                                    if characterView.cachedAnimations[i].current != characterView.sprites[i] {
+                                                        isDuplicated = false
+                                                        
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if isDuplicated {
+                                                redrawRequired = false
+                                            } else {
+                                                characterView.sprites.removeAll()
+                                                
+                                                for animation in characterView.cachedAnimations {
+                                                    characterView.sprites.append(animation.current)
+                                                }
+                                            }
+                                        }
+                                        
+                                        if redrawRequired {
+                                            characterView.render(animations: characterView.cachedAnimations, images: characterView.cachedImages, deltaTime: 1.0)
+                                        }
                                     }
                                 }
                             }
@@ -3787,6 +4049,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
         self.audioPlayer = nil
     }
     
+    func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: (any Error)?) {
+        self.audioPlayer = nil
+    }
+    
     class CharacterView: UIScrollView, UIScrollViewDelegate, AVAudioPlayerDelegate, CLLocationManagerDelegate {
         private var feedbackGenerator: UIImpactFeedbackGenerator? = nil
         var parentView: AgentView? = nil
@@ -3811,6 +4077,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
         var objectQueue: [(String, Any?)] = []
         var animationQueue: [Animation] = []
         var lastIdleDate: Date? = nil
+        var lastTickDate: Date = Date()
         var touch: UITouch? = nil
         var audioPlayer: AVAudioPlayer? = nil
         var locationManager: CLLocationManager? = nil
@@ -4730,6 +4997,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
             self.audioPlayer = nil
         }
         
+        func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: (any Error)?) {
+            self.audioPlayer = nil
+        }
+        
         func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
             if manager.authorizationStatus == .notDetermined {
                 manager.requestWhenInUseAuthorization()
@@ -4818,7 +5089,14 @@ extension UIWindow {
                             if y.name == "DoubleClick" {
                                 x.append(y)
                             }
-                        }), words: [])
+                        }), words: []) { sequences in
+                            Script.shared.queue.insert(contentsOf: sequences.reduce(into: [], { x, y in
+                                y.append(nil)
+                                x.append((character.name, y))
+                            }), at: 0)
+                            
+                            return []
+                        }
                     }
                 }
             } else if let first = Script.shared.characters.first {
@@ -4827,7 +5105,14 @@ extension UIWindow {
                         if y.name == "DoubleClick" {
                             x.append(y)
                         }
-                    }), words: [])
+                    }), words: []) { sequences in
+                        Script.shared.queue.insert(contentsOf: sequences.reduce(into: [], { x, y in
+                            y.append(nil)
+                            x.append((first.name, y))
+                        }), at: 0)
+                        
+                        return []
+                    }
                 }
             }
         }
