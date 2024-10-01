@@ -1532,14 +1532,33 @@ struct Stage: UIViewRepresentable {
                     var types = agentView.types
                     var typeIndex = -1
                     
-                    if self.resource.old != self.resource.new {
-                        agentView.change(path: self.resource.new)
-                        self.resource.old = self.resource.new
-                    }
-                    
-                    if let first = agentView.characterViews.first, let name = first.name, let value = self.likes.new[name], self.likes.old != value.count {
-                        withAnimation(.linear(duration: 0.5)) {
-                            self.likes.old = value.count
+                    if let first = agentView.characterViews.first {
+                        if self.resource.old != self.resource.new {
+                            self.resource.old = self.resource.new
+                            
+                            await Script.shared.run(name: first.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                if y.name == first.name {
+                                    for sequence in y.sequences {
+                                        if sequence.name == "Stop" {
+                                            x.append(sequence)
+                                        }
+                                    }
+                                }
+                            }), words: []) { x in
+                                var y = x
+                                
+                                y.append(Sequence(name: nil))
+                                
+                                Script.shared.queue.removeAll()
+                                
+                                return y
+                            }
+                        }
+                        
+                        if let name = first.name, let value = self.likes.new[name], self.likes.old != value.count {
+                            withAnimation(.linear(duration: 0.5)) {
+                                self.likes.old = value.count
+                            }
                         }
                     }
                     
@@ -1710,7 +1729,13 @@ struct Stage: UIViewRepresentable {
                                 }
                             }
                         }
-                    }), words: [])
+                    }), words: []) { x in
+                        var y = x
+                        
+                        y.append(Sequence(name: String()))
+                        
+                        return y
+                    }
                 }
             }
             
@@ -1826,6 +1851,10 @@ struct Stage: UIViewRepresentable {
             }
             
             self.update(agent: agent, force: flag)
+        }
+        
+        func agentDidStop(_ agent: AgentView) {
+            agent.change(path: self.parent.resource.new)
         }
         
         func agentDidChange(_ agent: AgentView) {
