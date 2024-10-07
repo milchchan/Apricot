@@ -4237,102 +4237,139 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             }
                             
                             lines.append((labels: labels, text: text, offset: offset, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
+                            
+                            if i == content.count - 1 {
+                                let messageLabel = UILabel(frame: CGRect.zero)
+                                let swipeRightGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
+                                let swipeLeftGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
+                                let maskLayer = CAShapeLayer()
+                                
+                                swipeRightGestureRecognizer.direction = .right
+                                swipeLeftGestureRecognizer.direction = .left
+                                
+                                maskLayer.fillRule = .evenOdd
+                                maskLayer.strokeColor = UIColor.clear.cgColor
+                                maskLayer.lineWidth = 0.0
+                                maskLayer.fillColor = UIColor(white: 1.0, alpha: 1.0).cgColor
+                                maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
+                                
+                                messageLabel.translatesAutoresizingMaskIntoConstraints = false
+                                messageLabel.isUserInteractionEnabled = true
+                                messageLabel.backgroundColor = .clear
+                                messageLabel.contentMode = .topLeft
+                                messageLabel.font = font
+                                messageLabel.lineBreakMode = .byClipping
+                                messageLabel.numberOfLines = 1
+                                messageLabel.addGestureRecognizer(swipeRightGestureRecognizer)
+                                messageLabel.addGestureRecognizer(swipeLeftGestureRecognizer)
+                                messageLabel.layer.mask = maskLayer
+                                
+                                visualEffectView.contentView.insertSubview(messageLabel, at: count)
+                                
+                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
+                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius + lineHeight * Double(count)))
+                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
+                                
+                                count += 1
+                                lines.append((labels: [messageLabel], text: String(), offset: offset, breaks: [], step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
+                                
+                                break
+                            }
+                            
                             offset = i + 1
                             current.removeAll()
                             text.removeAll()
                             breaks.removeAll()
+                        } else if character.isWhitespace {
+                            if current.isEmpty {
+                                i += 1
+                                offset += 1
+                                
+                                continue
+                            }
+                            
+                            current.append(character)
+                            text.append(character)
+                            
+                            var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
+                            let mutableAttributedString = NSMutableAttributedString()
+                            let paragraphStyle = NSMutableParagraphStyle()
+                            
+                            paragraphStyle.minimumLineHeight = font.lineHeight
+                            paragraphStyle.maximumLineHeight = font.lineHeight
+                            
+                            for j in 1..<current.count {
+                                let highlight = attributes.firstIndex(where: { offset + j >= $0.start && offset + j < $0.end })
+                                var component = components[components.count - 1]
+                                
+                                if highlight == component.highlight {
+                                    component.text.append(current[current.index(current.startIndex, offsetBy: j)])
+                                    components[components.count - 1] = component
+                                } else {
+                                    components.append((text: String(current[current.index(current.startIndex, offsetBy: j)]), highlight: highlight))
+                                }
+                            }
+                            
+                            for component in components {
+                                mutableAttributedString.append(NSAttributedString(string: component.text, attributes: Swift.Dictionary(uniqueKeysWithValues: [(.font, font), (.foregroundColor, component.highlight == nil ? UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) } : accentColor), (.paragraphStyle, paragraphStyle)] + language)))
+                            }
+                            
+                            if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
+                                offset += 1
+                                current.removeSubrange(current.startIndex..<current.endIndex)
+                                text.remove(at: text.index(text.endIndex, offsetBy: -1))
+                                breaks.insert(text.count)
+                            }
                         } else {
-                            if character.isWhitespace {
-                                if current.isEmpty {
-                                    i += 1
-                                    offset += 1
+                            current.append(character)
+                            text.append(character)
+                            
+                            var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
+                            let mutableAttributedString = NSMutableAttributedString()
+                            let paragraphStyle = NSMutableParagraphStyle()
+                            
+                            paragraphStyle.minimumLineHeight = font.lineHeight
+                            paragraphStyle.maximumLineHeight = font.lineHeight
+                            
+                            for j in 1..<current.count {
+                                let highlight = attributes.firstIndex(where: { offset + j >= $0.start && offset + j < $0.end })
+                                var component = components[components.count - 1]
+                                
+                                if highlight == component.highlight {
+                                    component.text.append(current[current.index(current.startIndex, offsetBy: j)])
+                                    components[components.count - 1] = component
+                                } else {
+                                    components.append((text: String(current[current.index(current.startIndex, offsetBy: j)]), highlight: highlight))
+                                }
+                            }
+                            
+                            for component in components {
+                                mutableAttributedString.append(NSAttributedString(string: component.text, attributes: Swift.Dictionary(uniqueKeysWithValues: [(.font, font), (.foregroundColor, component.highlight == nil ? UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) } : accentColor), (.paragraphStyle, paragraphStyle)] + language)))
+                            }
+                            
+                            if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
+                                var spaceIndex: Int? = nil
+                                
+                                for j in stride(from: current.count - 1, through: 0, by: -1) {
+                                    let c = current[current.index(current.startIndex, offsetBy: j)]
                                     
-                                    continue
-                                }
-                                
-                                current.append(character)
-                                text.append(character)
-                                
-                                var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
-                                let mutableAttributedString = NSMutableAttributedString()
-                                let paragraphStyle = NSMutableParagraphStyle()
-                                
-                                paragraphStyle.minimumLineHeight = font.lineHeight
-                                paragraphStyle.maximumLineHeight = font.lineHeight
-                                
-                                for j in 1..<current.count {
-                                    let highlight = attributes.firstIndex(where: { offset + j >= $0.start && offset + j < $0.end })
-                                    var component = components[components.count - 1]
-                                    
-                                    if highlight == component.highlight {
-                                        component.text.append(current[current.index(current.startIndex, offsetBy: j)])
-                                        components[components.count - 1] = component
-                                    } else {
-                                        components.append((text: String(current[current.index(current.startIndex, offsetBy: j)]), highlight: highlight))
-                                    }
-                                }
-                                
-                                for component in components {
-                                    mutableAttributedString.append(NSAttributedString(string: component.text, attributes: Swift.Dictionary(uniqueKeysWithValues: [(.font, font), (.foregroundColor, component.highlight == nil ? UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) } : accentColor), (.paragraphStyle, paragraphStyle)] + language)))
-                                }
-                                
-                                if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
-                                    offset += 1
-                                    current.removeSubrange(current.startIndex..<current.endIndex)
-                                    text.remove(at: text.index(text.endIndex, offsetBy: -1))
-                                    breaks.insert(text.count)
-                                }
-                            } else {
-                                current.append(character)
-                                text.append(character)
-                                
-                                var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
-                                let mutableAttributedString = NSMutableAttributedString()
-                                let paragraphStyle = NSMutableParagraphStyle()
-                                
-                                paragraphStyle.minimumLineHeight = font.lineHeight
-                                paragraphStyle.maximumLineHeight = font.lineHeight
-                                
-                                for j in 1..<current.count {
-                                    let highlight = attributes.firstIndex(where: { offset + j >= $0.start && offset + j < $0.end })
-                                    var component = components[components.count - 1]
-                                    
-                                    if highlight == component.highlight {
-                                        component.text.append(current[current.index(current.startIndex, offsetBy: j)])
-                                        components[components.count - 1] = component
-                                    } else {
-                                        components.append((text: String(current[current.index(current.startIndex, offsetBy: j)]), highlight: highlight))
-                                    }
-                                }
-                                
-                                for component in components {
-                                    mutableAttributedString.append(NSAttributedString(string: component.text, attributes: Swift.Dictionary(uniqueKeysWithValues: [(.font, font), (.foregroundColor, component.highlight == nil ? UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) } : accentColor), (.paragraphStyle, paragraphStyle)] + language)))
-                                }
-                                
-                                if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
-                                    var spaceIndex: Int? = nil
-                                    
-                                    for j in stride(from: current.count - 1, through: 0, by: -1) {
-                                        let c = current[current.index(current.startIndex, offsetBy: j)]
+                                    if c.isWhitespace {
+                                        spaceIndex = j
                                         
-                                        if c.isWhitespace {
-                                            spaceIndex = j
-                                            
-                                            break
-                                        } else if !c.isASCII {
-                                            break
-                                        }
+                                        break
+                                    } else if !c.isASCII {
+                                        break
                                     }
+                                }
+                                
+                                if let spaceIndex {
+                                    let distance = -spaceIndex + current.count - 1
                                     
-                                    if let spaceIndex {
-                                        let distance = -spaceIndex + current.count - 1
-                                        
-                                        current.removeSubrange(current.startIndex..<current.index(current.endIndex, offsetBy: -distance))
-                                        breaks.insert(text.count - distance)
-                                    } else {
-                                        current.removeSubrange(current.startIndex..<current.index(current.endIndex, offsetBy: -1))
-                                        breaks.insert(text.count - 1)
-                                    }
+                                    current.removeSubrange(current.startIndex..<current.index(current.endIndex, offsetBy: -distance))
+                                    breaks.insert(text.count - distance)
+                                } else {
+                                    current.removeSubrange(current.startIndex..<current.index(current.endIndex, offsetBy: -1))
+                                    breaks.insert(text.count - 1)
                                 }
                             }
                         }
