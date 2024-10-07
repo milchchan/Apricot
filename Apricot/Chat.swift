@@ -129,149 +129,37 @@ struct Chat: View {
                             VStack(spacing: 0.0) {
                                 VStack(spacing: 0.0) {
                                     ScrollView([.vertical]) {
-                                        ZStack {
-                                            Spacer()
-                                                .containerRelativeFrame([.vertical])
-                                            LazyVStack(spacing: 0.0) {
-                                                VStack(spacing: 0.0) {
-                                                    Button(action: {
-                                                        if let prompt = self.prompt.next, let word = prompt.1 {
-                                                            if prompt.2 {
-                                                                self.prompt = (previous: self.prompt.previous, next: (prompt.0, prompt.1, word.attributes.isEmpty, prompt.3, CACurrentMediaTime()))
-                                                            } else {
-                                                                Task {
-                                                                    await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape)
-                                                                }
-                                                                
-                                                                self.prompt = (previous: word, next: nil)
-                                                                
-                                                                withAnimation(.easeInOut(duration: 0.5)) {
-                                                                    self.revealMenu = false
-                                                                }
+                                        LazyVStack(spacing: 0.0) {
+                                            VStack(spacing: 0.0) {
+                                                Button(action: {
+                                                    if let prompt = self.prompt.next, let word = prompt.1 {
+                                                        if prompt.2 {
+                                                            self.prompt = (previous: self.prompt.previous, next: (prompt.0, prompt.1, word.attributes.isEmpty, prompt.3, CACurrentMediaTime()))
+                                                        } else {
+                                                            Task {
+                                                                await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
                                                             }
-                                                        }
-                                                    }) {
-                                                        ZStack(alignment: .center) {
-                                                            Prompt(input: self.prompt.next, accent: self.convert(from: self.accent.wrappedValue), font: UIFont.systemFont(ofSize: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0), weight: .semibold))
-                                                                .frame(
-                                                                    height: ceil(UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).lineHeight),
-                                                                    alignment: .center
-                                                                )
-                                                                .offset(y: ceil(UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).leading / 2.0))
-                                                                .padding(0.0)
-                                                                .background(.clear)
                                                             
-                                                            if self.script.words.isEmpty {
-                                                                Image(systemName: "exclamationmark.triangle")
-                                                                    .frame(
-                                                                        width: 16.0,
-                                                                        height: 16.0,
-                                                                        alignment: .center
-                                                                    )
-                                                                    .background(.clear)
-                                                                    .foregroundColor(Color(UIColor {
-                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                                    }))
-                                                                    .font(
-                                                                        .system(size: 16.0)
-                                                                    )
-                                                                    .bold()
-                                                                    .zIndex(1)
-                                                                    .transition(.opacity.animation(.linear(duration: 0.5)))
+                                                            self.prompt = (previous: word, next: nil)
+                                                            
+                                                            withAnimation(.easeInOut(duration: 0.5)) {
+                                                                self.revealMenu = false
                                                             }
                                                         }
                                                     }
-                                                    .frame(
-                                                        height: ceil(UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).lineHeight - UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).leading),
-                                                        alignment: .center
-                                                    )
-                                                    .padding(EdgeInsets(
-                                                        top: 8.0,
-                                                        leading: 16.0,
-                                                        bottom: 4.0,
-                                                        trailing: 16.0
-                                                    ))
-                                                    .background(.clear)
-                                                    Text(String(format: "%ld", self.script.words.count))
-                                                        .foregroundColor(Color(UIColor {
-                                                            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                        }))
-                                                        .font(.caption)
-                                                        .fontWeight(.semibold)
-                                                        .lineLimit(1)
-                                                        .truncationMode(.tail)
-                                                        .padding(EdgeInsets(
-                                                            top: 0.0,
-                                                            leading: 0.0,
-                                                            bottom: 0.0,
-                                                            trailing: 0.0
-                                                        ))
-                                                        .animation(.linear(duration: 0.5), value: "\(self.script.words.count)")
-                                                    Button(action: {
-                                                        if let prompt = self.prompt.next {
-                                                            if let word = prompt.1, !word.attributes.isEmpty && prompt.2 {
-                                                                self.prompt = (previous: nil, next: (prompt.0, prompt.1, false, prompt.3, CACurrentMediaTime()))
-                                                            } else if !self.script.words.isEmpty {
-                                                                let samples = 10
-                                                                var letterSet: Set<Character> = []
-                                                                var modifiers: [String] = []
-                                                                var words: [Word] = []
-                                                                
-                                                                for _ in 0..<samples {
-                                                                    let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
-                                                                    
-                                                                    for i in 0..<word.name.count {
-                                                                        let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
-                                                                        
-                                                                        if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                                            letterSet.insert(character)
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    if word.attributes.isEmpty {
-                                                                        modifiers.append(word.name)
-                                                                    } else {
-                                                                        words.append(word)
-                                                                    }
-                                                                }
-                                                                
-                                                                if words.isEmpty {
-                                                                    if modifiers.isEmpty {
-                                                                        self.prompt = (previous: nil, next: (nil, nil, false, nil, CACurrentMediaTime()))
-                                                                    } else {
-                                                                        let modifier = modifiers[Int.random(in: 0..<modifiers.count)]
-                                                                        
-                                                                        self.prompt = (previous: nil, next: (modifier, Word(name: modifier), true, letterSet, CACurrentMediaTime()))
-                                                                    }
-                                                                } else {
-                                                                    let epsilon = powl(10, -6)
-                                                                    var probabilities = self.softmax(x: words.reduce(into: [], { x, y in
-                                                                        if let (score, _, _, _) = Script.shared.scores[y.name] {
-                                                                            x.append(score)
-                                                                        } else {
-                                                                            x.append(epsilon)
-                                                                        }
-                                                                    }), temperature: self.temperature)
-                                                                    var word = words[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
-                                                                    
-                                                                    if Double.random(in: 0.0..<1.0) < Double(modifiers.count) / Double(samples) {
-                                                                        probabilities = self.softmax(x: modifiers.reduce(into: [], { x, y in
-                                                                            if let (score, _, _, _) = Script.shared.scores[y] {
-                                                                                x.append(score)
-                                                                            } else {
-                                                                                x.append(epsilon)
-                                                                            }
-                                                                        }), temperature: self.temperature)
-                                                                        word.name = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)] + word.name
-                                                                    }
-                                                                    
-                                                                    self.prompt = (previous: nil, next: (word.name, word, false, letterSet, CACurrentMediaTime()))
-                                                                }
-                                                            }
-                                                        }
-                                                    }) {
-                                                        VStack(alignment: .center, spacing: 8.0) {
-                                                            Image(systemName: "dice")
+                                                }) {
+                                                    ZStack(alignment: .center) {
+                                                        Prompt(input: self.prompt.next, accent: self.convert(from: self.accent.wrappedValue), font: UIFont.systemFont(ofSize: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0), weight: .semibold))
+                                                            .frame(
+                                                                height: ceil(UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).lineHeight),
+                                                                alignment: .center
+                                                            )
+                                                            .offset(y: ceil(UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).leading / 2.0))
+                                                            .padding(0.0)
+                                                            .background(.clear)
+                                                        
+                                                        if self.script.words.isEmpty {
+                                                            Image(systemName: "exclamationmark.triangle")
                                                                 .frame(
                                                                     width: 16.0,
                                                                     height: 16.0,
@@ -285,7 +173,168 @@ struct Chat: View {
                                                                     .system(size: 16.0)
                                                                 )
                                                                 .bold()
-                                                            Text("Randomize")
+                                                                .zIndex(1)
+                                                                .transition(.opacity.animation(.linear(duration: 0.5)))
+                                                        }
+                                                    }
+                                                }
+                                                .frame(
+                                                    height: ceil(UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).lineHeight - UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).leading),
+                                                    alignment: .center
+                                                )
+                                                .padding(EdgeInsets(
+                                                    top: 8.0,
+                                                    leading: 16.0,
+                                                    bottom: 4.0,
+                                                    trailing: 16.0
+                                                ))
+                                                .background(.clear)
+                                                Text(String(format: "%ld", self.script.words.count))
+                                                    .foregroundColor(Color(UIColor {
+                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                    }))
+                                                    .font(.caption)
+                                                    .fontWeight(.semibold)
+                                                    .lineLimit(1)
+                                                    .truncationMode(.tail)
+                                                    .padding(EdgeInsets(
+                                                        top: 0.0,
+                                                        leading: 0.0,
+                                                        bottom: 0.0,
+                                                        trailing: 0.0
+                                                    ))
+                                                    .animation(.linear(duration: 0.5), value: "\(self.script.words.count)")
+                                                Button(action: {
+                                                    if let prompt = self.prompt.next {
+                                                        if let word = prompt.1, !word.attributes.isEmpty && prompt.2 {
+                                                            self.prompt = (previous: nil, next: (prompt.0, prompt.1, false, prompt.3, CACurrentMediaTime()))
+                                                        } else if !self.script.words.isEmpty {
+                                                            let samples = 10
+                                                            var letterSet: Set<Character> = []
+                                                            var modifiers: [String] = []
+                                                            var words: [Word] = []
+                                                            
+                                                            for _ in 0..<samples {
+                                                                let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
+                                                                
+                                                                for i in 0..<word.name.count {
+                                                                    let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
+                                                                    
+                                                                    if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
+                                                                        letterSet.insert(character)
+                                                                    }
+                                                                }
+                                                                
+                                                                if word.attributes.isEmpty {
+                                                                    modifiers.append(word.name)
+                                                                } else {
+                                                                    words.append(word)
+                                                                }
+                                                            }
+                                                            
+                                                            if words.isEmpty {
+                                                                if modifiers.isEmpty {
+                                                                    self.prompt = (previous: nil, next: (nil, nil, false, nil, CACurrentMediaTime()))
+                                                                } else {
+                                                                    let modifier = modifiers[Int.random(in: 0..<modifiers.count)]
+                                                                    
+                                                                    self.prompt = (previous: nil, next: (modifier, Word(name: modifier), true, letterSet, CACurrentMediaTime()))
+                                                                }
+                                                            } else {
+                                                                let epsilon = powl(10, -6)
+                                                                var probabilities = self.softmax(x: words.reduce(into: [], { x, y in
+                                                                    if let (score, _, _, _) = Script.shared.scores[y.name] {
+                                                                        x.append(score)
+                                                                    } else {
+                                                                        x.append(epsilon)
+                                                                    }
+                                                                }), temperature: self.temperature)
+                                                                var word = words[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
+                                                                
+                                                                if Double.random(in: 0.0..<1.0) < Double(modifiers.count) / Double(samples) {
+                                                                    probabilities = self.softmax(x: modifiers.reduce(into: [], { x, y in
+                                                                        if let (score, _, _, _) = Script.shared.scores[y] {
+                                                                            x.append(score)
+                                                                        } else {
+                                                                            x.append(epsilon)
+                                                                        }
+                                                                    }), temperature: self.temperature)
+                                                                    word.name = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)] + word.name
+                                                                }
+                                                                
+                                                                self.prompt = (previous: nil, next: (word.name, word, false, letterSet, CACurrentMediaTime()))
+                                                            }
+                                                        }
+                                                    }
+                                                }) {
+                                                    VStack(alignment: .center, spacing: 8.0) {
+                                                        Image(systemName: "dice")
+                                                            .frame(
+                                                                width: 16.0,
+                                                                height: 16.0,
+                                                                alignment: .center
+                                                            )
+                                                            .background(.clear)
+                                                            .foregroundColor(Color(UIColor {
+                                                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                            }))
+                                                            .font(
+                                                                .system(size: 16.0)
+                                                            )
+                                                            .bold()
+                                                        Text("Randomize")
+                                                            .foregroundColor(Color(UIColor {
+                                                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                            }))
+                                                            .font(.caption)
+                                                            .fontWeight(.semibold)
+                                                            .lineLimit(1)
+                                                            .truncationMode(.tail)
+                                                            .textCase(.uppercase)
+                                                    }
+                                                }
+                                                .frame(
+                                                    alignment: .center
+                                                )
+                                                .padding(16.0)
+                                                .background(.clear)
+                                            }
+                                            .padding(0.0)
+                                            .background(.clear)
+                                            .foregroundColor(.black)
+                                            Rectangle()
+                                                .frame(
+                                                    height: 1.0
+                                                )
+                                                .foregroundColor(Color(UIColor {
+                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 0.25) : UIColor(white: 1.0, alpha: 0.25)
+                                                }))
+                                            HStack(alignment: .center, spacing: 0.0) {
+                                                VStack(alignment: .center, spacing: 0.0) {
+                                                    Button(action: {
+                                                        self.showActivity = true
+                                                        self.prompt = (previous: self.prompt.previous, next: nil)
+                                                        
+                                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                                            self.revealMenu = false
+                                                        }
+                                                    }) {
+                                                        VStack(alignment: .center, spacing: 8.0) {
+                                                            Image(systemName: "chart.bar")
+                                                                .frame(
+                                                                    width: 16.0,
+                                                                    height: 16.0,
+                                                                    alignment: .center
+                                                                )
+                                                                .background(.clear)
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(
+                                                                    .system(size: 16.0)
+                                                                )
+                                                                .bold()
+                                                            Text("Activity")
                                                                 .foregroundColor(Color(UIColor {
                                                                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
                                                                 }))
@@ -302,172 +351,128 @@ struct Chat: View {
                                                     .padding(16.0)
                                                     .background(.clear)
                                                 }
-                                                .padding(0.0)
-                                                .background(.clear)
-                                                .foregroundColor(.black)
+                                                .frame(
+                                                    minWidth: 0.0,
+                                                    maxWidth: .infinity
+                                                )
                                                 Rectangle()
                                                     .frame(
-                                                        height: 1.0
+                                                        width: 1.0
                                                     )
                                                     .foregroundColor(Color(UIColor {
                                                         $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 0.25) : UIColor(white: 1.0, alpha: 0.25)
                                                     }))
-                                                HStack(alignment: .center, spacing: 0.0) {
-                                                    VStack(alignment: .center, spacing: 0.0) {
-                                                        Button(action: {
-                                                            self.showActivity = true
-                                                            self.prompt = (previous: self.prompt.previous, next: nil)
-                                                            
-                                                            withAnimation(.easeInOut(duration: 0.5)) {
-                                                                self.revealMenu = false
-                                                            }
-                                                        }) {
-                                                            VStack(alignment: .center, spacing: 8.0) {
-                                                                Image(systemName: "chart.bar")
-                                                                    .frame(
-                                                                        width: 16.0,
-                                                                        height: 16.0,
-                                                                        alignment: .center
-                                                                    )
-                                                                    .background(.clear)
-                                                                    .foregroundColor(Color(UIColor {
-                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                                    }))
-                                                                    .font(
-                                                                        .system(size: 16.0)
-                                                                    )
-                                                                    .bold()
-                                                                Text("Activity")
-                                                                    .foregroundColor(Color(UIColor {
-                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                                    }))
-                                                                    .font(.caption)
-                                                                    .fontWeight(.semibold)
-                                                                    .lineLimit(1)
-                                                                    .truncationMode(.tail)
-                                                                    .textCase(.uppercase)
-                                                            }
+                                                VStack(alignment: .center, spacing: 0.0) {
+                                                    Button(action: {
+                                                        self.showDictionary = true
+                                                        self.prompt = (previous: self.prompt.previous, next: nil)
+                                                        
+                                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                                            self.revealMenu = false
                                                         }
-                                                        .frame(
-                                                            alignment: .center
-                                                        )
-                                                        .padding(16.0)
-                                                        .background(.clear)
+                                                    }) {
+                                                        VStack(alignment: .center, spacing: 8.0) {
+                                                            Image(systemName: "book")
+                                                                .frame(
+                                                                    width: 16.0,
+                                                                    height: 16.0,
+                                                                    alignment: .center
+                                                                )
+                                                                .background(.clear)
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(
+                                                                    .system(size: 16.0)
+                                                                )
+                                                                .bold()
+                                                            Text("Dictionary")
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(.caption)
+                                                                .fontWeight(.semibold)
+                                                                .lineLimit(1)
+                                                                .truncationMode(.tail)
+                                                                .textCase(.uppercase)
+                                                        }
                                                     }
                                                     .frame(
-                                                        minWidth: 0.0,
-                                                        maxWidth: .infinity
+                                                        alignment: .center
                                                     )
-                                                    Rectangle()
-                                                        .frame(
-                                                            width: 1.0
-                                                        )
-                                                        .foregroundColor(Color(UIColor {
-                                                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 0.25) : UIColor(white: 1.0, alpha: 0.25)
-                                                        }))
-                                                    VStack(alignment: .center, spacing: 0.0) {
-                                                        Button(action: {
-                                                            self.showDictionary = true
-                                                            self.prompt = (previous: self.prompt.previous, next: nil)
-                                                            
-                                                            withAnimation(.easeInOut(duration: 0.5)) {
-                                                                self.revealMenu = false
-                                                            }
-                                                        }) {
-                                                            VStack(alignment: .center, spacing: 8.0) {
-                                                                Image(systemName: "book")
-                                                                    .frame(
-                                                                        width: 16.0,
-                                                                        height: 16.0,
-                                                                        alignment: .center
-                                                                    )
-                                                                    .background(.clear)
-                                                                    .foregroundColor(Color(UIColor {
-                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                                    }))
-                                                                    .font(
-                                                                        .system(size: 16.0)
-                                                                    )
-                                                                    .bold()
-                                                                Text("Dictionary")
-                                                                    .foregroundColor(Color(UIColor {
-                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                                    }))
-                                                                    .font(.caption)
-                                                                    .fontWeight(.semibold)
-                                                                    .lineLimit(1)
-                                                                    .truncationMode(.tail)
-                                                                    .textCase(.uppercase)
-                                                            }
-                                                        }
-                                                        .frame(
-                                                            alignment: .center
-                                                        )
-                                                        .padding(16.0)
-                                                        .background(.clear)
-                                                    }
-                                                    .frame(
-                                                        minWidth: 0.0,
-                                                        maxWidth: .infinity
-                                                    )
-                                                    Rectangle()
-                                                        .frame(
-                                                            width: 1.0
-                                                        )
-                                                        .foregroundColor(Color(UIColor {
-                                                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 0.25) : UIColor(white: 1.0, alpha: 0.25)
-                                                        }))
-                                                    VStack(alignment: .center, spacing: 0.0) {
-                                                        Button(action: {
-                                                            self.showSettings = true
-                                                            self.prompt = (previous: self.prompt.previous, next: nil)
-                                                            
-                                                            withAnimation(.easeInOut(duration: 0.5)) {
-                                                                self.revealMenu = false
-                                                            }
-                                                        }) {
-                                                            VStack(alignment: .center, spacing: 8.0) {
-                                                                Image(systemName: "gearshape")
-                                                                    .frame(
-                                                                        width: 16.0,
-                                                                        height: 16.0,
-                                                                        alignment: .center
-                                                                    )
-                                                                    .background(.clear)
-                                                                    .foregroundColor(Color(UIColor {
-                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                                    }))
-                                                                    .font(
-                                                                        .system(size: 16.0)
-                                                                    )
-                                                                    .bold()
-                                                                Text("Settings")
-                                                                    .foregroundColor(Color(UIColor {
-                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                                    }))
-                                                                    .font(.caption)
-                                                                    .fontWeight(.semibold)
-                                                                    .lineLimit(1)
-                                                                    .truncationMode(.tail)
-                                                                    .textCase(.uppercase)
-                                                            }
-                                                        }
-                                                        .frame(
-                                                            alignment: .center
-                                                        )
-                                                        .padding(16.0)
-                                                        .background(.clear)
-                                                    }
-                                                    .frame(
-                                                        minWidth: 0.0,
-                                                        maxWidth: .infinity
-                                                    )
+                                                    .padding(16.0)
+                                                    .background(.clear)
                                                 }
-                                                ForEach(self.labels.indices, id: \.self) { index in
-                                                    let type = self.labels[index]
-                                                    let checked = self.types & Int(pow(2.0, Double(index)))
-                                                    
-                                                    VStack(spacing: 0.0) {
+                                                .frame(
+                                                    minWidth: 0.0,
+                                                    maxWidth: .infinity
+                                                )
+                                                Rectangle()
+                                                    .frame(
+                                                        width: 1.0
+                                                    )
+                                                    .foregroundColor(Color(UIColor {
+                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 0.25) : UIColor(white: 1.0, alpha: 0.25)
+                                                    }))
+                                                VStack(alignment: .center, spacing: 0.0) {
+                                                    Button(action: {
+                                                        self.showSettings = true
+                                                        self.prompt = (previous: self.prompt.previous, next: nil)
+                                                        
+                                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                                            self.revealMenu = false
+                                                        }
+                                                    }) {
+                                                        VStack(alignment: .center, spacing: 8.0) {
+                                                            Image(systemName: "gearshape")
+                                                                .frame(
+                                                                    width: 16.0,
+                                                                    height: 16.0,
+                                                                    alignment: .center
+                                                                )
+                                                                .background(.clear)
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(
+                                                                    .system(size: 16.0)
+                                                                )
+                                                                .bold()
+                                                            Text("Settings")
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(.caption)
+                                                                .fontWeight(.semibold)
+                                                                .lineLimit(1)
+                                                                .truncationMode(.tail)
+                                                                .textCase(.uppercase)
+                                                        }
+                                                    }
+                                                    .frame(
+                                                        alignment: .center
+                                                    )
+                                                    .padding(16.0)
+                                                    .background(.clear)
+                                                }
+                                                .frame(
+                                                    minWidth: 0.0,
+                                                    maxWidth: .infinity
+                                                )
+                                            }
+                                            Rectangle()
+                                                .frame(
+                                                    height: 1.0
+                                                )
+                                                .foregroundColor(Color(UIColor {
+                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 0.25) : UIColor(white: 1.0, alpha: 0.25)
+                                                }))
+                                            ForEach(self.labels.indices, id: \.self) { index in
+                                                let type = self.labels[index]
+                                                let checked = self.types & Int(pow(2.0, Double(index)))
+                                                
+                                                VStack(spacing: 0.0) {
+                                                    if index > 0 {
                                                         Rectangle()
                                                             .frame(
                                                                 height: 1.0
@@ -475,65 +480,66 @@ struct Chat: View {
                                                             .foregroundColor(Color(UIColor {
                                                                 $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 0.25) : UIColor(white: 1.0, alpha: 0.25)
                                                             }))
-                                                        Button(action: {
-                                                            if checked > 0 {
-                                                                var x = 0
-                                                                
-                                                                for i in 0..<self.labels.count {
-                                                                    if index != i && self.types & Int(pow(2.0, Double(i))) > 0 {
-                                                                        x = x | Int(pow(2.0, Double(i)))
-                                                                    }
-                                                                }
-                                                                
-                                                                withAnimation(.easeInOut(duration: 0.5)) {
-                                                                    self.types = self.types & x
-                                                                }
-                                                            } else {
-                                                                withAnimation(.easeInOut(duration: 0.5)) {
-                                                                    self.types = self.types | Int(pow(2.0, Double(index)))
+                                                    }
+                                                    
+                                                    Button(action: {
+                                                        if checked > 0 {
+                                                            var x = 0
+                                                            
+                                                            for i in 0..<self.labels.count {
+                                                                if index != i && self.types & Int(pow(2.0, Double(i))) > 0 {
+                                                                    x = x | Int(pow(2.0, Double(i)))
                                                                 }
                                                             }
-                                                        }) {
-                                                            HStack(alignment: .center, spacing: 16.0) {
-                                                                if checked > 0 {
-                                                                    Image(systemName: "checkmark")
-                                                                        .frame(
-                                                                            width: 16.0,
-                                                                            height: 16.0,
-                                                                            alignment: .center
-                                                                        )
-                                                                        .background(.clear)
-                                                                        .foregroundColor(Color(self.convert(from: self.accent.wrappedValue)))
-                                                                        .font(
-                                                                            .system(size: 16.0)
-                                                                        )
-                                                                        .bold()
-                                                                        .transition(AnyTransition.opacity.combined(with: .scale))
-                                                                }
-                                                                
-                                                                Text(type)
-                                                                    .foregroundColor(Color(UIColor {
-                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                                                    }))
-                                                                    .font(.subheadline)
-                                                                    .fontWeight(.semibold)
-                                                                    .lineLimit(1)
-                                                                    .truncationMode(.tail)
-                                                                    .textCase(.uppercase)
+                                                            
+                                                            withAnimation(.easeInOut(duration: 0.5)) {
+                                                                self.types = self.types & x
+                                                            }
+                                                        } else {
+                                                            withAnimation(.easeInOut(duration: 0.5)) {
+                                                                self.types = self.types | Int(pow(2.0, Double(index)))
                                                             }
                                                         }
-                                                        .frame(
-                                                            alignment: .center
-                                                        )
-                                                        .padding(16.0)
-                                                        .background(.clear)
+                                                    }) {
+                                                        HStack(alignment: .center, spacing: 16.0) {
+                                                            if checked > 0 {
+                                                                Image(systemName: "checkmark")
+                                                                    .frame(
+                                                                        width: 16.0,
+                                                                        height: 16.0,
+                                                                        alignment: .center
+                                                                    )
+                                                                    .background(.clear)
+                                                                    .foregroundColor(Color(self.convert(from: self.accent.wrappedValue)))
+                                                                    .font(
+                                                                        .system(size: 16.0)
+                                                                    )
+                                                                    .bold()
+                                                                    .transition(AnyTransition.opacity.combined(with: .scale))
+                                                            }
+                                                            
+                                                            Text(type)
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(.subheadline)
+                                                                .fontWeight(.semibold)
+                                                                .lineLimit(1)
+                                                                .truncationMode(.tail)
+                                                                .textCase(.uppercase)
+                                                        }
                                                     }
-                                                    .transition(.opacity)
+                                                    .frame(
+                                                        alignment: .center
+                                                    )
+                                                    .padding(16.0)
+                                                    .background(.clear)
                                                 }
+                                                .transition(.opacity)
                                             }
-                                            .padding(0.0)
-                                            .background(.clear)
                                         }
+                                        .padding(0.0)
+                                        .background(.clear)
                                     }
                                     .frame(
                                         height: UIScreen.main.bounds.height / 2.0 - 64.0 - geometry.safeAreaInsets.bottom
@@ -829,7 +835,7 @@ struct Chat: View {
                     }
                     
                     Task {
-                        await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false)
+                        await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                     }
                     
                     self.showActivity = false
@@ -871,7 +877,7 @@ struct Chat: View {
                     }
                     
                     Task {
-                        await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false)
+                        await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                     }
                     
                     self.shortcut.type = nil
@@ -938,7 +944,7 @@ struct Chat: View {
         self.starImage = image
     }
     
-    private func talk(word: Word, intensity: Double, temperature: Double, multiple: Bool, fallback: Bool = true) async {
+    private func talk(word: Word, intensity: Double, temperature: Double, multiple: Bool, fallback: Bool, mute: Bool) async {
         var queue = Script.shared.characters
         
         if let first = queue.first {
@@ -1029,7 +1035,7 @@ struct Chat: View {
                     messages.append(["role": "user", "content": input])
                 }
                 
-                if let (content, state) = await self.generate(messages: messages, temperature: temperature) {
+                if let (content, state, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                     var text = String(content)
                     let sequence = Sequence(name: "Activate", state: nil)
                     let id = UUID()
@@ -1050,6 +1056,11 @@ struct Chat: View {
                     }
                     
                     sequence.append(Message(id: id, inlines: inlines))
+                    
+                    if let voice {
+                        sequence.append(voice)
+                    }
+                    
                     sequence.append(Sequence(name: "Emote", state: state ?? String()))
                     sequences.append((first.name, id, sequence))
                     
@@ -1071,7 +1082,7 @@ struct Chat: View {
                                 }
                             }
                             
-                            if let (content, state) = await self.generate(messages: messages, temperature: temperature) {
+                            if let (content, state, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                                 var text = String(content)
                                 let sequence = Sequence(name: "Activate", state: nil)
                                 let id = UUID()
@@ -1092,6 +1103,11 @@ struct Chat: View {
                                 }
                                 
                                 sequence.append(Message(id: id, inlines: inlines))
+                                
+                                if let voice {
+                                    sequence.append(voice)
+                                }
+                                
                                 sequence.append(Sequence(name: "Emote", state: state ?? String()))
                                 sequences.append((character.name, id, sequence))
                             } else {
@@ -1119,7 +1135,7 @@ struct Chat: View {
             }
             
             if sequences.isEmpty {
-                let sequences = Script.shared.characters.reduce(into: [Sequence](), { x, y in
+                let tempSequences = Script.shared.characters.reduce(into: [Sequence](), { x, y in
                     if y.name == first.name {
                         for sequence in y.sequences {
                             if sequence.name == "Activate" {
@@ -1128,14 +1144,80 @@ struct Chat: View {
                         }
                     }
                 })
-                var isEmpty = true
+                var oldSequences: [Sequence]? = nil
                 
-                await Script.shared.run(name: first.name, sequences: sequences, words: [word], temperature: temperature) { x in
+                await Script.shared.run(name: first.name, sequences: tempSequences, words: [word], temperature: temperature) { x in
                     if !x.isEmpty {
                         var y = x
-                        var content = [String]()
                         
-                        for sequence in x {
+                        y.append(Sequence(name: String()))
+                        oldSequences = y
+                    }
+                    
+                    return []
+                }
+                
+                if let oldSequences {
+                    var content = [String]()
+                    var newSequences: [Sequence]
+                    
+                    if !mute, let prompt = await self.sample(path: first.path, sequences: first.sequences), let language = first.language {
+                        var generateRequired = false
+                        
+                        newSequences = []
+                        
+                        for sequence in oldSequences {
+                            let tempSequence = Sequence(name: sequence.name)
+                            
+                            for (i, obj) in sequence.enumerated() {
+                                if let message = obj as? Message {
+                                    let s = message.content
+                                    
+                                    if i + 1 < sequence.count && sequence[i + 1] is Sound {
+                                        tempSequence.append(message)
+                                    } else {
+                                        tempSequence.append((message, s))
+                                        generateRequired = true
+                                    }
+                                    
+                                    content.append(s)
+                                } else {
+                                    tempSequence.append(obj)
+                                }
+                            }
+                            
+                            newSequences.append(tempSequence)
+                        }
+                        
+                        if generateRequired {
+                            withAnimation(.easeOut(duration: 0.5)) {
+                                self.isLoading = true
+                            }
+                            
+                            for i in 0..<newSequences.count {
+                                let tempSequence = Sequence(name: newSequences[i].name)
+                                
+                                for obj in newSequences[i] {
+                                    if let (message, input) = obj as? (Message, String) {
+                                        tempSequence.append(message)
+                                        
+                                        if let wave = await self.generate(prompt: prompt, input: input, language: language, temperature: temperature) {
+                                            tempSequence.append(wave)
+                                        }
+                                    } else {
+                                        tempSequence.append(obj)
+                                    }
+                                }
+                                
+                                newSequences[i] = tempSequence
+                            }
+                            
+                            withAnimation(.easeIn(duration: 0.5)) {
+                                self.isLoading = false
+                            }
+                        }
+                    } else {
+                        for sequence in oldSequences {
                             for obj in sequence {
                                 if let message = obj as? Message {
                                     content.append(message.content)
@@ -1143,21 +1225,19 @@ struct Chat: View {
                             }
                         }
                         
-                        y.append(Sequence(name: String()))
-                        
-                        self.logs.append((id: nil, from: nil, to: first.name, group: time, content: word.name))
-                        self.logs.append((id: nil, from: first.name, to: nil, group: time, content: content.joined(separator: "\n")))
-                        
-                        isEmpty = false
-                        
-                        return y
+                        newSequences = oldSequences
                     }
                     
-                    return x
-                }
-                
-                if fallback && isEmpty {
-                    await Script.shared.run(name: first.name, sequences: sequences, words: [])
+                    self.logs.append((id: nil, from: nil, to: first.name, group: time, content: word.name))
+                    self.logs.append((id: nil, from: first.name, to: nil, group: time, content: content.joined(separator: "\n")))
+                    
+                    for sequence in newSequences {
+                        sequence.append(nil)
+                        
+                        Script.shared.queue.append((first.name, sequence))
+                    }
+                } else if fallback {
+                    await Script.shared.run(name: first.name, sequences: tempSequences, words: [])
                 }
             } else {
                 for i in 0..<sequences.count {
@@ -1202,16 +1282,71 @@ struct Chat: View {
         }
     }
     
-    private func generate(messages: [[String: Any]], temperature: Double) async -> (String, String?)? {
-        if let data = try? JSONSerialization.data(withJSONObject: messages) {
-            var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate?temperature=\(String(format: "%.1f", temperature))".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!)
+    private func sample(path: String, sequences: [Sequence]) async -> Data? {
+        return await Task.detached {
+            var sequenceQueue = sequences
+            
+            while !sequenceQueue.isEmpty {
+                let sequence = sequenceQueue.removeFirst()
+                var index: Int? = nil
+                
+                for (i, obj) in sequence.enumerated() {
+                    if let s = obj as? Sequence {
+                        sequenceQueue.append(s)
+                    } else if obj is Message {
+                        index = i
+                    } else if let sound = obj as? Sound, i - 1 == index, let soundPath = sound.path {
+                        let path = URL(filePath: path).deletingLastPathComponent().appending(path: soundPath, directoryHint: .inferFromPath).path(percentEncoded: false)
+                        
+                        if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                            defer {
+                                try? file.close()
+                            }
+                            
+                            if let data = try? file.readToEnd(), data.count > 44, let riff = String(data: data[0..<4], encoding: .ascii), riff == "RIFF", let wave = String(data: data[8..<12], encoding: .ascii), wave == "WAVE" && String(data: data[12..<16], encoding: .ascii) == "fmt " {
+                                let sampleRate = data.subdata(in: 24..<28).withUnsafeBytes { $0.load(as: UInt32.self) }
+                                let channels = data.subdata(in: 22..<24).withUnsafeBytes { $0.load(as: UInt16.self) }
+                                let bitsPerSample = data.subdata(in: 34..<36).withUnsafeBytes { $0.load(as: UInt16.self) }
+                                var dataChunkOffset = 36
+                                
+                                while dataChunkOffset + 8 < data.count {
+                                    let chunkID = String(data: data[dataChunkOffset..<dataChunkOffset + 4], encoding: .ascii)
+                                    let chunkSize = data.subdata(in: dataChunkOffset + 4..<dataChunkOffset + 8).withUnsafeBytes { $0.load(as: UInt32.self) }
+                                    
+                                    if chunkID == "data" {
+                                        let duration = Double(Int(chunkSize) / Int(bitsPerSample / 8 * channels)) / Double(sampleRate)
+                                        
+                                        if duration > 3.0 && duration <= 10.0 {
+                                            return data
+                                        }
+                                        
+                                        break
+                                    }
+                                    
+                                    dataChunkOffset += 8 + Int(chunkSize)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return nil
+        }.value
+    }
+    
+    private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String?, Data?)? {
+        if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
+            var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
             
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = data
+            request.timeoutInterval = 60.0
             
             if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
                 var state: String? = nil
+                var wave: Data? = nil
                 
                 if let states = jsonRoot["states"] as? [String: Any] {
                     var max = 0.0
@@ -1224,7 +1359,47 @@ struct Chat: View {
                     }
                 }
                 
-                return (content, state)
+                if let voice, let language {
+                    wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
+                }
+                
+                return (content, state, wave)
+            }
+        }
+        
+        return nil
+    }
+    
+    private func generate(prompt: Data, input: String, language: String, temperature: Double) async -> Data? {
+        if let data = try? JSONSerialization.data(withJSONObject: ["input": input, "language": language, "temperature": round(temperature * 10.0) / 10.0]) {
+            let request = await Task.detached {
+                var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
+                let boundary = UUID().uuidString
+                var body = Data()
+                
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"file\"; filename=\"prompt.wav\"\r\n".data(using: .utf8)!)
+                body.append("Content-Type: audio/wav\r\n".data(using: .utf8)!)
+                body.append("Content-Transfer-Encoding: binary\r\n\r\n".data(using: .utf8)!)
+                body.append(prompt)
+                body.append("\r\n".data(using: .utf8)!)
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"data\"\r\n".data(using: .utf8)!)
+                body.append("Content-Type: application/json\r\n\r\n".data(using: .utf8)!)
+                body.append(data)
+                body.append("\r\n".data(using: .utf8)!)
+                body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+                
+                request.httpMethod = "POST"
+                request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                request.httpBody = body
+                request.timeoutInterval = 60.0
+                
+                return request
+            }.value
+            
+            if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "audio/wav" {
+                return data
             }
         }
         
@@ -1332,7 +1507,7 @@ struct Chat: View {
                                 }
                                 
                                 Task {
-                                    await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false)
+                                    await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                                 }
                             }
                         }
@@ -2002,7 +2177,7 @@ struct Stage: UIViewRepresentable {
                     }
                     
                     Task {
-                        await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape)
+                        await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
                     }
                     
                     self.parent.prompt = (previous: word, next: (name, word, false, letterSet, CACurrentMediaTime()))
@@ -2114,7 +2289,10 @@ struct Stage: UIViewRepresentable {
                                 }
                             }
                             
-                            lines.append((text: String(like.content[like.content.index(like.content.startIndex, offsetBy: offset)..<like.content.index(like.content.startIndex, offsetBy: count)]).uppercased(), attributes: fixedAttributes))
+                            if count > offset {
+                                lines.append((text: String(like.content[like.content.index(like.content.startIndex, offsetBy: offset)..<like.content.index(like.content.startIndex, offsetBy: count)]).uppercased(), attributes: fixedAttributes))
+                            }
+                            
                             offset = count + 1
                         }
                         
@@ -2285,7 +2463,7 @@ struct Stage: UIViewRepresentable {
             }
         }
         
-        @MainActor private func talk(word: Word, intensity: Double, temperature: Double, multiple: Bool) {
+        @MainActor private func talk(word: Word, intensity: Double, temperature: Double, multiple: Bool, mute: Bool) {
             Task {
                 var queue = Script.shared.characters
                 
@@ -2377,7 +2555,7 @@ struct Stage: UIViewRepresentable {
                             messages.append(["role": "user", "content": input])
                         }
                         
-                        if let (content, state) = await self.generate(messages: messages, temperature: temperature) {
+                        if let (content, state, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                             var text = String(content)
                             let sequence = Sequence(name: "Activate", state: nil)
                             let id = UUID()
@@ -2398,6 +2576,11 @@ struct Stage: UIViewRepresentable {
                             }
                             
                             sequence.append(Message(id: id, inlines: inlines))
+                            
+                            if let voice {
+                                sequence.append(voice)
+                            }
+                            
                             sequence.append(Sequence(name: "Emote", state: state ?? String()))
                             sequences.append((first.name, id, sequence))
                             
@@ -2419,7 +2602,7 @@ struct Stage: UIViewRepresentable {
                                         }
                                     }
                                     
-                                    if let (content, state) = await self.generate(messages: messages, temperature: temperature) {
+                                    if let (content, state, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                                         var text = String(content)
                                         let sequence = Sequence(name: "Activate", state: nil)
                                         let id = UUID()
@@ -2440,6 +2623,11 @@ struct Stage: UIViewRepresentable {
                                         }
                                         
                                         sequence.append(Message(id: id, inlines: inlines))
+                                        
+                                        if let voice {
+                                            sequence.append(voice)
+                                        }
+                                        
                                         sequence.append(Sequence(name: "Emote", state: state ?? String()))
                                         sequences.append((character.name, id, sequence))
                                     } else {
@@ -2467,6 +2655,8 @@ struct Stage: UIViewRepresentable {
                     }
                     
                     if sequences.isEmpty {
+                        var oldSequences: [Sequence]? = nil
+                        
                         await Script.shared.run(name: first.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
                             if y.name == first.name {
                                 for sequence in y.sequences {
@@ -2478,9 +2668,75 @@ struct Stage: UIViewRepresentable {
                         }), words: [word], temperature: temperature) { x in
                             if !x.isEmpty {
                                 var y = x
-                                var content = [String]()
                                 
-                                for sequence in x {
+                                y.append(Sequence(name: String()))
+                                oldSequences = y
+                            }
+                            
+                            return []
+                        }
+                        
+                        if let oldSequences {
+                            var content = [String]()
+                            var newSequences: [Sequence]
+                            
+                            if !mute, let prompt = await self.sample(path: first.path, sequences: first.sequences), let language = first.language {
+                                var generateRequired = false
+                                
+                                newSequences = []
+                                
+                                for sequence in oldSequences {
+                                    let tempSequence = Sequence(name: sequence.name)
+                                    
+                                    for (i, obj) in sequence.enumerated() {
+                                        if let message = obj as? Message {
+                                            let s = message.content
+                                            
+                                            if i + 1 < sequence.count && sequence[i + 1] is Sound {
+                                                tempSequence.append(message)
+                                            } else {
+                                                tempSequence.append((message, s))
+                                                generateRequired = true
+                                            }
+                                            
+                                            content.append(s)
+                                        } else {
+                                            tempSequence.append(obj)
+                                        }
+                                    }
+                                    
+                                    newSequences.append(tempSequence)
+                                }
+                                
+                                if generateRequired {
+                                    withAnimation(.easeOut(duration: 0.5)) {
+                                        self.parent.loading = true
+                                    }
+                                    
+                                    for i in 0..<newSequences.count {
+                                        let tempSequence = Sequence(name: newSequences[i].name)
+                                        
+                                        for obj in newSequences[i] {
+                                            if let (message, input) = obj as? (Message, String) {
+                                                tempSequence.append(message)
+                                                
+                                                if let wave = await self.generate(prompt: prompt, input: input, language: language, temperature: temperature) {
+                                                    tempSequence.append(wave)
+                                                }
+                                            } else {
+                                                tempSequence.append(obj)
+                                            }
+                                        }
+                                        
+                                        newSequences[i] = tempSequence
+                                    }
+                                    
+                                    withAnimation(.easeIn(duration: 0.5)) {
+                                        self.parent.loading = false
+                                    }
+                                }
+                            } else {
+                                for sequence in oldSequences {
                                     for obj in sequence {
                                         if let message = obj as? Message {
                                             content.append(message.content)
@@ -2488,15 +2744,17 @@ struct Stage: UIViewRepresentable {
                                     }
                                 }
                                 
-                                y.append(Sequence(name: String()))
-                                
-                                self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, content: word.name))
-                                self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, content: content.joined(separator: "\n")))
-                                
-                                return y
+                                newSequences = oldSequences
                             }
                             
-                            return x
+                            self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, content: word.name))
+                            self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, content: content.joined(separator: "\n")))
+                            
+                            for sequence in newSequences {
+                                sequence.append(nil)
+                                
+                                Script.shared.queue.append((first.name, sequence))
+                            }
                         }
                     } else {
                         for i in 0..<sequences.count {
@@ -2542,16 +2800,71 @@ struct Stage: UIViewRepresentable {
             }
         }
         
-        private func generate(messages: [[String: Any]], temperature: Double) async -> (String, String?)? {
-            if let data = try? JSONSerialization.data(withJSONObject: messages) {
-                var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate?temperature=\(String(format: "%.1f", temperature))".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!)
+        private func sample(path: String, sequences: [Sequence]) async -> Data? {
+            return await Task.detached {
+                var sequenceQueue = sequences
+                
+                while !sequenceQueue.isEmpty {
+                    let sequence = sequenceQueue.removeFirst()
+                    var index: Int? = nil
+                    
+                    for (i, obj) in sequence.enumerated() {
+                        if let s = obj as? Sequence {
+                            sequenceQueue.append(s)
+                        } else if obj is Message {
+                            index = i
+                        } else if let sound = obj as? Sound, i - 1 == index, let soundPath = sound.path {
+                            let path = URL(filePath: path).deletingLastPathComponent().appending(path: soundPath, directoryHint: .inferFromPath).path(percentEncoded: false)
+                            
+                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                defer {
+                                    try? file.close()
+                                }
+                                
+                                if let data = try? file.readToEnd(), data.count > 44, let riff = String(data: data[0..<4], encoding: .ascii), riff == "RIFF", let wave = String(data: data[8..<12], encoding: .ascii), wave == "WAVE" && String(data: data[12..<16], encoding: .ascii) == "fmt " {
+                                    let sampleRate = data.subdata(in: 24..<28).withUnsafeBytes { $0.load(as: UInt32.self) }
+                                    let channels = data.subdata(in: 22..<24).withUnsafeBytes { $0.load(as: UInt16.self) }
+                                    let bitsPerSample = data.subdata(in: 34..<36).withUnsafeBytes { $0.load(as: UInt16.self) }
+                                    var dataChunkOffset = 36
+                                    
+                                    while dataChunkOffset + 8 < data.count {
+                                        let chunkID = String(data: data[dataChunkOffset..<dataChunkOffset + 4], encoding: .ascii)
+                                        let chunkSize = data.subdata(in: dataChunkOffset + 4..<dataChunkOffset + 8).withUnsafeBytes { $0.load(as: UInt32.self) }
+                                        
+                                        if chunkID == "data" {
+                                            let duration = Double(Int(chunkSize) / Int(bitsPerSample / 8 * channels)) / Double(sampleRate)
+                                            
+                                            if duration > 3.0 && duration <= 10.0 {
+                                                return data
+                                            }
+                                            
+                                            break
+                                        }
+                                        
+                                        dataChunkOffset += 8 + Int(chunkSize)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return nil
+            }.value
+        }
+        
+        private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String?, Data?)? {
+            if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
+                var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
                 
                 request.httpMethod = "POST"
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.httpBody = data
+                request.timeoutInterval = 60.0
                 
                 if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
                     var state: String? = nil
+                    var wave: Data? = nil
                     
                     if let states = jsonRoot["states"] as? [String: Any] {
                         var max = 0.0
@@ -2564,7 +2877,47 @@ struct Stage: UIViewRepresentable {
                         }
                     }
                     
-                    return (content, state)
+                    if let voice, let language {
+                        wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
+                    }
+                    
+                    return (content, state, wave)
+                }
+            }
+            
+            return nil
+        }
+        
+        private func generate(prompt: Data, input: String, language: String, temperature: Double) async -> Data? {
+            if let data = try? JSONSerialization.data(withJSONObject: ["input": input, "language": language, "temperature": round(temperature * 10.0) / 10.0]) {
+                let request = await Task.detached {
+                    var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
+                    let boundary = UUID().uuidString
+                    var body = Data()
+                    
+                    body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                    body.append("Content-Disposition: form-data; name=\"file\"; filename=\"prompt.wav\"\r\n".data(using: .utf8)!)
+                    body.append("Content-Type: audio/wav\r\n".data(using: .utf8)!)
+                    body.append("Content-Transfer-Encoding: binary\r\n\r\n".data(using: .utf8)!)
+                    body.append(prompt)
+                    body.append("\r\n".data(using: .utf8)!)
+                    body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                    body.append("Content-Disposition: form-data; name=\"data\"\r\n".data(using: .utf8)!)
+                    body.append("Content-Type: application/json\r\n\r\n".data(using: .utf8)!)
+                    body.append(data)
+                    body.append("\r\n".data(using: .utf8)!)
+                    body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+                    
+                    request.httpMethod = "POST"
+                    request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                    request.httpBody = body
+                    request.timeoutInterval = 60.0
+                    
+                    return request
+                }.value
+                
+                if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "audio/wav" {
+                    return data
                 }
             }
             
