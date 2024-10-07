@@ -976,12 +976,12 @@ struct Chat: View {
                         time = last.group
                     } else {
                         logs.removeAll()
-                        generateRequired = word.attributes.isEmpty ? true : Double.random(in: 0..<1) < intensity
+                        generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                         input = word.name
                         time = CACurrentMediaTime()
                     }
                 } else {
-                    generateRequired = word.attributes.isEmpty ? true : Double.random(in: 0..<1) < intensity
+                    generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                     input = word.name
                     time = CACurrentMediaTime()
                 }
@@ -993,7 +993,7 @@ struct Chat: View {
                     input = String()
                     time = last.group
                 } else {
-                    generateRequired = word.attributes.isEmpty ? true : Double.random(in: 0..<1) < intensity
+                    generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                     input = word.name
                     time = CACurrentMediaTime()
                 }
@@ -2496,12 +2496,12 @@ struct Stage: UIViewRepresentable {
                                 time = last.group
                             } else {
                                 logs.removeAll()
-                                generateRequired = word.attributes.isEmpty ? true : Double.random(in: 0..<1) < intensity
+                                generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                                 input = word.name
                                 time = CACurrentMediaTime()
                             }
                         } else {
-                            generateRequired = word.attributes.isEmpty ? true : Double.random(in: 0..<1) < intensity
+                            generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                             input = word.name
                             time = CACurrentMediaTime()
                         }
@@ -2513,7 +2513,7 @@ struct Stage: UIViewRepresentable {
                             input = String()
                             time = last.group
                         } else {
-                            generateRequired = word.attributes.isEmpty ? true : Double.random(in: 0..<1) < intensity
+                            generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                             input = word.name
                             time = CACurrentMediaTime()
                         }
