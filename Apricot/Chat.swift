@@ -2328,6 +2328,7 @@ struct Stage: UIViewRepresentable {
             var count = 0
             let nowDate = Date()
             let thresholdDate = Date(timeIntervalSinceNow: -60 * 60)
+            var hasPrompt = false
             
             for characterView in agent.characterViews {
                 if let name = characterView.name, let likes = Script.shared.likes[name] {
@@ -2339,6 +2340,10 @@ struct Stage: UIViewRepresentable {
                     
                     count += timestamps.count
                     self.parent.likes.new[name] = timestamps
+                    
+                    if let character = Script.shared.characters.first(where: { $0.name == name }), character.prompt != nil {
+                        hasPrompt = true
+                    }
                 }
             }
             
@@ -2357,7 +2362,7 @@ struct Stage: UIViewRepresentable {
             self.parent.intensity = self.intensities.reduce(0.5, { $0 + $1.0 }) / Double(self.intensities.count + 1)
             self.update(agent: agent)
             
-            if let images, let uiView = self.uiView {
+            if !hasPrompt || (self.parent.likability ?? 0.0) >= 0.5, let images, let uiView = self.uiView {
                 let particles = count
                 
                 if !images.isEmpty {
