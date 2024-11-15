@@ -41,6 +41,16 @@
         }
       }
     },
+    "Ask" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尋ねる"
+          }
+        }
+      }
+    },
     "Attributes" : {
       "localizations" : {
         "ja" : {
