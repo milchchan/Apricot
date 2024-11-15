@@ -62,7 +62,7 @@ class PromptView: UIView {
     func reload(text: String?) {
         self.isReloading = true
         self.isInvalidated = true
-        self.line = text
+        self.line = text?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "")
     }
     
     @objc private func update(displayLink: CADisplayLink) {
