@@ -1144,23 +1144,27 @@ class WallView: UIView {
                     
                     if let time = block.shake.time {
                         let t = time + deltaTime
+                        let duration = 0.5
                         
-                        if t >= 1.0 {
+                        if t >= duration {
                             block.shake.time = nil
                             block.shake.x = 0.0
                         } else {
-                            let length = 8.0
-                            let interval = 1.0 / length / 2.0
+                            let length = 5.0
+                            let interval = duration / length / 3.0
                             
                             block.shake.time = t
                             
                             if fmod(t, interval) > 0.0 {
-                                let x = Int(length * 2.0 - floor(t / interval))
+                                let x = Int(length * 3.0 - floor(t / interval))
+                                let remainder = x % 3
                                 
-                                if x % 2 == 0 {
-                                    block.shake.x = Double(x / 2)
+                                if remainder == 0 {
+                                    block.shake.x = Double(x / 3)
+                                } else if remainder == 1 {
+                                    block.shake.x = -Double(x / 3 + 1)
                                 } else {
-                                    block.shake.x = -Double(x / 2)
+                                    block.shake.x = 0.0
                                 }
                             }
                         }
