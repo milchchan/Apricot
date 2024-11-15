@@ -406,7 +406,9 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         }
                     }), state: likes) { _ in [] }
                 } else {
-                    let state = String((Script.shared.likes[character.name] ?? []).reduce(0, { $1.id == nil ? $0 + 1 : $0 }))
+                    let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date(timeIntervalSinceNow: -60 * 60 * 24 * 7))
+                    let thresholdDate = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day, hour: 0, minute: 0, second: 0, nanosecond: 0).date ?? Date(timeIntervalSince1970: 0.0)
+                    let state = String((Script.shared.likes[character.name] ?? []).reduce(0, { $1.id == nil && $1.timestamp > thresholdDate ? $0 + 1 : $0 }))
                     
                     Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
                         if y.name == character.name {
@@ -988,7 +990,9 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                     }
                                 }), state: likes, words: []) { _ in [] }
                             } else {
-                                let count = (Script.shared.likes[character.name] ?? []).reduce(0, { $1.id == nil ? $0 + 1 : $0 })
+                                let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date(timeIntervalSinceNow: -60 * 60 * 24 * 7))
+                                let thresholdDate = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day, hour: 0, minute: 0, second: 0, nanosecond: 0).date ?? Date(timeIntervalSince1970: 0.0)
+                                let count = (Script.shared.likes[character.name] ?? []).reduce(0, { $1.id == nil && $1.timestamp > thresholdDate ? $0 + 1 : $0 })
                                 let state = String(count)
                                 
                                 await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
@@ -1678,7 +1682,8 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             
                             x.index += y.text.count
                         })
-                        let thresholdDate = Date(timeIntervalSinceNow: -60 * 60 * 24 * 7)
+                        let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date(timeIntervalSinceNow: -60 * 60 * 24 * 7))
+                        let thresholdDate = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day, hour: 0, minute: 0, second: 0, nanosecond: 0).date ?? Date(timeIntervalSince1970: 0.0)
                         let isRunnable = self.characterViews[0].name == characterView.name
                         let oldCount = messages.reduce(0, { $1.id == nil ? $0 + 1 : $0 })
                         var isRemoved = false
@@ -1707,13 +1712,19 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             
                             UIView.animateKeyframes(withDuration: 0.5, delay: 0.0, options: [.allowUserInteraction, .beginFromCurrentState]) {
                                 var time = 0.0
-                                let duration = 1.0 / 10.0
+                                let duration = 1.0 / 15.0
                                 
-                                for i in stride(from: 4, through: 0, by: -1) {
+                                for i in stride(from: 5, to: 0, by: -1) {
                                     let x = CGFloat(i)
                                     
                                     UIView.addKeyframe(withRelativeStartTime: time, relativeDuration: duration) {
                                         sender.transform = CGAffineTransformMakeTranslation(x, 0.0)
+                                    }
+                                    
+                                    time += duration
+                                    
+                                    UIView.addKeyframe(withRelativeStartTime: 1.0, relativeDuration: duration) {
+                                        sender.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
                                     }
                                     
                                     time += duration
@@ -3129,7 +3140,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                         await MainActor.run {
                                             characterView.audioPlayer = audioPlayer
                                             characterView.audioPlayer!.delegate = characterView
-                                            characterView.audioPlayer!.volume = characterView.isMute ? 0.0 : 1.0
+                                            characterView.audioPlayer!.volume = self.isMute ? 0.0 : 1.0
                                             characterView.audioPlayer!.play()
                                         }
                                     }
@@ -3159,7 +3170,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                     await MainActor.run {
                                         characterView.audioPlayer = audioPlayer
                                         characterView.audioPlayer!.delegate = characterView
-                                        characterView.audioPlayer!.volume = characterView.isMute ? 0.0 : 1.0
+                                        characterView.audioPlayer!.volume = self.isMute ? 0.0 : 1.0
                                         characterView.audioPlayer!.play()
                                     }
                                 }
@@ -4084,7 +4095,6 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
         var isInvalidated = false
         var isLoaded = true
         var isMirror = false
-        var isMute = false
         var messageQueue: [(step: Double?, index: Int, lines: [(labels: [UILabel], text: String, offset: Int, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)], time: Double, speed: Double, duration: Double, reverse: Bool, attributes: [(start: Int, end: Int)], source: Message)] = []
         
         override init(frame: CGRect) {
