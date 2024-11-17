@@ -665,8 +665,8 @@ struct Chat: View {
                                                             }
                                                         }
                                                     }) {
-                                                        HStack(alignment: .center, spacing: 16.0) {
-                                                            if checked > 0 {
+                                                        if checked > 0 {
+                                                            HStack(alignment: .center, spacing: 16.0) {
                                                                 Image(systemName: "checkmark")
                                                                     .frame(
                                                                         width: 16.0,
@@ -679,9 +679,18 @@ struct Chat: View {
                                                                         .system(size: 16.0)
                                                                     )
                                                                     .bold()
-                                                                    .transition(AnyTransition.opacity.combined(with: .scale))
+                                                                Text(type)
+                                                                    .foregroundColor(Color(UIColor {
+                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                    }))
+                                                                    .font(.subheadline)
+                                                                    .fontWeight(.semibold)
+                                                                    .lineLimit(1)
+                                                                    .truncationMode(.tail)
+                                                                    .textCase(.uppercase)
                                                             }
-                                                            
+                                                            .transition(.opacity.animation(.linear(duration: 0.5)))
+                                                        } else {
                                                             Text(type)
                                                                 .foregroundColor(Color(UIColor {
                                                                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
@@ -691,6 +700,7 @@ struct Chat: View {
                                                                 .lineLimit(1)
                                                                 .truncationMode(.tail)
                                                                 .textCase(.uppercase)
+                                                                .transition(.opacity.animation(.linear(duration: 0.5)))
                                                         }
                                                     }
                                                     .frame(
@@ -2212,13 +2222,7 @@ struct Stage: UIViewRepresentable {
             self.parent.attributes.removeAll()
             self.parent.types = 0
             self.parent.choices.removeAll()
-            self.parent.intensity = 0.5
             self.parent.permissions.removeAll()
-            self.intensities.removeAll()
-            
-            withAnimation {
-                self.parent.likability = nil
-            }
         }
         
         func agentDidChange(_ agent: AgentView) {
@@ -2226,6 +2230,8 @@ struct Stage: UIViewRepresentable {
             let thresholdDate = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day, hour: 0, minute: 0, second: 0, nanosecond: 0).date ?? Date(timeIntervalSince1970: 0.0)
             
             self.parent.attributes.append(contentsOf: agent.attributes)
+            self.parent.intensity = 0.5
+            self.intensities.removeAll()
             
             for characterView in agent.characterViews {
                 if let name = characterView.name, let likes = Script.shared.likes[name] {
@@ -2244,6 +2250,7 @@ struct Stage: UIViewRepresentable {
             }
             
             withAnimation {
+                self.parent.likability = nil
                 self.parent.changing = false
             }
             
