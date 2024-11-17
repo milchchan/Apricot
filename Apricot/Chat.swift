@@ -17,7 +17,7 @@ import UIKit
 struct Chat: View {
     @StateObject private var shortcut = Shortcut.shared
     @StateObject private var script: Script
-    @State private var prompt: (previous: Word?, next: (String?, Word?, Bool, Set<Character>?, [String], Int, Double)?) = (previous: nil, next: nil)
+    @State private var prompt: (String?, Word?, Bool, Set<Character>?, [String], Int, Double)? = nil
     @State private var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
     @State private var labels = [String]()
     @State private var likes = (old: 0, new: [String: [Date]]())
@@ -161,15 +161,15 @@ struct Chat: View {
                                         LazyVStack(spacing: 0.0) {
                                             VStack(spacing: 0.0) {
                                                 Button(action: {
-                                                    if let prompt = self.prompt.next {
-                                                        if prompt.2 {
-                                                            self.prompt = (previous: self.prompt.previous, next: (prompt.0, prompt.1, false, prompt.3, prompt.4, prompt.5, CACurrentMediaTime()))
+                                                    if let prompt = self.prompt {
+                                                        if prompt.2 && prompt.5 == 0 {
+                                                            self.prompt = (prompt.0, prompt.1, false, prompt.3, prompt.4, prompt.5, CACurrentMediaTime())
                                                         } else if prompt.5 > 0 {
                                                             Task {
                                                                 await self.talk(word: Word(name: prompt.4[prompt.5 - 1]), intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
                                                             }
                                                             
-                                                            self.prompt = (previous: nil, next: nil)
+                                                            self.prompt = nil
                                                             self.choices.removeAll()
                                                             
                                                             withAnimation(.easeInOut(duration: 0.5)) {
@@ -180,7 +180,7 @@ struct Chat: View {
                                                                 await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
                                                             }
                                                             
-                                                            self.prompt = (previous: word, next: nil)
+                                                            self.prompt = nil
                                                             self.choices.removeAll()
                                                             
                                                             withAnimation(.easeInOut(duration: 0.5)) {
@@ -190,7 +190,7 @@ struct Chat: View {
                                                     }
                                                 }) {
                                                     ZStack(alignment: .center) {
-                                                        Prompt(input: self.prompt.next, accent: self.convert(from: self.accent.wrappedValue), font: UIFont.systemFont(ofSize: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0), weight: .semibold))
+                                                        Prompt(input: self.prompt, accent: self.convert(from: self.accent.wrappedValue), font: UIFont.systemFont(ofSize: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0), weight: .semibold))
                                                             .frame(
                                                                 height: ceil(UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).lineHeight),
                                                                 alignment: .center
@@ -199,7 +199,7 @@ struct Chat: View {
                                                             .padding(0.0)
                                                             .background(.clear)
                                                         
-                                                        if let next = self.prompt.next, next.0 == nil {
+                                                        if let prompt = self.prompt, prompt.0 == nil {
                                                             Image(systemName: "exclamationmark.triangle")
                                                                 .frame(
                                                                     width: 16.0,
@@ -283,52 +283,20 @@ struct Chat: View {
                                                     .animation(.linear(duration: 0.5), value: "\(self.script.words.count)")
                                                 HStack(alignment: .center, spacing: 0.0) {
                                                     VStack(alignment: .center, spacing: 0.0) {
-                                                        if let next = self.prompt.next, !next.4.isEmpty {
+                                                        if let prompt = self.prompt, !prompt.4.isEmpty {
                                                             Button(action: {
-                                                                let index = (next.5 - 1) % (next.4.count + 1)
+                                                                let index = (prompt.5 - 1) % (prompt.4.count + 1)
                                                                 
                                                                 if index > 0 {
-                                                                    let choice = next.4[index - 1]
-                                                                    var letterSet: Set<Character> = []
-                                                                    
-                                                                    for i in 0..<choice.count {
-                                                                        let character = choice[choice.index(choice.startIndex, offsetBy: i)]
-                                                                        
-                                                                        if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                                            letterSet.insert(character)
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    self.prompt = (previous: self.prompt.previous, next: (choice, next.1, false, letterSet, next.4, index, CACurrentMediaTime()))
+                                                                    self.prompt = (prompt.4[index - 1], prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                 } else if index == 0 {
-                                                                    if let word = next.1 {
-                                                                        var letterSet: Set<Character> = []
-                                                                        
-                                                                        for i in 0..<word.name.count {
-                                                                            let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
-                                                                            
-                                                                            if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                                                letterSet.insert(character)
-                                                                            }
-                                                                        }
-                                                                        
-                                                                        self.prompt = (previous: self.prompt.previous, next: (word.name, next.1, false, letterSet, next.4, index, CACurrentMediaTime()))
+                                                                    if let word = prompt.1 {
+                                                                        self.prompt = (word.name, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                     } else {
-                                                                        self.prompt = (previous: self.prompt.previous, next: (nil, next.1, false, nil, next.4, index, CACurrentMediaTime()))
+                                                                        self.prompt = (nil, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                     }
                                                                 } else {
-                                                                    let choice = next.4[next.4.count - 1]
-                                                                    var letterSet: Set<Character> = []
-                                                                    
-                                                                    for i in 0..<choice.count {
-                                                                        let character = choice[choice.index(choice.startIndex, offsetBy: i)]
-                                                                        
-                                                                        if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                                            letterSet.insert(character)
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    self.prompt = (previous: self.prompt.previous, next: (choice, next.1, false, letterSet, next.4, next.4.count, CACurrentMediaTime()))
+                                                                    self.prompt = (prompt.4[prompt.4.count - 1], prompt.1, prompt.2, prompt.3, prompt.4, prompt.4.count, CACurrentMediaTime())
                                                                 }
                                                             }) {
                                                                 Image(systemName: "chevron.backward")
@@ -359,9 +327,9 @@ struct Chat: View {
                                                     )
                                                     VStack(alignment: .center, spacing: 0.0) {
                                                         Button(action: {
-                                                            if let prompt = self.prompt.next {
+                                                            if let prompt = self.prompt {
                                                                 if let word = prompt.1, !word.attributes.isEmpty && prompt.2 {
-                                                                    self.prompt = (previous: nil, next: (prompt.0, prompt.1, false, prompt.3, prompt.4, prompt.5, CACurrentMediaTime()))
+                                                                    self.prompt = (prompt.0, prompt.1, false, prompt.3, prompt.4, prompt.5, CACurrentMediaTime())
                                                                 } else if self.script.words.isEmpty {
                                                                     self.shakes += 1
                                                                 } else {
@@ -389,7 +357,7 @@ struct Chat: View {
                                                                     }
                                                                     
                                                                     if words.isEmpty {
-                                                                        self.prompt = (previous: nil, next: (nil, nil, false, nil, prompt.4, 0, CACurrentMediaTime()))
+                                                                        self.prompt = (nil, nil, false, nil, prompt.4, 0, CACurrentMediaTime())
                                                                         self.shakes += 1
                                                                     } else {
                                                                         let epsilon = powl(10, -6)
@@ -413,7 +381,7 @@ struct Chat: View {
                                                                             word.name = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)] + word.name
                                                                         }
                                                                         
-                                                                        self.prompt = (previous: nil, next: (word.name, word, false, letterSet, prompt.4, 0, CACurrentMediaTime()))
+                                                                        self.prompt = (word.name, word, false, letterSet, prompt.4, 0, CACurrentMediaTime())
                                                                     }
                                                                 }
                                                             }
@@ -455,37 +423,16 @@ struct Chat: View {
                                                         maxWidth: .infinity
                                                     )
                                                     VStack(alignment: .center, spacing: 0.0) {
-                                                        if let next = self.prompt.next, !next.4.isEmpty {
+                                                        if let prompt = self.prompt, !prompt.4.isEmpty {
                                                             Button(action: {
-                                                                let index = (next.5 + 1) % (next.4.count + 1)
+                                                                let index = (prompt.5 + 1) % (prompt.4.count + 1)
                                                                 
                                                                 if index > 0 {
-                                                                    let choice = next.4[index - 1]
-                                                                    var letterSet: Set<Character> = []
-                                                                    
-                                                                    for i in 0..<choice.count {
-                                                                        let character = choice[choice.index(choice.startIndex, offsetBy: i)]
-                                                                        
-                                                                        if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                                            letterSet.insert(character)
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    self.prompt = (previous: self.prompt.previous, next: (choice, next.1, false, letterSet, next.4, index, CACurrentMediaTime()))
-                                                                } else if let word = next.1 {
-                                                                    var letterSet: Set<Character> = []
-                                                                    
-                                                                    for i in 0..<word.name.count {
-                                                                        let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
-                                                                        
-                                                                        if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                                            letterSet.insert(character)
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    self.prompt = (previous: self.prompt.previous, next: (word.name, next.1, false, letterSet, next.4, index, CACurrentMediaTime()))
+                                                                    self.prompt = (prompt.4[index - 1], prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
+                                                                } else if let word = prompt.1 {
+                                                                    self.prompt = (word.name, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                 } else {
-                                                                    self.prompt = (previous: self.prompt.previous, next: (nil, next.1, false, nil, next.4, index, CACurrentMediaTime()))
+                                                                    self.prompt = (nil, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                 }
                                                             }) {
                                                                 Image(systemName: "chevron.forward")
@@ -530,7 +477,7 @@ struct Chat: View {
                                                 VStack(alignment: .center, spacing: 0.0) {
                                                     Button(action: {
                                                         self.showActivity = true
-                                                        self.prompt = (previous: self.prompt.previous, next: nil)
+                                                        self.prompt = nil
                                                         
                                                         withAnimation(.easeInOut(duration: 0.5)) {
                                                             self.revealMenu = false
@@ -582,7 +529,7 @@ struct Chat: View {
                                                 VStack(alignment: .center, spacing: 0.0) {
                                                     Button(action: {
                                                         self.showDictionary = true
-                                                        self.prompt = (previous: self.prompt.previous, next: nil)
+                                                        self.prompt = nil
                                                         
                                                         withAnimation(.easeInOut(duration: 0.5)) {
                                                             self.revealMenu = false
@@ -634,7 +581,7 @@ struct Chat: View {
                                                 VStack(alignment: .center, spacing: 0.0) {
                                                     Button(action: {
                                                         self.showSettings = true
-                                                        self.prompt = (previous: self.prompt.previous, next: nil)
+                                                        self.prompt = nil
                                                         
                                                         withAnimation(.easeInOut(duration: 0.5)) {
                                                             self.revealMenu = false
@@ -803,21 +750,9 @@ struct Chat: View {
                                     self.stopRecognize()
                                 } else {
                                     if self.revealMenu {
-                                        self.prompt = (previous: self.prompt.previous, next: nil)
-                                    } else if let previous = self.prompt.previous {
-                                        var letterSet: Set<Character> = []
-                                        
-                                        for i in 0..<previous.name.count {
-                                            let character = previous.name[previous.name.index(previous.name.startIndex, offsetBy: i)]
-                                            
-                                            if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                letterSet.insert(character)
-                                            }
-                                        }
-                                        
-                                        self.prompt = (previous: previous, next: (previous.name, previous, false, letterSet, self.choices, 0, CACurrentMediaTime()))
+                                        self.prompt = nil
                                     } else if self.script.words.isEmpty {
-                                        self.prompt = (previous: nil, next: (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime()))
+                                        self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
                                     } else {
                                         let samples = 10
                                         var letterSet: Set<Character> = []
@@ -843,7 +778,7 @@ struct Chat: View {
                                         }
                                         
                                         if words.isEmpty {
-                                            self.prompt = (previous: nil, next: (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime()))
+                                            self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
                                         } else {
                                             let epsilon = powl(10, -6)
                                             var probabilities = self.softmax(x: words.reduce(into: [], { x, y in
@@ -866,7 +801,7 @@ struct Chat: View {
                                                 word.name = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)] + word.name
                                             }
                                             
-                                            self.prompt = (previous: nil, next: (word.name, word, true, letterSet, self.choices, 0, CACurrentMediaTime()))
+                                            self.prompt = (word.name, word, true, letterSet, self.choices, 0, CACurrentMediaTime())
                                         }
                                     }
                                     
@@ -1165,7 +1100,6 @@ struct Chat: View {
         if let first = queue.first {
             var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
             var generateRequired: Bool
-            var input: String
             var time: Double
             var sequences = [(String, UUID?, Sequence, Double?, [String]?)]()
             
@@ -1187,17 +1121,14 @@ struct Chat: View {
                     
                     if isContinuous {
                         generateRequired = true
-                        input = String()
                         time = last.group
                     } else {
                         logs.removeAll()
                         generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
-                        input = word.name
                         time = CACurrentMediaTime()
                     }
                 } else {
                     generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
-                    input = word.name
                     time = CACurrentMediaTime()
                 }
             } else {
@@ -1205,11 +1136,9 @@ struct Chat: View {
                 
                 if let last = self.logs.last, self.logs.contains(where: { $0.from == nil && $0.group == last.group && $0.content == word.name }) {
                     generateRequired = true
-                    input = String()
                     time = last.group
                 } else {
                     generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
-                    input = word.name
                     time = CACurrentMediaTime()
                 }
             }
@@ -1247,7 +1176,7 @@ struct Chat: View {
                         }
                     }
                     
-                    messages.append(["role": "user", "content": input])
+                    messages.append(["role": "user", "content": word.name])
                 }
                 
                 if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
@@ -1476,10 +1405,7 @@ struct Chat: View {
                         if i > 0 {
                             self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: content.joined(separator: "\n")))
                         } else {
-                            if !input.isEmpty {
-                                self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: word.name))
-                            }
-                            
+                            self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: word.name))
                             self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: content.joined(separator: "\n")))
                         }
                         
@@ -1860,7 +1786,7 @@ struct Chat: View {
 }
 
 struct Stage: UIViewRepresentable {
-    @Binding var prompt: (previous: Word?, next: (String?, Word?, Bool, Set<Character>?, [String], Int, Double)?)
+    @Binding var prompt: (String?, Word?, Bool, Set<Character>?, [String], Int, Double)?
     @Binding var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: String)]
     @Binding var resource: (old: String, new: String)
     @Binding var attributes: [String]
@@ -1879,7 +1805,7 @@ struct Stage: UIViewRepresentable {
     var mute: Bool
     @State var permissions: Set<String> = []
     
-    init(prompt: Binding<(previous: Word?, next: (String?, Word?, Bool, Set<Character>?, [String], Int, Double)?)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: String)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likes: Binding<(old: Int, new: [String: [Date]])>, likability: Binding<Double?>, choices: Binding<[String]>, changing: Binding<Bool>, loading: Binding<Bool>, intensity: Binding<Double>, temperature: Double, accent: UIColor, scale: Double, pause: Bool, mute: Bool) {
+    init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [String], Int, Double)?>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: String)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likes: Binding<(old: Int, new: [String: [Date]])>, likability: Binding<Double?>, choices: Binding<[String]>, changing: Binding<Bool>, loading: Binding<Bool>, intensity: Binding<Double>, temperature: Double, accent: UIColor, scale: Double, pause: Bool, mute: Bool) {
         self._prompt = prompt
         self._logs = logs
         self._resource = resource
@@ -2447,7 +2373,7 @@ struct Stage: UIViewRepresentable {
                         await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
                     }
                     
-                    self.parent.prompt = (previous: word, next: (name, word, false, letterSet, [], 0, CACurrentMediaTime()))
+                    self.parent.prompt = (name, word, false, letterSet, [], 0, CACurrentMediaTime())
                     self.parent.choices.removeAll()
                 }
             }
@@ -2738,7 +2664,6 @@ struct Stage: UIViewRepresentable {
                 if let first = queue.first {
                     var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
                     var generateRequired: Bool
-                    var input: String
                     var time: Double
                     var sequences = [(String, UUID?, Sequence, Double?, [String]?)]()
                     
@@ -2760,17 +2685,14 @@ struct Stage: UIViewRepresentable {
                             
                             if isContinuous {
                                 generateRequired = true
-                                input = String()
                                 time = last.group
                             } else {
                                 logs.removeAll()
                                 generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
-                                input = word.name
                                 time = CACurrentMediaTime()
                             }
                         } else {
                             generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
-                            input = word.name
                             time = CACurrentMediaTime()
                         }
                     } else {
@@ -2778,11 +2700,9 @@ struct Stage: UIViewRepresentable {
                         
                         if let last = self.parent.logs.last, self.parent.logs.contains(where: { $0.from == nil && $0.group == last.group && $0.content == word.name }) {
                             generateRequired = true
-                            input = String()
                             time = last.group
                         } else {
                             generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
-                            input = word.name
                             time = CACurrentMediaTime()
                         }
                     }
@@ -2820,7 +2740,7 @@ struct Stage: UIViewRepresentable {
                                 }
                             }
                             
-                            messages.append(["role": "user", "content": input])
+                            messages.append(["role": "user", "content": word.name])
                         }
                         
                         if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
@@ -3044,10 +2964,7 @@ struct Stage: UIViewRepresentable {
                                 if i > 0 {
                                     self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: content.joined(separator: "\n")))
                                 } else {
-                                    if !input.isEmpty {
-                                        self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: word.name))
-                                    }
-                                    
+                                    self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: word.name))
                                     self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: content.joined(separator: "\n")))
                                 }
                                 
@@ -3252,11 +3169,17 @@ struct Prompt: UIViewRepresentable {
         
         if let input = self.input, let text = input.0 {
             if context.coordinator.timestamp != input.6 {
-                if context.coordinator.text == text && !input.2 && uiView.isScrambled {
+                if context.coordinator.text == text && !input.2 && input.5 == 0 && uiView.isScrambled {
                     uiView.isScrambled = false
                 } else  {
-                    uiView.isScrambled = input.2
-                    uiView.scrambleLetters = input.3
+                    if input.5 > 0 {
+                        uiView.isScrambled = false
+                        uiView.scrambleLetters = nil
+                    } else {
+                        uiView.isScrambled = input.2
+                        uiView.scrambleLetters = input.3
+                    }
+                    
                     uiView.reload(text: text)
                 }
                 
