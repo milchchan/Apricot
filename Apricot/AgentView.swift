@@ -4436,12 +4436,13 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     let messageHeight = ceil(radius * 2.0 + (count > 1 ? font.lineHeight + lineHeight * Double(count - 1) : font.lineHeight))
                     let maxScale = (messageWidth + 16.0) / messageWidth
                     let balloonPath = self.createBalloonPath(messageWidth: messageWidth, messageHeight: messageHeight, balloonPartSize: balloonPartSize, radius: radius)
+                    let margin = floor((messageHeight + balloonPartSize.height) * maxScale - frame.origin.y)
                     
                     for constraint in self.constraints {
                         if constraint.firstItem === self.contentView && constraint.firstAttribute == .height && constraint.secondItem === self {
-                            constraint.constant = -floor((messageHeight + balloonPartSize.height) * maxScale - frame.origin.y)
+                            constraint.constant = -margin
                         } else if constraint.firstItem === self && constraint.firstAttribute == .height {
-                            constraint.constant = ceil(frame.height + (messageHeight + balloonPartSize.height) * maxScale - frame.origin.y)
+                            constraint.constant = ceil(margin + frame.height)
                         } else if constraint.firstItem === self.balloonView {
                             if constraint.firstAttribute == .height {
                                 constraint.constant = messageHeight + balloonPartSize.height
