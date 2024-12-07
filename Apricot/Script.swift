@@ -2159,6 +2159,20 @@ final public class Script: NSObject, ObservableObject {
                 self.characters[i].insets.right += self.characters[i].location.x
                 self.characters[i].insets.top += self.characters[i].location.y
                 self.characters[i].insets.bottom += self.characters[i].location.y
+                
+                if let prompt = self.characters[i].prompt {
+                    let p = URL(filePath: path).deletingLastPathComponent().appending(path: prompt, directoryHint: .inferFromPath).path(percentEncoded: false)
+                    
+                    if FileManager.default.fileExists(atPath: p), let file = FileHandle(forReadingAtPath: p) {
+                        defer {
+                            try? file.close()
+                        }
+                        
+                        if let data = try? file.readToEnd(), let s = String(data: data, encoding: .utf8) {
+                            self.characters[i].prompt = s
+                        }
+                    }
+                }
             }
             
             return (self.characters, self.attributes)
