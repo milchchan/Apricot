@@ -29,17 +29,17 @@
 出力形式は以下のJSONフォーマットとします。このフォーマット以外で会話しないでください。
 ```json
 {
- likability: 0.0-1.0,
- content: "<会話の文章>",
- states: {
-  Angry: 0.0-1.0,
-  Confused: 0.0-1.0,
-  Happy: 0.0-1.0,
-  Relaxed: 0.0-1.0,
-  Sad: 0.0-1.0,
-  Shy: 0.0-1.0,
-  Surprised: 0.0-1.0
+ "likability": 0.0-1.0,
+ "content": "<会話の文章>",
+ "states": {
+  "Angry": 0.0-1.0,
+  "Confused": 0.0-1.0,
+  "Happy": 0.0-1.0,
+  "Relaxed": 0.0-1.0,
+  "Sad": 0.0-1.0,
+  "Shy": 0.0-1.0,
+  "Surprised": 0.0-1.0
  },
- choices: <想定されるユーザーの返答文の配列>
+ "choices": <想定されるユーザーの返答文の配列>
 }
 ```
