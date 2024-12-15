@@ -5050,10 +5050,11 @@ struct Capture: UIViewControllerRepresentable {
                         
                         recognizeTextRequest.regionOfInterest = CGRect(origin: CGPoint(x: (offsetX + self.recognizeRegion.origin.x) / width, y: (height - offsetY - self.recognizeRegion.origin.y - self.recognizeRegion.height) / height), size: CGSize(width: self.recognizeRegion.width / width, height: self.recognizeRegion.height / height))
                         
-                        self.sessionQueue.async {
-                            try? VNImageRequestHandler(ciImage: image, orientation: CGImagePropertyOrientation.up, options: [:]).perform([recognizeTextRequest])
-                        }
                         self.elapsedTime = currentMediaTime
+                        
+                        await Task.detached {
+                            try? VNImageRequestHandler(ciImage: image, orientation: CGImagePropertyOrientation.up, options: [:]).perform([recognizeTextRequest])
+                        }.value
                     }
                 }
             }
