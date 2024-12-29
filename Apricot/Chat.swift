@@ -328,7 +328,7 @@ struct Chat: View {
                                                     VStack(alignment: .center, spacing: 0.0) {
                                                         Button(action: {
                                                             if let prompt = self.prompt {
-                                                                if let word = prompt.1, !word.attributes.isEmpty && prompt.2 {
+                                                                if let word = prompt.1, (word.attributes == nil || !word.attributes!.isEmpty) && prompt.2 {
                                                                     self.prompt = (prompt.0, prompt.1, false, prompt.3, prompt.4, prompt.5, CACurrentMediaTime())
                                                                 } else if self.script.words.isEmpty {
                                                                     self.shakes += 1
@@ -349,7 +349,7 @@ struct Chat: View {
                                                                             }
                                                                         }
                                                                         
-                                                                        if word.attributes.isEmpty {
+                                                                        if let attributes = word.attributes, attributes.isEmpty {
                                                                             modifiers.append(word.name)
                                                                         } else {
                                                                             words.append(word)
@@ -378,7 +378,14 @@ struct Chat: View {
                                                                                     x.append(epsilon)
                                                                                 }
                                                                             }), temperature: self.temperature)
-                                                                            word.name = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)] + word.name
+                                                                            
+                                                                            let modifier = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
+                                                                            
+                                                                            if modifier.allSatisfy({ $0.isASCII }) && word.name.allSatisfy({ $0.isASCII }) {
+                                                                                word.name = modifier + String("\u{0020}\u{000A}") + word.name
+                                                                            } else {
+                                                                                word.name = modifier + "\n" + word.name
+                                                                            }
                                                                         }
                                                                         
                                                                         self.prompt = (word.name, word, false, letterSet, prompt.4, 0, CACurrentMediaTime())
@@ -780,7 +787,7 @@ struct Chat: View {
                                                 }
                                             }
                                             
-                                            if word.attributes.isEmpty {
+                                            if let attributes = word.attributes, attributes.isEmpty {
                                                 modifiers.append(word.name)
                                             } else {
                                                 words.append(word)
@@ -808,7 +815,14 @@ struct Chat: View {
                                                         x.append(epsilon)
                                                     }
                                                 }), temperature: self.temperature)
-                                                word.name = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)] + word.name
+                                                
+                                                let modifier = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
+                                                
+                                                if modifier.allSatisfy({ $0.isASCII }) && word.name.allSatisfy({ $0.isASCII }) {
+                                                    word.name = modifier + String("\u{0020}\u{000A}") + word.name
+                                                } else {
+                                                    word.name = modifier + "\n" + word.name
+                                                }
                                             }
                                             
                                             self.prompt = (word.name, word, true, letterSet, self.choices, 0, CACurrentMediaTime())
@@ -979,22 +993,16 @@ struct Chat: View {
         .onChange(of: self.shortcut.type) {
             if let type = self.shortcut.type, !type.isEmpty {
                 if type[0].isEmpty {
-                    var word = Word(name: type[1])
-                    
-                    for attribute in Script.shared.words.reduce(into: Set<String>(), { x, y in
-                        if y.name == type[1] {
-                            for attribute in y.attributes {
-                                if !x.contains(attribute) {
-                                    x.insert(attribute)
+                    Task {
+                        await self.talk(word: Word(name: type[1], attributes: [String](Script.shared.words.reduce(into: Set<String>(), { x, y in
+                            if y.name == type[1], let attributes = y.attributes {
+                                for attribute in attributes {
+                                    if !x.contains(attribute) {
+                                        x.insert(attribute)
+                                    }
                                 }
                             }
-                        }
-                    }) {
-                        word.attributes.append(attribute)
-                    }
-                    
-                    Task {
-                        await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
+                        }))), intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                     }
                     
                     self.choices.removeAll()
@@ -1022,22 +1030,16 @@ struct Chat: View {
         .onAppear {
             if let type = self.shortcut.type, !type.isEmpty {
                 if type[0].isEmpty {
-                    var word = Word(name: type[1])
-                    
-                    for attribute in Script.shared.words.reduce(into: Set<String>(), { x, y in
-                        if y.name == type[1] {
-                            for attribute in y.attributes {
-                                if !x.contains(attribute) {
-                                    x.insert(attribute)
+                    Task {
+                        await self.talk(word: Word(name: type[1], attributes: [String](Script.shared.words.reduce(into: Set<String>(), { x, y in
+                            if y.name == type[1], let attributes = y.attributes {
+                                for attribute in attributes {
+                                    if !x.contains(attribute) {
+                                        x.insert(attribute)
+                                    }
                                 }
                             }
-                        }
-                    }) {
-                        word.attributes.append(attribute)
-                    }
-                    
-                    Task {
-                        await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
+                        }))), intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                     }
                     
                     self.shortcut.type = nil
@@ -1108,9 +1110,11 @@ struct Chat: View {
         var queue = Script.shared.characters
         
         if let first = queue.first {
+            let input = word.name.filter { !$0.isNewline }
             var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
-            var generateRequired: Bool
-            var time: Double
+            let attributes = word.attributes ?? []
+            let generateRequired: Bool
+            let time: Double
             var sequences = [(String, UUID?, Sequence, Double?, [String]?)]()
             
             if multiple {
@@ -1121,7 +1125,7 @@ struct Chat: View {
                     
                     for log in self.logs {
                         if log.group == last.group {
-                            if log.from == nil && log.content == word.name {
+                            if log.from == nil && log.content == input {
                                 isContinuous = true
                             }
                             
@@ -1134,21 +1138,21 @@ struct Chat: View {
                         time = last.group
                     } else {
                         logs.removeAll()
-                        generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
+                        generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                         time = CACurrentMediaTime()
                     }
                 } else {
-                    generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
+                    generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                     time = CACurrentMediaTime()
                 }
             } else {
                 queue.removeAll()
                 
-                if let last = self.logs.last, self.logs.contains(where: { $0.from == nil && $0.group == last.group && $0.content == word.name }) {
+                if let last = self.logs.last, self.logs.contains(where: { $0.from == nil && $0.group == last.group && $0.content == input }) {
                     generateRequired = true
                     time = last.group
                 } else {
-                    generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
+                    generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                     time = CACurrentMediaTime()
                 }
             }
@@ -1186,7 +1190,7 @@ struct Chat: View {
                         }
                     }
                     
-                    messages.append(["role": "user", "content": word.name])
+                    messages.append(["role": "user", "content": input])
                 }
                 
                 if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
@@ -1196,12 +1200,12 @@ struct Chat: View {
                     var inlines = [(text: String, attributes: [String]?)]()
                     
                     while !text.isEmpty {
-                        if !word.attributes.isEmpty, let range = text.range(of: word.name) {
+                        if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input) {
                             if text.startIndex != range.lowerBound {
                                 inlines.append((text: String(text[text.startIndex..<range.lowerBound]), attributes: nil))
                             }
                             
-                            inlines.append((text: String(text[range.lowerBound..<range.upperBound]), attributes: word.attributes))
+                            inlines.append((text: word.name, attributes: attributes))
                             text = String(text[range.upperBound..<text.endIndex])
                         } else {
                             inlines.append((text: text, attributes: nil))
@@ -1243,12 +1247,12 @@ struct Chat: View {
                                 var inlines = [(text: String, attributes: [String]?)]()
                                 
                                 while !text.isEmpty {
-                                    if !word.attributes.isEmpty, let range = text.range(of: word.name) {
+                                    if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input) {
                                         if text.startIndex != range.lowerBound {
                                             inlines.append((text: String(text[text.startIndex..<range.lowerBound]), attributes: nil))
                                         }
                                         
-                                        inlines.append((text: String(text[range.lowerBound..<range.upperBound]), attributes: word.attributes))
+                                        inlines.append((text: word.name, attributes: attributes))
                                         text = String(text[range.upperBound..<text.endIndex])
                                     } else {
                                         inlines.append((text: text, attributes: nil))
@@ -1289,6 +1293,9 @@ struct Chat: View {
             }
             
             if sequences.isEmpty {
+                var i = 0
+                var term = String()
+                var modifier = String()
                 let tempSequences = Script.shared.characters.reduce(into: [Sequence](), { x, y in
                     if y.name == first.name {
                         for sequence in y.sequences {
@@ -1300,7 +1307,20 @@ struct Chat: View {
                 })
                 var oldSequences: [Sequence]? = nil
                 
-                await Script.shared.run(name: first.name, sequences: tempSequences, words: [word], temperature: temperature) { x in
+                while i < word.name.count {
+                    let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
+                    
+                    if character.isNewline {
+                        modifier.append(contentsOf: term)
+                        term.removeAll()
+                    } else {
+                        term.append(character)
+                    }
+                    
+                    i += 1
+                }
+                
+                await Script.shared.run(name: first.name, sequences: tempSequences, words: [Word(name: term, attributes: word.attributes)], temperature: temperature) { x in
                     if !x.isEmpty {
                         var y = x
                         
@@ -1313,24 +1333,47 @@ struct Chat: View {
                 
                 if let oldSequences {
                     var content = [String]()
-                    var newSequences: [Sequence]
+                    var newSequences = [Sequence]()
                     
                     if !mute, let prompt = await self.sample(path: first.path, sequences: first.sequences), let language = first.language {
                         var generateRequired = false
-                        
-                        newSequences = []
                         
                         for sequence in oldSequences {
                             let tempSequence = Sequence(name: sequence.name)
                             
                             for (i, obj) in sequence.enumerated() {
                                 if let message = obj as? Message {
-                                    let s = message.content
+                                    var m = Message()
+                                    var s = String()
+                                    
+                                    for j in 0..<message.count {
+                                        var isEqual = true
+                                        
+                                        if let a = message[j].attributes, message[j].text == term && a.count == attributes.count {
+                                            for k in 0..<attributes.count {
+                                                if attributes[k] != a[k] {
+                                                    isEqual = false
+                                                    
+                                                    break
+                                                }
+                                            }
+                                        } else {
+                                            isEqual = false
+                                        }
+                                        
+                                        if isEqual {
+                                            m.append((text: modifier + "\n" + term, attributes: message[j].attributes))
+                                            s.append(modifier + term)
+                                        } else {
+                                            m.append((text: message[j].text, attributes: message[j].attributes))
+                                            s.append(message[j].text)
+                                        }
+                                    }
                                     
                                     if i + 1 < sequence.count && sequence[i + 1] is Sound {
-                                        tempSequence.append(message)
+                                        tempSequence.append(m)
                                     } else {
-                                        tempSequence.append((message, s))
+                                        tempSequence.append((m, s))
                                         generateRequired = true
                                     }
                                     
@@ -1372,17 +1415,49 @@ struct Chat: View {
                         }
                     } else {
                         for sequence in oldSequences {
+                            let tempSequence = Sequence(name: sequence.name)
+                            
                             for obj in sequence {
                                 if let message = obj as? Message {
-                                    content.append(message.content)
+                                    var m = Message()
+                                    var s = String()
+                                    
+                                    for i in 0..<message.count {
+                                        var isEqual = true
+                                        
+                                        if let a = message[i].attributes, message[i].text == term && a.count == attributes.count {
+                                            for j in 0..<attributes.count {
+                                                if attributes[j] != a[j] {
+                                                    isEqual = false
+                                                    
+                                                    break
+                                                }
+                                            }
+                                        } else {
+                                            isEqual = false
+                                        }
+                                        
+                                        if isEqual {
+                                            m.append((text: modifier + "\n" + term, attributes: message[i].attributes))
+                                            s.append(modifier + term)
+                                        } else {
+                                            m.append((text: message[i].text, attributes: message[i].attributes))
+                                            s.append(message[i].text)
+                                        }
+                                    }
+                                    
+                                    tempSequence.append(m)
+                                    content.append(s)
+                                } else {
+                                    tempSequence.append(obj)
                                 }
                             }
+                            
+                            newSequences.append(tempSequence)
                         }
-                        
-                        newSequences = oldSequences
                     }
                     
-                    self.logs.append((id: nil, from: nil, to: first.name, group: time, content: word.name))
+                    self.logs.append((id: nil, from: nil, to: first.name, group: time, content: input))
                     self.logs.append((id: nil, from: first.name, to: nil, group: time, content: content.joined(separator: "\n")))
                     self.choices.removeAll()
                     
@@ -1415,7 +1490,7 @@ struct Chat: View {
                         if i > 0 {
                             self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: content.joined(separator: "\n")))
                         } else {
-                            self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: word.name))
+                            self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: input))
                             self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: content.joined(separator: "\n")))
                         }
                         
@@ -1671,22 +1746,16 @@ struct Chat: View {
                             }
                             
                             if !text.isEmpty {
-                                var word = Word(name: text)
-                                
-                                for attribute in Script.shared.words.reduce(into: Set<String>(), { x, y in
-                                    if y.name == text {
-                                        for attribute in y.attributes {
-                                            if !x.contains(attribute) {
-                                                x.insert(attribute)
+                                Task {
+                                    await self.talk(word: Word(name: text, attributes: [String](Script.shared.words.reduce(into: Set<String>(), { x, y in
+                                        if y.name == text, let attributes = y.attributes {
+                                            for attribute in attributes {
+                                                if !x.contains(attribute) {
+                                                    x.insert(attribute)
+                                                }
                                             }
                                         }
-                                    }
-                                }) {
-                                    word.attributes.append(attribute)
-                                }
-                                
-                                Task {
-                                    await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
+                                    }))), intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                                 }
                                 
                                 self.choices.removeAll()
@@ -2069,7 +2138,7 @@ struct Stage: UIViewRepresentable {
         var pause = false
         private var parent: Stage
         private var snapshot: (name: String?, types: [String]) = (name: nil, types: [])
-        private var lines = [(text: String, attributes: [(name: String, start: Int, end: Int)])]()
+        private var lines = [(text: String, attributes: [(name: String?, start: Int, end: Int)])]()
         private var timestamp: Date? = nil
         private var intensities = [(Double, Date)]()
         
@@ -2192,13 +2261,7 @@ struct Stage: UIViewRepresentable {
                             if variance > 0.0 {
                                 for (key, value) in Script.shared.scores {
                                     if let x = data[key], (x - mean) / variance >= 2.0 && value.2 == language && !Script.shared.words.contains(where: { $0.name == key }) {
-                                        var word = Word(name: key)
-                                        
-                                        for attribute in value.1 {
-                                            word.attributes.append(attribute)
-                                        }
-                                        
-                                        words.append(word)
+                                        words.append(Word(name: key, attributes: value.1))
                                     }
                                 }
                             }
@@ -2315,16 +2378,95 @@ struct Stage: UIViewRepresentable {
         func wallDidSelect(_ wall: WallView, at index: Int) {
             if index < self.lines.count {
                 let line = self.lines[index]
-                var dictionary = [String: [String]]()
+                var dictionary = [String: ([String]?, [String])]()
                 
                 for attribute in line.attributes {
-                    let name = String(line.text[line.text.index(line.text.startIndex, offsetBy: attribute.start)..<line.text.index(line.text.startIndex, offsetBy: attribute.end)])
+                    var maxEnd = attribute.end
+                    var boundaryIndex = attribute.start
+                    var attributes = [String]()
                     
-                    if var attributes = dictionary[name] {
-                        attributes.append(attribute.name)
-                        dictionary[name] = attributes
+                    for i in 0..<line.attributes.count {
+                        if attribute.start == line.attributes[i].start && line.attributes[i].end > maxEnd {
+                            maxEnd = line.attributes[i].end
+                        }
+                    }
+                    
+                    for a in line.attributes {
+                        if a.end == maxEnd {
+                            if a.start > boundaryIndex {
+                                boundaryIndex = a.start
+                            }
+                            
+                            if let name = a.name, !attributes.contains(name) {
+                                attributes.append(name)
+                            }
+                        }
+                    }
+                    
+                    if boundaryIndex == attribute.start {
+                        let name = String(line.text[line.text.index(line.text.startIndex, offsetBy: attribute.start)..<line.text.index(line.text.startIndex, offsetBy: maxEnd)])
+                        
+                        if attributes.isEmpty {
+                            if dictionary[name] == nil {
+                                dictionary[name] = (nil, [])
+                            }
+                        } else if let tuple = dictionary[name] {
+                            if var currentAttributes = tuple.0 {
+                                for a in attributes {
+                                    if !currentAttributes.contains(a) {
+                                        currentAttributes.append(a)
+                                    }
+                                }
+                                
+                                dictionary[name] = (currentAttributes, tuple.1)
+                            } else {
+                                dictionary[name] = (attributes, tuple.1)
+                            }
+                        } else {
+                            dictionary[name] = (attributes, [])
+                        }
                     } else {
-                        dictionary[name] = [attribute.name]
+                        let modifier = String(line.text[line.text.index(line.text.startIndex, offsetBy: attribute.start)..<line.text.index(line.text.startIndex, offsetBy: boundaryIndex)]).trimmingCharacters(in: .whitespaces)
+                        let name = String(line.text[line.text.index(line.text.startIndex, offsetBy: boundaryIndex)..<line.text.index(line.text.startIndex, offsetBy: maxEnd)])
+                        
+                        if attributes.isEmpty {
+                            if let tuple = dictionary[name] {
+                                if !tuple.1.contains(modifier) {
+                                    var currentModifiers = tuple.1
+                                    
+                                    currentModifiers.append(modifier)
+                                    dictionary[name] = (tuple.0, currentModifiers)
+                                }
+                            } else {
+                                dictionary[name] = (nil, [modifier])
+                            }
+                        } else if let tuple = dictionary[name] {
+                            if var currentAttributes = tuple.0 {
+                                for a in attributes {
+                                    if !currentAttributes.contains(a) {
+                                        currentAttributes.append(a)
+                                    }
+                                }
+                                
+                                if tuple.1.contains(modifier) {
+                                    dictionary[name] = (currentAttributes, tuple.1)
+                                } else {
+                                    var currentModifiers = tuple.1
+                                    
+                                    currentModifiers.append(modifier)
+                                    dictionary[name] = (currentAttributes, currentModifiers)
+                                }
+                            } else if tuple.1.contains(modifier) {
+                                dictionary[name] = (attributes, tuple.1)
+                            } else {
+                                var currentModifiers = tuple.1
+                                
+                                currentModifiers.append(modifier)
+                                dictionary[name] = (attributes, currentModifiers)
+                            }
+                        } else {
+                            dictionary[name] = (attributes, [modifier])
+                        }
                     }
                 }
                 
@@ -2366,21 +2508,84 @@ struct Stage: UIViewRepresentable {
                     probabilities = probabilities.map({ $0 / sum })
                     
                     let name = names[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
-                    var word = Word(name: name)
+                    let (attributes, modifiers) = dictionary[name]!
                     
-                    for attribute in dictionary[name]! {
-                        word.attributes.append(attribute)
+                    
+                    if modifiers.isEmpty {
+                        let word = Word(name: name, attributes: attributes)
+                        
+                        if !Script.shared.words.contains(where: { $0.name == name }) {
+                            self.learn(words: [word])
+                        }
+                        
+                        Task {
+                            await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
+                        }
+                        
+                        self.parent.prompt = (name, word, false, letterSet, [], 0, CACurrentMediaTime())
+                    } else {
+                        var minProbability = modifiers.reduce(Double.greatestFiniteMagnitude, { x, y in
+                            if let (score, _, _, _) = Script.shared.scores[y], score > epsilon && score < x {
+                                return score
+                            }
+                            
+                            return x
+                        })
+                        var probabilities = [Double]()
+                        
+                        if minProbability == Double.greatestFiniteMagnitude {
+                            minProbability = epsilon
+                        }
+                        
+                        for modifier in modifiers {
+                            if let (score, _, _, _) = Script.shared.scores[modifier], score > epsilon {
+                                probabilities.append(score)
+                            } else {
+                                probabilities.append(minProbability)
+                            }
+                            
+                            for i in 0..<modifier.count {
+                                let character = modifier[modifier.index(modifier.startIndex, offsetBy: i)]
+                                
+                                if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
+                                    letterSet.insert(character)
+                                }
+                            }
+                        }
+                        
+                        let sum = probabilities.reduce(0, { $0 + $1 })
+                        
+                        probabilities = probabilities.map({ $0 / sum })
+                        
+                        let modifier = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
+                        var words = [Word]()
+                        let word: Word
+                        
+                        if !Script.shared.words.contains(where: { $0.name == modifier }) {
+                            words.append(Word(name: modifier, attributes: []))
+                        }
+                        
+                        if !Script.shared.words.contains(where: { $0.name == name }) {
+                            words.append(Word(name: name, attributes: attributes))
+                        }
+                        
+                        if !words.isEmpty {
+                            self.learn(words: words)
+                        }
+                        
+                        if modifier.allSatisfy({ $0.isASCII }) && name.allSatisfy({ $0.isASCII }) {
+                            word = Word(name: modifier + String("\u{0020}\u{000A}") + name, attributes: attributes)
+                        } else {
+                            word = Word(name: modifier + "\n" + name, attributes: attributes)
+                        }
+                        
+                        Task {
+                            await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
+                        }
+                        
+                        self.parent.prompt = (name, word, false, letterSet, [], 0, CACurrentMediaTime())
                     }
                     
-                    if !Script.shared.words.contains(where: { $0.name == name }) {
-                        self.learn(words: [word])
-                    }
-                    
-                    Task {
-                        await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
-                    }
-                    
-                    self.parent.prompt = (name, word, false, letterSet, [], 0, CACurrentMediaTime())
                     self.parent.choices.removeAll()
                 }
             }
@@ -2394,7 +2599,7 @@ struct Stage: UIViewRepresentable {
             let maxLines = Int(round(min(window.screen.bounds.width, window.screen.bounds.height) / ceil(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .body).pointSize * 1.5)))
             var language: String? = nil
             let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
-            var lines = [(text: String, attributes: [(name: String, start: Int, end: Int)])]()
+            var lines = [(text: String, attributes: [(name: String?, start: Int, end: Int)])]()
             var baseLines: Int? = nil
             var isUpdated = false
             
@@ -2406,7 +2611,7 @@ struct Stage: UIViewRepresentable {
                 }
             }
             
-            var likes = Script.shared.likes.reduce(into: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String, start: Int, end: Int)], timestamp: Date)]()) { x, y in
+            var likes = Script.shared.likes.reduce(into: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]()) { x, y in
                 for like in y.value {
                     if like.language == language {
                         x.append(like)
@@ -2418,7 +2623,7 @@ struct Stage: UIViewRepresentable {
             
             for i in stride(from: likes.count - 1, through: 0, by: -1) {
                 if likes[i].timestamp > yesterday {
-                    var attributes = [(name: String, start: Int, end: Int)]()
+                    var attributes = [(name: String?, start: Int, end: Int)]()
                     var count = 0
                     var offset = 0
                     
@@ -2432,7 +2637,7 @@ struct Stage: UIViewRepresentable {
                         let character = likes[i].content[likes[i].content.index(likes[i].content.startIndex, offsetBy: count)]
                         
                         if character.isNewline {
-                            var fixedAttributes: [(name: String, start: Int, end: Int)] = []
+                            var fixedAttributes: [(name: String?, start: Int, end: Int)] = []
                             
                             for attribute in attributes {
                                 if attribute.start - offset >= 0 && attribute.end <= count {
@@ -2448,7 +2653,7 @@ struct Stage: UIViewRepresentable {
                     }
                     
                     if count > offset {
-                        var fixedAttributes = [(name: String, start: Int, end: Int)]()
+                        var fixedAttributes = [(name: String?, start: Int, end: Int)]()
                         
                         for attribute in attributes {
                             if attribute.start - offset >= 0 {
@@ -2468,7 +2673,7 @@ struct Stage: UIViewRepresentable {
                 
                 for i in 0..<min(likes.count, maxLines - lines.count) {
                     let like = likes[i]
-                    var attributes = [(name: String, start: Int, end: Int)]()
+                    var attributes = [(name: String?, start: Int, end: Int)]()
                     var count = 0
                     var offset = 0
                     
@@ -2482,7 +2687,7 @@ struct Stage: UIViewRepresentable {
                         let character = like.content[like.content.index(like.content.startIndex, offsetBy: count)]
                         
                         if character.isNewline {
-                            var fixedAttributes: [(name: String, start: Int, end: Int)] = []
+                            var fixedAttributes: [(name: String?, start: Int, end: Int)] = []
                             
                             for attribute in attributes {
                                 if attribute.start - offset >= 0 && attribute.end <= count {
@@ -2501,7 +2706,7 @@ struct Stage: UIViewRepresentable {
                     }
                     
                     if count > offset {
-                        var fixedAttributes = [(name: String, start: Int, end: Int)]()
+                        var fixedAttributes = [(name: String?, start: Int, end: Int)]()
                         
                         for attribute in attributes {
                             if attribute.start - offset >= 0 {
@@ -2572,7 +2777,17 @@ struct Stage: UIViewRepresentable {
                     var attributes = [(start: Int, end: Int)]()
                     
                     for attribute in y.attributes {
-                        attributes.append((start: attribute.start, end: attribute.end))
+                        if !attributes.contains(where: { $0.start == attribute.start }) {
+                            var maxEnd = 0
+                            
+                            for i in 0..<y.attributes.count {
+                                if attribute.start == y.attributes[i].start && y.attributes[i].end > maxEnd {
+                                    maxEnd = y.attributes[i].end
+                                }
+                            }
+                            
+                            attributes.append((start: attribute.start, end: maxEnd))
+                        }
                     }
                     
                     x.append((text: y.text, attributes: attributes))
@@ -2669,9 +2884,11 @@ struct Stage: UIViewRepresentable {
                 var queue = Script.shared.characters
                 
                 if let first = queue.first {
+                    let input = word.name.filter { !$0.isNewline }
                     var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
-                    var generateRequired: Bool
-                    var time: Double
+                    let attributes = word.attributes ?? []
+                    let generateRequired: Bool
+                    let time: Double
                     var sequences = [(String, UUID?, Sequence, Double?, [String]?)]()
                     
                     if multiple {
@@ -2682,7 +2899,7 @@ struct Stage: UIViewRepresentable {
                             
                             for log in self.parent.logs {
                                 if log.group == last.group {
-                                    if log.from == nil && log.content == word.name {
+                                    if log.from == nil && log.content == input {
                                         isContinuous = true
                                     }
                                     
@@ -2695,21 +2912,21 @@ struct Stage: UIViewRepresentable {
                                 time = last.group
                             } else {
                                 logs.removeAll()
-                                generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
+                                generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                                 time = CACurrentMediaTime()
                             }
                         } else {
-                            generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
+                            generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                             time = CACurrentMediaTime()
                         }
                     } else {
                         queue.removeAll()
                         
-                        if let last = self.parent.logs.last, self.parent.logs.contains(where: { $0.from == nil && $0.group == last.group && $0.content == word.name }) {
+                        if let last = self.parent.logs.last, self.parent.logs.contains(where: { $0.from == nil && $0.group == last.group && $0.content == input }) {
                             generateRequired = true
                             time = last.group
                         } else {
-                            generateRequired = word.attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
+                            generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" }) ? true : Double.random(in: 0..<1) < intensity
                             time = CACurrentMediaTime()
                         }
                     }
@@ -2747,7 +2964,7 @@ struct Stage: UIViewRepresentable {
                                 }
                             }
                             
-                            messages.append(["role": "user", "content": word.name])
+                            messages.append(["role": "user", "content": input])
                         }
                         
                         if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
@@ -2757,12 +2974,12 @@ struct Stage: UIViewRepresentable {
                             var inlines = [(text: String, attributes: [String]?)]()
                             
                             while !text.isEmpty {
-                                if !word.attributes.isEmpty, let range = text.range(of: word.name) {
+                                if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input) {
                                     if text.startIndex != range.lowerBound {
                                         inlines.append((text: String(text[text.startIndex..<range.lowerBound]), attributes: nil))
                                     }
                                     
-                                    inlines.append((text: String(text[range.lowerBound..<range.upperBound]), attributes: word.attributes))
+                                    inlines.append((text: word.name, attributes: attributes))
                                     text = String(text[range.upperBound..<text.endIndex])
                                 } else {
                                     inlines.append((text: text, attributes: nil))
@@ -2804,12 +3021,12 @@ struct Stage: UIViewRepresentable {
                                         var inlines = [(text: String, attributes: [String]?)]()
                                         
                                         while !text.isEmpty {
-                                            if !word.attributes.isEmpty, let range = text.range(of: word.name) {
+                                            if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input) {
                                                 if text.startIndex != range.lowerBound {
                                                     inlines.append((text: String(text[text.startIndex..<range.lowerBound]), attributes: nil))
                                                 }
                                                 
-                                                inlines.append((text: String(text[range.lowerBound..<range.upperBound]), attributes: word.attributes))
+                                                inlines.append((text: word.name, attributes: attributes))
                                                 text = String(text[range.upperBound..<text.endIndex])
                                             } else {
                                                 inlines.append((text: text, attributes: nil))
@@ -2850,7 +3067,23 @@ struct Stage: UIViewRepresentable {
                     }
                     
                     if sequences.isEmpty {
+                        var i = 0
+                        var term = String()
+                        var modifier = String()
                         var oldSequences: [Sequence]? = nil
+                        
+                        while i < word.name.count {
+                            let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
+                            
+                            if character.isNewline {
+                                modifier.append(contentsOf: term)
+                                term.removeAll()
+                            } else {
+                                term.append(character)
+                            }
+                            
+                            i += 1
+                        }
                         
                         await Script.shared.run(name: first.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
                             if y.name == first.name {
@@ -2860,7 +3093,7 @@ struct Stage: UIViewRepresentable {
                                     }
                                 }
                             }
-                        }), words: [word], temperature: temperature) { x in
+                        }), words: [Word(name: term, attributes: word.attributes)], temperature: temperature) { x in
                             if !x.isEmpty {
                                 var y = x
                                 
@@ -2873,24 +3106,47 @@ struct Stage: UIViewRepresentable {
                         
                         if let oldSequences {
                             var content = [String]()
-                            var newSequences: [Sequence]
+                            var newSequences = [Sequence]()
                             
                             if !mute, let prompt = await self.sample(path: first.path, sequences: first.sequences), let language = first.language {
                                 var generateRequired = false
-                                
-                                newSequences = []
                                 
                                 for sequence in oldSequences {
                                     let tempSequence = Sequence(name: sequence.name)
                                     
                                     for (i, obj) in sequence.enumerated() {
                                         if let message = obj as? Message {
-                                            let s = message.content
+                                            var m = Message()
+                                            var s = String()
+                                            
+                                            for j in 0..<message.count {
+                                                var isEqual = true
+                                                
+                                                if let a = message[j].attributes, message[j].text == term && a.count == attributes.count {
+                                                    for k in 0..<attributes.count {
+                                                        if attributes[k] != a[k] {
+                                                            isEqual = false
+                                                            
+                                                            break
+                                                        }
+                                                    }
+                                                } else {
+                                                    isEqual = false
+                                                }
+                                                
+                                                if isEqual {
+                                                    m.append((text: modifier + "\n" + term, attributes: message[j].attributes))
+                                                    s.append(modifier + term)
+                                                } else {
+                                                    m.append((text: message[j].text, attributes: message[j].attributes))
+                                                    s.append(message[j].text)
+                                                }
+                                            }
                                             
                                             if i + 1 < sequence.count && sequence[i + 1] is Sound {
-                                                tempSequence.append(message)
+                                                tempSequence.append(m)
                                             } else {
-                                                tempSequence.append((message, s))
+                                                tempSequence.append((m, s))
                                                 generateRequired = true
                                             }
                                             
@@ -2932,17 +3188,49 @@ struct Stage: UIViewRepresentable {
                                 }
                             } else {
                                 for sequence in oldSequences {
+                                    let tempSequence = Sequence(name: sequence.name)
+                                    
                                     for obj in sequence {
                                         if let message = obj as? Message {
-                                            content.append(message.content)
+                                            var m = Message()
+                                            var s = String()
+                                            
+                                            for i in 0..<message.count {
+                                                var isEqual = true
+                                                
+                                                if let a = message[i].attributes, message[i].text == term && a.count == attributes.count {
+                                                    for j in 0..<attributes.count {
+                                                        if attributes[j] != a[j] {
+                                                            isEqual = false
+                                                            
+                                                            break
+                                                        }
+                                                    }
+                                                } else {
+                                                    isEqual = false
+                                                }
+                                                
+                                                if isEqual {
+                                                    m.append((text: modifier + "\n" + term, attributes: message[i].attributes))
+                                                    s.append(modifier + term)
+                                                } else {
+                                                    m.append((text: message[i].text, attributes: message[i].attributes))
+                                                    s.append(message[i].text)
+                                                }
+                                            }
+                                            
+                                            tempSequence.append(m)
+                                            content.append(s)
+                                        } else {
+                                            tempSequence.append(obj)
                                         }
                                     }
+                                    
+                                    newSequences.append(tempSequence)
                                 }
-                                
-                                newSequences = oldSequences
                             }
                             
-                            self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, content: word.name))
+                            self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, content: input))
                             self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, content: content.joined(separator: "\n")))
                             self.parent.choices.removeAll()
                             
@@ -2971,7 +3259,7 @@ struct Stage: UIViewRepresentable {
                                 if i > 0 {
                                     self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: content.joined(separator: "\n")))
                                 } else {
-                                    self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: word.name))
+                                    self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: input))
                                     self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: content.joined(separator: "\n")))
                                 }
                                 
@@ -3187,7 +3475,7 @@ struct Prompt: UIViewRepresentable {
                         uiView.scrambleLetters = input.3
                     }
                     
-                    uiView.reload(text: text)
+                    uiView.reload(text: text.filter { !$0.isNewline })
                 }
                 
                 context.coordinator.text = text
@@ -3798,6 +4086,7 @@ struct Dictionary: View {
     @State private var isSubmittable = false
     @State private var isRecording = false
     @State private var isCapturing = false
+    @State private var isModifier = false
     @State private var input = String()
     @State private var selectedAttributes: Set<String> = []
     @State private var path: [Word] = []
@@ -3931,9 +4220,11 @@ struct Dictionary: View {
                                 }
                             } else if let index = self.words.firstIndex(where: { $0.id == self.path[0].id }) {
                                 for attribute in self.attributes {
-                                    if let i = self.words[index].attributes.firstIndex(where: { $0 == attribute }) {
+                                    if var attributes = self.words[index].attributes, let i = attributes.firstIndex(where: { $0 == attribute }) {
+                                        attributes.remove(at: i)
+                                        
                                         withAnimation {
-                                            _ = self.words[index].attributes.remove(at: i)
+                                            self.words[index].attributes = attributes
                                         }
                                     }
                                 }
@@ -4016,6 +4307,20 @@ struct Dictionary: View {
                     if let type = self.type {
                         self.input = type
                         self.type = nil
+                    }
+                }
+                .onChange(of: self.words) {
+                    if let word = self.path.first, let index = self.words.firstIndex(where: { $0.id == word.id }), let attributes = self.words[index].attributes, attributes.isEmpty {
+                        self.isModifier = true
+                    } else {
+                        self.isModifier = false
+                    }
+                }
+                .onChange(of: self.path) {
+                    if let word = self.path.first, let attributes = word.attributes, attributes.isEmpty {
+                        self.isModifier = true
+                    } else {
+                        self.isModifier = false
                     }
                 }
                 .onAppear {
@@ -4302,39 +4607,41 @@ struct Dictionary: View {
                                             .fontWeight(.semibold)
                                         Spacer()
                                         
-                                        if word.attributes.isEmpty {
-                                            Text("Modifier")
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(.caption)
-                                                .fontWeight(.semibold)
-                                                .lineLimit(1)
-                                                .textCase(.uppercase)
-                                                .padding(EdgeInsets(
-                                                    top: 4.0,
-                                                    leading: 8.0,
-                                                    bottom: 4.0,
-                                                    trailing: 8.0
-                                                ))
-                                                .overlay(
-                                                    Capsule(style: .continuous)
-                                                        .stroke(Color(uiColor: self.accent), style: StrokeStyle(lineWidth: 1.0))
-                                                )
-                                        } else {
-                                            Text(String(format: "%ld", word.attributes.count))
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(.caption)
-                                                .fontWeight(.semibold)
-                                                .lineLimit(1)
-                                                .padding(EdgeInsets(
-                                                    top: 4.0,
-                                                    leading: 8.0,
-                                                    bottom: 4.0,
-                                                    trailing: 8.0
-                                                ))
-                                                .overlay(
-                                                    Capsule(style: .continuous)
-                                                        .stroke(Color(uiColor: self.accent), style: StrokeStyle(lineWidth: 1.0))
-                                                )
+                                        if let attributes = word.attributes {
+                                            if attributes.isEmpty {
+                                                Text("Modifier")
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(.caption)
+                                                    .fontWeight(.semibold)
+                                                    .lineLimit(1)
+                                                    .textCase(.uppercase)
+                                                    .padding(EdgeInsets(
+                                                        top: 4.0,
+                                                        leading: 8.0,
+                                                        bottom: 4.0,
+                                                        trailing: 8.0
+                                                    ))
+                                                    .overlay(
+                                                        Capsule(style: .continuous)
+                                                            .stroke(Color(uiColor: self.accent), style: StrokeStyle(lineWidth: 1.0))
+                                                    )
+                                            } else {
+                                                Text(String(format: "%ld", attributes.count))
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(.caption)
+                                                    .fontWeight(.semibold)
+                                                    .lineLimit(1)
+                                                    .padding(EdgeInsets(
+                                                        top: 4.0,
+                                                        leading: 8.0,
+                                                        bottom: 4.0,
+                                                        trailing: 8.0
+                                                    ))
+                                                    .overlay(
+                                                        Capsule(style: .continuous)
+                                                            .stroke(Color(uiColor: self.accent), style: StrokeStyle(lineWidth: 1.0))
+                                                    )
+                                            }
                                         }
                                         
                                         Image(systemName: "chevron.right")
@@ -4385,67 +4692,135 @@ struct Dictionary: View {
                 }
     }
     
+    @ViewBuilder
     private func makeAttributes(word: Word) -> some View {
-        return Section(header: Text("Attributes")
-            .foregroundColor(Color(UIColor {
-                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-            }))
-                .fontWeight(.semibold)
-                .lineLimit(1)
-                .textCase(.uppercase)) {
-                    ForEach(self.attributes, id: \.self) { attribute in
-                        if let index = self.words.firstIndex(where: { $0.id == word.id }) {
-                            Button(action: {
-                                if let i = self.words[index].attributes.firstIndex(where: { $0 == attribute }) {
+        if self.attributes.isEmpty {
+            Section(header: Text("Attributes")
+                .foregroundColor(Color(UIColor {
+                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                }))
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                    .textCase(.uppercase)) {
+                        Toggle("Modifier", isOn: Binding<Bool>(get: { self.isModifier }, set: { _ in
+                            if let index = self.words.firstIndex(where: { $0.id == word.id }) {
+                                if self.words[index].attributes == nil {
                                     withAnimation {
-                                        _ = self.words[index].attributes.remove(at: i)
+                                        self.words[index].attributes = []
                                     }
-                                    
-                                    self.save(words: self.words)
                                 } else {
                                     withAnimation {
-                                        self.words[index].attributes.append(attribute)
+                                        self.words[index].attributes = nil
                                     }
-                                    
-                                    self.save(words: self.words)
                                 }
-                            }) {
-                                HStack(alignment: .center, spacing: 16.0) {
-                                    Text(attribute)
-                                        .foregroundColor(Color(UIColor {
-                                            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                        }))
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                    Spacer()
-                                    Image(systemName: "checkmark")
-                                        .frame(
-                                            width: 16.0,
-                                            height: 16.0,
-                                            alignment: .center
-                                        )
-                                        .background(.clear)
-                                        .foregroundColor(Color(self.accent))
-                                        .font(
-                                            .system(size: 16.0)
-                                        )
-                                        .bold()
-                                        .opacity(self.words[index].attributes.contains(attribute) ? 1.0 : 0.0)
-                                        .animation(.linear(duration: 0.5), value: self.words[index].attributes.contains(attribute))
-                                }
-                                .frame(
-                                    maxWidth: .infinity
-                                )
-                                .contentShape(Rectangle())
+                                
+                                self.save(words: self.words)
                             }
-                            .buttonStyle(PlainButtonStyle())
+                        }))
+                            .foregroundColor(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                            }))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .tint(Color(self.accent))
                             .listRowBackground(Color(UIColor {
                                 $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
                             }))
-                        }
                     }
-                    .transition(.opacity.animation(.linear))
-                }
+        } else {
+            Section(header: Text("Attributes")
+                .foregroundColor(Color(UIColor {
+                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                }))
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                    .textCase(.uppercase)) {
+                        ForEach(self.attributes, id: \.self) { attribute in
+                            if let index = self.words.firstIndex(where: { $0.id == word.id }) {
+                                Button(action: {
+                                    if var attributes = self.words[index].attributes {
+                                        if let i = attributes.firstIndex(where: { $0 == attribute }) {
+                                            attributes.remove(at: i)
+                                        } else {
+                                            attributes.append(attribute)
+                                        }
+                                        
+                                        withAnimation {
+                                            self.words[index].attributes = attributes
+                                        }
+                                        
+                                        self.save(words: self.words)
+                                    } else {
+                                        withAnimation {
+                                            self.words[index].attributes = [attribute]
+                                        }
+                                        
+                                        self.save(words: self.words)
+                                    }
+                                }) {
+                                    HStack(alignment: .center, spacing: 16.0) {
+                                        Text(attribute)
+                                            .foregroundColor(Color(UIColor {
+                                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                            }))
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                            .frame(
+                                                width: 16.0,
+                                                height: 16.0,
+                                                alignment: .center
+                                            )
+                                            .background(.clear)
+                                            .foregroundColor(Color(self.accent))
+                                            .font(
+                                                .system(size: 16.0)
+                                            )
+                                            .bold()
+                                            .opacity((self.words[index].attributes ?? []).contains(attribute) ? 1.0 : 0.0)
+                                            .animation(.linear(duration: 0.5), value: (self.words[index].attributes ?? []).contains(attribute))
+                                    }
+                                    .frame(
+                                        maxWidth: .infinity
+                                    )
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .listRowBackground(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                }))
+                            }
+                        }
+                        .transition(.opacity.animation(.linear))
+                    }
+            Section {
+                Toggle("Modifier", isOn: Binding<Bool>(get: { self.isModifier }, set: { _ in
+                    if let index = self.words.firstIndex(where: { $0.id == word.id }) {
+                        if self.words[index].attributes == nil {
+                            withAnimation {
+                                self.words[index].attributes = []
+                            }
+                        } else {
+                            withAnimation {
+                                self.words[index].attributes = nil
+                            }
+                        }
+                        
+                        self.save(words: self.words)
+                    }
+                }))
+                    .foregroundColor(Color(UIColor {
+                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                    }))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .tint(Color(self.accent))
+                    .listRowBackground(Color(UIColor {
+                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                    }))
+            }
+        }
     }
     
     private func save(words: [Word]) {
