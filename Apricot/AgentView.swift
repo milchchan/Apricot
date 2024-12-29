@@ -1669,18 +1669,60 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     if !characterView.messageQueue.isEmpty {
                         var messages = Script.shared.likes[characterView.name!] ?? []
                         let source = characterView.messageQueue[0].source
-                        let message = source.reduce(into: (content: String(), attributes: [(name: String, start: Int, end: Int)](), index: Int(0)), { x, y in
-                            x.content.append(y.text)
-                            
+                        let message = source.reduce(into: (content: String(), attributes: [(name: String?, start: Int, end: Int)](), index: Int(0)), { x, y in
                             if let attributes = y.attributes {
-                                let end = x.index + y.text.count
+                                var i = 0
+                                var term = String()
+                                var modifier = String()
                                 
-                                for name in attributes {
-                                    x.attributes.append((name: name, start: x.index, end: end))
+                                while i < y.text.count {
+                                    let character = y.text[y.text.index(y.text.startIndex, offsetBy: i)]
+                                    
+                                    if character.isNewline {
+                                        modifier.append(contentsOf: term)
+                                        term.removeAll()
+                                    } else {
+                                        term.append(character)
+                                    }
+                                    
+                                    i += 1
                                 }
+                                
+                                if modifier.isEmpty {
+                                    let end = x.index + y.text.count
+                                    
+                                    x.content.append(y.text)
+                                    
+                                    if attributes.isEmpty {
+                                        x.attributes.append((name: nil, start: x.index, end: end))
+                                    } else {
+                                        for name in attributes {
+                                            x.attributes.append((name: name, start: x.index, end: end))
+                                        }
+                                    }
+                                    
+                                    x.index += y.text.count
+                                } else {
+                                    let word = modifier + term
+                                    let end = x.index + word.count
+                                    
+                                    x.content.append(word)
+                                    x.attributes.append((name: nil, start: x.index, end: x.index + modifier.count))
+                                    
+                                    if attributes.isEmpty {
+                                        x.attributes.append((name: nil, start: x.index, end: end))
+                                    } else {
+                                        for name in attributes {
+                                            x.attributes.append((name: name, start: x.index, end: end))
+                                        }
+                                    }
+                                    
+                                    x.index += word.count
+                                }
+                            } else {
+                                x.content.append(y.text)
+                                x.index += y.text.count
                             }
-                            
-                            x.index += y.text.count
                         })
                         let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date(timeIntervalSinceNow: -60 * 60 * 24 * 7))
                         let thresholdDate = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day, hour: 0, minute: 0, second: 0, nanosecond: 0).date ?? Date(timeIntervalSince1970: 0.0)
@@ -1855,7 +1897,11 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                                 var jsonAttributes: [[String: Any]] = []
                                                 
                                                 for attributes in message.attributes {
-                                                    jsonAttributes.append(["name": attributes.name, "start": attributes.start, "end": attributes.end])
+                                                    if let name = attributes.name {
+                                                        jsonAttributes.append(["name": name, "start": attributes.start, "end": attributes.end])
+                                                    } else {
+                                                        jsonAttributes.append(["start": attributes.start, "end": attributes.end])
+                                                    }
                                                 }
                                                 
                                                 if let language = message.language {
@@ -2451,7 +2497,11 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                             var jsonAttributes: [[String: Any]] = []
                                             
                                             for attributes in message.attributes {
-                                                jsonAttributes.append(["name": attributes.name, "start": attributes.start, "end": attributes.end])
+                                                if let name = attributes.name {
+                                                    jsonAttributes.append(["name": name, "start": attributes.start, "end": attributes.end])
+                                                } else {
+                                                    jsonAttributes.append(["start": attributes.start, "end": attributes.end])
+                                                }
                                             }
                                             
                                             if let language = message.language {
@@ -2488,7 +2538,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 }.value
                                 
                                 if let data = try? JSONSerialization.data(withJSONObject: ["name": characterView.name!, "content": message.content, "language": characterView.language as Any, "attributes": message.attributes.reduce(into: [[String: Any]](), { x, y in
-                                    x.append(["name": y.name, "start": y.start, "end": y.end])
+                                    x.append(["name": y.name as Any, "start": y.start, "end": y.end])
                                 })]) {
                                     var request = URLRequest(url: URL(string: "https://milchchan.com/api/like")!)
                                     
@@ -4195,10 +4245,13 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     }()
                     
                     for inline in message {
-                        content.append(inline.text)
-                        
-                        if inline.attributes != nil {
-                            attributes.append((start: index, end: index + inline.text.count))
+                        if inline.attributes == nil {
+                            content.append(inline.text)
+                        } else {
+                            let s = inline.text.filter { !$0.isNewline }
+                            
+                            content.append(s)
+                            attributes.append((start: index, end: index + s.count))
                         }
                         
                         index += inline.text.count
