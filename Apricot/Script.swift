@@ -13,9 +13,9 @@ final public class Script: NSObject, ObservableObject {
     public static let shared = Script()
     @Published public var words: [Word] = []
     @Published public var attributes: [String] = []
-    @Published public var scores: [String: (Double, [String], String?, Date)] = [:]
+    @Published public var scores: [String: (Double, [String]?, String?, Date)] = [:]
     public var characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])] = []
-    public var likes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String, start: Int, end: Int)], timestamp: Date)]] = [:]
+    public var likes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]] = [:]
     private let runtime = Script.Runtime()
     public var states: [String: String] {
         get {
@@ -89,7 +89,7 @@ final public class Script: NSObject, ObservableObject {
                             var name: String? = nil
                             var content: String? = nil
                             var language: String? = nil
-                            var attributes: [(name: String, start: Int, end: Int)] = []
+                            var attributes: [(name: String?, start: Int, end: Int)] = []
                             var date: Date? = nil
                             
                             if let value = likeObject["name"] as? String {
@@ -106,13 +106,8 @@ final public class Script: NSObject, ObservableObject {
                             
                             if let attributeArray = likeObject["attributes"] as? [[String: Any]] {
                                 for dictionaryObject in attributeArray {
-                                    var attributeName: String? = nil
                                     var attributeStart: Int? = nil
                                     var attributeEnd: Int? = nil
-                                    
-                                    if let value = dictionaryObject["name"] as? String {
-                                        attributeName = value
-                                    }
                                     
                                     if let value = dictionaryObject["start"] as? Double {
                                         attributeStart = Int(value)
@@ -122,8 +117,8 @@ final public class Script: NSObject, ObservableObject {
                                         attributeEnd = Int(value)
                                     }
                                     
-                                    if let attributeName, let attributeStart, let attributeEnd {
-                                        attributes.append((name: attributeName, start: attributeStart, end: attributeEnd))
+                                    if let attributeStart, let attributeEnd {
+                                        attributes.append((name: dictionaryObject["name"] as? String, start: attributeStart, end: attributeEnd))
                                     }
                                 }
                             }
@@ -155,15 +150,12 @@ final public class Script: NSObject, ObservableObject {
                 }
                 
                 if let data = try? file.readToEnd(), let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [Any] {
-                    var modifiers: [String] = []
                     var words: [Word] = []
                     var documents: [[String]] = []
-                    var metadata: [([[String]], String?, Date)] = []
+                    var metadata: [([[String]?], String?, Date)] = []
                     
                     for word in self.words {
-                        if word.attributes.isEmpty {
-                            modifiers.append(word.name)
-                        } else {
+                        if word.attributes == nil || !word.attributes!.isEmpty {
                             words.append(word)
                         }
                     }
@@ -251,45 +243,51 @@ final public class Script: NSObject, ObservableObject {
                             if !like.attributes.isEmpty {
                                 var index = 0
                                 var document: [String] = []
-                                var annotations: [[String]] = []
+                                var annotations: [[String]?] = []
                                 
                                 while index < like.content.count {
                                     var maxEnd = index
-                                    var attributes: [String] = []
                                     
                                     for attribute in like.attributes {
                                         if attribute.start == index && attribute.end > maxEnd {
                                             maxEnd = attribute.end
                                         }
-                                        
-                                        if !attributes.contains(attribute.name) {
-                                            attributes.append(attribute.name)
-                                        }
                                     }
                                     
                                     if index != maxEnd {
-                                        let term = String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)])
-                                        var hasModifier = false
+                                        var boundaryIndex = index
+                                        var attributes: [String] = []
                                         
-                                        for modifier in modifiers {
-                                            if modifier.count < term.count && term.hasPrefix(modifier) {
-                                                let s = String(term[term.index(term.startIndex, offsetBy: modifier.count)..<term.index(term.startIndex, offsetBy: term.count)])
+                                        for attribute in like.attributes {
+                                            if attribute.end == maxEnd {
+                                                if attribute.start > boundaryIndex {
+                                                    boundaryIndex = attribute.start
+                                                }
                                                 
-                                                if words.contains(where: { $0.name == s }) {
-                                                    document.append(modifier)
-                                                    annotations.append([])
-                                                    document.append(s)
-                                                    annotations.append(attributes)
-                                                    hasModifier = true
-                                                    
-                                                    break
+                                                if let name = attribute.name, !attributes.contains(name) {
+                                                    attributes.append(name)
                                                 }
                                             }
                                         }
                                         
-                                        if !hasModifier {
-                                            document.append(term)
-                                            annotations.append(attributes)
+                                        if boundaryIndex == index {
+                                            document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)]))
+                                            
+                                            if attributes.isEmpty {
+                                                annotations.append(nil)
+                                            } else {
+                                                annotations.append(attributes)
+                                            }
+                                        } else {
+                                            document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: boundaryIndex)]).trimmingCharacters(in: .whitespaces))
+                                            annotations.append([])
+                                            document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: boundaryIndex)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)]))
+                                            
+                                            if attributes.isEmpty {
+                                                annotations.append(nil)
+                                            } else {
+                                                annotations.append(attributes)
+                                            }
                                         }
                                         
                                         index = maxEnd
@@ -309,11 +307,11 @@ final public class Script: NSObject, ObservableObject {
                     if !documents.isEmpty {
                         let scores = self.computeBM25(documents: documents)
                         let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
-                        var recentLikes: [([String: (Double, [String])], String?, Date)] = []
+                        var recentLikes: [([String: (Double, [String]?)], String?, Date)] = []
                         
                         for i in 0..<documents.count {
                             if metadata[i].2 > yesterday {
-                                var temp: [String: (Double, [String])] = [:]
+                                var temp: [String: (Double, [String]?)] = [:]
                                 
                                 for (key, value) in scores[i] {
                                     for j in 0..<documents[i].count {
@@ -331,7 +329,7 @@ final public class Script: NSObject, ObservableObject {
                         
                         if recentLikes.isEmpty {
                             for i in 0..<documents.count {
-                                var temp: [String: (Double, [String])] = [:]
+                                var temp: [String: (Double, [String]?)] = [:]
                                 
                                 for (key, value) in scores[i] {
                                     for j in 0..<documents[i].count {
@@ -353,15 +351,19 @@ final public class Script: NSObject, ObservableObject {
                         for like in recentLikes {
                             for (key, value) in like.0 {
                                 if let tuple = self.scores[key] {
-                                    var attributes = tuple.1
-                                    
-                                    for attribute in value.1 {
-                                        if !attributes.contains(attribute) {
-                                            attributes.append(attribute)
+                                    if var currentAttributes = tuple.1 {
+                                        if let attributes = value.1 {
+                                            for attribute in attributes {
+                                                if !currentAttributes.contains(attribute) {
+                                                    currentAttributes.append(attribute)
+                                                }
+                                            }
                                         }
+                                        
+                                        self.scores[key] = (value.0 + tuple.0, currentAttributes, like.1, tuple.3)
+                                    } else {
+                                        self.scores[key] = (value.0 + tuple.0, value.1, like.1, tuple.3)
                                     }
-                                    
-                                    self.scores[key] = (value.0 + tuple.0, attributes, like.1, tuple.3)
                                 } else {
                                     self.scores[key] = (value.0, value.1, like.1, like.2)
                                 }
@@ -545,15 +547,14 @@ final public class Script: NSObject, ObservableObject {
         
         let tempJson = json
         let data = await Task.detached {
-            var likes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String, start: Int, end: Int)], timestamp: Date)]] = [:]
-            var tempLikes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String, start: Int, end: Int)], timestamp: Date)]] = [:]
+            var likes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]] = [:]
+            var tempLikes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]] = [:]
             var idSet = Set<Int>()
-            var modifiers: [String] = []
             var words: [Word] = []
             var isUpdated = false
             var documents: [[String]] = []
-            var metadata: [([[String]], String?, Date)] = []
-            var data: [String: (Double, [String], String?, Date)] = [:]
+            var metadata: [([[String]?], String?, Date)] = []
+            var data: [String: (Double, [String]?, String?, Date)] = [:]
             
             for (key, value) in self.likes {
                 for like in value {
@@ -573,9 +574,7 @@ final public class Script: NSObject, ObservableObject {
             }
             
             for word in self.words {
-                if word.attributes.isEmpty {
-                    modifiers.append(word.name)
-                } else {
+                if word.attributes == nil || !word.attributes!.isEmpty {
                     words.append(word)
                 }
             }
@@ -586,7 +585,7 @@ final public class Script: NSObject, ObservableObject {
                     var name: String? = nil
                     var content: String? = nil
                     var language: String? = nil
-                    var attributes: [(name: String, start: Int, end: Int)] = []
+                    var attributes: [(name: String?, start: Int, end: Int)] = []
                     var date: Date? = nil
                     
                     if let value = likeObject["id"] as? Int {
@@ -607,13 +606,8 @@ final public class Script: NSObject, ObservableObject {
                     
                     if let attributeArray = likeObject["attributes"] as? [[String: Any]] {
                         for dictionaryObject in attributeArray {
-                            var attributeName: String? = nil
                             var attributeStart: Int? = nil
                             var attributeEnd: Int? = nil
-                            
-                            if let value = dictionaryObject["name"] as? String {
-                                attributeName = value
-                            }
                             
                             if let value = dictionaryObject["start"] as? Double {
                                 attributeStart = Int(value)
@@ -623,8 +617,8 @@ final public class Script: NSObject, ObservableObject {
                                 attributeEnd = Int(value)
                             }
                             
-                            if let attributeName, let attributeStart, let attributeEnd {
-                                attributes.append((name: attributeName, start: attributeStart, end: attributeEnd))
+                            if let attributeStart, let attributeEnd {
+                                attributes.append((name: dictionaryObject["name"] as? String, start: attributeStart, end: attributeEnd))
                             }
                         }
                     }
@@ -673,45 +667,51 @@ final public class Script: NSObject, ObservableObject {
                     if !like.attributes.isEmpty {
                         var index = 0
                         var document: [String] = []
-                        var annotations: [[String]] = []
+                        var annotations: [[String]?] = []
                         
                         while index < like.content.count {
                             var maxEnd = index
-                            var attributes: [String] = []
                             
                             for attribute in like.attributes {
                                 if attribute.start == index && attribute.end > maxEnd {
                                     maxEnd = attribute.end
                                 }
-                                
-                                if !attributes.contains(attribute.name) {
-                                    attributes.append(attribute.name)
-                                }
                             }
                             
                             if index != maxEnd {
-                                let term = String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)])
-                                var hasModifier = false
+                                var boundaryIndex = index
+                                var attributes: [String] = []
                                 
-                                for modifier in modifiers {
-                                    if modifier.count < term.count && term.hasPrefix(modifier) {
-                                        let s = String(term[term.index(term.startIndex, offsetBy: modifier.count)..<term.index(term.startIndex, offsetBy: term.count)])
+                                for attribute in like.attributes {
+                                    if attribute.end == maxEnd {
+                                        if attribute.start > boundaryIndex {
+                                            boundaryIndex = attribute.start
+                                        }
                                         
-                                        if words.contains(where: { $0.name == s }) {
-                                            document.append(modifier)
-                                            annotations.append([])
-                                            document.append(s)
-                                            annotations.append(attributes)
-                                            hasModifier = true
-                                            
-                                            break
+                                        if let name = attribute.name, !attributes.contains(name) {
+                                            attributes.append(name)
                                         }
                                     }
                                 }
                                 
-                                if !hasModifier {
-                                    document.append(term)
-                                    annotations.append(attributes)
+                                if boundaryIndex == index {
+                                    document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)]))
+                                    
+                                    if attributes.isEmpty {
+                                        annotations.append(nil)
+                                    } else {
+                                        annotations.append(attributes)
+                                    }
+                                } else {
+                                    document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: boundaryIndex)]).trimmingCharacters(in: .whitespaces))
+                                    annotations.append([])
+                                    document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: boundaryIndex)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)]))
+                                    
+                                    if attributes.isEmpty {
+                                        annotations.append(nil)
+                                    } else {
+                                        annotations.append(attributes)
+                                    }
                                 }
                                 
                                 index = maxEnd
@@ -731,11 +731,11 @@ final public class Script: NSObject, ObservableObject {
             if !documents.isEmpty {
                 let scores = self.computeBM25(documents: documents)
                 let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
-                var recentLikes: [([String: (Double, [String])], String?, Date)] = []
+                var recentLikes: [([String: (Double, [String]?)], String?, Date)] = []
                 
                 for i in 0..<documents.count {
                     if metadata[i].2 > yesterday {
-                        var temp: [String: (Double, [String])] = [:]
+                        var temp: [String: (Double, [String]?)] = [:]
                         
                         for (key, value) in scores[i] {
                             for j in 0..<documents[i].count {
@@ -753,7 +753,7 @@ final public class Script: NSObject, ObservableObject {
                 
                 if recentLikes.isEmpty {
                     for i in 0..<documents.count {
-                        var temp: [String: (Double, [String])] = [:]
+                        var temp: [String: (Double, [String]?)] = [:]
                         
                         for (key, value) in scores[i] {
                             for j in 0..<documents[i].count {
@@ -774,15 +774,19 @@ final public class Script: NSObject, ObservableObject {
                 for like in recentLikes {
                     for (key, value) in like.0 {
                         if let tuple = data[key] {
-                            var attributes = tuple.1
-                            
-                            for attribute in value.1 {
-                                if !attributes.contains(attribute) {
-                                    attributes.append(attribute)
+                            if var currentAttributes = tuple.1 {
+                                if let attributes = value.1 {
+                                    for attribute in attributes {
+                                        if !currentAttributes.contains(attribute) {
+                                            currentAttributes.append(attribute)
+                                        }
+                                    }
                                 }
+                                
+                                data[key] = (value.0 + tuple.0, currentAttributes, like.1, tuple.3)
+                            } else {
+                                data[key] = (value.0 + tuple.0, value.1, like.1, tuple.3)
                             }
-                            
-                            data[key] = (value.0 + tuple.0, attributes, like.1, tuple.3)
                         } else {
                             data[key] = (value.0, value.1, like.1, like.2)
                         }
@@ -794,7 +798,7 @@ final public class Script: NSObject, ObservableObject {
                 }
             }
             
-            return (isUpdated, tempLikes.reduce(into: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String, start: Int, end: Int)], timestamp: Date)]](), { x, y in
+            return (isUpdated, tempLikes.reduce(into: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]](), { x, y in
                 for like in y.value {
                     if like.id != nil {
                         if var value = x[y.key] {
@@ -976,7 +980,7 @@ final public class Script: NSObject, ObservableObject {
             }
         }
         
-        public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (Double, [String], String?, Date)], words: [Word], temperature: Double = 1.0, completion: (([Sequence]) -> [Sequence])? = nil) async {
+        public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (Double, [String]?, String?, Date)], words: [Word], temperature: Double = 1.0, completion: (([Sequence]) -> [Sequence])? = nil) async {
             var preparedSequences = await self.prepareAsync(characters: characters, name: name, sequences: sequences, state: state, scores: scores, words: words, temperature: temperature)
             
             if let completion {
@@ -1675,7 +1679,7 @@ final public class Script: NSObject, ObservableObject {
             }.value
         }
         
-        private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (Double, [String], String?, Date)], words: [Word], temperature: Double = 1.0, beamWidth: Int = 3) async -> [Sequence] {
+        private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (Double, [String]?, String?, Date)], words: [Word], temperature: Double = 1.0, beamWidth: Int = 3) async -> [Sequence] {
             return await Task.detached {
                 let epsilon = powl(10, -6)
                 var preparedSequences = [Sequence]()
@@ -1683,12 +1687,14 @@ final public class Script: NSObject, ObservableObject {
                 var reverseDictionary: [String: [(String, [String])]] = [:]
                 
                 for (key, value) in scores {
-                    for attribute in value.1 {
-                        if var tuple = reverseDictionary[attribute] {
-                            tuple.append((key, value.1))
-                            reverseDictionary[attribute] = tuple
-                        } else {
-                            reverseDictionary[attribute] = [(key, value.1)]
+                    if let attributes = value.1 {
+                        for attribute in attributes {
+                            if var tuple = reverseDictionary[attribute] {
+                                tuple.append((key, attributes))
+                                reverseDictionary[attribute] = tuple
+                            } else {
+                                reverseDictionary[attribute] = [(key, attributes)]
+                            }
                         }
                     }
                 }
@@ -1737,7 +1743,7 @@ final public class Script: NSObject, ObservableObject {
                                                     if !tempAttributeSet.contains(attribute) {
                                                         if !tempWordQueue.isEmpty {
                                                             repeat {
-                                                                if tempWordQueue.removeFirst().attributes.contains(attribute) {
+                                                                if let attributes = tempWordQueue.removeFirst().attributes, attributes.contains(attribute) {
                                                                     tempAttributeSet.insert(attribute)
                                                                     
                                                                     break
@@ -1806,9 +1812,11 @@ final public class Script: NSObject, ObservableObject {
                         
                         return false
                     }) && words.contains(where: { word in
-                        for attribute in word.attributes {
-                            if attributeSet.contains(attribute) {
-                                return true
+                        if let attributes = word.attributes {
+                            for attribute in attributes {
+                                if attributeSet.contains(attribute) {
+                                    return true
+                                }
                             }
                         }
                         
@@ -1858,17 +1866,19 @@ final public class Script: NSObject, ObservableObject {
                                                 var candidates: [([(text: String, attributes: [String]?)], [String: (text: String, attributes: [String])], (text: String, attributes: [String]), Double)] = []
                                                 
                                                 for word in words {
-                                                    for attribute in word.attributes {
-                                                        if let match = attribute.firstMatch(of: regex), !match.output.isEmpty {
-                                                            selections.append((word.name, word.attributes))
-                                                            
-                                                            if let (score, _, _, _) = scores[word.name] {
-                                                                probabilities.append(score)
-                                                            } else {
-                                                                probabilities.append(epsilon)
+                                                    if let attributes = word.attributes {
+                                                        for attribute in attributes {
+                                                            if let match = attribute.firstMatch(of: regex), !match.output.isEmpty {
+                                                                selections.append((word.name, attributes))
+                                                                
+                                                                if let (score, _, _, _) = scores[word.name] {
+                                                                    probabilities.append(score)
+                                                                } else {
+                                                                    probabilities.append(epsilon)
+                                                                }
+                                                                
+                                                                break
                                                             }
-                                                            
-                                                            break
                                                         }
                                                     }
                                                 }
