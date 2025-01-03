@@ -329,7 +329,7 @@ struct Chat: View {
                                                         Button(action: {
                                                             if let prompt = self.prompt {
                                                                 if let word = prompt.1, (word.attributes == nil || !word.attributes!.isEmpty) && prompt.2 {
-                                                                    self.prompt = (prompt.0, prompt.1, false, prompt.3, prompt.4, prompt.5, CACurrentMediaTime())
+                                                                    self.prompt = (word.name, prompt.1, false, prompt.3, prompt.4, 0, CACurrentMediaTime())
                                                                 } else if self.script.words.isEmpty {
                                                                     self.shakes += 1
                                                                 } else {
