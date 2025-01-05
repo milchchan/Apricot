@@ -1338,52 +1338,77 @@ struct Chat: View {
                     if !mute, let prompt = await self.sample(path: first.path, sequences: first.sequences), let language = first.language {
                         var generateRequired = false
                         
-                        for sequence in oldSequences {
-                            let tempSequence = Sequence(name: sequence.name)
-                            
-                            for (i, obj) in sequence.enumerated() {
-                                if let message = obj as? Message {
-                                    var m = Message()
-                                    var s = String()
-                                    
-                                    for j in 0..<message.count {
-                                        var isEqual = true
+                        if modifier.isEmpty {
+                            for sequence in oldSequences {
+                                let tempSequence = Sequence(name: sequence.name)
+                                
+                                for (i, obj) in sequence.enumerated() {
+                                    if let message = obj as? Message {
+                                        let s = message.content
                                         
-                                        if let a = message[j].attributes, message[j].text == term && a.count == attributes.count {
-                                            for k in 0..<attributes.count {
-                                                if attributes[k] != a[k] {
-                                                    isEqual = false
-                                                    
-                                                    break
-                                                }
-                                            }
+                                        if i + 1 < sequence.count && sequence[i + 1] is Sound {
+                                            tempSequence.append(message)
                                         } else {
-                                            isEqual = false
+                                            tempSequence.append((message, s))
+                                            generateRequired = true
                                         }
                                         
-                                        if isEqual {
-                                            m.append((text: modifier + "\n" + term, attributes: message[j].attributes))
-                                            s.append(modifier + term)
-                                        } else {
-                                            m.append((text: message[j].text, attributes: message[j].attributes))
-                                            s.append(message[j].text)
-                                        }
-                                    }
-                                    
-                                    if i + 1 < sequence.count && sequence[i + 1] is Sound {
-                                        tempSequence.append(m)
+                                        content.append(s)
                                     } else {
-                                        tempSequence.append((m, s))
-                                        generateRequired = true
+                                        tempSequence.append(obj)
                                     }
-                                    
-                                    content.append(s)
-                                } else {
-                                    tempSequence.append(obj)
                                 }
+                                
+                                newSequences.append(tempSequence)
                             }
-                            
-                            newSequences.append(tempSequence)
+                        } else {
+                            for sequence in oldSequences {
+                                let tempSequence = Sequence(name: sequence.name)
+                                
+                                for (i, obj) in sequence.enumerated() {
+                                    if let message = obj as? Message {
+                                        var m = Message()
+                                        var s = String()
+                                        
+                                        for j in 0..<message.count {
+                                            var isEqual = true
+                                            
+                                            if let a = message[j].attributes, message[j].text == term && a.count == attributes.count {
+                                                for k in 0..<attributes.count {
+                                                    if attributes[k] != a[k] {
+                                                        isEqual = false
+                                                        
+                                                        break
+                                                    }
+                                                }
+                                            } else {
+                                                isEqual = false
+                                            }
+                                            
+                                            if isEqual {
+                                                m.append((text: modifier + "\n" + term, attributes: message[j].attributes))
+                                                s.append(modifier + term)
+                                            } else {
+                                                m.append((text: message[j].text, attributes: message[j].attributes))
+                                                s.append(message[j].text)
+                                            }
+                                        }
+                                        
+                                        if i + 1 < sequence.count && sequence[i + 1] is Sound {
+                                            tempSequence.append(m)
+                                        } else {
+                                            tempSequence.append((m, s))
+                                            generateRequired = true
+                                        }
+                                        
+                                        content.append(s)
+                                    } else {
+                                        tempSequence.append(obj)
+                                    }
+                                }
+                                
+                                newSequences.append(tempSequence)
+                            }
                         }
                         
                         if generateRequired {
@@ -1412,6 +1437,21 @@ struct Chat: View {
                             withAnimation(.easeIn(duration: 0.5)) {
                                 self.isLoading = false
                             }
+                        }
+                    } else if modifier.isEmpty {
+                        for sequence in oldSequences {
+                            let tempSequence = Sequence(name: sequence.name)
+                            
+                            for obj in sequence {
+                                if let message = obj as? Message {
+                                    tempSequence.append(message)
+                                    content.append(message.content)
+                                } else {
+                                    tempSequence.append(obj)
+                                }
+                            }
+                            
+                            newSequences.append(tempSequence)
                         }
                     } else {
                         for sequence in oldSequences {
@@ -3111,52 +3151,77 @@ struct Stage: UIViewRepresentable {
                             if !mute, let prompt = await self.sample(path: first.path, sequences: first.sequences), let language = first.language {
                                 var generateRequired = false
                                 
-                                for sequence in oldSequences {
-                                    let tempSequence = Sequence(name: sequence.name)
-                                    
-                                    for (i, obj) in sequence.enumerated() {
-                                        if let message = obj as? Message {
-                                            var m = Message()
-                                            var s = String()
-                                            
-                                            for j in 0..<message.count {
-                                                var isEqual = true
+                                if modifier.isEmpty {
+                                    for sequence in oldSequences {
+                                        let tempSequence = Sequence(name: sequence.name)
+                                        
+                                        for (i, obj) in sequence.enumerated() {
+                                            if let message = obj as? Message {
+                                                let s = message.content
                                                 
-                                                if let a = message[j].attributes, message[j].text == term && a.count == attributes.count {
-                                                    for k in 0..<attributes.count {
-                                                        if attributes[k] != a[k] {
-                                                            isEqual = false
-                                                            
-                                                            break
-                                                        }
-                                                    }
+                                                if i + 1 < sequence.count && sequence[i + 1] is Sound {
+                                                    tempSequence.append(message)
                                                 } else {
-                                                    isEqual = false
+                                                    tempSequence.append((message, s))
+                                                    generateRequired = true
                                                 }
                                                 
-                                                if isEqual {
-                                                    m.append((text: modifier + "\n" + term, attributes: message[j].attributes))
-                                                    s.append(modifier + term)
-                                                } else {
-                                                    m.append((text: message[j].text, attributes: message[j].attributes))
-                                                    s.append(message[j].text)
-                                                }
-                                            }
-                                            
-                                            if i + 1 < sequence.count && sequence[i + 1] is Sound {
-                                                tempSequence.append(m)
+                                                content.append(s)
                                             } else {
-                                                tempSequence.append((m, s))
-                                                generateRequired = true
+                                                tempSequence.append(obj)
                                             }
-                                            
-                                            content.append(s)
-                                        } else {
-                                            tempSequence.append(obj)
                                         }
+                                        
+                                        newSequences.append(tempSequence)
                                     }
-                                    
-                                    newSequences.append(tempSequence)
+                                } else {
+                                    for sequence in oldSequences {
+                                        let tempSequence = Sequence(name: sequence.name)
+                                        
+                                        for (i, obj) in sequence.enumerated() {
+                                            if let message = obj as? Message {
+                                                var m = Message()
+                                                var s = String()
+                                                
+                                                for j in 0..<message.count {
+                                                    var isEqual = true
+                                                    
+                                                    if let a = message[j].attributes, message[j].text == term && a.count == attributes.count {
+                                                        for k in 0..<attributes.count {
+                                                            if attributes[k] != a[k] {
+                                                                isEqual = false
+                                                                
+                                                                break
+                                                            }
+                                                        }
+                                                    } else {
+                                                        isEqual = false
+                                                    }
+                                                    
+                                                    if isEqual {
+                                                        m.append((text: modifier + "\n" + term, attributes: message[j].attributes))
+                                                        s.append(modifier + term)
+                                                    } else {
+                                                        m.append((text: message[j].text, attributes: message[j].attributes))
+                                                        s.append(message[j].text)
+                                                    }
+                                                }
+                                                
+                                                if i + 1 < sequence.count && sequence[i + 1] is Sound {
+                                                    tempSequence.append(m)
+                                                } else {
+                                                    tempSequence.append((m, s))
+                                                    generateRequired = true
+                                                }
+                                                
+                                                content.append(s)
+                                            } else {
+                                                tempSequence.append(obj)
+                                            }
+                                        }
+                                        
+                                        newSequences.append(tempSequence)
+                                    }
                                 }
                                 
                                 if generateRequired {
@@ -3185,6 +3250,21 @@ struct Stage: UIViewRepresentable {
                                     withAnimation(.easeIn(duration: 0.5)) {
                                         self.parent.loading = false
                                     }
+                                }
+                            } else if modifier.isEmpty {
+                                for sequence in oldSequences {
+                                    let tempSequence = Sequence(name: sequence.name)
+                                    
+                                    for obj in sequence {
+                                        if let message = obj as? Message {
+                                            tempSequence.append(message)
+                                            content.append(message.content)
+                                        } else {
+                                            tempSequence.append(obj)
+                                        }
+                                    }
+                                    
+                                    newSequences.append(tempSequence)
                                 }
                             } else {
                                 for sequence in oldSequences {
