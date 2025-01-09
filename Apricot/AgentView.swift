@@ -3073,7 +3073,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     let nowDate = Date()
                     
                     if nowDate.timeIntervalSince(idleDate) >= 10.0 {
-                        if let delegate = self.delegate, delegate.agentShouldIdle(self, by: characterView.name!) && (UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0) {
+                        if let delegate = self.delegate, delegate.agentShouldIdle(self, by: characterView.name!) {
                             Task {
                                 await Script.shared.run(name: characterView.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
                                     if y.name == characterView.name {
