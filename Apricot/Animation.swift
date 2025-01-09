@@ -44,14 +44,14 @@ public class Animation: Collection, Hashable {
             }
         }
         
-        if time > frame.delay {
+        if time >= frame.delay {
             var delay = frame.delay
             
             for i in 1..<self.frames.count {
                 frame = self.frames[i]
                 delay += frame.delay
                 
-                if time <= delay {
+                if time < delay {
                     break
                 }
             }
