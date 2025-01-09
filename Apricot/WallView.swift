@@ -821,14 +821,14 @@ class WallView: UIView {
             if let frames = self.backgroundFrames {
                 var frame = frames[0]
                 
-                if let currentTime = self.currentTime, currentTime > frame.delay {
+                if let currentTime = self.currentTime, currentTime >= frame.delay {
                     var delay = frame.delay
                     
                     for i in 1..<frames.count {
                         frame = frames[i]
                         delay += frame.delay
                         
-                        if currentTime <= delay {
+                        if currentTime < delay {
                             break
                         }
                     }
@@ -1818,11 +1818,11 @@ class WallView: UIView {
                         for frame in frames {
                             let nextDelay = delay + frame.delay
                             
-                            if currentTime > delay && currentTime <= nextDelay {
+                            if currentTime >= delay && currentTime < nextDelay {
                                 previousImage = frame.image
                             }
                             
-                            if nextTime > delay && nextTime <= nextDelay {
+                            if nextTime >= delay && nextTime < nextDelay {
                                 nextImage = frame.image
                             }
                             
@@ -2018,7 +2018,7 @@ class WallView: UIView {
                     var particle = self.particles[i]
                     let time = particle.time + deltaTime
                     
-                    if time > particle.delay {
+                    if time >= particle.delay {
                         let t = particle.time - particle.delay
                         
                         if t >= particle.duration {
