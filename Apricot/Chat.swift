@@ -4483,7 +4483,7 @@ struct Dictionary: View {
                                         await Task.detached {
                                             await MainActor.run {
                                                 withAnimation {
-                                                    self.words.append(Word(name: input))
+                                                    self.words.append(Word(name: input, attributes: nil))
                                                 }
                                                 
                                                 self.save(words: self.words)
@@ -4599,7 +4599,7 @@ struct Dictionary: View {
                                 await Task.detached {
                                     await MainActor.run {
                                         withAnimation {
-                                            self.words.append(Word(name: input))
+                                            self.words.append(Word(name: input, attributes: nil))
                                         }
                                         
                                         self.save(words: self.words)
