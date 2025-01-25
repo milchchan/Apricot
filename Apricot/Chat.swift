@@ -2421,25 +2421,20 @@ struct Stage: UIViewRepresentable {
                 var dictionary = [String: ([String]?, [String])]()
                 
                 for attribute in line.attributes {
-                    var maxEnd = attribute.end
+                    var maxEnd = attribute.start
                     var boundaryIndex = attribute.start
                     var attributes = [String]()
                     
                     for i in 0..<line.attributes.count {
                         if attribute.start == line.attributes[i].start && line.attributes[i].end > maxEnd {
+                            boundaryIndex = maxEnd
                             maxEnd = line.attributes[i].end
                         }
                     }
                     
                     for a in line.attributes {
-                        if a.end == maxEnd {
-                            if a.start > boundaryIndex {
-                                boundaryIndex = a.start
-                            }
-                            
-                            if let name = a.name, !attributes.contains(name) {
-                                attributes.append(name)
-                            }
+                        if a.end == maxEnd, let name = a.name, !attributes.contains(name) {
+                            attributes.append(name)
                         }
                     }
                     
