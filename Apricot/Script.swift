@@ -165,7 +165,7 @@ final public class Script: NSObject, ObservableObject {
                             var id: Int? = nil
                             var name: String? = nil
                             var content: String? = nil
-                            var attributes: [(name: String, start: Int, end: Int)] = []
+                            var attributes: [(name: String?, start: Int, end: Int)] = []
                             var language: String? = nil
                             var date: Date? = nil
                             
@@ -187,13 +187,8 @@ final public class Script: NSObject, ObservableObject {
                             
                             if let attributeArray = likeObject["attributes"] as? [[String: Any]] {
                                 for dictionaryObject in attributeArray {
-                                    var attributeName: String? = nil
                                     var attributeStart: Int? = nil
                                     var attributeEnd: Int? = nil
-                                    
-                                    if let value = dictionaryObject["name"] as? String {
-                                        attributeName = value
-                                    }
                                     
                                     if let value = dictionaryObject["start"] as? Double {
                                         attributeStart = Int(value)
@@ -203,8 +198,8 @@ final public class Script: NSObject, ObservableObject {
                                         attributeEnd = Int(value)
                                     }
                                     
-                                    if let attributeName, let attributeStart, let attributeEnd {
-                                        attributes.append((name: attributeName, start: attributeStart, end: attributeEnd))
+                                    if let attributeStart, let attributeEnd {
+                                        attributes.append((name: dictionaryObject["name"] as? String, start: attributeStart, end: attributeEnd))
                                     }
                                 }
                             }
@@ -247,26 +242,21 @@ final public class Script: NSObject, ObservableObject {
                                 
                                 while index < like.content.count {
                                     var maxEnd = index
+                                    var boundaryIndex = index
                                     
                                     for attribute in like.attributes {
                                         if attribute.start == index && attribute.end > maxEnd {
+                                            boundaryIndex = maxEnd
                                             maxEnd = attribute.end
                                         }
                                     }
                                     
                                     if index != maxEnd {
-                                        var boundaryIndex = index
                                         var attributes: [String] = []
                                         
                                         for attribute in like.attributes {
-                                            if attribute.end == maxEnd {
-                                                if attribute.start > boundaryIndex {
-                                                    boundaryIndex = attribute.start
-                                                }
-                                                
-                                                if let name = attribute.name, !attributes.contains(name) {
-                                                    attributes.append(name)
-                                                }
+                                            if attribute.end == maxEnd, let name = attribute.name, !attributes.contains(name) {
+                                                attributes.append(name)
                                             }
                                         }
                                         
@@ -671,26 +661,21 @@ final public class Script: NSObject, ObservableObject {
                         
                         while index < like.content.count {
                             var maxEnd = index
+                            var boundaryIndex = index
                             
                             for attribute in like.attributes {
                                 if attribute.start == index && attribute.end > maxEnd {
+                                    boundaryIndex = maxEnd
                                     maxEnd = attribute.end
                                 }
                             }
                             
                             if index != maxEnd {
-                                var boundaryIndex = index
                                 var attributes: [String] = []
                                 
                                 for attribute in like.attributes {
-                                    if attribute.end == maxEnd {
-                                        if attribute.start > boundaryIndex {
-                                            boundaryIndex = attribute.start
-                                        }
-                                        
-                                        if let name = attribute.name, !attributes.contains(name) {
-                                            attributes.append(name)
-                                        }
+                                    if attribute.end == maxEnd, let name = attribute.name, !attributes.contains(name) {
+                                        attributes.append(name)
                                     }
                                 }
                                 
