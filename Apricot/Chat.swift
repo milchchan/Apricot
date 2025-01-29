@@ -15,14 +15,15 @@ import StoreKit
 import UIKit
 
 struct Chat: View {
+    @Environment(\.openURL) var openURL
     @StateObject private var shortcut = Shortcut.shared
     @StateObject private var script: Script
-    @State private var prompt: (String?, Word?, Bool, Set<Character>?, [String], Int, Double)? = nil
+    @State private var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)? = nil
     @State private var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
     @State private var labels = [String]()
     @State private var likes = (old: 0, new: [String: [Date]]())
     @State private var likability: Double? = nil
-    @State private var choices = [String]()
+    @State private var choices = [(String, URL?)]()
     @State private var revealMenu = false
     @State private var showActivity = false
     @State private var showDictionary = false
@@ -165,12 +166,17 @@ struct Chat: View {
                                                         if prompt.2 && prompt.5 == 0 {
                                                             self.prompt = (prompt.0, prompt.1, false, prompt.3, prompt.4, prompt.5, CACurrentMediaTime())
                                                         } else if prompt.5 > 0 {
-                                                            Task {
-                                                                await self.talk(word: Word(name: prompt.4[prompt.5 - 1]), intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
+                                                            if let url = prompt.4[prompt.5 - 1].1 {
+                                                                openURL(url)
+                                                            } else {
+                                                                Task {
+                                                                    await self.talk(word: Word(name: prompt.4[prompt.5 - 1].0), intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
+                                                                }
+                                                                
+                                                                self.choices.removeAll()
                                                             }
                                                             
                                                             self.prompt = nil
-                                                            self.choices.removeAll()
                                                             
                                                             withAnimation(.easeInOut(duration: 0.5)) {
                                                                 self.revealMenu = false
@@ -180,8 +186,8 @@ struct Chat: View {
                                                                 await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
                                                             }
                                                             
-                                                            self.prompt = nil
                                                             self.choices.removeAll()
+                                                            self.prompt = nil
                                                             
                                                             withAnimation(.easeInOut(duration: 0.5)) {
                                                                 self.revealMenu = false
@@ -288,7 +294,7 @@ struct Chat: View {
                                                                 let index = (prompt.5 - 1) % (prompt.4.count + 1)
                                                                 
                                                                 if index > 0 {
-                                                                    self.prompt = (prompt.4[index - 1], prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
+                                                                    self.prompt = (prompt.4[index - 1].0, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                 } else if index == 0 {
                                                                     if let word = prompt.1 {
                                                                         self.prompt = (word.name, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
@@ -296,7 +302,7 @@ struct Chat: View {
                                                                         self.prompt = (nil, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                     }
                                                                 } else {
-                                                                    self.prompt = (prompt.4[prompt.4.count - 1], prompt.1, prompt.2, prompt.3, prompt.4, prompt.4.count, CACurrentMediaTime())
+                                                                    self.prompt = (prompt.4[prompt.4.count - 1].0, prompt.1, prompt.2, prompt.3, prompt.4, prompt.4.count, CACurrentMediaTime())
                                                                 }
                                                             }) {
                                                                 Image(systemName: "chevron.backward")
@@ -435,7 +441,7 @@ struct Chat: View {
                                                                 let index = (prompt.5 + 1) % (prompt.4.count + 1)
                                                                 
                                                                 if index > 0 {
-                                                                    self.prompt = (prompt.4[index - 1], prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
+                                                                    self.prompt = (prompt.4[index - 1].0, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                 } else if let word = prompt.1 {
                                                                     self.prompt = (word.name, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
                                                                 } else {
@@ -1115,7 +1121,7 @@ struct Chat: View {
             let attributes = word.attributes ?? []
             let generateRequired: Bool
             let time: Double
-            var sequences = [(String, UUID?, Sequence, Double?, [String]?)]()
+            var sequences = [(String, UUID?, Sequence, Double?, [(String, URL?)]?)]()
             
             if multiple {
                 queue.removeFirst()
@@ -1162,7 +1168,22 @@ struct Chat: View {
                     self.isLoading = true
                 }
                 
-                var messages: [[String: Any]] = [["role": "system", "content": prompt]]
+                var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
+                    return self.replacePlaceholders(text: prompt, resolver: { format in
+                        
+                        if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
+                            let dateFormatter = DateFormatter()
+                            
+                            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                            dateFormatter.dateFormat = format
+                            
+                            return dateFormatter.string(from: Date())
+                        }
+                        
+                        return nil
+                    })
+                }.value]]
+                
                 var i = logs.count - 1
                 
                 while i > 0 {
@@ -1226,7 +1247,21 @@ struct Chat: View {
                         let character = queue.removeFirst()
                         
                         if let prompt = character.prompt {
-                            var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": content]]
+                            var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
+                                return self.replacePlaceholders(text: prompt, resolver: { format in
+                                    
+                                    if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
+                                        let dateFormatter = DateFormatter()
+                                        
+                                        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                                        dateFormatter.dateFormat = format
+                                        
+                                        return dateFormatter.string(from: Date())
+                                    }
+                                    
+                                    return nil
+                                })
+                            }.value], ["role": "user", "content": content]]
                             var i = logs.count - 1
                             
                             while i > 0 {
@@ -1615,7 +1650,7 @@ struct Chat: View {
         }.value
     }
     
-    private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, Double?, String?, [String], Data?)? {
+    private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, Double?, String?, [(String, URL?)], Data?)? {
         if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
             var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
             
@@ -1627,7 +1662,7 @@ struct Chat: View {
             if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
                 var likability: Double? = nil
                 var state: String? = nil
-                var choices = [String]()
+                var choices = [(String, URL?)]()
                 var wave: Data? = nil
                 
                 if let value = jsonRoot["likability"] as? Double {
@@ -1648,7 +1683,17 @@ struct Chat: View {
                 if let objects = jsonRoot["choices"] as? [Any] {
                     for object in objects {
                         if let value = object as? String {
-                            choices.append(value)
+                            choices.append((value, nil))
+                        } else if let dictionary = object as? [String: Any?] {
+                            if let text = dictionary["text"] as? String {
+                                if let value = dictionary["url"] as? String {
+                                    if value.lowercased().hasPrefix("https://"), let url = URL(string: value) {
+                                        choices.append((text, url))
+                                    }
+                                } else {
+                                    choices.append((text, nil))
+                                }
+                            }
                         }
                     }
                 }
@@ -1698,6 +1743,36 @@ struct Chat: View {
         }
         
         return nil
+    }
+    
+    private nonisolated func replacePlaceholders(text: String, resolver: (String) -> String?) -> String {
+        var input = String(text)
+        var output = String()
+        
+        repeat {
+            if let match = input.firstMatch(of: /({{1,2})([^{}\r\n]+)(}{1,2})/), let replacement = resolver(String(match.output.2)) {
+                output.append(String(input[input.startIndex..<match.range.lowerBound]))
+                
+                if match.output.1.count == 2 {
+                    if match.output.3.count == 2 {
+                        output.append("{\(match.output.2)}")
+                    } else {
+                        output.append("{\(replacement)")
+                    }
+                } else if match.output.3.count == 2 {
+                    output.append("\(replacement)}")
+                } else {
+                    output.append(replacement)
+                }
+                
+                input = String(input[match.range.upperBound..<input.endIndex])
+            } else {
+                output.append(input)
+                input.removeAll()
+            }
+        } while !input.isEmpty
+        
+        return output
     }
     
     private func startRecognize() {
@@ -1905,7 +1980,7 @@ struct Chat: View {
 }
 
 struct Stage: UIViewRepresentable {
-    @Binding var prompt: (String?, Word?, Bool, Set<Character>?, [String], Int, Double)?
+    @Binding var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)?
     @Binding var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: String)]
     @Binding var resource: (old: String, new: String)
     @Binding var attributes: [String]
@@ -1913,7 +1988,7 @@ struct Stage: UIViewRepresentable {
     @Binding var labels: [String]
     @Binding var likes: (old: Int, new: [String: [Date]])
     @Binding var likability: Double?
-    @Binding var choices: [String]
+    @Binding var choices: [(String, URL?)]
     @Binding var changing: Bool
     @Binding var loading: Bool
     @Binding var intensity: Double
@@ -1924,7 +1999,7 @@ struct Stage: UIViewRepresentable {
     var mute: Bool
     @State var permissions: Set<String> = []
     
-    init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [String], Int, Double)?>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: String)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likes: Binding<(old: Int, new: [String: [Date]])>, likability: Binding<Double?>, choices: Binding<[String]>, changing: Binding<Bool>, loading: Binding<Bool>, intensity: Binding<Double>, temperature: Double, accent: UIColor, scale: Double, pause: Bool, mute: Bool) {
+    init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)?>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: String)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likes: Binding<(old: Int, new: [String: [Date]])>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, changing: Binding<Bool>, loading: Binding<Bool>, intensity: Binding<Double>, temperature: Double, accent: UIColor, scale: Double, pause: Bool, mute: Bool) {
         self._prompt = prompt
         self._logs = logs
         self._resource = resource
@@ -2924,7 +2999,7 @@ struct Stage: UIViewRepresentable {
                     let attributes = word.attributes ?? []
                     let generateRequired: Bool
                     let time: Double
-                    var sequences = [(String, UUID?, Sequence, Double?, [String]?)]()
+                    var sequences = [(String, UUID?, Sequence, Double?, [(String, URL?)]?)]()
                     
                     if multiple {
                         queue.removeFirst()
@@ -2971,7 +3046,21 @@ struct Stage: UIViewRepresentable {
                             self.parent.loading = true
                         }
                         
-                        var messages: [[String: Any]] = [["role": "system", "content": prompt]]
+                        var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
+                            return self.replacePlaceholders(text: prompt, resolver: { format in
+                                
+                                if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
+                                    let dateFormatter = DateFormatter()
+                                    
+                                    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                                    dateFormatter.dateFormat = format
+                                    
+                                    return dateFormatter.string(from: Date())
+                                }
+                                
+                                return nil
+                            })
+                        }.value]]
                         var i = logs.count - 1
                         
                         while i > 0 {
@@ -3035,7 +3124,21 @@ struct Stage: UIViewRepresentable {
                                 let character = queue.removeFirst()
                                 
                                 if let prompt = character.prompt {
-                                    var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": content]]
+                                    var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
+                                        return self.replacePlaceholders(text: prompt, resolver: { format in
+                                            
+                                            if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
+                                                let dateFormatter = DateFormatter()
+                                                
+                                                dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                                                dateFormatter.dateFormat = format
+                                                
+                                                return dateFormatter.string(from: Date())
+                                            }
+                                            
+                                            return nil
+                                        })
+                                    }.value], ["role": "user", "content": content]]
                                     var i = logs.count - 1
                                     
                                     while i > 0 {
@@ -3420,7 +3523,7 @@ struct Stage: UIViewRepresentable {
             }.value
         }
         
-        private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, Double?, String?, [String], Data?)? {
+        private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, Double?, String?, [(String, URL?)], Data?)? {
             if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
                 var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
                 
@@ -3432,7 +3535,7 @@ struct Stage: UIViewRepresentable {
                 if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
                     var likability: Double? = nil
                     var state: String? = nil
-                    var choices = [String]()
+                    var choices = [(String, URL?)]()
                     var wave: Data? = nil
                     
                     if let value = jsonRoot["likability"] as? Double {
@@ -3453,7 +3556,17 @@ struct Stage: UIViewRepresentable {
                     if let objects = jsonRoot["choices"] as? [Any] {
                         for object in objects {
                             if let value = object as? String {
-                                choices.append(value)
+                                choices.append((value, nil))
+                            } else if let dictionary = object as? [String: Any?] {
+                                if let text = dictionary["text"] as? String {
+                                    if let value = dictionary["url"] as? String {
+                                        if value.lowercased().hasPrefix("https://"), let url = URL(string: value) {
+                                            choices.append((text, url))
+                                        }
+                                    } else {
+                                        choices.append((text, nil))
+                                    }
+                                }
                             }
                         }
                     }
@@ -3505,6 +3618,36 @@ struct Stage: UIViewRepresentable {
             return nil
         }
         
+        private nonisolated func replacePlaceholders(text: String, resolver: (String) -> String?) -> String {
+            var input = String(text)
+            var output = String()
+            
+            repeat {
+                if let match = input.firstMatch(of: /({{1,2})([^{}\r\n]+)(}{1,2})/), let replacement = resolver(String(match.output.2)) {
+                    output.append(String(input[input.startIndex..<match.range.lowerBound]))
+                    
+                    if match.output.1.count == 2 {
+                        if match.output.3.count == 2 {
+                            output.append("{\(match.output.2)}")
+                        } else {
+                            output.append("{\(replacement)")
+                        }
+                    } else if match.output.3.count == 2 {
+                        output.append("\(replacement)}")
+                    } else {
+                        output.append(replacement)
+                    }
+                    
+                    input = String(input[match.range.upperBound..<input.endIndex])
+                } else {
+                    output.append(input)
+                    input.removeAll()
+                }
+            } while !input.isEmpty
+            
+            return output
+        }
+        
         private func choice(probabilities: [Double]) -> Int {
             let random = Double.random(in: 0.0..<1.0)
             var sum = 0.0
@@ -3525,7 +3668,7 @@ struct Stage: UIViewRepresentable {
 }
 
 struct Prompt: UIViewRepresentable {
-    let input: (String?, Word?, Bool, Set<Character>?, [String], Int, Double)?
+    let input: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)?
     let accent: UIColor
     let font: UIFont
     
@@ -5686,6 +5829,8 @@ struct Settings: View {
                                     
                                     for i in 0..<self.paths.count {
                                         if self.paths[i] == self.resource {
+                                            dismiss()
+                                            
                                             withAnimation {
                                                 self.characters[i].2 = true
                                                 self.changing = true
@@ -6433,7 +6578,21 @@ struct AskIntent: AppIntent {
             
             for character in parser.parse(path: filename).0 {
                 if let prompt = character.prompt {
-                    content = await self.generate(messages: [["role": "system", "content": prompt], ["role": "user", "content": self.prompt]], temperature: AppStorage(wrappedValue: 1.0, "temperature").wrappedValue)
+                    content = await self.generate(messages: [["role": "system", "content": await Task.detached {
+                        return self.replacePlaceholders(text: prompt, resolver: { format in
+                            
+                            if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
+                                let dateFormatter = DateFormatter()
+                                
+                                dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                                dateFormatter.dateFormat = format
+                                
+                                return dateFormatter.string(from: Date())
+                            }
+                            
+                            return nil
+                        })
+                    }.value], ["role": "user", "content": self.prompt]], temperature: AppStorage(wrappedValue: 1.0, "temperature").wrappedValue)
                 }
                 
                 break
@@ -6460,6 +6619,36 @@ struct AskIntent: AppIntent {
         }
         
         return nil
+    }
+    
+    private nonisolated func replacePlaceholders(text: String, resolver: (String) -> String?) -> String {
+        var input = String(text)
+        var output = String()
+        
+        repeat {
+            if let match = input.firstMatch(of: /({{1,2})([^{}\r\n]+)(}{1,2})/), let replacement = resolver(String(match.output.2)) {
+                output.append(String(input[input.startIndex..<match.range.lowerBound]))
+                
+                if match.output.1.count == 2 {
+                    if match.output.3.count == 2 {
+                        output.append("{\(match.output.2)}")
+                    } else {
+                        output.append("{\(replacement)")
+                    }
+                } else if match.output.3.count == 2 {
+                    output.append("\(replacement)}")
+                } else {
+                    output.append(replacement)
+                }
+                
+                input = String(input[match.range.upperBound..<input.endIndex])
+            } else {
+                output.append(input)
+                input.removeAll()
+            }
+        } while !input.isEmpty
+        
+        return output
     }
 }
 
