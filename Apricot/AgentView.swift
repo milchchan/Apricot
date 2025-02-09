@@ -3227,8 +3227,15 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             }
                         }
                     }
-                } else if characterView.balloonView!.isHidden && characterView.audioPlayer == nil {
-                    characterView.objectQueue.removeFirst()
+                } else if characterView.balloonView!.isHidden {
+                    if let audioPlayer = characterView.audioPlayer {
+                        if !audioPlayer.isPlaying {
+                            characterView.objectQueue.removeFirst()
+                            characterView.audioPlayer = nil
+                        }
+                    } else {
+                        characterView.objectQueue.removeFirst()
+                    }
                 }
             }
             
