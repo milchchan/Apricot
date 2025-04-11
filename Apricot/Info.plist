@@ -45,7 +45,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Your microphone is used to record voices.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Your camera is used to read text.</string>
+	<string>Your camera is used for image analysis.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your location is used to get weather information.</string>
 </dict>
