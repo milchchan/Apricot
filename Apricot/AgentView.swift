@@ -15,6 +15,7 @@ protocol AgentDelegate: AnyObject {
     func agentShouldIdle(_ agent: AgentView, by name: String) -> Bool
     func agentDidRender(_ agent: AgentView, image: CGImage, by name: String)
     func agentDidRefresh(_ agent: AgentView, forcibly flag: Bool)
+    func agentDidTransition(_ agent: AgentView)
     func agentDidStop(_ agent: AgentView)
     func agentDidChange(_ agent: AgentView)
     func agentDidLike(_ agent: AgentView, message: Message, with images: [[(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]]?)
@@ -80,6 +81,11 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     }
                 }
             }
+        }
+    }
+    var idle: Bool {
+        get {
+            return self.characterViews.allSatisfy({ $0.lastIdleDate != nil })
         }
     }
     
@@ -3066,6 +3072,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         }
                         
                         characterView.lastIdleDate = nil
+                        self.delegate?.agentDidTransition(self)
                     } else if !Script.shared.characters.contains(where: { $0.name == Script.shared.queue[0].0 }) {
                         Script.shared.queue.removeFirst()
                     }
@@ -3088,6 +3095,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         }
                         
                         characterView.lastIdleDate = nil
+                        self.delegate?.agentDidTransition(self)
                     } else if nowDate.timeIntervalSince(characterView.lastTickDate) >= 1.0 {
                         let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: nowDate)
                         
@@ -3115,6 +3123,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     }
                 } else {
                     characterView.lastIdleDate = Date()
+                    self.delegate?.agentDidTransition(self)
                     
                     if self.characterViews.firstIndex(of: characterView) == 0 {
                         var isUpdated = true
