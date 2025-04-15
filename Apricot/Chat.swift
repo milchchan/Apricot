@@ -18,8 +18,8 @@ struct Chat: View {
     @Environment(\.openURL) var openURL
     @StateObject private var shortcut = Shortcut.shared
     @StateObject private var script: Script
-    @State private var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)? = nil
-    @State private var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
+    @State private var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double) = (nil, nil, false, nil, [], 0, 0)
+    @State private var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]()
     @State private var labels = [String]()
     @State private var likes = (old: 0, new: [String: [Date]]())
     @State private var likability: Double? = nil
@@ -31,7 +31,11 @@ struct Chat: View {
     @State private var selection: String
     @State private var isLongPressed = false
     @State private var isRecording = false
+    @State private var isPeeking = false
+    @State private var isPeekable = true
+    @State private var isPaused = false
     @State private var isChanging = false
+    @State private var isIdle = false
     @State private var isLoading = false
     @State private var loadingAmount = 0.0
     @State private var shakes = 0
@@ -55,7 +59,7 @@ struct Chat: View {
                 Stage(prompt: self.$prompt, logs: self.$logs, resource: Binding<(old: String, new: String)>(get: { (old: self.selection, new: self.path.wrappedValue) }, set: { newValue in
                     self.selection = newValue.old
                     self.path.wrappedValue = newValue.new
-                }), attributes: self.$script.attributes, types: self.$types, labels: self.$labels, likes: self.$likes, likability: self.$likability, choices: self.$choices, changing: self.$isChanging, loading: self.$isLoading, intensity: self.$intensity, temperature: self.temperature, accent: self.convert(from: self.accent.wrappedValue), scale: self.scale, pause: self.revealMenu || self.showActivity || self.showDictionary || self.showSettings, mute: self.mute)
+                }), attributes: self.$script.attributes, types: self.$types, labels: self.$labels, likes: self.$likes, likability: self.$likability, choices: self.$choices, changing: self.$isChanging, idle: self.$isIdle, loading: self.$isLoading, intensity: self.$intensity, temperature: self.temperature, accent: self.convert(from: self.accent.wrappedValue), scale: self.scale, pause: self.revealMenu || self.showActivity || self.showDictionary || self.showSettings, mute: self.mute)
                     .frame(
                         minWidth: 0.0,
                         maxWidth: .infinity,
@@ -118,6 +122,59 @@ struct Chat: View {
                         .truncationMode(.tail)
                         .contentTransition(.numericText(value: Double(self.likes.old)))
                     
+                    if self.isPeeking {
+                        ZStack {
+                            ZStack {
+                                Peek(peekable: self.$isPeekable, pause: self.isPaused, logs: self.$logs, likability: self.$likability, choices: self.$choices, idle: self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showSettings, loading: self.$isLoading, intensity: self.intensity, temperature: self.temperature, mute: self.mute)
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        maxHeight: .infinity
+                                    )
+                                    .background(.clear)
+                                
+                                if !self.isPeekable {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .frame(
+                                            width: 16.0,
+                                            height: 16.0,
+                                            alignment: .center
+                                        )
+                                        .background(.clear)
+                                        .foregroundColor(Color(UIColor(white: 1.0, alpha: 1.0)))
+                                        .font(
+                                            .system(size: 16.0)
+                                        )
+                                        .bold()
+                                } else if self.isPaused {
+                                    Image(systemName: "pause")
+                                        .frame(
+                                            width: 16.0,
+                                            height: 16.0,
+                                            alignment: .center
+                                        )
+                                        .background(.clear)
+                                        .foregroundColor(Color(UIColor(white: 1.0, alpha: 1.0)))
+                                        .font(.system(size: 16.0))
+                                        .bold()
+                                }
+                            }
+                            .frame(
+                                width: (UIDevice.current.userInterfaceIdiom == .phone ? min(UIScreen.main.bounds.width, UIScreen.main.bounds.height) / 2.0 : min(UIScreen.main.bounds.width, UIScreen.main.bounds.height) / 4.0) - 32.0,
+                                height: (UIDevice.current.userInterfaceIdiom == .phone ? min(UIScreen.main.bounds.width, UIScreen.main.bounds.height) / 2.0 : min(UIScreen.main.bounds.width, UIScreen.main.bounds.height) / 4.0) - 32.0,
+                                alignment: .top
+                            )
+                            .background(Color(UIColor(white: 0.0, alpha: 1.0)))
+                            .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                            .transition(.opacity)
+                            .onLongPressGesture(perform: {
+                                withAnimation(.linear(duration: 0.5)) {
+                                    self.isPaused.toggle()
+                                }
+                            })
+                        }
+                        .offset(y: -floor(UIFont(name: "DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 5.0))!.lineHeight - UIFont(name: "DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 5.0))!.capHeight))
+                    }
+                    
                     if self.isLoading {
                         HStack(spacing: 8.0) {
                             ForEach(0..<3) { index in
@@ -162,36 +219,31 @@ struct Chat: View {
                                         LazyVStack(spacing: 0.0) {
                                             VStack(spacing: 0.0) {
                                                 Button(action: {
-                                                    if let prompt = self.prompt {
-                                                        if prompt.2 && prompt.5 == 0 {
-                                                            self.prompt = (prompt.0, prompt.1, false, prompt.3, prompt.4, prompt.5, CACurrentMediaTime())
-                                                        } else if prompt.5 > 0 {
-                                                            if let url = prompt.4[prompt.5 - 1].1 {
-                                                                openURL(url)
-                                                            } else {
-                                                                Task {
-                                                                    await self.talk(word: Word(name: prompt.4[prompt.5 - 1].0), intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
-                                                                }
-                                                                
-                                                                self.choices.removeAll()
-                                                            }
-                                                            
-                                                            self.prompt = nil
-                                                            
-                                                            withAnimation(.easeInOut(duration: 0.5)) {
-                                                                self.revealMenu = false
-                                                            }
-                                                        } else if let word = prompt.1 {
+                                                    if self.prompt.2 && self.prompt.5 == 0 {
+                                                        self.prompt = (self.prompt.0, self.prompt.1, false, self.prompt.3, self.prompt.4, self.prompt.5, CACurrentMediaTime())
+                                                    } else if self.prompt.5 > 0 {
+                                                        if let url = self.prompt.4[self.prompt.5 - 1].1 {
+                                                            openURL(url)
+                                                        } else {
                                                             Task {
-                                                                await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
+                                                                await self.talk(word: Word(name: self.prompt.4[self.prompt.5 - 1].0), intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
                                                             }
                                                             
                                                             self.choices.removeAll()
-                                                            self.prompt = nil
-                                                            
-                                                            withAnimation(.easeInOut(duration: 0.5)) {
-                                                                self.revealMenu = false
-                                                            }
+                                                        }
+                                                        
+                                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                                            self.revealMenu = false
+                                                        }
+                                                    } else if let word = self.prompt.1 {
+                                                        Task {
+                                                            await self.talk(word: word, intensity: self.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
+                                                        }
+                                                        
+                                                        self.choices.removeAll()
+                                                        
+                                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                                            self.revealMenu = false
                                                         }
                                                     }
                                                 }) {
@@ -205,7 +257,7 @@ struct Chat: View {
                                                             .padding(0.0)
                                                             .background(.clear)
                                                         
-                                                        if let prompt = self.prompt, prompt.0 == nil {
+                                                        if self.prompt.0 == nil {
                                                             Image(systemName: "exclamationmark.triangle")
                                                                 .frame(
                                                                     width: 16.0,
@@ -289,20 +341,20 @@ struct Chat: View {
                                                     .animation(.linear(duration: 0.5), value: "\(self.script.words.count)")
                                                 HStack(alignment: .center, spacing: 0.0) {
                                                     VStack(alignment: .center, spacing: 0.0) {
-                                                        if let prompt = self.prompt, !prompt.4.isEmpty {
+                                                        if !self.prompt.4.isEmpty {
                                                             Button(action: {
-                                                                let index = (prompt.5 - 1) % (prompt.4.count + 1)
+                                                                let index = (self.prompt.5 - 1) % (self.prompt.4.count + 1)
                                                                 
                                                                 if index > 0 {
-                                                                    self.prompt = (prompt.4[index - 1].0, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
+                                                                    self.prompt = (self.prompt.4[index - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
                                                                 } else if index == 0 {
-                                                                    if let word = prompt.1 {
-                                                                        self.prompt = (word.name, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
+                                                                    if let word = self.prompt.1 {
+                                                                        self.prompt = (word.name, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
                                                                     } else {
-                                                                        self.prompt = (nil, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
+                                                                        self.prompt = (nil, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
                                                                     }
                                                                 } else {
-                                                                    self.prompt = (prompt.4[prompt.4.count - 1].0, prompt.1, prompt.2, prompt.3, prompt.4, prompt.4.count, CACurrentMediaTime())
+                                                                    self.prompt = (self.prompt.4[self.prompt.4.count - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, self.prompt.4.count, CACurrentMediaTime())
                                                                 }
                                                             }) {
                                                                 Image(systemName: "chevron.backward")
@@ -325,6 +377,7 @@ struct Chat: View {
                                                             )
                                                             .padding(16.0)
                                                             .background(.clear)
+                                                            .transition(.opacity.animation(.linear(duration: 0.5)))
                                                         }
                                                     }
                                                     .frame(
@@ -333,69 +386,67 @@ struct Chat: View {
                                                     )
                                                     VStack(alignment: .center, spacing: 0.0) {
                                                         Button(action: {
-                                                            if let prompt = self.prompt {
-                                                                if let word = prompt.1, (word.attributes == nil || !word.attributes!.isEmpty) && prompt.2 {
-                                                                    self.prompt = (word.name, prompt.1, false, prompt.3, prompt.4, 0, CACurrentMediaTime())
-                                                                } else if self.script.words.isEmpty {
-                                                                    self.shakes += 1
-                                                                } else {
-                                                                    let samples = 10
-                                                                    var letterSet: Set<Character> = []
-                                                                    var modifiers: [String] = []
-                                                                    var words: [Word] = []
+                                                            if let word = self.prompt.1, (word.attributes == nil || !word.attributes!.isEmpty) && self.prompt.2 {
+                                                                self.prompt = (word.name, self.prompt.1, false, self.prompt.3, self.prompt.4, 0, CACurrentMediaTime())
+                                                            } else if self.script.words.isEmpty {
+                                                                self.shakes += 1
+                                                            } else {
+                                                                let samples = 10
+                                                                var letterSet: Set<Character> = []
+                                                                var modifiers: [String] = []
+                                                                var words: [Word] = []
+                                                                
+                                                                for _ in 0..<samples {
+                                                                    let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
                                                                     
-                                                                    for _ in 0..<samples {
-                                                                        let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
+                                                                    for i in 0..<word.name.count {
+                                                                        let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
                                                                         
-                                                                        for i in 0..<word.name.count {
-                                                                            let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
-                                                                            
-                                                                            if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                                                letterSet.insert(character)
-                                                                            }
-                                                                        }
-                                                                        
-                                                                        if let attributes = word.attributes, attributes.isEmpty {
-                                                                            modifiers.append(word.name)
-                                                                        } else {
-                                                                            words.append(word)
+                                                                        if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
+                                                                            letterSet.insert(character)
                                                                         }
                                                                     }
                                                                     
-                                                                    if words.isEmpty {
-                                                                        self.prompt = (nil, nil, false, nil, prompt.4, 0, CACurrentMediaTime())
-                                                                        self.shakes += 1
+                                                                    if let attributes = word.attributes, attributes.isEmpty {
+                                                                        modifiers.append(word.name)
                                                                     } else {
-                                                                        let epsilon = powl(10, -6)
-                                                                        var probabilities = self.softmax(x: words.reduce(into: [], { x, y in
-                                                                            if let (score, _, _, _) = Script.shared.scores[y.name] {
+                                                                        words.append(word)
+                                                                    }
+                                                                }
+                                                                
+                                                                if words.isEmpty {
+                                                                    self.prompt = (nil, nil, false, nil, self.prompt.4, 0, CACurrentMediaTime())
+                                                                    self.shakes += 1
+                                                                } else {
+                                                                    let epsilon = powl(10, -6)
+                                                                    var probabilities = self.softmax(x: words.reduce(into: [], { x, y in
+                                                                        if let (score, _, _, _) = Script.shared.scores[y.name] {
+                                                                            x.append(score)
+                                                                        } else {
+                                                                            x.append(epsilon)
+                                                                        }
+                                                                    }), temperature: self.temperature)
+                                                                    var word = words[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
+                                                                    
+                                                                    if Double.random(in: 0.0..<1.0) < Double(modifiers.count) / Double(samples) {
+                                                                        probabilities = self.softmax(x: modifiers.reduce(into: [], { x, y in
+                                                                            if let (score, _, _, _) = Script.shared.scores[y] {
                                                                                 x.append(score)
                                                                             } else {
                                                                                 x.append(epsilon)
                                                                             }
                                                                         }), temperature: self.temperature)
-                                                                        var word = words[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
                                                                         
-                                                                        if Double.random(in: 0.0..<1.0) < Double(modifiers.count) / Double(samples) {
-                                                                            probabilities = self.softmax(x: modifiers.reduce(into: [], { x, y in
-                                                                                if let (score, _, _, _) = Script.shared.scores[y] {
-                                                                                    x.append(score)
-                                                                                } else {
-                                                                                    x.append(epsilon)
-                                                                                }
-                                                                            }), temperature: self.temperature)
-                                                                            
-                                                                            let modifier = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
-                                                                            
-                                                                            if modifier.allSatisfy({ $0.isASCII }) && word.name.allSatisfy({ $0.isASCII }) {
-                                                                                word.name = modifier + String("\u{0020}\u{000A}") + word.name
-                                                                            } else {
-                                                                                word.name = modifier + "\n" + word.name
-                                                                            }
+                                                                        let modifier = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
+                                                                        
+                                                                        if modifier.allSatisfy({ $0.isASCII }) && word.name.allSatisfy({ $0.isASCII }) {
+                                                                            word.name = modifier + String("\u{0020}\u{000A}") + word.name
+                                                                        } else {
+                                                                            word.name = modifier + "\n" + word.name
                                                                         }
-                                                                        
-                                                                        self.prompt = (word.name, word, false, letterSet, prompt.4, 0, CACurrentMediaTime())
                                                                     }
+                                                                    
+                                                                    self.prompt = (word.name, word, false, letterSet, self.prompt.4, 0, CACurrentMediaTime())
                                                                 }
                                                             }
                                                         }) {
@@ -436,16 +487,16 @@ struct Chat: View {
                                                         maxWidth: .infinity
                                                     )
                                                     VStack(alignment: .center, spacing: 0.0) {
-                                                        if let prompt = self.prompt, !prompt.4.isEmpty {
+                                                        if !self.prompt.4.isEmpty {
                                                             Button(action: {
-                                                                let index = (prompt.5 + 1) % (prompt.4.count + 1)
+                                                                let index = (self.prompt.5 + 1) % (self.prompt.4.count + 1)
                                                                 
                                                                 if index > 0 {
-                                                                    self.prompt = (prompt.4[index - 1].0, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
-                                                                } else if let word = prompt.1 {
-                                                                    self.prompt = (word.name, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
+                                                                    self.prompt = (self.prompt.4[index - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
+                                                                } else if let word = self.prompt.1 {
+                                                                    self.prompt = (word.name, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
                                                                 } else {
-                                                                    self.prompt = (nil, prompt.1, prompt.2, prompt.3, prompt.4, index, CACurrentMediaTime())
+                                                                    self.prompt = (nil, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
                                                                 }
                                                             }) {
                                                                 Image(systemName: "chevron.forward")
@@ -468,6 +519,7 @@ struct Chat: View {
                                                             )
                                                             .padding(16.0)
                                                             .background(.clear)
+                                                            .transition(.opacity.animation(.linear(duration: 0.5)))
                                                         }
                                                     }
                                                     .frame(
@@ -489,8 +541,72 @@ struct Chat: View {
                                             HStack(alignment: .center, spacing: 0.0) {
                                                 VStack(alignment: .center, spacing: 0.0) {
                                                     Button(action: {
+                                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                                            self.isPeeking.toggle()
+                                                            self.revealMenu = false
+                                                        }
+                                                    }) {
+                                                        VStack(alignment: .center, spacing: 8.0) {
+                                                            ZStack {
+                                                                Image(systemName: "camera.aperture")
+                                                                    .frame(
+                                                                        width: 16.0,
+                                                                        height: 16.0,
+                                                                        alignment: .center
+                                                                    )
+                                                                    .background(.clear)
+                                                                    .foregroundColor(Color(UIColor {
+                                                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                    }))
+                                                                    .font(
+                                                                        .system(size: 16.0)
+                                                                    )
+                                                                    .bold()
+                                                                Circle()
+                                                                    .frame(width: 4, height: 4)
+                                                                    .foregroundColor(Color(self.convert(from: self.accent.wrappedValue)))
+                                                                    .opacity(self.isPeeking ? 1.0 : 0.0)
+                                                                    .transition(.opacity)
+                                                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                                            }
+                                                            .frame(
+                                                                width: 16,
+                                                                height: 16
+                                                            )
+                                                            .background(.clear)
+                                                            Text("Vision")
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(.caption)
+                                                                .fontWeight(.semibold)
+                                                                .lineLimit(1)
+                                                                .truncationMode(.tail)
+                                                                .textCase(.uppercase)
+                                                        }
+                                                    }
+                                                    .frame(
+                                                        alignment: .center
+                                                    )
+                                                    .padding(16.0)
+                                                    .background(.clear)
+                                                }
+                                                .frame(
+                                                    minWidth: 0.0,
+                                                    maxWidth: .infinity
+                                                )
+                                            }
+                                            Rectangle()
+                                                .frame(
+                                                    height: 1.0
+                                                )
+                                                .foregroundColor(Color(UIColor {
+                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 0.25) : UIColor(white: 1.0, alpha: 0.25)
+                                                }))
+                                            HStack(alignment: .center, spacing: 0.0) {
+                                                VStack(alignment: .center, spacing: 0.0) {
+                                                    Button(action: {
                                                         self.showActivity = true
-                                                        self.prompt = nil
                                                         
                                                         withAnimation(.easeInOut(duration: 0.5)) {
                                                             self.revealMenu = false
@@ -542,7 +658,6 @@ struct Chat: View {
                                                 VStack(alignment: .center, spacing: 0.0) {
                                                     Button(action: {
                                                         self.showDictionary = true
-                                                        self.prompt = nil
                                                         
                                                         withAnimation(.easeInOut(duration: 0.5)) {
                                                             self.revealMenu = false
@@ -594,7 +709,6 @@ struct Chat: View {
                                                 VStack(alignment: .center, spacing: 0.0) {
                                                     Button(action: {
                                                         self.showSettings = true
-                                                        self.prompt = nil
                                                         
                                                         withAnimation(.easeInOut(duration: 0.5)) {
                                                             self.revealMenu = false
@@ -772,66 +886,66 @@ struct Chat: View {
                                 } else if self.isRecording {
                                     self.stopRecognize()
                                 } else {
-                                    if self.revealMenu {
-                                        self.prompt = nil
-                                    } else if self.script.words.isEmpty {
-                                        self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
-                                    } else {
-                                        let samples = 10
-                                        var letterSet: Set<Character> = []
-                                        var modifiers: [String] = []
-                                        var words: [Word] = []
-                                        
-                                        for _ in 0..<samples {
-                                            let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
-                                            
-                                            for i in 0..<word.name.count {
-                                                let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
-                                                
-                                                if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                    letterSet.insert(character)
-                                                }
-                                            }
-                                            
-                                            if let attributes = word.attributes, attributes.isEmpty {
-                                                modifiers.append(word.name)
-                                            } else {
-                                                words.append(word)
-                                            }
-                                        }
-                                        
-                                        if words.isEmpty {
+                                    if !self.revealMenu {
+                                        if self.script.words.isEmpty {
                                             self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
                                         } else {
-                                            let epsilon = powl(10, -6)
-                                            var probabilities = self.softmax(x: words.reduce(into: [], { x, y in
-                                                if let (score, _, _, _) = Script.shared.scores[y.name] {
-                                                    x.append(score)
-                                                } else {
-                                                    x.append(epsilon)
-                                                }
-                                            }), temperature: self.temperature)
-                                            var word = words[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
+                                            let samples = 10
+                                            var letterSet: Set<Character> = []
+                                            var modifiers: [String] = []
+                                            var words: [Word] = []
                                             
-                                            if Double.random(in: 0.0..<1.0) < Double(modifiers.count) / Double(samples) {
-                                                probabilities = self.softmax(x: modifiers.reduce(into: [], { x, y in
-                                                    if let (score, _, _, _) = Script.shared.scores[y] {
+                                            for _ in 0..<samples {
+                                                let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
+                                                
+                                                for i in 0..<word.name.count {
+                                                    let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
+                                                    
+                                                    if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
+                                                        letterSet.insert(character)
+                                                    }
+                                                }
+                                                
+                                                if let attributes = word.attributes, attributes.isEmpty {
+                                                    modifiers.append(word.name)
+                                                } else {
+                                                    words.append(word)
+                                                }
+                                            }
+                                            
+                                            if words.isEmpty {
+                                                self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
+                                            } else {
+                                                let epsilon = powl(10, -6)
+                                                var probabilities = self.softmax(x: words.reduce(into: [], { x, y in
+                                                    if let (score, _, _, _) = Script.shared.scores[y.name] {
                                                         x.append(score)
                                                     } else {
                                                         x.append(epsilon)
                                                     }
                                                 }), temperature: self.temperature)
+                                                var word = words[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
                                                 
-                                                let modifier = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
-                                                
-                                                if modifier.allSatisfy({ $0.isASCII }) && word.name.allSatisfy({ $0.isASCII }) {
-                                                    word.name = modifier + String("\u{0020}\u{000A}") + word.name
-                                                } else {
-                                                    word.name = modifier + "\n" + word.name
+                                                if Double.random(in: 0.0..<1.0) < Double(modifiers.count) / Double(samples) {
+                                                    probabilities = self.softmax(x: modifiers.reduce(into: [], { x, y in
+                                                        if let (score, _, _, _) = Script.shared.scores[y] {
+                                                            x.append(score)
+                                                        } else {
+                                                            x.append(epsilon)
+                                                        }
+                                                    }), temperature: self.temperature)
+                                                    
+                                                    let modifier = modifiers[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
+                                                    
+                                                    if modifier.allSatisfy({ $0.isASCII }) && word.name.allSatisfy({ $0.isASCII }) {
+                                                        word.name = modifier + String("\u{0020}\u{000A}") + word.name
+                                                    } else {
+                                                        word.name = modifier + "\n" + word.name
+                                                    }
                                                 }
+                                                
+                                                self.prompt = (word.name, word, true, letterSet, self.choices, 0, CACurrentMediaTime())
                                             }
-                                            
-                                            self.prompt = (word.name, word, true, letterSet, self.choices, 0, CACurrentMediaTime())
                                         }
                                     }
                                     
@@ -1085,7 +1199,7 @@ struct Chat: View {
         self._selection = State(initialValue: self.path.wrappedValue)
         self.accent = AppStorage(wrappedValue: String.init(format: "#%02lx%02lx%02lx", lroundf(Float(red * 255)), lroundf(Float(green * 255)), lroundf(Float(blue * 255))), "accent")
         
-        UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
+        UIGraphicsBeginImageContextWithOptions(size, false, 1)
         
         if let context = UIGraphicsGetCurrentContext(), let starImage = image.cgImage {
             context.interpolationQuality = .high
@@ -1117,7 +1231,7 @@ struct Chat: View {
         
         if let first = queue.first {
             let input = word.name.filter { !$0.isNewline }
-            var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
+            var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]()
             let attributes = word.attributes ?? []
             let generateRequired: Bool
             let time: Double
@@ -1131,7 +1245,7 @@ struct Chat: View {
                     
                     for log in self.logs {
                         if log.group == last.group {
-                            if log.from == nil && log.content == input {
+                            if log.from == nil, let choices = log.choices, choices.contains(where: { $0 == input }) {
                                 isContinuous = true
                             }
                             
@@ -1154,7 +1268,13 @@ struct Chat: View {
             } else {
                 queue.removeAll()
                 
-                if let last = self.logs.last, self.logs.contains(where: { $0.from == nil && $0.group == last.group && $0.content == input }) {
+                if let last = self.logs.last, self.logs.contains(where: { x in
+                    if x.from == nil && x.group == last.group, let choices = x.choices {
+                        return choices.contains(where: { $0 == input })
+                    }
+                    
+                    return false
+                }) {
                     generateRequired = true
                     time = last.group
                 } else {
@@ -1183,13 +1303,34 @@ struct Chat: View {
                         return nil
                     })
                 }.value]]
-                
                 var i = logs.count - 1
                 
                 while i > 0 {
                     if let from = logs[i].from, from != first.name && logs[i - 1].from == first.name {
-                        messages.insert(["role": "user", "content": logs[i].content], at: 1)
-                        messages.insert(["role": "assistant", "content": logs[i - 1].content], at: 1)
+                        var parts = [[String: Any]]()
+                        
+                        if let text = logs[i].content.text {
+                            parts.append(["type": "text", "text": text])
+                        }
+                        
+                        if let image = logs[i].content.image {
+                            if let dataURL = (await Task.detached {
+                                var dataURL: String? = nil
+                                
+                                if let resizedImage = self.resize(image: image) {
+                                    dataURL = self.convert(image: resizedImage)
+                                }
+                                
+                                return dataURL
+                            }.value) {
+                                parts.append(["type": "image", "image": dataURL])
+                            }
+                        }
+                        
+                        if !parts.isEmpty, let text = logs[i - 1].content.text {
+                            messages.insert(["role": "user", "content": parts], at: 1)
+                            messages.insert(["role": "assistant", "content": text], at: 1)
+                        }
                         
                         i -= 2
                     } else {
@@ -1202,8 +1343,30 @@ struct Chat: View {
                     
                     while i > 0 {
                         if self.logs[i].from == first.name && self.logs[i].to == nil && self.logs[i - 1].from == nil && self.logs[i - 1].to == first.name {
-                            messages.insert(["role": "assistant", "content": self.logs[i].content], at: 1)
-                            messages.insert(["role": "user", "content": self.logs[i - 1].content], at: 1)
+                            var parts = [[String: Any]]()
+                            
+                            if let text = self.logs[i - 1].content.text {
+                                parts.append(["type": "text", "text": text])
+                            }
+                            
+                            if let image = self.logs[i - 1].content.image {
+                                if let dataURL = (await Task.detached {
+                                    var dataURL: String? = nil
+                                    
+                                    if let resizedImage = self.resize(image: image) {
+                                        dataURL = self.convert(image: resizedImage)
+                                    }
+                                    
+                                    return dataURL
+                                }.value) {
+                                    parts.append(["type": "image", "image": dataURL])
+                                }
+                            }
+                            
+                            if !parts.isEmpty, let text = self.logs[i].content.text {
+                                messages.insert(["role": "assistant", "content": text], at: 1)
+                                messages.insert(["role": "user", "content": parts], at: 1)
+                            }
                             
                             i -= 2
                         } else {
@@ -1211,7 +1374,7 @@ struct Chat: View {
                         }
                     }
                     
-                    messages.append(["role": "user", "content": input])
+                    messages.append(["role": "user", "content": [["type": "text", "text": input]]])
                 }
                 
                 if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
@@ -1261,13 +1424,35 @@ struct Chat: View {
                                     
                                     return nil
                                 })
-                            }.value], ["role": "user", "content": content]]
+                            }.value], ["role": "user", "content": [["type": "text", "text": content]]]]
                             var i = logs.count - 1
                             
                             while i > 0 {
                                 if logs[i].from == character.name {
-                                    messages.insert(["role": "assistant", "content": logs[i].content], at: 1)
-                                    messages.insert(["role": "user", "content": logs[i - 1].content], at: 1)
+                                    var parts = [[String: Any]]()
+                                    
+                                    if let text = logs[i - 1].content.text {
+                                        parts.append(["type": "text", "text": text])
+                                    }
+                                    
+                                    if let image = logs[i - 1].content.image {
+                                        if let dataURL = (await Task.detached {
+                                            var dataURL: String? = nil
+                                            
+                                            if let resizedImage = self.resize(image: image) {
+                                                dataURL = self.convert(image: resizedImage)
+                                            }
+                                            
+                                            return dataURL
+                                        }.value) {
+                                            parts.append(["type": "image", "image": dataURL])
+                                        }
+                                    }
+                                    
+                                    if !parts.isEmpty, let text = logs[i].content.text {
+                                        messages.insert(["role": "assistant", "content": text], at: 1)
+                                        messages.insert(["role": "user", "content": parts], at: 1)
+                                    }
                                     
                                     i -= 2
                                 } else {
@@ -1532,8 +1717,8 @@ struct Chat: View {
                         }
                     }
                     
-                    self.logs.append((id: nil, from: nil, to: first.name, group: time, content: input))
-                    self.logs.append((id: nil, from: first.name, to: nil, group: time, content: content.joined(separator: "\n")))
+                    self.logs.append((id: nil, from: nil, to: first.name, group: time, content: (text: input, image: nil), choices: nil))
+                    self.logs.append((id: nil, from: first.name, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
                     self.choices.removeAll()
                     
                     for sequence in newSequences {
@@ -1551,6 +1736,7 @@ struct Chat: View {
                     await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].2], words: []) { x in
                         var y = x
                         var content = [String]()
+                        let choices: [String]?
                         
                         for sequence in x {
                             for obj in sequence {
@@ -1562,22 +1748,27 @@ struct Chat: View {
                         
                         y.append(Sequence(name: String()))
                         
-                        if i > 0 {
-                            self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: content.joined(separator: "\n")))
+                        if let c = sequences[i].4 {
+                            choices = c.reduce(into: [String](), { x, y in
+                                x.append(y.0)
+                            })
+                            self.choices.removeAll()
+                            self.choices.append(contentsOf: c)
                         } else {
-                            self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: input))
-                            self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: content.joined(separator: "\n")))
+                            choices = nil
+                        }
+                        
+                        if i > 0 {
+                            self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                        } else {
+                            self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: (text: input, image: nil), choices: choices))
+                            self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                         }
                         
                         if let likability = sequences[i].3 {
                             withAnimation {
                                 self.likability = likability
                             }
-                        }
-                        
-                        if let choices = sequences[i].4 {
-                            self.choices.removeAll()
-                            self.choices.append(contentsOf: choices)
                         }
                         
                         return y
@@ -1925,6 +2116,62 @@ struct Chat: View {
         }
     }
     
+    private nonisolated func resize(image: CGImage, maximum: Double = 768) -> CGImage? {
+        let imageWidth = Double(image.width)
+        let imageHeight = Double(image.height)
+        let width: Double
+        let height: Double
+        var resizedImage: CGImage? = nil
+        
+        if imageWidth < imageHeight {
+            if imageHeight > maximum {
+                width = floor(maximum / imageHeight * imageWidth)
+                height = maximum
+            } else {
+                width = imageWidth
+                height = imageHeight
+            }
+        } else if imageWidth > maximum {
+            width = maximum
+            height = floor(maximum / imageWidth * imageHeight)
+        } else {
+            width = imageWidth
+            height = imageHeight
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+        
+        if let context = UIGraphicsGetCurrentContext() {
+            context.interpolationQuality = .high
+            context.setAllowsAntialiasing(true)
+            context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+            context.translateBy(x: 0.0, y: height)
+            context.scaleBy(x: 1.0, y: -1.0)
+            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
+            resizedImage = context.makeImage()
+        }
+        
+        UIGraphicsEndImageContext()
+        
+        return resizedImage
+    }
+    
+    private nonisolated func convert(image: CGImage) -> String? {
+        let mutableData = NSMutableData()
+        
+        guard let destination = CGImageDestinationCreateWithData(mutableData, UTType.jpeg.identifier as CFString, 1, nil) else {
+            return nil
+        }
+        
+        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.75] as CFDictionary)
+        
+        guard CGImageDestinationFinalize(destination) else {
+            return nil
+        }
+        
+        return "data:image/jpeg;base64,\(mutableData.base64EncodedString(options: []))"
+    }
+    
     private func convert(from: String) -> UIColor {
         let scanner = Scanner(string: from)
         var c: UInt64 = 0
@@ -1980,8 +2227,8 @@ struct Chat: View {
 }
 
 struct Stage: UIViewRepresentable {
-    @Binding var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)?
-    @Binding var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: String)]
+    @Binding var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)
+    @Binding var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
     @Binding var resource: (old: String, new: String)
     @Binding var attributes: [String]
     @Binding var types: Int
@@ -1990,6 +2237,7 @@ struct Stage: UIViewRepresentable {
     @Binding var likability: Double?
     @Binding var choices: [(String, URL?)]
     @Binding var changing: Bool
+    @Binding var idle: Bool
     @Binding var loading: Bool
     @Binding var intensity: Double
     var temperature: Double
@@ -1999,7 +2247,7 @@ struct Stage: UIViewRepresentable {
     var mute: Bool
     @State var permissions: Set<String> = []
     
-    init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)?>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: String)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likes: Binding<(old: Int, new: [String: [Date]])>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, changing: Binding<Bool>, loading: Binding<Bool>, intensity: Binding<Double>, temperature: Double, accent: UIColor, scale: Double, pause: Bool, mute: Bool) {
+    init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likes: Binding<(old: Int, new: [String: [Date]])>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, changing: Binding<Bool>, idle: Binding<Bool>, loading: Binding<Bool>, intensity: Binding<Double>, temperature: Double, accent: UIColor, scale: Double, pause: Bool, mute: Bool) {
         self._prompt = prompt
         self._logs = logs
         self._resource = resource
@@ -2010,6 +2258,7 @@ struct Stage: UIViewRepresentable {
         self._likability = likability
         self._choices = choices
         self._changing = changing
+        self._idle = idle
         self._loading = loading
         self._intensity = intensity
         self.temperature = temperature
@@ -2394,6 +2643,14 @@ struct Stage: UIViewRepresentable {
             self.update(agent: agent, force: flag)
         }
         
+        func agentDidTransition(_ agent: AgentView) {
+            let isIdle = agent.idle
+            
+            if self.parent.idle != isIdle {
+                self.parent.idle = isIdle
+            }
+        }
+        
         func agentDidStop(_ agent: AgentView) {
             agent.change(path: self.parent.resource.new)
             
@@ -2632,7 +2889,7 @@ struct Stage: UIViewRepresentable {
                             await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
                         }
                         
-                        self.parent.prompt = (name, word, false, letterSet, [], 0, CACurrentMediaTime())
+                        self.parent.prompt = (name, word, self.parent.prompt.2, letterSet, self.parent.prompt.4, self.parent.prompt.5, CACurrentMediaTime())
                     } else {
                         var minProbability = modifiers.reduce(Double.greatestFiniteMagnitude, { x, y in
                             if let (score, _, _, _) = Script.shared.scores[y], score > epsilon && score < x {
@@ -2693,7 +2950,7 @@ struct Stage: UIViewRepresentable {
                             await self.talk(word: word, intensity: self.parent.intensity, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
                         }
                         
-                        self.parent.prompt = (name, word, false, letterSet, [], 0, CACurrentMediaTime())
+                        self.parent.prompt = (name, word, self.parent.prompt.2, letterSet, self.parent.prompt.4, self.parent.prompt.5, CACurrentMediaTime())
                     }
                     
                     self.parent.choices.removeAll()
@@ -2989,13 +3246,14 @@ struct Stage: UIViewRepresentable {
             }
         }
         
-        @MainActor private func talk(word: Word, intensity: Double, temperature: Double, multiple: Bool, mute: Bool) {
+        @MainActor
+        private func talk(word: Word, intensity: Double, temperature: Double, multiple: Bool, mute: Bool) {
             Task {
                 var queue = Script.shared.characters
                 
                 if let first = queue.first {
                     let input = word.name.filter { !$0.isNewline }
-                    var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: String)]()
+                    var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]()
                     let attributes = word.attributes ?? []
                     let generateRequired: Bool
                     let time: Double
@@ -3009,7 +3267,7 @@ struct Stage: UIViewRepresentable {
                             
                             for log in self.parent.logs {
                                 if log.group == last.group {
-                                    if log.from == nil && log.content == input {
+                                    if log.from == nil, let choices = log.choices, choices.contains(where: { $0 == input }) {
                                         isContinuous = true
                                     }
                                     
@@ -3032,7 +3290,13 @@ struct Stage: UIViewRepresentable {
                     } else {
                         queue.removeAll()
                         
-                        if let last = self.parent.logs.last, self.parent.logs.contains(where: { $0.from == nil && $0.group == last.group && $0.content == input }) {
+                        if let last = self.parent.logs.last, self.parent.logs.contains(where: { x in
+                            if x.from == nil && x.group == last.group, let choices = x.choices {
+                                return choices.contains(where: { $0 == input })
+                            }
+                            
+                            return false
+                        }) {
                             generateRequired = true
                             time = last.group
                         } else {
@@ -3065,8 +3329,30 @@ struct Stage: UIViewRepresentable {
                         
                         while i > 0 {
                             if let from = logs[i].from, from != first.name && logs[i - 1].from == first.name {
-                                messages.insert(["role": "user", "content": logs[i].content], at: 1)
-                                messages.insert(["role": "assistant", "content": logs[i - 1].content], at: 1)
+                                var parts = [[String: Any]]()
+                                
+                                if let text = logs[i].content.text {
+                                    parts.append(["type": "text", "text": text])
+                                }
+                                
+                                if let image = logs[i].content.image {
+                                    if let dataURL = (await Task.detached {
+                                        var dataURL: String? = nil
+                                        
+                                        if let resizedImage = self.resize(image: image) {
+                                            dataURL = self.convert(image: resizedImage)
+                                        }
+                                        
+                                        return dataURL
+                                    }.value) {
+                                        parts.append(["type": "image", "image": dataURL])
+                                    }
+                                }
+                                
+                                if !parts.isEmpty, let text = logs[i - 1].content.text {
+                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                    messages.insert(["role": "assistant", "content": text], at: 1)
+                                }
                                 
                                 i -= 2
                             } else {
@@ -3079,8 +3365,30 @@ struct Stage: UIViewRepresentable {
                             
                             while i > 0 {
                                 if self.parent.logs[i].from == first.name && self.parent.logs[i].to == nil && self.parent.logs[i - 1].from == nil && self.parent.logs[i - 1].to == first.name {
-                                    messages.insert(["role": "assistant", "content": self.parent.logs[i].content], at: 1)
-                                    messages.insert(["role": "user", "content": self.parent.logs[i - 1].content], at: 1)
+                                    var parts = [[String: Any]]()
+                                    
+                                    if let text = self.parent.logs[i - 1].content.text {
+                                        parts.append(["type": "text", "text": text])
+                                    }
+                                    
+                                    if let image = self.parent.logs[i - 1].content.image {
+                                        if let dataURL = (await Task.detached {
+                                            var dataURL: String? = nil
+                                            
+                                            if let resizedImage = self.resize(image: image) {
+                                                dataURL = self.convert(image: resizedImage)
+                                            }
+                                            
+                                            return dataURL
+                                        }.value) {
+                                            parts.append(["type": "image", "image": dataURL])
+                                        }
+                                    }
+                                    
+                                    if !parts.isEmpty, let text = self.parent.logs[i].content.text {
+                                        messages.insert(["role": "assistant", "content": text], at: 1)
+                                        messages.insert(["role": "user", "content": parts], at: 1)
+                                    }
                                     
                                     i -= 2
                                 } else {
@@ -3088,7 +3396,7 @@ struct Stage: UIViewRepresentable {
                                 }
                             }
                             
-                            messages.append(["role": "user", "content": input])
+                            messages.append(["role": "user", "content": [["type": "text", "text": input]]])
                         }
                         
                         if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
@@ -3138,13 +3446,35 @@ struct Stage: UIViewRepresentable {
                                             
                                             return nil
                                         })
-                                    }.value], ["role": "user", "content": content]]
+                                    }.value], ["role": "user", "content": [["type": "text", "text": content]]]]
                                     var i = logs.count - 1
                                     
                                     while i > 0 {
                                         if logs[i].from == character.name {
-                                            messages.insert(["role": "assistant", "content": logs[i].content], at: 1)
-                                            messages.insert(["role": "user", "content": logs[i - 1].content], at: 1)
+                                            var parts = [[String: Any]]()
+                                            
+                                            if let text = logs[i - 1].content.text {
+                                                parts.append(["type": "text", "text": text])
+                                            }
+                                            
+                                            if let image = logs[i - 1].content.image {
+                                                if let dataURL = (await Task.detached {
+                                                    var dataURL: String? = nil
+                                                    
+                                                    if let resizedImage = self.resize(image: image) {
+                                                        dataURL = self.convert(image: resizedImage)
+                                                    }
+                                                    
+                                                    return dataURL
+                                                }.value) {
+                                                    parts.append(["type": "image", "image": dataURL])
+                                                }
+                                            }
+                                            
+                                            if !parts.isEmpty, let text = logs[i].content.text {
+                                                messages.insert(["role": "assistant", "content": text], at: 1)
+                                                messages.insert(["role": "user", "content": parts], at: 1)
+                                            }
                                             
                                             i -= 2
                                         } else {
@@ -3408,8 +3738,8 @@ struct Stage: UIViewRepresentable {
                                 }
                             }
                             
-                            self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, content: input))
-                            self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, content: content.joined(separator: "\n")))
+                            self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, content: (text: input, image: nil), choices: nil))
+                            self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
                             self.parent.choices.removeAll()
                             
                             for sequence in newSequences {
@@ -3423,6 +3753,7 @@ struct Stage: UIViewRepresentable {
                             await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].2], words: []) { x in
                                 var y = x
                                 var content = [String]()
+                                let choices: [String]?
                                 
                                 for sequence in x {
                                     for obj in sequence {
@@ -3434,22 +3765,27 @@ struct Stage: UIViewRepresentable {
                                 
                                 y.append(Sequence(name: String()))
                                 
-                                if i > 0 {
-                                    self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: content.joined(separator: "\n")))
+                                if let c = sequences[i].4 {
+                                    choices = c.reduce(into: [String](), { x, y in
+                                        x.append(y.0)
+                                    })
+                                    self.parent.choices.removeAll()
+                                    self.parent.choices.append(contentsOf: c)
                                 } else {
-                                    self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: input))
-                                    self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: content.joined(separator: "\n")))
+                                    choices = nil
+                                }
+                                
+                                if i > 0 {
+                                    self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                                } else {
+                                    self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: (text: input, image: nil), choices: choices))
+                                    self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                                 }
                                 
                                 if let likability = sequences[i].3 {
                                     withAnimation {
                                         self.parent.likability = likability
                                     }
-                                }
-                             
-                                if let choices = sequences[i].4 {
-                                    self.parent.choices.removeAll()
-                                    self.parent.choices.append(contentsOf: choices)
                                 }
                                 
                                 return y
@@ -3648,6 +3984,62 @@ struct Stage: UIViewRepresentable {
             return output
         }
         
+        private nonisolated func resize(image: CGImage, maximum: Double = 768) -> CGImage? {
+            let imageWidth = Double(image.width)
+            let imageHeight = Double(image.height)
+            let width: Double
+            let height: Double
+            var resizedImage: CGImage? = nil
+            
+            if imageWidth < imageHeight {
+                if imageHeight > maximum {
+                    width = floor(maximum / imageHeight * imageWidth)
+                    height = maximum
+                } else {
+                    width = imageWidth
+                    height = imageHeight
+                }
+            } else if imageWidth > maximum {
+                width = maximum
+                height = floor(maximum / imageWidth * imageHeight)
+            } else {
+                width = imageWidth
+                height = imageHeight
+            }
+            
+            UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+            
+            if let context = UIGraphicsGetCurrentContext() {
+                context.interpolationQuality = .high
+                context.setAllowsAntialiasing(true)
+                context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                context.translateBy(x: 0.0, y: height)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                resizedImage = context.makeImage()
+            }
+            
+            UIGraphicsEndImageContext()
+            
+            return resizedImage
+        }
+        
+        private nonisolated func convert(image: CGImage) -> String? {
+            let mutableData = NSMutableData()
+            
+            guard let destination = CGImageDestinationCreateWithData(mutableData, UTType.jpeg.identifier as CFString, 1, nil) else {
+                return nil
+            }
+            
+            CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.75] as CFDictionary)
+            
+            guard CGImageDestinationFinalize(destination) else {
+                return nil
+            }
+            
+            return "data:image/jpeg;base64,\(mutableData.base64EncodedString(options: []))"
+        }
+        
         private func choice(probabilities: [Double]) -> Int {
             let random = Double.random(in: 0.0..<1.0)
             var sum = 0.0
@@ -3716,13 +4108,795 @@ struct Prompt: UIViewRepresentable {
     }
 }
 
+struct Peek: UIViewControllerRepresentable {
+    @Binding private var peekable: Bool
+    private var pause: Bool
+    @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
+    @Binding private var likability: Double?
+    @Binding private var choices: [(String, URL?)]
+    private var idle: Bool
+    @Binding private var loading: Bool
+    private var intensity: Double
+    private var temperature: Double
+    private var mute: Bool
+    
+    init(peekable: Binding<Bool>, pause: Bool, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, idle: Bool, loading: Binding<Bool>, intensity: Double, temperature: Double, mute: Bool) {
+        self._peekable = peekable
+        self.pause = pause
+        self._logs = logs
+        self._likability = likability
+        self._choices = choices
+        self.idle = idle
+        self._loading = loading
+        self.intensity = intensity
+        self.temperature = temperature
+        self.mute = mute
+    }
+    
+    func makeUIViewController(context: Context) -> PeekViewController {
+        let viewController = PeekViewController()
+        
+        viewController.delegate = context.coordinator
+        
+        return viewController
+    }
+    
+    func updateUIViewController(_ uiViewController: PeekViewController, context: Context) {
+        if self.pause != uiViewController.isPaused {
+            uiViewController.isPaused = self.pause
+        }
+        
+        if self.idle != uiViewController.isIdle {
+            uiViewController.isIdle = self.idle
+        }
+        
+        if self.intensity != context.coordinator.intensity {
+            context.coordinator.intensity = self.intensity
+        }
+        
+        if self.temperature != context.coordinator.temperature {
+            context.coordinator.temperature = self.temperature
+        }
+        
+        if self.mute != context.coordinator.mute {
+            context.coordinator.mute = self.mute
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        return Coordinator(self)
+    }
+    
+    protocol PeekDelegate: AnyObject {
+        func peekDidUpdate(_ peek: PeekViewController)
+        func peekDidFail(_ peek: PeekViewController)
+    }
+    
+    class Coordinator: NSObject, PeekDelegate {
+        var temperature = 1.0
+        var intensity = 0.5
+        var mute = false
+        private var parent: Peek
+        
+        init(_ parent: Peek) {
+            self.parent = parent
+        }
+        
+        func peekDidUpdate(_ peek: Peek.PeekViewController) {
+            if let image = peek.peekedImage {
+                Task {
+                    await self.talk(image: image, intensity: self.parent.intensity, temperature: self.parent.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
+                }
+            }
+        }
+        
+        func peekDidFail(_ peek: Peek.PeekViewController) {
+            Task {
+                await MainActor.run { [weak self] in
+                    self?.parent.peekable = peek.isPeekable
+                }
+            }
+        }
+        
+        @MainActor
+        private func talk(image: CGImage, intensity: Double, temperature: Double, multiple: Bool, mute: Bool) {
+            Task {
+                var queue = Script.shared.characters
+                
+                if let first = queue.first {
+                    let time = CACurrentMediaTime()
+                    var sequences = [(String, UUID?, Sequence, Double?, [(String, URL?)]?)]()
+                    
+                    if multiple {
+                        queue.removeFirst()
+                    } else {
+                        queue.removeAll()
+                    }
+                    
+                    if let prompt = first.prompt {
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            self.parent.loading = true
+                        }
+                        
+                        var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
+                            return self.replacePlaceholders(text: prompt, resolver: { format in
+                                
+                                if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
+                                    let dateFormatter = DateFormatter()
+                                    
+                                    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                                    dateFormatter.dateFormat = format
+                                    
+                                    return dateFormatter.string(from: Date())
+                                }
+                                
+                                return nil
+                            })
+                        }.value]]
+                        var i = self.parent.logs.count - 1
+                        
+                        while i > 0 {
+                            if self.parent.logs[i].from == first.name && self.parent.logs[i].to == nil && self.parent.logs[i - 1].from == nil && self.parent.logs[i - 1].to == first.name {
+                                var parts = [[String: Any]]()
+                                
+                                if let text = self.parent.logs[i - 1].content.text {
+                                    parts.append(["type": "text", "text": text])
+                                }
+                                
+                                if let image = self.parent.logs[i - 1].content.image {
+                                    if let dataURL = (await Task.detached {
+                                        var dataURL: String? = nil
+                                        
+                                        if let resizedImage = self.resize(image: image) {
+                                            dataURL = self.convert(image: resizedImage)
+                                        }
+                                        
+                                        return dataURL
+                                    }.value) {
+                                        parts.append(["type": "image", "image": dataURL])
+                                    }
+                                }
+                                
+                                if !parts.isEmpty, let text = self.parent.logs[i].content.text {
+                                    messages.insert(["role": "assistant", "content": text], at: 1)
+                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                }
+                                
+                                i -= 2
+                            } else {
+                                i -= 1
+                            }
+                        }
+                        
+                        if let dataURL = (await Task.detached {
+                            var dataURL: String? = nil
+                            
+                            if let resizedImage = self.resize(image: image) {
+                                dataURL = self.convert(image: resizedImage)
+                            }
+                            
+                            return dataURL
+                        }.value) {
+                            messages.append(["role": "user", "content": [["type": "image", "image": dataURL]]])
+                        } else {
+                            return
+                        }
+                        
+                        if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
+                            let sequence = Sequence(name: "Activate", state: nil)
+                            let id = UUID()
+                            
+                            sequence.append(Message(id: id, inlines: [(text: content, attributes: nil)]))
+                            
+                            if let voice {
+                                sequence.append(voice)
+                            }
+                            
+                            sequence.append(Sequence(name: "Emote", state: state ?? String()))
+                            sequences.append((first.name, id, sequence, likability, choices))
+                            
+                            while !queue.isEmpty {
+                                let character = queue.removeFirst()
+                                
+                                if let prompt = character.prompt {
+                                    if let (content, _, state, _, voice) = await self.generate(messages: [["role": "system", "content": await Task.detached {
+                                        return self.replacePlaceholders(text: prompt, resolver: { format in
+                                            
+                                            if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
+                                                let dateFormatter = DateFormatter()
+                                                
+                                                dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+                                                dateFormatter.dateFormat = format
+                                                
+                                                return dateFormatter.string(from: Date())
+                                            }
+                                            
+                                            return nil
+                                        })
+                                    }.value], ["role": "user", "content": [["type": "text", "text": content]]]], voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
+                                        let sequence = Sequence(name: "Activate", state: nil)
+                                        let id = UUID()
+                                        
+                                        sequence.append(Message(id: id, inlines: [(text: content, attributes: nil)]))
+                                        
+                                        if let voice {
+                                            sequence.append(voice)
+                                        }
+                                        
+                                        sequence.append(Sequence(name: "Emote", state: state ?? String()))
+                                        sequences.append((character.name, id, sequence, nil, nil))
+                                    } else {
+                                        sequences.removeAll()
+                                        queue.removeAll()
+                                        
+                                        break
+                                    }
+                                } else {
+                                    sequences.removeAll()
+                                    queue.removeAll()
+                                    
+                                    break
+                                }
+                            }
+                        } else {
+                            queue.removeAll()
+                        }
+                        
+                        withAnimation(.easeIn(duration: 0.5)) {
+                            self.parent.loading = false
+                        }
+                    } else {
+                        queue.removeAll()
+                    }
+                    
+                    for i in 0..<sequences.count {
+                        await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].2], words: []) { x in
+                            var y = x
+                            var content = [String]()
+                            let choices: [String]?
+                            
+                            for sequence in x {
+                                for obj in sequence {
+                                    if let message = obj as? Message {
+                                        content.append(message.content)
+                                    }
+                                }
+                            }
+                            
+                            y.append(Sequence(name: String()))
+                            
+                            if let c = sequences[i].4 {
+                                choices = c.reduce(into: [String](), { x, y in
+                                    x.append(y.0)
+                                })
+                                self.parent.choices.removeAll()
+                                self.parent.choices.append(contentsOf: c)
+                            } else {
+                                choices = nil
+                            }
+                            
+                            if i > 0 {
+                                self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                            } else {
+                                var index = self.parent.logs.count - 1
+                                
+                                while index >= 0 {
+                                    if self.parent.logs[index].content.image != nil {
+                                        let group = self.parent.logs[index].group
+                                        
+                                        for j in stride(from: self.parent.logs.count - 1, through: 0, by: -1) {
+                                            if self.parent.logs[j].group == group {
+                                                self.parent.logs.remove(at: j)
+                                            }
+                                        }
+                                        
+                                        index = self.parent.logs.count - 1
+                                        
+                                        continue
+                                    }
+                                    
+                                    index -= 1
+                                }
+                                
+                                self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: (text: nil, image: image), choices: choices))
+                                self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                            }
+                            
+                            if let likability = sequences[i].3 {
+                                withAnimation {
+                                    self.parent.likability = likability
+                                }
+                            }
+                            
+                            return y
+                        }
+                    }
+                    
+                    while self.parent.logs.count > 10 {
+                        let group = self.parent.logs[0].group
+                        
+                        for i in stride(from: self.parent.logs.count - 1, through: 0, by: -1) {
+                            if self.parent.logs[i].group == group {
+                                self.parent.logs.remove(at: i)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        private func sample(path: String, sequences: [Sequence]) async -> Data? {
+            return await Task.detached {
+                var sequenceQueue = sequences
+                
+                while !sequenceQueue.isEmpty {
+                    let sequence = sequenceQueue.removeFirst()
+                    var index: Int? = nil
+                    
+                    for (i, obj) in sequence.enumerated() {
+                        if let s = obj as? Sequence {
+                            sequenceQueue.append(s)
+                        } else if obj is Message {
+                            index = i
+                        } else if let sound = obj as? Sound, i - 1 == index, let soundPath = sound.path {
+                            let path = URL(filePath: path).deletingLastPathComponent().appending(path: soundPath, directoryHint: .inferFromPath).path(percentEncoded: false)
+                            
+                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                defer {
+                                    try? file.close()
+                                }
+                                
+                                if let data = try? file.readToEnd(), data.count > 44, let riff = String(data: data[0..<4], encoding: .ascii), riff == "RIFF", let wave = String(data: data[8..<12], encoding: .ascii), wave == "WAVE" && String(data: data[12..<16], encoding: .ascii) == "fmt " {
+                                    let sampleRate = data.subdata(in: 24..<28).withUnsafeBytes { $0.load(as: UInt32.self) }
+                                    let channels = data.subdata(in: 22..<24).withUnsafeBytes { $0.load(as: UInt16.self) }
+                                    let bitsPerSample = data.subdata(in: 34..<36).withUnsafeBytes { $0.load(as: UInt16.self) }
+                                    var dataChunkOffset = 36
+                                    
+                                    while dataChunkOffset + 8 < data.count {
+                                        let chunkID = String(data: data[dataChunkOffset..<dataChunkOffset + 4], encoding: .ascii)
+                                        let chunkSize = data.subdata(in: dataChunkOffset + 4..<dataChunkOffset + 8).withUnsafeBytes { $0.load(as: UInt32.self) }
+                                        
+                                        if chunkID == "data" {
+                                            let duration = Double(Int(chunkSize) / Int(bitsPerSample / 8 * channels)) / Double(sampleRate)
+                                            
+                                            if duration > 3.0 && duration <= 10.0 {
+                                                return data
+                                            }
+                                            
+                                            break
+                                        }
+                                        
+                                        dataChunkOffset += 8 + Int(chunkSize)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return nil
+            }.value
+        }
+        
+        private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, Double?, String?, [(String, URL?)], Data?)? {
+            if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
+                var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
+                
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.httpBody = data
+                request.timeoutInterval = 60.0
+                
+                if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
+                    var likability: Double? = nil
+                    var state: String? = nil
+                    var choices = [(String, URL?)]()
+                    var wave: Data? = nil
+                    
+                    if let value = jsonRoot["likability"] as? Double {
+                        likability = value
+                    }
+                    
+                    if let states = jsonRoot["states"] as? [String: Any] {
+                        var max = 0.0
+                        
+                        for (key, object) in states {
+                            if let value = object as? Double, value > max {
+                                state = key
+                                max = value
+                            }
+                        }
+                    }
+                    
+                    if let objects = jsonRoot["choices"] as? [Any] {
+                        for object in objects {
+                            if let value = object as? String {
+                                choices.append((value, nil))
+                            } else if let dictionary = object as? [String: Any?] {
+                                if let text = dictionary["text"] as? String {
+                                    if let value = dictionary["url"] as? String {
+                                        if value.lowercased().hasPrefix("https://"), let url = URL(string: value) {
+                                            choices.append((text, url))
+                                        }
+                                    } else {
+                                        choices.append((text, nil))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if let voice, let language {
+                        wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
+                    }
+                    
+                    return (content, likability, state, choices, wave)
+                }
+            }
+            
+            return nil
+        }
+        
+        private func generate(prompt: Data, input: String, language: String, temperature: Double) async -> Data? {
+            if let data = try? JSONSerialization.data(withJSONObject: ["input": input, "language": language, "temperature": round(temperature * 10.0) / 10.0]) {
+                let request = await Task.detached {
+                    var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
+                    let boundary = UUID().uuidString
+                    var body = Data()
+                    
+                    body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                    body.append("Content-Disposition: form-data; name=\"file\"; filename=\"prompt.wav\"\r\n".data(using: .utf8)!)
+                    body.append("Content-Type: audio/wav\r\n".data(using: .utf8)!)
+                    body.append("Content-Transfer-Encoding: binary\r\n\r\n".data(using: .utf8)!)
+                    body.append(prompt)
+                    body.append("\r\n".data(using: .utf8)!)
+                    body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                    body.append("Content-Disposition: form-data; name=\"data\"\r\n".data(using: .utf8)!)
+                    body.append("Content-Type: application/json\r\n\r\n".data(using: .utf8)!)
+                    body.append(data)
+                    body.append("\r\n".data(using: .utf8)!)
+                    body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+                    
+                    request.httpMethod = "POST"
+                    request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                    request.httpBody = body
+                    request.timeoutInterval = 60.0
+                    
+                    return request
+                }.value
+                
+                if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "audio/wav" {
+                    return data
+                }
+            }
+            
+            return nil
+        }
+        
+        private nonisolated func replacePlaceholders(text: String, resolver: (String) -> String?) -> String {
+            var input = String(text)
+            var output = String()
+            
+            repeat {
+                if let match = input.firstMatch(of: /({{1,2})([^{}\r\n]+)(}{1,2})/), let replacement = resolver(String(match.output.2)) {
+                    output.append(String(input[input.startIndex..<match.range.lowerBound]))
+                    
+                    if match.output.1.count == 2 {
+                        if match.output.3.count == 2 {
+                            output.append("{\(match.output.2)}")
+                        } else {
+                            output.append("{\(replacement)")
+                        }
+                    } else if match.output.3.count == 2 {
+                        output.append("\(replacement)}")
+                    } else {
+                        output.append(replacement)
+                    }
+                    
+                    input = String(input[match.range.upperBound..<input.endIndex])
+                } else {
+                    output.append(input)
+                    input.removeAll()
+                }
+            } while !input.isEmpty
+            
+            return output
+        }
+        
+        private nonisolated func resize(image: CGImage, maximum: Double = 768) -> CGImage? {
+            let imageWidth = Double(image.width)
+            let imageHeight = Double(image.height)
+            let width: Double
+            let height: Double
+            var resizedImage: CGImage? = nil
+            
+            if imageWidth < imageHeight {
+                if imageHeight > maximum {
+                    width = floor(maximum / imageHeight * imageWidth)
+                    height = maximum
+                } else {
+                    width = imageWidth
+                    height = imageHeight
+                }
+            } else if imageWidth > maximum {
+                width = maximum
+                height = floor(maximum / imageWidth * imageHeight)
+            } else {
+                width = imageWidth
+                height = imageHeight
+            }
+            
+            UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+            
+            if let context = UIGraphicsGetCurrentContext() {
+                context.interpolationQuality = .high
+                context.setAllowsAntialiasing(true)
+                context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                context.translateBy(x: 0.0, y: height)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                resizedImage = context.makeImage()
+            }
+            
+            UIGraphicsEndImageContext()
+            
+            return resizedImage
+        }
+        
+        private nonisolated func convert(image: CGImage) -> String? {
+            let mutableData = NSMutableData()
+            
+            guard let destination = CGImageDestinationCreateWithData(mutableData, UTType.jpeg.identifier as CFString, 1, nil) else {
+                return nil
+            }
+            
+            CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.75] as CFDictionary)
+            
+            guard CGImageDestinationFinalize(destination) else {
+                return nil
+            }
+            
+            return "data:image/jpeg;base64,\(mutableData.base64EncodedString(options: []))"
+        }
+    }
+    
+    class PeekViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
+        var delegate: PeekDelegate? = nil
+        var isPeekable = true
+        var isPaused = false
+        var isIdle = false
+        var peekedImage: CGImage? = nil
+        private let sessionQueue = DispatchQueue(label: String(describing: Peek.PeekViewController.self))
+        private let captureSession = AVCaptureSession()
+        private var captureVideoPreviewLayer: AVCaptureVideoPreviewLayer? = nil
+        private var elapsedTime = CACurrentMediaTime()
+        private let threshold = 8
+        private var peekedImageHash: UInt64 = 0
+        
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            
+            switch AVCaptureDevice.authorizationStatus(for: .video) {
+            case .authorized:
+                break
+                
+            case .notDetermined:
+                self.sessionQueue.suspend()
+                
+                AVCaptureDevice.requestAccess(for: .video, completionHandler: { granted in
+                    if !granted {
+                        self.isPeekable = false
+                        self.delegate?.peekDidFail(self)
+                    }
+                    
+                    self.sessionQueue.resume()
+                })
+                
+            default:
+                self.isPeekable = false
+                self.delegate?.peekDidFail(self)
+            }
+            
+            if self.isPeekable {
+                self.captureVideoPreviewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
+                self.captureVideoPreviewLayer!.videoGravity = AVLayerVideoGravity.resizeAspectFill
+                self.captureVideoPreviewLayer!.frame = CGRect(origin: CGPoint.zero, size: self.view.frame.size)
+                
+                self.view.layer.addSublayer(self.captureVideoPreviewLayer!)
+                
+                if let captureDevice = AVCaptureDevice.default(for: AVMediaType.video), let input = try? AVCaptureDeviceInput(device: captureDevice), self.captureSession.canAddInput(input) {
+                    
+                    let output = AVCaptureVideoDataOutput()
+                    
+                    self.captureSession.beginConfiguration()
+                    self.captureSession.addInput(input)
+                    
+                    output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+                    output.setSampleBufferDelegate(self, queue: self.sessionQueue)
+                    output.alwaysDiscardsLateVideoFrames = true
+                    
+                    if self.captureSession.canAddOutput(output) {
+                        self.captureSession.addOutput(output)
+                    } else {
+                        self.captureSession.commitConfiguration()
+                        self.isPeekable = false
+                        self.delegate?.peekDidFail(self)
+                        
+                        return
+                    }
+                    
+                    if self.captureSession.canSetSessionPreset(.photo) {
+                        self.captureSession.sessionPreset = .photo
+                    }
+                    
+                    self.captureSession.commitConfiguration()
+                } else {
+                    self.isPeekable = false
+                    self.delegate?.peekDidFail(self)
+                }
+            }
+        }
+        
+        override func viewDidLayoutSubviews() {
+            if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
+                captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: self.view.frame.size)
+            }
+        }
+        
+        override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+            if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
+                captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: size)
+                
+                switch UIDevice.current.orientation {
+                case UIDeviceOrientation.portraitUpsideDown:
+                    captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+                case UIDeviceOrientation.landscapeLeft:
+                    captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+                case UIDeviceOrientation.landscapeRight:
+                    captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+                default:
+                    captureVideoPreviewLayer.connection?.videoRotationAngle = 90
+                }
+            }
+        }
+        
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            
+            if self.isPeekable {
+                self.sessionQueue.async {
+                    self.captureSession.startRunning()
+                    
+                    Task {
+                        await MainActor.run { [weak self] in
+                            if let captureVideoPreviewLayer = self?.captureVideoPreviewLayer {
+                                switch UIDevice.current.orientation {
+                                case UIDeviceOrientation.portraitUpsideDown:
+                                    captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+                                case UIDeviceOrientation.landscapeLeft:
+                                    captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+                                case UIDeviceOrientation.landscapeRight:
+                                    captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+                                default:
+                                    captureVideoPreviewLayer.connection?.videoRotationAngle = 90
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        override func viewWillDisappear(_ animated: Bool) {
+            if self.isPeekable {
+                self.sessionQueue.async {
+                    self.captureSession.stopRunning()
+                }
+            }
+            
+            super.viewWillDisappear(animated)
+        }
+        
+        func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+            if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                let orientation: CGImagePropertyOrientation
+                
+                switch UIDevice.current.orientation {
+                case UIDeviceOrientation.landscapeLeft:
+                    orientation = .up
+                case UIDeviceOrientation.landscapeRight:
+                    orientation = .down
+                default:
+                    orientation = .right
+                }
+                
+                let image = CIImage(cvImageBuffer: pixelBuffer).oriented(orientation)
+                
+                Task {
+                    let currentMediaTime = CACurrentMediaTime()
+                    
+                    if !self.isPaused && self.isIdle && currentMediaTime - self.elapsedTime >= 1.0 {
+                        let scale = min(image.extent.width / self.view.frame.width, image.extent.height / self.view.frame.height)
+                        let offsetX = (image.extent.width - self.view.frame.width * scale) / 2.0
+                        let offsetY = (image.extent.height - self.view.frame.height * scale) / 2.0
+                        let length = min(image.extent.width, image.extent.height)
+                        
+                        self.elapsedTime = currentMediaTime
+                        
+                        let (peekedImage, peekedImageHash) = await Task.detached {
+                            let context = CIContext()
+                            var tuple: (CGImage?, UInt64) = (nil, 0)
+                            
+                            if let i = context.createCGImage(image, from: image.extent), let croppedImage = i.cropping(to: CGRect(x: Int(offsetX), y: Int(offsetY), width: Int(length), height: Int(length))), let hash = self.computeHash(image: i) {
+                                tuple = (croppedImage, hash)
+                            }
+                            
+                            return tuple
+                        }.value
+                        
+                        if self.hammingDistance(self.peekedImageHash, peekedImageHash) > self.threshold {
+                            self.peekedImage = peekedImage
+                            self.peekedImageHash = peekedImageHash
+                            self.delegate?.peekDidUpdate(self)
+                        }
+                    }
+                }
+            }
+        }
+        
+        nonisolated func computeHash(image: CGImage) -> UInt64? {
+            let size = CGSize(width: 8, height: 8)
+            var resizedImage: CGImage? = nil
+            
+            UIGraphicsBeginImageContextWithOptions(size, false, 1)
+            
+            if let context = UIGraphicsGetCurrentContext() {
+                context.interpolationQuality = .high
+                context.setAllowsAntialiasing(true)
+                context.clear(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+                context.translateBy(x: 0.0, y: size.height)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+                resizedImage = context.makeImage()
+            }
+            
+            UIGraphicsEndImageContext()
+            
+            if let resizedImage {
+                var pixelData = [UInt8](repeating: 0, count: resizedImage.width * resizedImage.height)
+                
+                if let context = CGContext(data: &pixelData, width: resizedImage.width, height: resizedImage.height, bitsPerComponent: 8, bytesPerRow: resizedImage.width, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue) {
+                    context.draw(resizedImage, in: CGRect(x: 0, y: 0, width: resizedImage.width, height: resizedImage.height))
+                    let sum = pixelData.reduce(0, { $0 + Int($1) })
+                    let mean = sum / pixelData.count
+                    var hash: UInt64 = 0
+                    
+                    for (i, pixel) in pixelData.enumerated() {
+                        if pixel > mean {
+                            hash |= 1 << UInt64(63 - i)
+                        }
+                    }
+                    
+                    return hash
+                }
+            }
+            
+            return nil
+        }
+        
+        func hammingDistance(_ hash1: UInt64, _ hash2: UInt64) -> Int {
+            return (hash1 ^ hash2).nonzeroBitCount
+        }
+    }
+}
+
 struct Activity: View {
     private let accent: UIColor
-    @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: String)]
+    @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
     @Environment(\.dismiss) private var dismiss
     @Namespace private var topID
-    @State private var names: [(String?)]
-    @State private var messages: [String]
+    @State private var names: [String?]
+    @State private var contents: [(text: String?, image: CGImage?)]
     @State private var isDefault = true
     private var stats: [Int] = []
     private var mean: Double = 0.0
@@ -3830,21 +5004,21 @@ struct Activity: View {
         }
     }
     
-    init(accent: UIColor, data: [(name: String, sequences: [Sequence], likes: [Date]?)], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: String)]>) {
+    init(accent: UIColor, data: [(name: String, sequences: [Sequence], likes: [Date]?)], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
         var names = [String?]()
-        var messages = [String]()
+        var contents = [(text: String?, image: CGImage?)]()
         let maxDays = 6
         let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date())
         
         for log in logs.wrappedValue {
             names.append(log.from)
-            messages.append(log.content)
+            contents.append((text: log.content.text, image: log.content.image))
         }
         
         self.accent = accent
         self._logs = logs
         self._names = State(initialValue: names)
-        self._messages = State(initialValue: messages)
+        self._contents = State(initialValue: contents)
         
         for i in stride(from: -maxDays, through: 0, by: 1) {
             let dateComponents = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day! + i, hour: 0, minute: 0, second: 0, nanosecond: 0)
@@ -4163,7 +5337,7 @@ struct Activity: View {
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .textCase(.uppercase)) {
-                    if self.messages.isEmpty {
+                    if self.contents.isEmpty {
                         Text("None")
                             .foregroundColor(Color(UIColor {
                                 $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
@@ -4179,8 +5353,8 @@ struct Activity: View {
                             }))
                             .transition(.opacity.animation(.linear))
                     } else {
-                        ForEach(Array(self.messages.reversed().enumerated()), id: \.element) { (index, message) in
-                            if let name = self.names[self.names.count - 1 - index] {
+                        ForEach(Array(self.names.reversed().enumerated()), id: \.element) { (index, name) in
+                            if let name {
                                 VStack(alignment: .leading, spacing: 8.0) {
                                     HStack(alignment: .center, spacing: 8.0) {
                                         Text(name)
@@ -4201,40 +5375,115 @@ struct Activity: View {
                                             )
                                             .bold()
                                     }
-                                    Text(message)
-                                        .foregroundColor(Color(UIColor {
-                                            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                        }))
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .frame(
-                                            maxWidth: .infinity,
-                                            alignment: .leading
-                                        )
-                                        .multilineTextAlignment(.leading)
+                                    
+                                    if let text = self.contents[self.contents.count - 1 - index].text {
+                                        Text(text)
+                                            .foregroundColor(Color(UIColor {
+                                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                            }))
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                            .frame(
+                                                maxWidth: .infinity,
+                                                alignment: .leading
+                                            )
+                                            .multilineTextAlignment(.leading)
+                                    }
+                                    
+                                    if let image = self.contents[self.contents.count - 1 - index].image {
+                                        Image(uiImage: UIImage(cgImage: image))
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(
+                                                maxWidth: .infinity,
+                                                alignment: .leading
+                                            )
+                                            .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                                    }
                                 }
                                 .listRowBackground(Color(UIColor {
                                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
                                 }))
                             } else {
-                                HStack(alignment: .center, spacing: 8.0) {
-                                    Text(message)
-                                        .foregroundColor(Color(uiColor: self.accent))
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .lineLimit(1)
-                                    Image(systemName: "arrow.up.right")
+                                VStack(alignment: .leading, spacing: 8.0) {
+                                    if let text = self.contents[self.contents.count - 1 - index].text, let image = self.contents[self.contents.count - 1 - index].image {
+                                        HStack(alignment: .center, spacing: 8.0) {
+                                            Text(text)
+                                                .foregroundColor(Color(uiColor: self.accent))
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .lineLimit(1)
+                                            Image(systemName: "arrow.up.right")
+                                                .frame(
+                                                    width: 16.0,
+                                                    height: 16.0,
+                                                    alignment: .center
+                                                )
+                                                .background(.clear)
+                                                .foregroundColor(Color(uiColor: self.accent))
+                                                .font(
+                                                    .system(size: 16.0)
+                                                )
+                                                .bold()
+                                        }
+                                        Image(uiImage: UIImage(cgImage: image))
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(
+                                                maxWidth: .infinity,
+                                                alignment: .leading
+                                            )
+                                            .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                                    } else if let text = self.contents[self.contents.count - 1 - index].text {
+                                        HStack(alignment: .center, spacing: 8.0) {
+                                            Text(text)
+                                                .foregroundColor(Color(uiColor: self.accent))
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .lineLimit(1)
+                                            Image(systemName: "arrow.up.right")
+                                                .frame(
+                                                    width: 16.0,
+                                                    height: 16.0,
+                                                    alignment: .center
+                                                )
+                                                .background(.clear)
+                                                .foregroundColor(Color(uiColor: self.accent))
+                                                .font(
+                                                    .system(size: 16.0)
+                                                )
+                                                .bold()
+                                        }
+                                    } else if let image = self.contents[self.contents.count - 1 - index].image {
+                                        ZStack {
+                                            Image(uiImage: UIImage(cgImage: image))
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(
+                                                    maxWidth: .infinity,
+                                                    alignment: .leading
+                                                )
+                                                .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                                            Image(systemName: "arrow.up.right")
+                                                .frame(
+                                                    width: 16.0,
+                                                    height: 16.0,
+                                                    alignment: .center
+                                                )
+                                                .background(.clear)
+                                                .foregroundColor(Color(uiColor: self.accent))
+                                                .font(
+                                                    .system(size: 16.0)
+                                                )
+                                                .bold()
+                                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                                .offset(x: -8.0, y: 8.0)
+                                        }
                                         .frame(
-                                            width: 16.0,
-                                            height: 16.0,
-                                            alignment: .center
+                                            maxWidth: .infinity
                                         )
                                         .background(.clear)
-                                        .foregroundColor(Color(uiColor: self.accent))
-                                        .font(
-                                            .system(size: 16.0)
-                                        )
-                                        .bold()
+                                    }
                                 }
                                 .listRowBackground(Color(UIColor {
                                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
@@ -4245,7 +5494,7 @@ struct Activity: View {
                         Button(action: {
                             withAnimation {
                                 self.names.removeAll()
-                                self.messages.removeAll()
+                                self.contents.removeAll()
                             }
                             
                             self.logs.removeAll()
@@ -5252,7 +6501,7 @@ struct Camera: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Capture(isRecognizable: self.$isRecognizable, isPaused: self.isPaused, recognizeRegion: self.$recognizeRegion, recognizedText: self.$recognizedText)
+                Capture(recognizable: self.$isRecognizable, pause: self.isPaused, region: self.$recognizeRegion, text: self.$recognizedText)
                     .frame(
                         maxWidth: .infinity,
                         maxHeight: .infinity
@@ -5386,16 +6635,16 @@ struct Camera: View {
 }
 
 struct Capture: UIViewControllerRepresentable {
-    @Binding private var isRecognizable: Bool
-    private var isPaused: Bool
-    @Binding private var recognizeRegion: CGRect
-    @Binding private var recognizedText: String
+    @Binding private var recognizable: Bool
+    private var pause: Bool
+    @Binding private var region: CGRect
+    @Binding private var text: String
     
-    init(isRecognizable: Binding<Bool>, isPaused: Bool, recognizeRegion: Binding<CGRect>, recognizedText: Binding<String>) {
-        self._isRecognizable = isRecognizable
-        self.isPaused = isPaused
-        self._recognizeRegion = recognizeRegion
-        self._recognizedText = recognizedText
+    init(recognizable: Binding<Bool>, pause: Bool, region: Binding<CGRect>, text: Binding<String>) {
+        self._recognizable = recognizable
+        self.pause = pause
+        self._region = region
+        self._text = text
     }
     
     func makeUIViewController(context: Context) -> CaptureViewController {
@@ -5407,8 +6656,8 @@ struct Capture: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: CaptureViewController, context: Context) {
-        if self.isPaused != uiViewController.isPaused {
-            uiViewController.isPaused = self.isPaused
+        if self.pause != uiViewController.isPaused {
+            uiViewController.isPaused = self.pause
         }
     }
     
@@ -5429,17 +6678,21 @@ struct Capture: UIViewControllerRepresentable {
         }
         
         func captureDidUpdate(_ capture: Capture.CaptureViewController) {
-            if !self.parent.recognizeRegion.equalTo(capture.recognizeRegion) {
-                self.parent.recognizeRegion = capture.recognizeRegion
+            if !self.parent.region.equalTo(capture.recognizeRegion) {
+                self.parent.region = capture.recognizeRegion
             }
             
-            if self.parent.recognizedText != capture.recognizedText {
-                self.parent.recognizedText = capture.recognizedText
+            if self.parent.text != capture.recognizedText {
+                self.parent.text = capture.recognizedText
             }
         }
         
         func captureDidFail(_ capture: Capture.CaptureViewController) {
-            self.parent.isRecognizable = capture.isRecognizable
+            Task {
+                await MainActor.run { [weak self] in
+                    self?.parent.recognizable = capture.isRecognizable
+                }
+            }
         }
     }
     
@@ -6566,6 +7819,9 @@ struct AskIntent: AppIntent {
     @Parameter(title: "Prompt")
     var prompt: String
     
+    @Parameter(title: "Image", supportedTypeIdentifiers: ["public.image"])
+    var image: IntentFile?
+    
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String?> {
         let path = AppStorage(wrappedValue: String(), "path").wrappedValue
@@ -6578,6 +7834,30 @@ struct AskIntent: AppIntent {
             
             for character in parser.parse(path: filename).0 {
                 if let prompt = character.prompt {
+                    var parts: [[String: Any]] = []
+                    
+                    if let image = self.image {
+                        if let dataURL = (await Task.detached {
+                            var dataURL: String? = nil
+                            
+                            if let imageSource = CGImageSourceCreateWithData(image.data as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil), let resizedImage = self.resize(image: image) {
+                                dataURL = self.convert(image: resizedImage)
+                            }
+                            
+                            return dataURL
+                        }.value) {
+                            if !self.prompt.isEmpty {
+                                parts.append(["type": "text", "text": self.prompt])
+                            }
+                            
+                            parts.append(["type": "image", "image": dataURL])
+                        } else {
+                            return .result(value: nil)
+                        }
+                    } else {
+                        parts.append(["type": "text", "text": self.prompt])
+                    }
+                    
                     content = await self.generate(messages: [["role": "system", "content": await Task.detached {
                         return self.replacePlaceholders(text: prompt, resolver: { format in
                             
@@ -6592,7 +7872,7 @@ struct AskIntent: AppIntent {
                             
                             return nil
                         })
-                    }.value], ["role": "user", "content": self.prompt]], temperature: AppStorage(wrappedValue: 1.0, "temperature").wrappedValue)
+                    }.value], ["role": "user", "content": parts]], temperature: AppStorage(wrappedValue: 1.0, "temperature").wrappedValue)
                 }
                 
                 break
@@ -6649,6 +7929,62 @@ struct AskIntent: AppIntent {
         } while !input.isEmpty
         
         return output
+    }
+    
+    private nonisolated func resize(image: CGImage, maximum: Double = 768) -> CGImage? {
+        let imageWidth = Double(image.width)
+        let imageHeight = Double(image.height)
+        let width: Double
+        let height: Double
+        var resizedImage: CGImage? = nil
+        
+        if imageWidth < imageHeight {
+            if imageHeight > maximum {
+                width = floor(maximum / imageHeight * imageWidth)
+                height = maximum
+            } else {
+                width = imageWidth
+                height = imageHeight
+            }
+        } else if imageWidth > maximum {
+            width = maximum
+            height = floor(maximum / imageWidth * imageHeight)
+        } else {
+            width = imageWidth
+            height = imageHeight
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+        
+        if let context = UIGraphicsGetCurrentContext() {
+            context.interpolationQuality = .high
+            context.setAllowsAntialiasing(true)
+            context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+            context.translateBy(x: 0.0, y: height)
+            context.scaleBy(x: 1.0, y: -1.0)
+            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
+            resizedImage = context.makeImage()
+        }
+        
+        UIGraphicsEndImageContext()
+        
+        return resizedImage
+    }
+    
+    private nonisolated func convert(image: CGImage) -> String? {
+        let mutableData = NSMutableData()
+        
+        guard let destination = CGImageDestinationCreateWithData(mutableData, UTType.jpeg.identifier as CFString, 1, nil) else {
+            return nil
+        }
+        
+        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.75] as CFDictionary)
+        
+        guard CGImageDestinationFinalize(destination) else {
+            return nil
+        }
+        
+        return "data:image/jpeg;base64,\(mutableData.base64EncodedString(options: []))"
     }
 }
 
