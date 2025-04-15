@@ -79,9 +79,16 @@ class WallView: UIView {
         
         loadingLayer.backgroundColor = UIColor(patternImage: self.backgroundPattern).cgColor
         loadingLayer.contentsGravity = .topLeft
+        loadingLayer.opacity = 0.125
         loadingLayer.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
-        blindLayer.backgroundColor = UIColor(named: "AccentColor")!.cgColor
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        
+        UIColor(named: "AccentColor")!.getRed(&red, green: &green, blue: &blue, alpha: nil)
+        
+        blindLayer.backgroundColor = CGColor(colorSpace: CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB(), components: [red, green, blue, 1.0])!
         blindLayer.contentsGravity = .resizeAspect
         blindLayer.masksToBounds = true
         
