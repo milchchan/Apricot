@@ -91,6 +91,16 @@
         }
       }
     },
+    "Image" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像"
+          }
+        }
+      }
+    },
     "Intelligence" : {
       "localizations" : {
         "ja" : {
@@ -320,6 +330,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分散"
+          }
+        }
+      }
+    },
+    "Vision" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ビジョン"
           }
         }
       }
