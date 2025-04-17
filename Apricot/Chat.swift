@@ -4895,8 +4895,8 @@ struct Activity: View {
     @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
     @Environment(\.dismiss) private var dismiss
     @Namespace private var topID
-    @State private var names: [String?]
-    @State private var contents: [(text: String?, image: CGImage?)]
+    @State private var indexes: [Int]
+    @State private var contents: [(name: String?, text: String?, image: CGImage?)]
     @State private var isDefault = true
     private var stats: [Int] = []
     private var mean: Double = 0.0
@@ -5005,19 +5005,19 @@ struct Activity: View {
     }
     
     init(accent: UIColor, data: [(name: String, sequences: [Sequence], likes: [Date]?)], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
-        var names = [String?]()
-        var contents = [(text: String?, image: CGImage?)]()
+        var indexes = [Int]()
+        var contents = [(name: String?, text: String?, image: CGImage?)]()
         let maxDays = 6
         let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date())
         
-        for log in logs.wrappedValue {
-            names.append(log.from)
-            contents.append((text: log.content.text, image: log.content.image))
+        for (index, log) in logs.wrappedValue.enumerated() {
+            indexes.append(index)
+            contents.append((name: log.from, text: log.content.text, image: log.content.image))
         }
         
         self.accent = accent
         self._logs = logs
-        self._names = State(initialValue: names)
+        self._indexes = State(initialValue: indexes)
         self._contents = State(initialValue: contents)
         
         for i in stride(from: -maxDays, through: 0, by: 1) {
@@ -5353,8 +5353,8 @@ struct Activity: View {
                             }))
                             .transition(.opacity.animation(.linear))
                     } else {
-                        ForEach(Array(self.names.reversed().enumerated()), id: \.element) { (index, name) in
-                            if let name {
+                        ForEach(Array(self.indexes.reversed().enumerated()), id: \.element) { (_, index) in
+                            if let name = self.contents[index].name {
                                 VStack(alignment: .leading, spacing: 8.0) {
                                     HStack(alignment: .center, spacing: 8.0) {
                                         Text(name)
@@ -5376,7 +5376,7 @@ struct Activity: View {
                                             .bold()
                                     }
                                     
-                                    if let text = self.contents[self.contents.count - 1 - index].text {
+                                    if let text = self.contents[index].text {
                                         Text(text)
                                             .foregroundColor(Color(UIColor {
                                                 $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
@@ -5390,7 +5390,7 @@ struct Activity: View {
                                             .multilineTextAlignment(.leading)
                                     }
                                     
-                                    if let image = self.contents[self.contents.count - 1 - index].image {
+                                    if let image = self.contents[index].image {
                                         Image(uiImage: UIImage(cgImage: image))
                                             .resizable()
                                             .scaledToFill()
@@ -5406,7 +5406,7 @@ struct Activity: View {
                                 }))
                             } else {
                                 VStack(alignment: .leading, spacing: 8.0) {
-                                    if let text = self.contents[self.contents.count - 1 - index].text, let image = self.contents[self.contents.count - 1 - index].image {
+                                    if let text = self.contents[index].text, let image = self.contents[index].image {
                                         HStack(alignment: .center, spacing: 8.0) {
                                             Text(text)
                                                 .foregroundColor(Color(uiColor: self.accent))
@@ -5434,7 +5434,7 @@ struct Activity: View {
                                                 alignment: .leading
                                             )
                                             .clipShape(RoundedRectangle(cornerRadius: 16.0))
-                                    } else if let text = self.contents[self.contents.count - 1 - index].text {
+                                    } else if let text = self.contents[index].text {
                                         HStack(alignment: .center, spacing: 8.0) {
                                             Text(text)
                                                 .foregroundColor(Color(uiColor: self.accent))
@@ -5454,7 +5454,7 @@ struct Activity: View {
                                                 )
                                                 .bold()
                                         }
-                                    } else if let image = self.contents[self.contents.count - 1 - index].image {
+                                    } else if let image = self.contents[index].image {
                                         ZStack {
                                             Image(uiImage: UIImage(cgImage: image))
                                                 .resizable()
@@ -5493,7 +5493,7 @@ struct Activity: View {
                         .transition(.opacity.animation(.linear))
                         Button(action: {
                             withAnimation {
-                                self.names.removeAll()
+                                self.indexes.removeAll()
                                 self.contents.removeAll()
                             }
                             
