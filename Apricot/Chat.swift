@@ -125,7 +125,7 @@ struct Chat: View {
                     if self.isPeeking {
                         ZStack {
                             ZStack {
-                                Peek(peekable: self.$isPeekable, pause: self.isPaused, logs: self.$logs, likability: self.$likability, choices: self.$choices, idle: self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showSettings, loading: self.$isLoading, intensity: self.intensity, temperature: self.temperature, mute: self.mute)
+                                Peek(peekable: self.$isPeekable, ready: self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showSettings, pause: self.isPaused, logs: self.$logs, likability: self.$likability, choices: self.$choices, loading: self.$isLoading, intensity: self.intensity, temperature: self.temperature, mute: self.mute)
                                     .frame(
                                         maxWidth: .infinity,
                                         maxHeight: .infinity
@@ -4110,23 +4110,23 @@ struct Prompt: UIViewRepresentable {
 
 struct Peek: UIViewControllerRepresentable {
     @Binding private var peekable: Bool
+    private var ready: Bool
     private var pause: Bool
     @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
     @Binding private var likability: Double?
     @Binding private var choices: [(String, URL?)]
-    private var idle: Bool
     @Binding private var loading: Bool
     private var intensity: Double
     private var temperature: Double
     private var mute: Bool
     
-    init(peekable: Binding<Bool>, pause: Bool, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, idle: Bool, loading: Binding<Bool>, intensity: Double, temperature: Double, mute: Bool) {
+    init(peekable: Binding<Bool>, ready: Bool, pause: Bool, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, loading: Binding<Bool>, intensity: Double, temperature: Double, mute: Bool) {
         self._peekable = peekable
+        self.ready = ready
         self.pause = pause
         self._logs = logs
         self._likability = likability
         self._choices = choices
-        self.idle = idle
         self._loading = loading
         self.intensity = intensity
         self.temperature = temperature
@@ -4142,12 +4142,12 @@ struct Peek: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: PeekViewController, context: Context) {
-        if self.pause != uiViewController.isPaused {
-            uiViewController.isPaused = self.pause
+        if self.ready != uiViewController.isReady {
+            uiViewController.isReady = self.ready
         }
         
-        if self.idle != uiViewController.isIdle {
-            uiViewController.isIdle = self.idle
+        if self.pause != uiViewController.isPaused {
+            uiViewController.isPaused = self.pause
         }
         
         if self.intensity != context.coordinator.intensity {
@@ -4184,6 +4184,8 @@ struct Peek: UIViewControllerRepresentable {
         
         func peekDidUpdate(_ peek: Peek.PeekViewController) {
             if let image = peek.peekedImage {
+                peek.flash()
+                
                 Task {
                     await self.talk(image: image, intensity: self.parent.intensity, temperature: self.parent.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
                 }
@@ -4664,7 +4666,7 @@ struct Peek: UIViewControllerRepresentable {
         var delegate: PeekDelegate? = nil
         var isPeekable = true
         var isPaused = false
-        var isIdle = false
+        var isReady = false
         var peekedImage: CGImage? = nil
         private let sessionQueue = DispatchQueue(label: String(describing: Peek.PeekViewController.self))
         private let captureSession = AVCaptureSession()
@@ -4815,7 +4817,7 @@ struct Peek: UIViewControllerRepresentable {
                 Task {
                     let currentMediaTime = CACurrentMediaTime()
                     
-                    if !self.isPaused && self.isIdle && currentMediaTime - self.elapsedTime >= 1.0 {
+                    if !self.isPaused && self.isReady && currentMediaTime - self.elapsedTime >= 1.0 {
                         let scale = min(image.extent.width / self.view.frame.width, image.extent.height / self.view.frame.height)
                         let offsetX = (image.extent.width - self.view.frame.width * scale) / 2.0
                         let offsetY = (image.extent.height - self.view.frame.height * scale) / 2.0
@@ -4842,6 +4844,34 @@ struct Peek: UIViewControllerRepresentable {
                     }
                 }
             }
+        }
+        
+        func flash() {
+            let skewAngle = 45.0
+            let beamView = UIView()
+            let gradientLayer = CAGradientLayer()
+            let frame = CGRect(x: 0.0, y: 0.0, width: floor(self.view.bounds.width * 0.25), height: self.view.bounds.height)
+            let skewTransform = CGAffineTransform(a: 1.0, b: 0.0, c: -tan(skewAngle * .pi / 180.0), d: 1.0, tx: 0.0, ty: 0.0)
+            
+            gradientLayer.colors = [UIColor.black.withAlphaComponent(0.5).cgColor, UIColor.black.cgColor, UIColor.black.withAlphaComponent(0.5).cgColor]
+            gradientLayer.locations = [0.0, 0.5, 1.0]
+            gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.5)
+            gradientLayer.endPoint = CGPoint(x: 1.0, y: 0.5)
+            gradientLayer.frame = frame
+            
+            beamView.isUserInteractionEnabled = false
+            beamView.backgroundColor = UIColor.white.withAlphaComponent(0.5)
+            beamView.frame = gradientLayer.frame
+            beamView.layer.mask = gradientLayer
+            beamView.transform = CGAffineTransformConcat(skewTransform, CGAffineTransformMakeTranslation(floor(frame.height * abs(tan(skewAngle * .pi / 180.0)) / 2.0 - frame.width - frame.height * abs(tan(skewAngle * .pi / 180.0))), 0.0))
+            
+            self.view.addSubview(beamView)
+            
+            UIView.animate(withDuration: 1.0, delay: 0.0, options: [.curveLinear], animations: {
+                beamView.transform = CGAffineTransformConcat(skewTransform, CGAffineTransformMakeTranslation(floor(frame.height * abs(tan(skewAngle * .pi / 180.0)) / 2.0 + self.view.frame.width), 0.0))
+            }, completion: { _ in
+                beamView.removeFromSuperview()
+            })
         }
         
         nonisolated func computeHash(image: CGImage) -> UInt64? {
