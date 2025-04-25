@@ -2708,11 +2708,20 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 
                                 for subview in characterView.balloonView!.subviews {
                                     if let visualEffectView = subview as? UIVisualEffectView {
-                                        for constraint in visualEffectView.contentView.constraints.filter({ constraint in
-                                            return constraint.firstItem is UILabel
+                                        if let view = visualEffectView.contentView.subviews.first(where: { subview in
+                                            return subview.subviews.contains(where: { $0 is UILabel })
                                         }) {
-                                            self.removeConstraint(constraint)
-                                            constraint.firstItem!.removeFromSuperview()
+                                            for constraint in visualEffectView.contentView.constraints.filter({ constraint in
+                                                if constraint.firstItem === view {
+                                                    return true
+                                                }
+                                                
+                                                return false
+                                            }) {
+                                                visualEffectView.contentView.removeConstraint(constraint)
+                                            }
+                                            
+                                            view.removeFromSuperview()
                                         }
                                         
                                         break
@@ -2747,22 +2756,51 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         
                         if characterView.messageQueue[0].reverse {
                             if message.type.count > 0 {
-                                characterView.messageQueue[0].lines[index].type.elapsed += deltaTime * characterView.messageQueue[0].speed
-                                
-                                if message.type.elapsed >= 1.0 / message.type.speed {
-                                    if message.type.count - 1 < message.text.count {
-                                        let width = message.text.count / 2
-                                        
-                                        if message.type.buffer.count <= width && message.type.count > 0 {
-                                            characterView.messageQueue[0].lines[index].type.count -= 1
+                                if characterView.messageQueue[0].slide.step == nil {
+                                    var lines = 0
+                                    
+                                    for i in 0...index {
+                                        for j in stride(from: 1, to: characterView.messageQueue[0].lines[i].type.count, by: 1) {
+                                            if characterView.messageQueue[0].lines[i].breaks.contains(j) {
+                                                lines += 1
+                                            }
                                         }
                                         
-                                        if !message.type.buffer.isEmpty {
-                                            characterView.messageQueue[0].lines[index].type.buffer.remove(at: message.type.buffer.index(message.type.buffer.endIndex, offsetBy: -1))
-                                        }
+                                        lines += 1
                                     }
                                     
-                                    characterView.messageQueue[0].lines[index].type.elapsed = 0.0
+                                    if lines >= characterView.maxLines && lines - characterView.maxLines == characterView.messageQueue[0].slide.index - 1 && characterView.messageQueue[0].lines[index].breaks.contains(characterView.messageQueue[0].lines[index].type.count) {
+                                        characterView.messageQueue[0].slide.index -= 1
+                                        characterView.messageQueue[0].slide.step = 1.0
+                                    }
+                                }
+                                
+                                if let step = characterView.messageQueue[0].slide.step {
+                                    let slideStep = step - deltaTime
+                                    
+                                    if slideStep <= 0.0 {
+                                        characterView.messageQueue[0].slide.step = nil
+                                    } else {
+                                        characterView.messageQueue[0].slide.step = slideStep
+                                    }
+                                } else {
+                                    characterView.messageQueue[0].lines[index].type.elapsed += deltaTime * characterView.messageQueue[0].speed
+                                    
+                                    if message.type.elapsed >= 1.0 / message.type.speed {
+                                        if message.type.count - 1 < message.text.count {
+                                            let width = message.text.count / 2
+                                            
+                                            if message.type.buffer.count <= width && message.type.count > 0 {
+                                                characterView.messageQueue[0].lines[index].type.count -= 1
+                                            }
+                                            
+                                            if !message.type.buffer.isEmpty {
+                                                characterView.messageQueue[0].lines[index].type.buffer.remove(at: message.type.buffer.index(message.type.buffer.endIndex, offsetBy: -1))
+                                            }
+                                        }
+                                        
+                                        characterView.messageQueue[0].lines[index].type.elapsed = 0.0
+                                    }
                                 }
                             } else if index > 0 {
                                 characterView.messageQueue[0].index -= 1
@@ -2772,22 +2810,51 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 characterView.messageQueue[0].index = -1
                             }
                         } else if message.type.buffer.count < message.text.count {
-                            if message.type.elapsed >= 0.0 {
-                                characterView.messageQueue[0].lines[index].type.elapsed += deltaTime * characterView.messageQueue[0].speed
-                            } else {
-                                characterView.messageQueue[0].lines[index].type.elapsed = deltaTime * characterView.messageQueue[0].speed
+                            if characterView.messageQueue[0].slide.step == nil {
+                                var lines = 0
+                                
+                                for i in 0...index {
+                                    for j in stride(from: 1, to: characterView.messageQueue[0].lines[i].type.buffer.count, by: 1) {
+                                        if characterView.messageQueue[0].lines[i].breaks.contains(j) {
+                                            lines += 1
+                                        }
+                                    }
+                                    
+                                    lines += 1
+                                }
+                                
+                                if lines >= characterView.maxLines && lines - characterView.maxLines == characterView.messageQueue[0].slide.index && characterView.messageQueue[0].lines[index].breaks.contains(characterView.messageQueue[0].lines[index].type.buffer.count) {
+                                    characterView.messageQueue[0].slide.step = 0.0
+                                }
                             }
                             
-                            if message.type.elapsed >= 1.0 / message.type.speed {
-                                if message.type.count >= message.text.count / 2 {
-                                    characterView.messageQueue[0].lines[index].type.buffer.append(message.text[message.text.index(message.text.startIndex, offsetBy: message.type.buffer.count)])
+                            if let step = characterView.messageQueue[0].slide.step {
+                                let slideStep = step + deltaTime
+                                
+                                if slideStep >= 1.0 {
+                                    characterView.messageQueue[0].slide.index += 1
+                                    characterView.messageQueue[0].slide.step = nil
+                                } else {
+                                    characterView.messageQueue[0].slide.step = slideStep
+                                }
+                            } else {
+                                if message.type.elapsed >= 0.0 {
+                                    characterView.messageQueue[0].lines[index].type.elapsed += deltaTime * characterView.messageQueue[0].speed
+                                } else {
+                                    characterView.messageQueue[0].lines[index].type.elapsed = deltaTime * characterView.messageQueue[0].speed
                                 }
                                 
-                                if message.type.count < message.text.count {
-                                    characterView.messageQueue[0].lines[index].type.count += 1
+                                if message.type.elapsed >= 1.0 / message.type.speed {
+                                    if message.type.count >= message.text.count / 2 {
+                                        characterView.messageQueue[0].lines[index].type.buffer.append(message.text[message.text.index(message.text.startIndex, offsetBy: message.type.buffer.count)])
+                                    }
+                                    
+                                    if message.type.count < message.text.count {
+                                        characterView.messageQueue[0].lines[index].type.count += 1
+                                    }
+                                    
+                                    characterView.messageQueue[0].lines[index].type.elapsed = 0.0
                                 }
-                                
-                                characterView.messageQueue[0].lines[index].type.elapsed = 0.0
                             }
                         } else if index < characterView.messageQueue[0].lines.count - 1 {
                             characterView.messageQueue[0].index += 1
@@ -2878,6 +2945,8 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             
                             for (index, label) in characterView.messageQueue[0].lines[index].labels.enumerated() {
                                 let mutableAttributedString = NSMutableAttributedString()
+                                let lineHeight = ceil(label.font!.lineHeight * 1.5)
+                                var y = lineHeight * CGFloat(characterView.messageQueue[0].slide.index)
                                 
                                 if index < lines.count {
                                     let paragraphStyle = NSMutableParagraphStyle()
@@ -2891,6 +2960,12 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 }
                                 
                                 label.attributedText = mutableAttributedString
+                                
+                                if let step = characterView.messageQueue[0].slide.step {
+                                    y += lineHeight * step
+                                }
+                                
+                                label.transform = CGAffineTransformMakeTranslation(0.0, -y)
                             }
                         }
                     }
@@ -4161,7 +4236,8 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
         var isInvalidated = false
         var isLoaded = true
         var isMirror = false
-        var messageQueue: [(step: Double?, index: Int, lines: [(labels: [UILabel], text: String, offset: Int, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)], time: Double, speed: Double, duration: Double, reverse: Bool, attributes: [(start: Int, end: Int)], source: Message)] = []
+        var maxLines = 5
+        var messageQueue: [(step: Double?, index: Int, lines: [(labels: [UILabel], text: String, offset: Int, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)], time: Double, speed: Double, duration: Double, slide: (index: Int, step: Double?), reverse: Bool, attributes: [(start: Int, end: Int)], source: Message)] = []
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -4259,6 +4335,26 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         
                         return []
                     }()
+                    let messageView = UIView()
+                    let swipeRightGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
+                    let swipeLeftGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
+                    
+                    swipeRightGestureRecognizer.direction = .right
+                    swipeLeftGestureRecognizer.direction = .left
+                    
+                    messageView.translatesAutoresizingMaskIntoConstraints = false
+                    messageView.isUserInteractionEnabled = true
+                    messageView.backgroundColor = .clear
+                    messageView.clipsToBounds = true
+                    messageView.addGestureRecognizer(swipeRightGestureRecognizer)
+                    messageView.addGestureRecognizer(swipeLeftGestureRecognizer)
+                    
+                    visualEffectView.contentView.insertSubview(messageView, at: count)
+                    
+                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
+                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius))
+                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: maxLineWidth))
+                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .bottom, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .bottom, multiplier: 1.0, constant: -radius - balloonPartSize.height))
                     
                     for inline in message {
                         if inline.attributes == nil {
@@ -4281,12 +4377,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             
                             for _ in 0..<breaks.count + 1 {
                                 let messageLabel = UILabel(frame: CGRect.zero)
-                                let swipeRightGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
-                                let swipeLeftGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
                                 let maskLayer = CAShapeLayer()
-                                
-                                swipeRightGestureRecognizer.direction = .right
-                                swipeLeftGestureRecognizer.direction = .left
                                 
                                 maskLayer.fillRule = .evenOdd
                                 maskLayer.strokeColor = UIColor.clear.cgColor
@@ -4295,21 +4386,19 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
                                 
                                 messageLabel.translatesAutoresizingMaskIntoConstraints = false
-                                messageLabel.isUserInteractionEnabled = true
+                                messageLabel.isUserInteractionEnabled = false
                                 messageLabel.backgroundColor = .clear
                                 messageLabel.contentMode = .topLeft
                                 messageLabel.font = font
                                 messageLabel.lineBreakMode = .byClipping
                                 messageLabel.numberOfLines = 1
-                                messageLabel.addGestureRecognizer(swipeRightGestureRecognizer)
-                                messageLabel.addGestureRecognizer(swipeLeftGestureRecognizer)
                                 messageLabel.layer.mask = maskLayer
                                 
-                                visualEffectView.contentView.insertSubview(messageLabel, at: count)
+                                messageView.insertSubview(messageLabel, at: count)
                                 
-                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
-                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius + lineHeight * Double(count)))
-                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
+                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
+                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
+                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
                                 
                                 labels.append(messageLabel)
                                 count += 1
@@ -4319,12 +4408,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             
                             if i == content.count - 1 {
                                 let messageLabel = UILabel(frame: CGRect.zero)
-                                let swipeRightGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
-                                let swipeLeftGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
                                 let maskLayer = CAShapeLayer()
-                                
-                                swipeRightGestureRecognizer.direction = .right
-                                swipeLeftGestureRecognizer.direction = .left
                                 
                                 maskLayer.fillRule = .evenOdd
                                 maskLayer.strokeColor = UIColor.clear.cgColor
@@ -4333,21 +4417,19 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
                                 
                                 messageLabel.translatesAutoresizingMaskIntoConstraints = false
-                                messageLabel.isUserInteractionEnabled = true
+                                messageLabel.isUserInteractionEnabled = false
                                 messageLabel.backgroundColor = .clear
                                 messageLabel.contentMode = .topLeft
                                 messageLabel.font = font
                                 messageLabel.lineBreakMode = .byClipping
                                 messageLabel.numberOfLines = 1
-                                messageLabel.addGestureRecognizer(swipeRightGestureRecognizer)
-                                messageLabel.addGestureRecognizer(swipeLeftGestureRecognizer)
                                 messageLabel.layer.mask = maskLayer
                                 
-                                visualEffectView.contentView.insertSubview(messageLabel, at: count)
+                                messageView.insertSubview(messageLabel, at: count)
                                 
-                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
-                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius + lineHeight * Double(count)))
-                                visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
+                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
+                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
+                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
                                 
                                 count += 1
                                 lines.append((labels: [messageLabel], text: String(), offset: offset, breaks: [], step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
@@ -4461,12 +4543,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         
                         for _ in 0..<breaks.count + 1 {
                             let messageLabel = UILabel(frame: CGRect.zero)
-                            let swipeRightGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
-                            let swipeLeftGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
                             let maskLayer = CAShapeLayer()
-                            
-                            swipeRightGestureRecognizer.direction = .right
-                            swipeLeftGestureRecognizer.direction = .left
                             
                             maskLayer.fillRule = .evenOdd
                             maskLayer.strokeColor = UIColor.clear.cgColor
@@ -4475,21 +4552,19 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
                             
                             messageLabel.translatesAutoresizingMaskIntoConstraints = false
-                            messageLabel.isUserInteractionEnabled = true
+                            messageLabel.isUserInteractionEnabled = false
                             messageLabel.backgroundColor = .clear
                             messageLabel.contentMode = .topLeft
                             messageLabel.font = font
                             messageLabel.lineBreakMode = .byClipping
                             messageLabel.numberOfLines = 1
-                            messageLabel.addGestureRecognizer(swipeRightGestureRecognizer)
-                            messageLabel.addGestureRecognizer(swipeLeftGestureRecognizer)
                             messageLabel.layer.mask = maskLayer
                             
-                            visualEffectView.contentView.insertSubview(messageLabel, at: count)
+                            messageView.insertSubview(messageLabel, at: count)
                             
-                            visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
-                            visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius + lineHeight * Double(count)))
-                            visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
+                            messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
+                            messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
+                            messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
                             
                             labels.append(messageLabel)
                             count += 1
@@ -4498,11 +4573,11 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         lines.append((labels: labels, text: text, offset: offset, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
                     }
                     
-                    self.messageQueue.append((step: 0.0, index: 0, lines: lines, time: 0.0, speed: 1.0, duration: message.duration, reverse: false, attributes: attributes, source: message))
+                    self.messageQueue.append((step: 0.0, index: 0, lines: lines, time: 0.0, speed: 1.0, duration: message.duration, slide: (index: 0, step: nil), reverse: false, attributes: attributes, source: message))
                     
                     let preferredScale = (self.scale == 0.0 ? window.screen.scale : self.scale) * parentView.userScale * parentView.systemScale
                     let frame = CGRect(x: self.origin.x * preferredScale / window.screen.scale, y: self.origin.y * preferredScale / window.screen.scale, width: self.size.width * preferredScale / window.screen.scale, height: self.size.height * preferredScale / window.screen.scale)
-                    let messageHeight = ceil(radius * 2.0 + (count > 1 ? font.lineHeight + lineHeight * Double(count - 1) : font.lineHeight))
+                    let messageHeight = ceil(radius * 2.0 + (count > 1 ? font.lineHeight + lineHeight * Double(min(count, self.maxLines) - 1) : font.lineHeight))
                     let maxScale = (messageWidth + 16.0) / messageWidth
                     let balloonPath = self.createBalloonPath(messageWidth: messageWidth, messageHeight: messageHeight, balloonPartSize: balloonPartSize, radius: radius)
                     let margin = floor((messageHeight + balloonPartSize.height) * maxScale - frame.origin.y)
