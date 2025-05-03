@@ -1045,6 +1045,8 @@ struct Chat: View {
                                 
                                 x.append((name: y.name, sequences: sequences, likes: self.likes.new[y.name]))
                             }
+                        }), scores: Script.shared.scores, languages: Script.shared.characters.reduce(into: [], { x, y in
+                            x.append(y.language)
                         }), logs: self.$logs)
                             .presentationBackground(.ultraThinMaterial)
                             .presentationDetents([.large])
@@ -4927,12 +4929,13 @@ struct Activity: View {
     @Namespace private var topID
     @State private var indexes: [Int]
     @State private var contents: [(name: String?, text: String?, image: CGImage?)]
-    @State private var isDefault = true
+    @State private var mode = 0
     private var stats: [Int] = []
     private var mean: Double = 0.0
     private var variance: Double = 0.0
     private var achievements = [String]()
     private var remains = [Int?]()
+    private var trendings = [String]()
     
     var body: some View {
         NavigationStack {
@@ -4941,12 +4944,14 @@ struct Activity: View {
                     EmptyView()
                         .id(self.topID)
                     
-                    if self.isDefault {
+                    if self.mode == 0 {
                         self.makeStats()
                         
                         if !self.achievements.isEmpty {
                             self.makeAchievements()
                         }
+                    } else if self.mode == 1 {
+                        self.makeTrendings()
                     } else {
                         self.makeLogs()
                     }
@@ -5002,7 +5007,7 @@ struct Activity: View {
                         Button(action: {
                             withAnimation {
                                 proxy.scrollTo(self.topID, anchor: .bottom)
-                                self.isDefault.toggle()
+                                self.mode = (self.mode + 1) % 3
                             }
                         }) {
                             Circle()
@@ -5034,11 +5039,13 @@ struct Activity: View {
         }
     }
     
-    init(accent: UIColor, data: [(name: String, sequences: [Sequence], likes: [Date]?)], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
+    init(accent: UIColor, data: [(name: String, sequences: [Sequence], likes: [Date]?)], scores: [String: (Double, [String]?, String?, Date)], languages: [String?], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
         var indexes = [Int]()
         var contents = [(name: String?, text: String?, image: CGImage?)]()
         let maxDays = 6
         let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date())
+        let epsilon = powl(10, -6)
+        var trendings = [(String, Double)]()
         
         for (index, log) in logs.wrappedValue.enumerated() {
             indexes.append(index)
@@ -5046,6 +5053,7 @@ struct Activity: View {
         }
         
         self.accent = accent
+        
         self._logs = logs
         self._indexes = State(initialValue: indexes)
         self._contents = State(initialValue: contents)
@@ -5176,6 +5184,18 @@ struct Activity: View {
                 self.achievements.append(name)
                 self.remains.append(count)
             }
+        }
+        
+        for (key, value) in scores {
+            if value.0 > epsilon && languages.contains(where: { $0 == value.2 }) {
+                trendings.append((key, value.0))
+            }
+        }
+        
+        trendings.sort { $0.1 > $1.1 }
+        
+        for i in 0..<min(10, trendings.count) {
+            self.trendings.append(trendings[i].0)
         }
     }
     
@@ -5356,6 +5376,73 @@ struct Activity: View {
                         }))
                     }
                     .transition(.opacity.animation(.linear))
+                }
+    }
+    
+    private func makeTrendings() -> some View {
+        return Section(header: Text("Trending")
+            .foregroundColor(Color(UIColor {
+                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+            }))
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .textCase(.uppercase)) {
+                    if self.trendings.isEmpty {
+                        Text("None")
+                            .foregroundColor(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                            }))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .frame(
+                                maxWidth: .infinity,
+                                alignment: .center
+                            )
+                            .listRowBackground(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                            }))
+                    } else {
+                        ForEach(Array(self.trendings.enumerated()), id: \.element) { (index, word) in
+                            if index == 0 {
+                                HStack(alignment: .center, spacing: 16.0) {
+                                    Text(word)
+                                        .foregroundColor(Color(UIColor {
+                                            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                        }))
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Image(systemName: "crown")
+                                        .frame(
+                                            width: 16.0,
+                                            height: 16.0,
+                                            alignment: .center
+                                        )
+                                        .background(.clear)
+                                        .foregroundColor(Color(uiColor: self.accent))
+                                        .font(
+                                            .system(size: 16.0)
+                                        )
+                                        .bold()
+                                }
+                                .listRowBackground(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                }))
+                            } else {
+                                Text(word)
+                                    .foregroundColor(Color(UIColor {
+                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                    }))
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(1)
+                                    .listRowBackground(Color(UIColor {
+                                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                    }))
+                            }
+                        }
+                    }
                 }
     }
     
