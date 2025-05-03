@@ -313,6 +313,16 @@
         }
       }
     },
+    "Trending" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トレンド"
+          }
+        }
+      }
+    },
     "Update" : {
       "extractionState" : "manual",
       "localizations" : {
