@@ -11,6 +11,7 @@ import AppIntents
 import AVFoundation
 import Speech
 import Vision
+import CryptoKit
 import StoreKit
 import UIKit
 
@@ -27,6 +28,7 @@ struct Chat: View {
     @State private var revealMenu = false
     @State private var showActivity = false
     @State private var showDictionary = false
+    @State private var showGallery = false
     @State private var showSettings = false
     @State private var selection: String
     @State private var isLongPressed = false
@@ -59,7 +61,7 @@ struct Chat: View {
                 Stage(prompt: self.$prompt, logs: self.$logs, resource: Binding<(old: String, new: String)>(get: { (old: self.selection, new: self.path.wrappedValue) }, set: { newValue in
                     self.selection = newValue.old
                     self.path.wrappedValue = newValue.new
-                }), attributes: self.$script.attributes, types: self.$types, labels: self.$labels, likes: self.$likes, likability: self.$likability, choices: self.$choices, changing: self.$isChanging, idle: self.$isIdle, loading: self.$isLoading, intensity: self.$intensity, temperature: self.temperature, accent: self.convert(from: self.accent.wrappedValue), scale: self.scale, pause: self.revealMenu || self.showActivity || self.showDictionary || self.showSettings, mute: self.mute)
+                }), attributes: self.$script.attributes, types: self.$types, labels: self.$labels, likes: self.$likes, likability: self.$likability, choices: self.$choices, changing: self.$isChanging, idle: self.$isIdle, loading: self.$isLoading, intensity: self.$intensity, temperature: self.temperature, accent: self.convert(from: self.accent.wrappedValue), scale: self.scale, pause: self.revealMenu || self.showActivity || self.showDictionary || self.showGallery || self.showSettings, mute: self.mute)
                     .frame(
                         minWidth: 0.0,
                         maxWidth: .infinity,
@@ -125,7 +127,7 @@ struct Chat: View {
                     if self.isPeeking {
                         ZStack {
                             ZStack {
-                                Peek(peekable: self.$isPeekable, ready: self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showSettings, pause: self.isPaused, logs: self.$logs, likability: self.$likability, choices: self.$choices, loading: self.$isLoading, intensity: self.intensity, temperature: self.temperature, mute: self.mute)
+                                Peek(peekable: self.$isPeekable, ready: self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showGallery && !self.showSettings, pause: self.isPaused, logs: self.$logs, likability: self.$likability, choices: self.$choices, loading: self.$isLoading, intensity: self.intensity, temperature: self.temperature, mute: self.mute)
                                     .frame(
                                         maxWidth: .infinity,
                                         maxHeight: .infinity
@@ -708,6 +710,52 @@ struct Chat: View {
                                                     }))
                                                 VStack(alignment: .center, spacing: 0.0) {
                                                     Button(action: {
+                                                        self.showGallery = true
+                                                        
+                                                        withAnimation(.easeInOut(duration: 0.5)) {
+                                                            self.revealMenu = false
+                                                        }
+                                                    }) {
+                                                        VStack(alignment: .center, spacing: 8.0) {
+                                                            Image(systemName: "photo")
+                                                                .frame(
+                                                                    width: 16.0,
+                                                                    height: 16.0,
+                                                                    alignment: .center
+                                                                )
+                                                                .background(.clear)
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(
+                                                                    .system(size: 16.0)
+                                                                )
+                                                                .bold()
+                                                            Text("Gallery")
+                                                                .foregroundColor(Color(UIColor {
+                                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                                }))
+                                                                .font(.caption)
+                                                                .fontWeight(.semibold)
+                                                                .lineLimit(1)
+                                                                .truncationMode(.tail)
+                                                                .textCase(.uppercase)
+                                                        }
+                                                    }
+                                                    .frame(
+                                                        alignment: .center
+                                                    )
+                                                    .padding(16.0)
+                                                    .background(.clear)
+                                                }
+                                                .frame(
+                                                    minWidth: 0.0,
+                                                    maxWidth: .infinity
+                                                )
+                                            }
+                                            HStack(alignment: .center, spacing: 0.0) {
+                                                VStack(alignment: .center, spacing: 0.0) {
+                                                    Button(action: {
                                                         self.showSettings = true
                                                         
                                                         withAnimation(.easeInOut(duration: 0.5)) {
@@ -1070,6 +1118,11 @@ struct Chat: View {
                             .presentationBackground(.ultraThinMaterial)
                             .presentationDetents([.medium])
                     })
+                    .sheet(isPresented: self.$showGallery, content: {
+                        Gallery(accent: self.convert(from: self.accent.wrappedValue))
+                            .presentationBackground(.ultraThinMaterial)
+                            .presentationDetents([.large])
+                    })
                     .sheet(isPresented: self.$showSettings, content: {
                         Settings(resource: Binding<String>(get: { self.path.wrappedValue }, set: { newValue in
                             self.path.wrappedValue = newValue
@@ -1129,8 +1182,9 @@ struct Chat: View {
                     
                     self.choices.removeAll()
                     self.showActivity = false
-                    self.showSettings = false
                     self.showDictionary = false
+                    self.showGallery = false
+                    self.showSettings = false
                     self.shortcut.type = nil
                 } else if type[0] == "Dictionary" {
                     if self.isRecording {
@@ -1138,6 +1192,7 @@ struct Chat: View {
                     }
                     
                     self.showActivity = false
+                    self.showGallery = false
                     self.showSettings = false
                     self.showDictionary = true
                     
@@ -1386,7 +1441,7 @@ struct Chat: View {
                     var inlines = [(text: String, attributes: [String]?)]()
                     
                     while !text.isEmpty {
-                        if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input) {
+                        if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input, options: .caseInsensitive) {
                             if text.startIndex != range.lowerBound {
                                 inlines.append((text: String(text[text.startIndex..<range.lowerBound]), attributes: nil))
                             }
@@ -1469,7 +1524,7 @@ struct Chat: View {
                                 var inlines = [(text: String, attributes: [String]?)]()
                                 
                                 while !text.isEmpty {
-                                    if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input) {
+                                    if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input, options: .caseInsensitive) {
                                         if text.startIndex != range.lowerBound {
                                             inlines.append((text: String(text[text.startIndex..<range.lowerBound]), attributes: nil))
                                         }
@@ -2960,6 +3015,81 @@ struct Stage: UIViewRepresentable {
             }
         }
         
+        func wallDidLoad(_ wall: WallView, frames: [(image: CGImage, delay: Double)]) {
+            Task.detached {
+                var hasher = SHA256()
+                
+                for frame in frames {
+                    if let resizedImage = self.resize(image: frame.image, maximum: 256, quality: .none) {
+                        let meta = [UInt32(resizedImage.width), UInt32(resizedImage.height), UInt32(resizedImage.bitsPerPixel), UInt32(resizedImage.bytesPerRow)]
+                        
+                        meta.withUnsafeBytes { hasher.update(data: $0) }
+                        
+                        guard let dataProvider = resizedImage.dataProvider, let data = dataProvider.data, let bytes = CFDataGetBytePtr(data) else {
+                            return
+                        }
+                        
+                        hasher.update(data: Data(bytes: bytes, count: CFDataGetLength(data)))
+                    } else {
+                        return
+                    }
+                }
+                
+                let encodedFrames = self.encode(hasher.finalize())
+                
+                if let documentUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                    let payload = encodedFrames.suffix(16)
+                    var isNew = true
+                    
+                    if let urls = try? FileManager.default.contentsOfDirectory(at: documentUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
+                        let regex = /(?i)([0-9A-HJKMNP-TV-Z]{26})(?=\.png$)/
+                        
+                        for url in urls {
+                            if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .nameKey]), let isDirectory = values.isDirectory, !isDirectory, let name = values.name, let match = name.firstMatch(of: regex), payload == String(match.output.1).suffix(16) {
+                                isNew = false
+                                
+                                break
+                            }
+                        }
+                    }
+                    
+                    if isNew {
+                        let data = NSMutableData()
+                        
+                        guard let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, frames.count, nil) else {
+                            return
+                        }
+                        
+                        CGImageDestinationSetProperties(destination, [kCGImagePropertyPNGDictionary: [kCGImagePropertyAPNGLoopCount: 0]] as CFDictionary)
+                        
+                        for frame in frames {
+                            CGImageDestinationAddImage(destination, frame.image, [kCGImagePropertyPNGDictionary: [kCGImagePropertyAPNGDelayTime: frame.delay]] as CFDictionary)
+                        }
+                        
+                        if CGImageDestinationFinalize(destination) {
+                            FileManager.default.createFile(atPath: documentUrl.appending(path: "\(encodedFrames).png", directoryHint: .inferFromPath).path(percentEncoded: false), contents: data as Data, attributes: nil)
+                            
+                            let image = UIImage(systemName: "arrow.down.doc", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
+                            
+                            await MainActor.run { [weak self] in
+                                if let uiView = self?.uiView {
+                                    for view in uiView.subviews {
+                                        if let agentView = view as? AgentView {
+                                            if let characterView = agentView.characterViews.first {
+                                                agentView.notify(characterView: characterView, image: image, text: nil, duration: 5.0)
+                                            }
+                                            
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         func update(agent: AgentView, force: Bool = false) {
             guard let uiView = self.uiView, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
                 return
@@ -3408,7 +3538,7 @@ struct Stage: UIViewRepresentable {
                             var inlines = [(text: String, attributes: [String]?)]()
                             
                             while !text.isEmpty {
-                                if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input) {
+                                if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input, options: .caseInsensitive) {
                                     if text.startIndex != range.lowerBound {
                                         inlines.append((text: String(text[text.startIndex..<range.lowerBound]), attributes: nil))
                                     }
@@ -3491,7 +3621,7 @@ struct Stage: UIViewRepresentable {
                                         var inlines = [(text: String, attributes: [String]?)]()
                                         
                                         while !text.isEmpty {
-                                            if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input) {
+                                            if word.attributes == nil || !attributes.isEmpty, let range = text.range(of: input, options: .caseInsensitive) {
                                                 if text.startIndex != range.lowerBound {
                                                     inlines.append((text: String(text[text.startIndex..<range.lowerBound]), attributes: nil))
                                                 }
@@ -3986,7 +4116,7 @@ struct Stage: UIViewRepresentable {
             return output
         }
         
-        private nonisolated func resize(image: CGImage, maximum: Double = 768) -> CGImage? {
+        private nonisolated func resize(image: CGImage, maximum: Double = 768, quality: CGInterpolationQuality = .high) -> CGImage? {
             let imageWidth = Double(image.width)
             let imageHeight = Double(image.height)
             let width: Double
@@ -4012,7 +4142,7 @@ struct Stage: UIViewRepresentable {
             UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
             
             if let context = UIGraphicsGetCurrentContext() {
-                context.interpolationQuality = .high
+                context.interpolationQuality = quality
                 context.setAllowsAntialiasing(true)
                 context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
                 context.translateBy(x: 0.0, y: height)
@@ -4057,6 +4187,34 @@ struct Stage: UIViewRepresentable {
             }
             
             return index
+        }
+        
+        private nonisolated func encode(_ digest: SHA256.Digest) -> String {
+            let alphabet: [Character] = Array("0123456789ABCDEFGHJKMNPQRSTVWXYZ")
+            var time = UInt64(Date().timeIntervalSince1970 * 1000)
+            var timeChars = [Character](repeating: "0", count: 10)
+            var digestChars: [Character] = []
+            var bitBuffer = 0
+            var bitCount  = 0
+            
+            for i in stride(from: 9, through: 0, by: -1) {
+                timeChars[i] = alphabet[Int(time & 0x1F)]
+                time >>= 5
+            }
+            
+            digestChars.reserveCapacity(16)
+            
+            for byte in digest.prefix(10) {
+                bitBuffer = bitBuffer << 8 | Int(byte)
+                bitCount += 8
+                
+                while bitCount >= 5 && digestChars.count < 16 {
+                    bitCount -= 5
+                    digestChars.append(alphabet[bitBuffer >> bitCount & 0x1F])
+                }
+            }
+            
+            return String(timeChars + digestChars)
         }
     }
 }
@@ -7031,6 +7189,660 @@ struct Capture: UIViewControllerRepresentable {
     }
 }
 
+struct Gallery: View {
+    let accent: UIColor
+    @Environment(\.dismiss) private var dismiss
+    @State private var page = 0
+    @State private var paths: [String] = []
+    @State private var playables: [(Bool, Bool)] = []
+    
+    var body: some View {
+        NavigationStack {
+            TabView(selection: self.$page) {
+                ForEach(Array(self.paths.enumerated()), id: \.offset) { (index, path) in
+                    ZStack {
+                        ZStack {
+                            if self.playables[index].1 {
+                                Player(path: path, accent: self.accent)
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        maxHeight: .infinity
+                                    )
+                                    .background(.clear)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(UIColor {
+                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                        }))
+                        .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                        .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
+                        .opacity(self.playables[index].0 ? 1.0 : 0.0)
+                        .transaction {
+                            $0.addAnimationCompletion(criteria: .logicallyComplete) {
+                                if self.playables.indices.contains(index) && !self.playables[index].0 && self.playables[index].1 {
+                                    self.playables[index] = (false, false)
+                                }
+                            }
+                        }
+                        .animation(.easeInOut(duration: 0.5), value: self.playables[index].0)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.clear)
+                    .padding(16.0)
+                    .tag(index)
+                    .transition(.opacity.animation(.linear))
+                    .onAppear {
+                        self.playables[index] = (true, true)
+                    }
+                    .onDisappear {
+                        guard self.paths.indices.contains(index) else {
+                            return
+                        }
+                        
+                        self.playables[index] = (false, false)
+                    }
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity
+            )
+            .background(.clear)
+            .scrollContentBackground(.hidden)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Gallery")
+                        .foregroundColor(Color(UIColor {
+                            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                        }))
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .textCase(.uppercase)
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Circle()
+                            .fill(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                            }))
+                            .frame(
+                                width: 32.0,
+                                height: 32.0
+                            )
+                            .overlay(Image(systemName: "xmark")
+                                .frame(
+                                    alignment: .center
+                                )
+                                .background(.clear)
+                                .foregroundColor(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                }))
+                                    .font(
+                                        .system(size: 8.0)
+                                    )
+                                    .bold())
+                    }
+                    .background(.clear)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        let path = self.paths[self.page]
+                        
+                        withAnimation {
+                            self.paths.remove(at: self.page)
+                            self.playables.remove(at: self.page)
+                            
+                            if self.page >= self.paths.count {
+                                self.page = max(self.paths.count - 1, 0)
+                            }
+                            
+                            if self.paths.count > 0 {
+                                self.playables[self.page] = (true, true)
+                            }
+                        }
+                        
+                        Task.detached {
+                            if FileManager.default.fileExists(atPath: path) {
+                                try? FileManager.default.removeItem(atPath: path)
+                            }
+                        }
+                    }) {
+                        Circle()
+                            .fill(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                            }))
+                            .frame(
+                                width: 32.0,
+                                height: 32.0
+                            )
+                            .overlay(Image(systemName: "trash")
+                                .frame(
+                                    alignment: .center
+                                )
+                                .background(.clear)
+                                .foregroundColor(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                }))
+                                    .font(
+                                        .system(size: 8.0)
+                                    )
+                                    .bold())
+                            .opacity(self.paths.indices.contains(self.page) ? 1.0 : 0.5)
+                            .animation(.linear, value: self.paths.indices.contains(self.page))
+                    }
+                    .background(.clear)
+                    .disabled(!self.paths.indices.contains(self.page))
+                }
+            }
+            .transition(.opacity)
+            .task {
+                let paths = await self.load()
+                
+                withAnimation {
+                    for path in paths {
+                        self.paths.append(path)
+                        self.playables.append((false, false))
+                    }
+                }
+            }
+        }
+    }
+    
+    private func load() async -> [String] {///
+        return await Task.detached {
+            var imagePaths = [String]()
+            
+            if let documentUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first, let urls = try? FileManager.default.contentsOfDirectory(at: documentUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
+                let regex = /(?i)([0-9A-HJKMNP-TV-Z]{26})(?=\.png$)/
+                
+                for url in urls {
+                    if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .nameKey]), let isDirectory = values.isDirectory, !isDirectory, let name = values.name, name.firstMatch(of: regex) != nil {
+                        imagePaths.append(documentUrl.appending(path: name, directoryHint: .inferFromPath).path(percentEncoded: false))
+                    }
+                }
+            }
+            
+            imagePaths.sort { $0 > $1 }
+            
+            return imagePaths
+        }.value
+    }
+}
+
+struct Player: UIViewRepresentable {
+    let path: String
+    let accent: UIColor
+    
+    func makeUIView(context: Context) -> PlayerView {
+        let playerView = PlayerView(frame: .zero)
+        
+        playerView.change(accent: self.accent.cgColor)
+        
+        return playerView
+    }
+    
+    func updateUIView(_ uiView: PlayerView, context: Context) {
+        uiView.accentColor = self.accent.cgColor
+        
+        if context.coordinator.path != self.path {
+            context.coordinator.path = self.path
+            
+            Task {
+                await uiView.fetch(path: self.path)
+            }
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        return Coordinator()
+    }
+    
+    class Coordinator: NSObject {
+        var path: String? = nil
+    }
+    
+    class PlayerView: UIView {
+        private var isReloading = false
+        private var isLoading = false
+        private var isFetched = false
+        private var revealStep: Double = -1.0
+        private var loadingStep: Double = -1.0
+        private var fetchedFrames: [(image: CGImage?, delay: Double)]? = nil
+        private var backgroundFrames: [(image: CGImage?, delay: Double)]? = nil
+        private var blindColor: CGColor? = nil
+        private var currentTime: Double? = nil
+        private var loadingLayer: CALayer? = nil
+        private var blindLayer: CALayer? = nil
+        private let backgroundPattern = UIImage(named: "Stripes")!
+        var accentColor: CGColor? {
+            get {
+                return self.blindColor
+            }
+            set(color) {
+                self.blindColor = color
+            }
+        }
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            let loadingLayer = CALayer()
+            let blindLayer = CALayer()
+            
+            loadingLayer.backgroundColor = UIColor(patternImage: self.backgroundPattern).cgColor
+            loadingLayer.contentsGravity = .topLeft
+            loadingLayer.opacity = 0.125
+            loadingLayer.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+            
+            var red: CGFloat = 0
+            var green: CGFloat = 0
+            var blue: CGFloat = 0
+            
+            UIColor(named: "AccentColor")!.getRed(&red, green: &green, blue: &blue, alpha: nil)
+            
+            blindLayer.backgroundColor = CGColor(colorSpace: CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB(), components: [red, green, blue, 1.0])!
+            blindLayer.contentsGravity = .resizeAspect
+            blindLayer.masksToBounds = true
+            
+            if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                
+                blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
+                loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
+            }
+            
+            blindLayer.addSublayer(loadingLayer)
+            
+            self.blindColor = blindLayer.backgroundColor
+            self.isUserInteractionEnabled = true
+            self.isMultipleTouchEnabled = true
+            self.backgroundColor = .clear
+            self.contentMode = .center
+            self.loadingLayer = loadingLayer
+            self.blindLayer = blindLayer
+            self.layer.contentsGravity = .resizeAspect
+            self.layer.addSublayer(self.blindLayer!)
+            
+            let displayLink = CADisplayLink(target: self, selector: #selector(self.update))
+            
+            displayLink.add(to: .current, forMode: .common)
+        }
+        
+        required init?(coder aDecoder: NSCoder) {
+            super.init(coder: aDecoder)
+        }
+        
+        func change(accent: CGColor) {
+            self.blindColor = accent
+            self.blindLayer?.backgroundColor = accent
+        }
+        
+        func fetch(path: String) async {
+            self.isReloading = true
+            self.isLoading = true
+            self.isFetched = false
+            
+            Task {
+                if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height) * window.screen.scale
+                    
+                    self.fetchedFrames = await Task.detached {
+                        var frames = [(image: CGImage?, delay: Double)]()
+                        
+                        if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                            defer {
+                                try? file.close()
+                            }
+                            
+                            if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                for i in 0..<CGImageSourceGetCount(imageSource) {
+                                    if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil), let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, i, nil) as? [String: Any] {
+                                        let width: Double
+                                        let height: Double
+                                        var resizedImage: CGImage? = nil
+                                        var delay = 0.0
+                                        
+                                        if image.width < image.height {
+                                            if Double(image.width) > length {
+                                                width = length
+                                                height = floor(length / Double(image.width) * Double(image.height))
+                                            } else {
+                                                width = Double(image.width)
+                                                height = Double(image.height)
+                                            }
+                                        } else if Double(image.height) > length {
+                                            width = floor(length / Double(image.height) * Double(image.height))
+                                            height = length
+                                        } else {
+                                            width = Double(image.width)
+                                            height = Double(image.height)
+                                        }
+                                        
+                                        UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+                                        
+                                        if let context = UIGraphicsGetCurrentContext() {
+                                            context.interpolationQuality = .high
+                                            context.setAllowsAntialiasing(true)
+                                            context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                                            context.translateBy(x: 0.0, y: height)
+                                            context.scaleBy(x: 1.0, y: -1.0)
+                                            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                                            
+                                            resizedImage = context.makeImage()
+                                        }
+                                        
+                                        UIGraphicsEndImageContext()
+                                        
+                                        for (key, value) in properties {
+                                            if key == kCGImagePropertyPNGDictionary as String, let dictionary = value as? [String: Any] {
+                                                if let delayTime = dictionary[kCGImagePropertyAPNGUnclampedDelayTime as String] {
+                                                    if let number = delayTime as? NSNumber {
+                                                        let doubleValue = number.doubleValue
+                                                        
+                                                        if doubleValue <= 0.01 {
+                                                            delay = 0.1
+                                                        } else {
+                                                            delay = doubleValue
+                                                        }
+                                                    }
+                                                } else if let delayTime = dictionary[kCGImagePropertyAPNGDelayTime as String] {
+                                                    if let number = delayTime as? NSNumber {
+                                                        let doubleValue = number.doubleValue
+                                                        
+                                                        if doubleValue <= 0.01 {
+                                                            delay = 0.1
+                                                        } else {
+                                                            delay = doubleValue
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        frames.append((image: resizedImage, delay: delay))
+                                    }
+                                }
+                                
+                                for i in stride(from: frames.count - 2, through: 0, by: -1) {
+                                    frames.append(frames[i])
+                                }
+                                
+                                return frames
+                            }
+                        }
+                        
+                        return nil
+                    }.value
+                }
+            
+                self.isReloading = false
+            }
+        }
+        
+        @objc private func update(displayLink: CADisplayLink) {
+            if self.frame.size.width > 0 && self.frame.size.height > 0 {
+                let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
+                
+                if self.isLoading {
+                    if self.isFetched {
+                        let step = self.revealStep + deltaTime
+                        
+                        if step >= 1.0 {
+                            if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                blindLayer.frame = CGRect.zero
+                                loadingLayer.frame = CGRect.zero
+                                
+                                CATransaction.commit()
+                            }
+                            
+                            self.revealStep = -1.0
+                            self.loadingStep = 0.0
+                            self.isLoading = false
+                        } else {
+                            if let blindLayer = self.blindLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                                
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                blindLayer.frame = CGRect(x: 0.0, y: -length * sin(step / 2.0 * Double.pi), width: length, height: length)
+                                
+                                CATransaction.commit()
+                            }
+                            
+                            self.loadingStep += deltaTime
+                            
+                            if self.loadingStep >= 1.0 {
+                                self.loadingStep = 0.0
+                            }
+                            
+                            if let loadingLayer = self.loadingLayer {
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                loadingLayer.frame = CGRect(x: (loadingLayer.frame.height - loadingLayer.frame.width) * self.loadingStep, y: 0.0, width: loadingLayer.frame.width, height: loadingLayer.frame.height)
+                                
+                                CATransaction.commit()
+                            }
+                            
+                            self.revealStep = step
+                        }
+                    } else if self.revealStep > 0.0 {
+                        let step = self.revealStep - deltaTime
+                        
+                        self.loadingStep += deltaTime
+                        
+                        if self.loadingStep >= 1.0 {
+                            self.loadingStep = 0.0
+                        }
+                        
+                        if step <= 0.0 {
+                            if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                                
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
+                                loadingLayer.frame = CGRect(x: (loadingLayer.frame.height - loadingLayer.frame.width) * self.loadingStep, y: 0.0, width: loadingLayer.frame.width, height: loadingLayer.frame.height)
+                                
+                                CATransaction.commit()
+                            }
+                            
+                            self.revealStep = 0.0
+                            
+                            if !self.isReloading {
+                                self.backgroundFrames = self.fetchedFrames
+                                self.currentTime = nil
+                                self.isFetched = true
+                            }
+                        } else {
+                            if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                                
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                blindLayer.frame = CGRect(x: 0.0, y: -length * sin(step / 2.0 * Double.pi), width: length, height: length)
+                                loadingLayer.frame = CGRect(x: (loadingLayer.frame.height - loadingLayer.frame.width) * self.loadingStep, y: 0.0, width: loadingLayer.frame.width, height: loadingLayer.frame.height)
+                                
+                                CATransaction.commit()
+                            }
+                            
+                            self.revealStep = step
+                        }
+                    } else {
+                        let step = self.revealStep + deltaTime
+                        
+                        if step >= 0.0 {
+                            if self.loadingStep < 0.0 {
+                                self.loadingStep = 0.0
+                                
+                                if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                    let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                                    
+                                    CATransaction.begin()
+                                    CATransaction.setDisableActions(true)
+                                    
+                                    blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
+                                    loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
+                                    
+                                    CATransaction.commit()
+                                }
+                            } else {
+                                self.loadingStep += deltaTime
+                                
+                                if self.loadingStep >= 1.0 {
+                                    self.loadingStep = 0.0
+                                }
+                                
+                                if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                    let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                                    
+                                    CATransaction.begin()
+                                    CATransaction.setDisableActions(true)
+                                    
+                                    blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
+                                    loadingLayer.frame = CGRect(x: (loadingLayer.frame.height - loadingLayer.frame.width) * self.loadingStep, y: 0.0, width: loadingLayer.frame.width, height: loadingLayer.frame.height)
+                                    
+                                    CATransaction.commit()
+                                }
+                            }
+                            
+                            self.revealStep = 0.0
+                            
+                            if !self.isReloading {
+                                self.backgroundFrames = self.fetchedFrames
+                                self.currentTime = nil
+                                self.isFetched = true
+                            }
+                        } else {
+                            if self.revealStep > -1.0 {
+                                if let blindLayer = self.blindLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                    let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                                    
+                                    CATransaction.begin()
+                                    CATransaction.setDisableActions(true)
+                                    
+                                    blindLayer.frame = CGRect(x: 0.0, y: -length * sin(step / 2.0 * Double.pi), width: length, height: length)
+                                    
+                                    CATransaction.commit()
+                                }
+                                
+                                self.loadingStep += deltaTime
+                                
+                                if self.loadingStep >= 1.0 {
+                                    self.loadingStep = 0.0
+                                }
+                                
+                                if let loadingLayer = self.loadingLayer {
+                                    CATransaction.begin()
+                                    CATransaction.setDisableActions(true)
+                                    
+                                    loadingLayer.frame = CGRect(x: (loadingLayer.frame.height - loadingLayer.frame.width) * self.loadingStep, y: 0.0, width: loadingLayer.frame.width, height: loadingLayer.frame.height)
+                                    
+                                    CATransaction.commit()
+                                }
+                            } else if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                                
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                blindLayer.frame = CGRect(x: 0.0, y: -length * sin(step / 2.0 * Double.pi), width: length, height: length)
+                                blindLayer.backgroundColor = self.blindColor
+                                loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
+                                
+                                CATransaction.commit()
+                            }
+                            
+                            self.revealStep = step
+                        }
+                    }
+                }
+                
+                if let frames = self.backgroundFrames {
+                    var image: CGImage? = nil
+                    var updateRequired = false
+                    
+                    if let currentTime = self.currentTime {
+                        if frames.count > 1 {
+                            let nextTime = currentTime + deltaTime
+                            var previousImage: CGImage? = nil
+                            var nextImage: CGImage? = nil
+                            var delay = 0.0
+                            
+                            for frame in frames {
+                                let nextDelay = delay + frame.delay
+                                
+                                if currentTime >= delay && currentTime < nextDelay {
+                                    previousImage = frame.image
+                                }
+                                
+                                if nextTime >= delay && nextTime < nextDelay {
+                                    nextImage = frame.image
+                                }
+                                
+                                delay = nextDelay
+                            }
+                            
+                            if nextImage == nil {
+                                if previousImage != frames[0].image {
+                                    updateRequired = true
+                                }
+                                
+                                image = frames[0].image
+                                self.currentTime = 0.0
+                            } else if previousImage == nextImage {
+                                image = nextImage
+                                self.currentTime = nextTime
+                            } else {
+                                updateRequired = true
+                                image = nextImage
+                                self.currentTime = nextTime
+                            }
+                        } else {
+                            image = frames[0].image
+                        }
+                    } else {
+                        image = frames[0].image
+                        updateRequired = true
+                        self.currentTime = 0.0
+                    }
+                    
+                    if let image, updateRequired {
+                        CATransaction.begin()
+                        CATransaction.setDisableActions(true)
+                        
+                        self.layer.contents = image
+                        
+                        CATransaction.commit()
+                    }
+                } else if self.currentTime == nil {
+                    CATransaction.begin()
+                    CATransaction.setDisableActions(true)
+                    
+                    self.layer.contents = nil
+                    
+                    CATransaction.commit()
+                    
+                    self.currentTime = 0.0
+                }
+            }
+        }
+    }
+}
+
 struct Settings: View {
     @Binding private var resource: String
     @Binding private var changing: Bool
@@ -7520,16 +8332,16 @@ struct Settings: View {
                         .lineLimit(1)
                         .textCase(.uppercase)
                         .underline()
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .center
+                        )
                         .padding(EdgeInsets(
                             top: 32.0,
                             leading: 0.0,
                             bottom: 0.0,
                             trailing: 0.0
-                        ))
-                        .frame(
-                            maxWidth: .infinity,
-                            alignment: .center
-                        )
+                    ))
                 }) {
                     VStack(spacing: 8.0) {
                         HStack(alignment: .center, spacing: 16.0) {
