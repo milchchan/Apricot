@@ -4351,11 +4351,6 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     
                     visualEffectView.contentView.insertSubview(messageView, at: count)
                     
-                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
-                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius))
-                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: maxLineWidth))
-                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .bottom, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .bottom, multiplier: 1.0, constant: -radius - balloonPartSize.height))
-                    
                     for inline in message {
                         if inline.attributes == nil {
                             content.append(inline.text)
@@ -4392,6 +4387,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 messageLabel.font = font
                                 messageLabel.lineBreakMode = .byClipping
                                 messageLabel.numberOfLines = 1
+                                messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
                                 messageLabel.layer.mask = maskLayer
                                 
                                 messageView.insertSubview(messageLabel, at: count)
@@ -4423,6 +4419,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 messageLabel.font = font
                                 messageLabel.lineBreakMode = .byClipping
                                 messageLabel.numberOfLines = 1
+                                messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
                                 messageLabel.layer.mask = maskLayer
                                 
                                 messageView.insertSubview(messageLabel, at: count)
@@ -4558,6 +4555,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             messageLabel.font = font
                             messageLabel.lineBreakMode = .byClipping
                             messageLabel.numberOfLines = 1
+                            messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
                             messageLabel.layer.mask = maskLayer
                             
                             messageView.insertSubview(messageLabel, at: count)
@@ -4577,10 +4575,16 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     
                     let preferredScale = (self.scale == 0.0 ? window.screen.scale : self.scale) * parentView.userScale * parentView.systemScale
                     let frame = CGRect(x: self.origin.x * preferredScale / window.screen.scale, y: self.origin.y * preferredScale / window.screen.scale, width: self.size.width * preferredScale / window.screen.scale, height: self.size.height * preferredScale / window.screen.scale)
-                    let messageHeight = ceil(radius * 2.0 + (count > 1 ? font.lineHeight + lineHeight * Double(min(count, self.maxLines) - 1) : font.lineHeight))
+                    let contentHeight = count > 1 ? font.lineHeight + lineHeight * Double(min(count, self.maxLines) - 1) : font.lineHeight
+                    let messageHeight = ceil(radius * 2.0 + contentHeight)
                     let maxScale = (messageWidth + 16.0) / messageWidth
                     let balloonPath = self.createBalloonPath(messageWidth: messageWidth, messageHeight: messageHeight, balloonPartSize: balloonPartSize, radius: radius)
                     let margin = floor((messageHeight + balloonPartSize.height) * maxScale - frame.origin.y)
+                    
+                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
+                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius))
+                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: maxLineWidth))
+                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(contentHeight)))
                     
                     for constraint in self.constraints {
                         if constraint.firstItem === self.contentView && constraint.firstAttribute == .height && constraint.secondItem === self {
