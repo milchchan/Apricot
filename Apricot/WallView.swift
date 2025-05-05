@@ -13,6 +13,7 @@ import UIKit
 protocol WallDelegate: AnyObject {
     func wallCanSelect(_ wall: WallView, at index: Int) -> Bool
     func wallDidSelect(_ wall: WallView, at index: Int)
+    func wallDidLoad(_ wall: WallView, frames: [(image: CGImage, delay: Double)])
 }
 
 class WallView: UIView {
@@ -166,11 +167,13 @@ class WallView: UIView {
             self.isFetched = false
             
             Task {
+                var compositedFrames: [(image: CGImage, delay: Double)]? = nil
+                
                 if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
                     let scale = Int(round(window.screen.scale))
                     let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height) * window.screen.scale
-                    
-                    self.fetchedFrames = await Task.detached {
+                    let data = await Task.detached {
+                        var data: ([(image: CGImage, delay: Double)]?, [(image: CGImage?, delay: Double)]?) = (nil, nil)
                         var caches: [String: Data] = [:]
                         var minX = 0.0
                         var minY = 0.0
@@ -365,11 +368,6 @@ class WallView: UIView {
                                                 }
                                                 
                                                 if tempFrames.count > through {
-                                                    for i in stride(from: tempFrames.count - 2, through: through, by: -1) {
-                                                        tempFrames.append(tempFrames[i])
-                                                        duration += tempFrames[i].delay
-                                                    }
-                                                    
                                                     tempFrames[tempFrames.count - 1].delay += frame.delay
                                                 }
                                             }
@@ -408,7 +406,8 @@ class WallView: UIView {
                         if !animations.isEmpty {
                             var time = 0.0
                             var splittedAnimations: [(layers: [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)], delay: Double)] = []
-                            var compositedFrames: [(image: CGImage?, delay: Double)] = []
+                            var unscaledCompositedFrames: [(image: CGImage, delay: Double)] = []
+                            var scaledCompositedFrames: [(image: CGImage?, delay: Double)] = []
                             let imageScale: Double
                             let width: Double
                             let height: Double
@@ -469,40 +468,70 @@ class WallView: UIView {
                             } while time < maxDuration
                             
                             for animation in splittedAnimations {
-                                var compositedImage: CGImage? = nil
+                                var unscaledCompositedImage: CGImage? = nil
+                                var scaledCompositedImage: CGImage? = nil
                                 
-                                UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+                                UIGraphicsBeginImageContextWithOptions(CGSize(width: maxWidth, height: maxHeight), false, 1)
                                 
                                 if let context = UIGraphicsGetCurrentContext() {
                                     context.interpolationQuality = .high
                                     context.setAllowsAntialiasing(true)
-                                    context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                                    context.translateBy(x: 0.0, y: height)
+                                    context.clear(CGRect(x: 0.0, y: 0.0, width: maxWidth, height: maxHeight))
+                                    context.translateBy(x: 0.0, y: maxHeight)
                                     context.scaleBy(x: 1.0, y: -1.0)
                                     
                                     for layer in animation.layers {
                                         if let image = layer.image {
-                                            context.draw(image, in: CGRect(x: round((layer.x - minX) * imageScale), y: round(height - (layer.y - minY + layer.height) * imageScale), width: floor(layer.width * imageScale), height: floor(layer.height * imageScale)))
+                                            context.draw(image, in: CGRect(x: round(layer.x - minX), y: round(maxHeight - layer.y + minY - layer.height), width: floor(layer.width), height: floor(layer.height)))
                                         }
                                     }
                                     
-                                    compositedImage = context.makeImage()
+                                    unscaledCompositedImage = context.makeImage()
                                 }
                                 
                                 UIGraphicsEndImageContext()
                                 
-                                compositedFrames.append((image: compositedImage, delay: animation.delay))
+                                if let unscaledCompositedImage {
+                                    unscaledCompositedFrames.append((image: unscaledCompositedImage, delay: animation.delay))
+                                    
+                                    UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+                                    
+                                    if let context = UIGraphicsGetCurrentContext() {
+                                        context.interpolationQuality = .high
+                                        context.setAllowsAntialiasing(true)
+                                        context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                                        context.translateBy(x: 0.0, y: height)
+                                        context.scaleBy(x: 1.0, y: -1.0)
+                                        context.draw(unscaledCompositedImage, in: CGRect(x: 0.0, y: 0.0, width: floor(Double(unscaledCompositedImage.width) * imageScale), height: floor(Double(unscaledCompositedImage.height) * imageScale)))
+                                        scaledCompositedImage = context.makeImage()
+                                    }
+                                    
+                                    UIGraphicsEndImageContext()
+                                }
+                                
+                                scaledCompositedFrames.append((image: scaledCompositedImage, delay: animation.delay))
                             }
                             
-                            return compositedFrames
+                            for i in stride(from: scaledCompositedFrames.count - 2, through: 0, by: -1) {
+                                scaledCompositedFrames.append(scaledCompositedFrames[i])
+                            }
+                            
+                            data = (unscaledCompositedFrames, scaledCompositedFrames)
                         }
                         
-                        return  nil
+                        return data
                     }.value
+                    
+                    compositedFrames = data.0
+                    self.fetchedFrames = data.1
                     self.requestParticles = particles
                 }
                 
                 self.isReloading = false
+                
+                if let compositedFrames {
+                    self.delegate?.wallDidLoad(self, frames: compositedFrames)
+                }
             }
         }
     }
