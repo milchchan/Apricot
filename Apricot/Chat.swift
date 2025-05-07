@@ -2934,7 +2934,6 @@ struct Stage: UIViewRepresentable {
                     let name = names[min(self.choice(probabilities: probabilities), probabilities.count - 1)]
                     let (attributes, modifiers) = dictionary[name]!
                     
-                    
                     if modifiers.isEmpty {
                         let word = Word(name: name, attributes: attributes)
                         
@@ -5082,18 +5081,21 @@ struct Peek: UIViewControllerRepresentable {
 
 struct Activity: View {
     private let accent: UIColor
+    private let data: [(name: String, sequences: [Sequence], likes: [Date]?)]
+    private let scores: [String: (Double, [String]?, String?, Date)]
+    private let languages: [String?]
     @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
     @Environment(\.dismiss) private var dismiss
     @Namespace private var topID
-    @State private var indexes: [Int]
-    @State private var contents: [(name: String?, text: String?, image: CGImage?)]
     @State private var mode = 0
-    private var stats: [Int] = []
-    private var mean: Double = 0.0
-    private var variance: Double = 0.0
-    private var achievements = [String]()
-    private var remains = [Int?]()
-    private var trendings = [String]()
+    @State private var stats: [Int]? = nil
+    @State private var mean: Double? = nil
+    @State private var variance: Double? = nil
+    @State private var achievements: [String]? = nil
+    @State private var remains: [Int?]? = nil
+    @State private var trendings: [String]? = nil
+    @State private var indexes: [Int]? = nil
+    @State private var contents: [(name: String?, text: String?, image: CGImage?)]? = nil
     
     var body: some View {
         NavigationStack {
@@ -5103,15 +5105,21 @@ struct Activity: View {
                         .id(self.topID)
                     
                     if self.mode == 0 {
-                        self.makeStats()
+                        if self.stats != nil {
+                            self.makeStats()
+                        }
                         
-                        if !self.achievements.isEmpty {
+                        if let achievements = self.achievements, !achievements.isEmpty {
                             self.makeAchievements()
                         }
                     } else if self.mode == 1 {
-                        self.makeTrendings()
+                        if self.trendings != nil {
+                            self.makeTrendings()
+                        }
                     } else {
-                        self.makeLogs()
+                        if self.contents != nil {
+                            self.makeLogs()
+                        }
                     }
                 }
                 .frame(
@@ -5193,168 +5201,198 @@ struct Activity: View {
                     }
                 }
                 .transition(.opacity)
+                .task {
+                    let (stats, mean, variance, achievements, remains, trendings, indexes, contents) = await self.load()
+                    
+                    withAnimation {
+                        self.stats = stats
+                        self.mean = mean
+                        self.variance = variance
+                        self.achievements = achievements
+                        self.remains = remains
+                        self.trendings = trendings.reduce(into: [], { x, y in
+                            x.append(y.0)
+                        })
+                        self.indexes = indexes
+                        self.contents = contents
+                    }
+                }
             }
         }
     }
     
     init(accent: UIColor, data: [(name: String, sequences: [Sequence], likes: [Date]?)], scores: [String: (Double, [String]?, String?, Date)], languages: [String?], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
-        var indexes = [Int]()
-        var contents = [(name: String?, text: String?, image: CGImage?)]()
-        let maxDays = 6
-        let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date())
-        let epsilon = powl(10, -6)
-        var trendings = [(String, Double)]()
-        
-        for (index, log) in logs.wrappedValue.enumerated() {
-            indexes.append(index)
-            contents.append((name: log.from, text: log.content.text, image: log.content.image))
-        }
-        
         self.accent = accent
-        
+        self.data = data
+        self.scores = scores
+        self.languages = languages
         self._logs = logs
-        self._indexes = State(initialValue: indexes)
-        self._contents = State(initialValue: contents)
+    }
+    
+    private func load() async -> ([Int], Double, Double, [String], [Int?], [(String, Double)], [Int], [(name: String?, text: String?, image: CGImage?)]) {
+        let data = self.data
+        let logs = self.logs
         
-        for i in stride(from: -maxDays, through: 0, by: 1) {
-            let dateComponents = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day! + i, hour: 0, minute: 0, second: 0, nanosecond: 0)
-            var count = 0
+        return await Task.detached {
+            let maxDays = 6
+            let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date())
+            var stats = [Int]()
+            var mean = 0.0
+            var variance = 0.0
+            var achievements = [String]()
+            var remains = [Int?]()
+            let epsilon = powl(10, -6)
+            var trendings = [(String, Double)]()
+            var indexes = [Int]()
+            var contents = [(name: String?, text: String?, image: CGImage?)]()
             
-            for character in data {
-                if let likes = character.likes {
-                    for date in likes {
-                        let dc = Calendar.current.dateComponents([.year, .month, .day], from: date)
-                        
-                        if dateComponents.year == dc.year && dateComponents.month == dc.month && dateComponents.day == dc.day {
-                            count += 1
+            for i in stride(from: -maxDays, through: 0, by: 1) {
+                let dateComponents = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day! + i, hour: 0, minute: 0, second: 0, nanosecond: 0)
+                var count = 0
+                
+                for character in data {
+                    if let likes = character.likes {
+                        for date in likes {
+                            let dc = Calendar.current.dateComponents([.year, .month, .day], from: date)
+                            
+                            if dateComponents.year == dc.year && dateComponents.month == dc.month && dateComponents.day == dc.day {
+                                count += 1
+                            }
                         }
                     }
                 }
+                
+                stats.append(count)
             }
             
-            self.stats.append(count)
-        }
-        
-        self.mean = self.mean(data: self.stats)
-        self.variance = self.variance(data: self.stats, mean: self.mean)
-        
-        for character in data {
-            let likes = character.likes == nil ? 0 : character.likes!.count
-            var available = 0
-            var max = 0
-            var lockedAchievements: [String: Int] = [:]
-            var unlockableAchievementSet: Set<String> = []
-            var tempAchievements: [(name: String, count: Int?)] = []
+            mean = self.mean(data: stats)
+            variance = self.variance(data: stats, mean: mean)
             
-            for sequence in character.sequences {
-                var isLocked = true
-                var requiredLikes = 0
+            for character in data {
+                let likes = character.likes == nil ? 0 : character.likes!.count
+                var available = 0
+                var max = 0
+                var lockedAchievements: [String: Int] = [:]
+                var unlockableAchievementSet: Set<String> = []
+                var tempAchievements: [(name: String, count: Int?)] = []
                 
-                if let pattern = sequence.state, let regex = try? Regex(pattern) {
-                    for i in 0...likes + 10 {
-                        if let match = "\(i)".firstMatch(of: regex), !match.output.isEmpty {
-                            if i <= likes {
-                                available += 1
-                                isLocked = false
-                            } else {
-                                requiredLikes = i - likes
+                for sequence in character.sequences {
+                    var isLocked = true
+                    var requiredLikes = 0
+                    
+                    if let pattern = sequence.state, let regex = try? Regex(pattern) {
+                        for i in 0...likes + 10 {
+                            if let match = "\(i)".firstMatch(of: regex), !match.output.isEmpty {
+                                if i <= likes {
+                                    available += 1
+                                    isLocked = false
+                                } else {
+                                    requiredLikes = i - likes
+                                }
+                                
+                                break
                             }
-                            
-                            break
                         }
                     }
-                }
-                
-                for i in 0..<sequence.count {
-                    if let s1 = sequence[i] as? Sequence {
-                        if let name = s1.name, s1.state == nil && !s1.isEmpty {
-                            for j in stride(from: i + 1, to: sequence.count, by: 1) {
-                                if let s2 = sequence[j] as? Sequence {
-                                    var isAvailable = false
-                                    
-                                    if s2.isEmpty {
-                                        if s1.name == s2.name && s2.state == nil {
-                                            isAvailable = true
-                                        }
-                                    } else {
-                                        var queue: [Sequence] = []
+                    
+                    for i in 0..<sequence.count {
+                        if let s1 = sequence[i] as? Sequence {
+                            if let name = s1.name, s1.state == nil && !s1.isEmpty {
+                                for j in stride(from: i + 1, to: sequence.count, by: 1) {
+                                    if let s2 = sequence[j] as? Sequence {
+                                        var isAvailable = false
                                         
-                                        for obj in s2 {
-                                            if let s3 = obj as? Sequence {
-                                                queue.append(s3)
+                                        if s2.isEmpty {
+                                            if s1.name == s2.name && s2.state == nil {
+                                                isAvailable = true
                                             }
-                                        }
-                                        
-                                        while !queue.isEmpty {
-                                            let s = queue.removeFirst()
+                                        } else {
+                                            var queue: [Sequence] = []
                                             
-                                            if s.isEmpty {
-                                                if s1.name == s.name && s.state == nil {
-                                                    isAvailable = true
+                                            for obj in s2 {
+                                                if let s3 = obj as? Sequence {
+                                                    queue.append(s3)
                                                 }
-                                            } else {
-                                                for obj in s {
-                                                    if let s3 = obj as? Sequence {
-                                                        queue.append(s3)
+                                            }
+                                            
+                                            while !queue.isEmpty {
+                                                let s = queue.removeFirst()
+                                                
+                                                if s.isEmpty {
+                                                    if s1.name == s.name && s.state == nil {
+                                                        isAvailable = true
+                                                    }
+                                                } else {
+                                                    for obj in s {
+                                                        if let s3 = obj as? Sequence {
+                                                            queue.append(s3)
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
-                                    }
-                                    
-                                    if isAvailable {
-                                        if isLocked {
-                                            if let count = lockedAchievements[name] {
-                                                if requiredLikes > count {
+                                        
+                                        if isAvailable {
+                                            if isLocked {
+                                                if let count = lockedAchievements[name] {
+                                                    if requiredLikes > count {
+                                                        lockedAchievements[name] = requiredLikes
+                                                    }
+                                                } else {
                                                     lockedAchievements[name] = requiredLikes
                                                 }
-                                            } else {
-                                                lockedAchievements[name] = requiredLikes
                                             }
+                                            
+                                            if !unlockableAchievementSet.contains(name) {
+                                                unlockableAchievementSet.insert(name)
+                                            }
+                                            
+                                            break
                                         }
-                                        
-                                        if !unlockableAchievementSet.contains(name) {
-                                            unlockableAchievementSet.insert(name)
-                                        }
-                                        
-                                        break
                                     }
                                 }
                             }
                         }
                     }
+                    
+                    max += 1
                 }
                 
-                max += 1
-            }
-            
-            for name in unlockableAchievementSet {
-                if let count = lockedAchievements[name] {
-                    tempAchievements.append((name: name, count: count))
-                } else {
-                    tempAchievements.append((name: name, count: nil))
+                for name in unlockableAchievementSet {
+                    if let count = lockedAchievements[name] {
+                        tempAchievements.append((name: name, count: count))
+                    } else {
+                        tempAchievements.append((name: name, count: nil))
+                    }
+                }
+                
+                tempAchievements.sort { $0.name < $1.name }
+                
+                for (name, count) in tempAchievements {
+                    achievements.append(name)
+                    remains.append(count)
                 }
             }
             
-            tempAchievements.sort { $0.name < $1.name }
+            for (key, value) in self.scores {
+                if value.0 > epsilon && self.languages.contains(where: { $0 == value.2 }) {
+                    trendings.append((key, value.0))
+                }
+            }
             
-            for (name, count) in tempAchievements {
-                self.achievements.append(name)
-                self.remains.append(count)
+            trendings.sort { $0.1 > $1.1 }
+            
+            if trendings.count > 10 {
+                trendings.removeSubrange(10...)
             }
-        }
-        
-        for (key, value) in scores {
-            if value.0 > epsilon && languages.contains(where: { $0 == value.2 }) {
-                trendings.append((key, value.0))
+            
+            for (index, log) in logs.enumerated() {
+                indexes.append(index)
+                contents.append((name: log.from, text: log.content.text, image: log.content.image))
             }
-        }
-        
-        trendings.sort { $0.1 > $1.1 }
-        
-        for i in 0..<min(10, trendings.count) {
-            self.trendings.append(trendings[i].0)
-        }
+            
+            return (stats, mean, variance, achievements, remains, trendings, indexes, contents)
+        }.value
     }
     
     private func makeStats() -> some View {
@@ -5365,79 +5403,87 @@ struct Activity: View {
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .textCase(.uppercase)) {
-                    Chart {
-                        let today = Calendar.current.startOfDay(for: Date())
-                        
-                        ForEach(Array(self.stats.enumerated()), id: \.element) { (index, item) in
-                            BarMark(
-                                x: .value("Time", Calendar.current.date(byAdding: .day, value: -self.stats.count + 1 + index, to: today)!),
-                                y: .value("Likes", item),
-                                width: 8
-                            )
-                            .annotation(position: .top, alignment: .center) {
-                                if item > 0 {
-                                    Text(String(item))
-                                        .font(.caption)
+                    if let stats = self.stats {
+                        Chart {
+                            let today = Calendar.current.startOfDay(for: Date())
+                            
+                            ForEach(Array(stats.enumerated()), id: \.element) { (index, item) in
+                                BarMark(
+                                    x: .value("Time", Calendar.current.date(byAdding: .day, value: -stats.count + 1 + index, to: today)!),
+                                    y: .value("Likes", item),
+                                    width: 8
+                                )
+                                .annotation(position: .top, alignment: .center) {
+                                    if item > 0 {
+                                        Text(String(item))
+                                            .font(.caption)
+                                    }
                                 }
+                                .foregroundStyle(Color(uiColor: self.accent))
+                                .clipShape(Capsule())
                             }
-                            .foregroundStyle(Color(uiColor: self.accent))
-                            .clipShape(Capsule())
                         }
-                    }
-                    .chartXAxis {
-                        AxisMarks(preset: .aligned, values: .stride(by: .day, count: 1)) { _ in
-                            AxisGridLine()
-                            AxisTick()
-                            AxisValueLabel(format: .dateTime.weekday())
+                        .chartXAxis {
+                            AxisMarks(preset: .aligned, values: .stride(by: .day, count: 1)) { _ in
+                                AxisGridLine()
+                                AxisTick()
+                                AxisValueLabel(format: .dateTime.weekday())
+                            }
                         }
-                    }
-                    .chartYAxis {
-                        AxisMarks(position: .leading, values: .automatic) { _ in
-                            AxisGridLine()
-                            AxisTick()
+                        .chartYAxis {
+                            AxisMarks(position: .leading, values: .automatic) { _ in
+                                AxisGridLine()
+                                AxisTick()
+                            }
                         }
+                        .aspectRatio(UIDevice.current.userInterfaceIdiom == .phone ? 1.0 : 2.0, contentMode: .fit)
+                        .listRowBackground(Color(UIColor {
+                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                        }))
+                        .transition(.opacity.animation(.linear))
                     }
-                    .aspectRatio(UIDevice.current.userInterfaceIdiom == .phone ? 1.0 : 2.0, contentMode: .fit)
-                    .listRowBackground(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                    }))
-                    .transition(.opacity.animation(.linear))
-                    HStack(alignment: .center, spacing: 16.0) {
-                        Text("Mean")
-                            .foregroundColor(Color(UIColor {
-                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                            }))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Spacer()
-                        Text(String(format: "%.1f", self.mean))
-                            .foregroundColor(Color(uiColor: self.accent))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .lineLimit(1)
+                    
+                    if let mean = self.mean {
+                        HStack(alignment: .center, spacing: 16.0) {
+                            Text("Mean")
+                                .foregroundColor(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                }))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Text(String(format: "%.1f", mean))
+                                .foregroundColor(Color(uiColor: self.accent))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .lineLimit(1)
+                        }
+                        .listRowBackground(Color(UIColor {
+                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                        }))
+                        .transition(.opacity.animation(.linear))
                     }
-                    .listRowBackground(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                    }))
-                    .transition(.opacity.animation(.linear))
-                    HStack(alignment: .center, spacing: 16.0) {
-                        Text("Variance")
-                            .foregroundColor(Color(UIColor {
-                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                            }))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Spacer()
-                        Text(String(format: "%.1f", self.variance))
-                            .foregroundColor(Color(uiColor: self.accent))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .lineLimit(1)
+                    
+                    if let variance = self.variance {
+                        HStack(alignment: .center, spacing: 16.0) {
+                            Text("Variance")
+                                .foregroundColor(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                }))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Text(String(format: "%.1f", variance))
+                                .foregroundColor(Color(uiColor: self.accent))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .lineLimit(1)
+                        }
+                        .listRowBackground(Color(UIColor {
+                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                        }))
+                        .transition(.opacity.animation(.linear))
                     }
-                    .listRowBackground(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                    }))
-                    .transition(.opacity.animation(.linear))
                 }
     }
     
@@ -5449,37 +5495,74 @@ struct Activity: View {
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .textCase(.uppercase)) {
-                    HStack(alignment: .center, spacing: 16.0) {
-                        Text("Overall")
-                            .foregroundColor(Color(UIColor {
-                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                            }))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Spacer()
-                        Text(String(format: "%.1f%%", Double(self.achievements.enumerated().reduce(0, { self.remains[$1.offset] == nil ? $0 + 1 : $0 })) / Double(self.achievements.count)))
-                            .foregroundColor(Color(uiColor: self.accent))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .lineLimit(1)
-                    }
-                    .listRowBackground(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                    }))
-                    .transition(.opacity.animation(.linear))
-                    ForEach(Array(self.achievements.enumerated()), id: \.element) { (index, item) in
+                    if let achievements = self.achievements, let remains = self.remains {
                         HStack(alignment: .center, spacing: 16.0) {
-                            Text(item)
+                            Text("Overall")
                                 .foregroundColor(Color(UIColor {
                                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
                                 }))
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                             Spacer()
-                            
-                            if let count = self.remains[index] {
-                                HStack(alignment: .center, spacing: 8.0) {
-                                    Image(systemName: "lock")
+                            Text(String(format: "%.1f%%", Double(achievements.enumerated().reduce(0, { remains[$1.offset] == nil ? $0 + 1 : $0 })) / Double(achievements.count)))
+                                .foregroundColor(Color(uiColor: self.accent))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .lineLimit(1)
+                        }
+                        .listRowBackground(Color(UIColor {
+                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                        }))
+                        .transition(.opacity.animation(.linear))
+                        ForEach(Array(achievements.enumerated()), id: \.element) { (index, item) in
+                            HStack(alignment: .center, spacing: 16.0) {
+                                Text(item)
+                                    .foregroundColor(Color(UIColor {
+                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                    }))
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Spacer()
+                                
+                                if let count = remains[index] {
+                                    HStack(alignment: .center, spacing: 8.0) {
+                                        Image(systemName: "lock")
+                                            .frame(
+                                                width: 16.0,
+                                                height: 16.0,
+                                                alignment: .center
+                                            )
+                                            .background(.clear)
+                                            .foregroundColor(Color(uiColor: self.accent))
+                                            .font(
+                                                .system(size: 16.0)
+                                            )
+                                            .bold()
+                                        
+                                        if count > 0 {
+                                            Text(String(format: "%ld", -count))
+                                                .foregroundColor(Color(uiColor: self.accent))
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .lineLimit(1)
+                                        } else {
+                                            HStack(alignment: .center, spacing: 8.0) {
+                                                Image(systemName: "greaterthan")
+                                                    .background(.clear)
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(
+                                                        .system(size: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize)
+                                                    )
+                                                Text(String(format: "%ld", 10))
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(.subheadline)
+                                                    .fontWeight(.semibold)
+                                                    .lineLimit(1)
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Image(systemName: "lock.open")
                                         .frame(
                                             width: 16.0,
                                             height: 16.0,
@@ -5491,49 +5574,14 @@ struct Activity: View {
                                             .system(size: 16.0)
                                         )
                                         .bold()
-                                    
-                                    if count > 0 {
-                                        Text(String(format: "%ld", -count))
-                                            .foregroundColor(Color(uiColor: self.accent))
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                            .lineLimit(1)
-                                    } else {
-                                        HStack(alignment: .center, spacing: 8.0) {
-                                            Image(systemName: "greaterthan")
-                                                .background(.clear)
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(
-                                                    .system(size: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize)
-                                                )
-                                            Text(String(format: "%ld", 10))
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(.subheadline)
-                                                .fontWeight(.semibold)
-                                                .lineLimit(1)
-                                        }
-                                    }
                                 }
-                            } else {
-                                Image(systemName: "lock.open")
-                                    .frame(
-                                        width: 16.0,
-                                        height: 16.0,
-                                        alignment: .center
-                                    )
-                                    .background(.clear)
-                                    .foregroundColor(Color(uiColor: self.accent))
-                                    .font(
-                                        .system(size: 16.0)
-                                    )
-                                    .bold()
                             }
+                            .listRowBackground(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                            }))
                         }
-                        .listRowBackground(Color(UIColor {
-                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                        }))
+                        .transition(.opacity.animation(.linear))
                     }
-                    .transition(.opacity.animation(.linear))
                 }
     }
     
@@ -5545,24 +5593,52 @@ struct Activity: View {
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .textCase(.uppercase)) {
-                    if self.trendings.isEmpty {
-                        Text("None")
-                            .foregroundColor(Color(UIColor {
-                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                            }))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .frame(
-                                maxWidth: .infinity,
-                                alignment: .center
-                            )
-                            .listRowBackground(Color(UIColor {
-                                $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                            }))
-                    } else {
-                        ForEach(Array(self.trendings.enumerated()), id: \.element) { (index, word) in
-                            if index == 0 {
-                                HStack(alignment: .center, spacing: 16.0) {
+                    if let trendings = self.trendings {
+                        if trendings.isEmpty {
+                            Text("None")
+                                .foregroundColor(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                }))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .frame(
+                                    maxWidth: .infinity,
+                                    alignment: .center
+                                )
+                                .listRowBackground(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                }))
+                                .transition(.opacity.animation(.linear))
+                        } else {
+                            ForEach(Array(trendings.enumerated()), id: \.element) { (index, word) in
+                                if index == 0 {
+                                    HStack(alignment: .center, spacing: 16.0) {
+                                        Text(word)
+                                            .foregroundColor(Color(UIColor {
+                                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                            }))
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                            .lineLimit(1)
+                                        Spacer()
+                                        Image(systemName: "crown")
+                                            .frame(
+                                                width: 16.0,
+                                                height: 16.0,
+                                                alignment: .center
+                                            )
+                                            .background(.clear)
+                                            .foregroundColor(Color(uiColor: self.accent))
+                                            .font(
+                                                .system(size: 16.0)
+                                            )
+                                            .bold()
+                                    }
+                                    .listRowBackground(Color(UIColor {
+                                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                    }))
+                                    .transition(.opacity.animation(.linear))
+                                } else {
                                     Text(word)
                                         .foregroundColor(Color(UIColor {
                                             $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
@@ -5570,34 +5646,11 @@ struct Activity: View {
                                         .font(.subheadline)
                                         .fontWeight(.semibold)
                                         .lineLimit(1)
-                                    Spacer()
-                                    Image(systemName: "crown")
-                                        .frame(
-                                            width: 16.0,
-                                            height: 16.0,
-                                            alignment: .center
-                                        )
-                                        .background(.clear)
-                                        .foregroundColor(Color(uiColor: self.accent))
-                                        .font(
-                                            .system(size: 16.0)
-                                        )
-                                        .bold()
+                                        .listRowBackground(Color(UIColor {
+                                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                        }))
+                                        .transition(.opacity.animation(.linear))
                                 }
-                                .listRowBackground(Color(UIColor {
-                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                                }))
-                            } else {
-                                Text(word)
-                                    .foregroundColor(Color(UIColor {
-                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                    }))
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .lineLimit(1)
-                                    .listRowBackground(Color(UIColor {
-                                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                                    }))
                             }
                         }
                     }
@@ -5612,169 +5665,9 @@ struct Activity: View {
                 .fontWeight(.semibold)
                 .lineLimit(1)
                 .textCase(.uppercase)) {
-                    if self.contents.isEmpty {
-                        Text("None")
-                            .foregroundColor(Color(UIColor {
-                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                            }))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .frame(
-                                maxWidth: .infinity,
-                                alignment: .center
-                            )
-                            .listRowBackground(Color(UIColor {
-                                $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                            }))
-                            .transition(.opacity.animation(.linear))
-                    } else {
-                        ForEach(Array(self.indexes.reversed().enumerated()), id: \.element) { (_, index) in
-                            if let name = self.contents[index].name {
-                                VStack(alignment: .leading, spacing: 8.0) {
-                                    HStack(alignment: .center, spacing: 8.0) {
-                                        Text(name)
-                                            .foregroundColor(Color(uiColor: self.accent))
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                            .lineLimit(1)
-                                        Image(systemName: "arrow.down.left")
-                                            .frame(
-                                                width: 16.0,
-                                                height: 16.0,
-                                                alignment: .center
-                                            )
-                                            .background(.clear)
-                                            .foregroundColor(Color(uiColor: self.accent))
-                                            .font(
-                                                .system(size: 16.0)
-                                            )
-                                            .bold()
-                                    }
-                                    
-                                    if let text = self.contents[index].text {
-                                        Text(text)
-                                            .foregroundColor(Color(UIColor {
-                                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                            }))
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                            .frame(
-                                                maxWidth: .infinity,
-                                                alignment: .leading
-                                            )
-                                            .multilineTextAlignment(.leading)
-                                    }
-                                    
-                                    if let image = self.contents[index].image {
-                                        Image(uiImage: UIImage(cgImage: image))
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(
-                                                maxWidth: .infinity,
-                                                alignment: .leading
-                                            )
-                                            .clipShape(RoundedRectangle(cornerRadius: 16.0))
-                                    }
-                                }
-                                .listRowBackground(Color(UIColor {
-                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                                }))
-                            } else {
-                                VStack(alignment: .leading, spacing: 8.0) {
-                                    if let text = self.contents[index].text, let image = self.contents[index].image {
-                                        HStack(alignment: .center, spacing: 8.0) {
-                                            Text(text)
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(.subheadline)
-                                                .fontWeight(.semibold)
-                                                .lineLimit(1)
-                                            Image(systemName: "arrow.up.right")
-                                                .frame(
-                                                    width: 16.0,
-                                                    height: 16.0,
-                                                    alignment: .center
-                                                )
-                                                .background(.clear)
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(
-                                                    .system(size: 16.0)
-                                                )
-                                                .bold()
-                                        }
-                                        Image(uiImage: UIImage(cgImage: image))
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(
-                                                maxWidth: .infinity,
-                                                alignment: .leading
-                                            )
-                                            .clipShape(RoundedRectangle(cornerRadius: 16.0))
-                                    } else if let text = self.contents[index].text {
-                                        HStack(alignment: .center, spacing: 8.0) {
-                                            Text(text)
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(.subheadline)
-                                                .fontWeight(.semibold)
-                                                .lineLimit(1)
-                                            Image(systemName: "arrow.up.right")
-                                                .frame(
-                                                    width: 16.0,
-                                                    height: 16.0,
-                                                    alignment: .center
-                                                )
-                                                .background(.clear)
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(
-                                                    .system(size: 16.0)
-                                                )
-                                                .bold()
-                                        }
-                                    } else if let image = self.contents[index].image {
-                                        ZStack {
-                                            Image(uiImage: UIImage(cgImage: image))
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(
-                                                    maxWidth: .infinity,
-                                                    alignment: .leading
-                                                )
-                                                .clipShape(RoundedRectangle(cornerRadius: 16.0))
-                                            Image(systemName: "arrow.up.right")
-                                                .frame(
-                                                    width: 16.0,
-                                                    height: 16.0,
-                                                    alignment: .center
-                                                )
-                                                .background(.clear)
-                                                .foregroundColor(Color(uiColor: self.accent))
-                                                .font(
-                                                    .system(size: 16.0)
-                                                )
-                                                .bold()
-                                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                                                .offset(x: -8.0, y: 8.0)
-                                        }
-                                        .frame(
-                                            maxWidth: .infinity
-                                        )
-                                        .background(.clear)
-                                    }
-                                }
-                                .listRowBackground(Color(UIColor {
-                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                                }))
-                            }
-                        }
-                        .transition(.opacity.animation(.linear))
-                        Button(action: {
-                            withAnimation {
-                                self.indexes.removeAll()
-                                self.contents.removeAll()
-                            }
-                            
-                            self.logs.removeAll()
-                        }) {
-                            Text("Reset")
+                    if var indexes = self.indexes, var contents = self.contents {
+                        if contents.isEmpty {
+                            Text("None")
                                 .foregroundColor(Color(UIColor {
                                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
                                 }))
@@ -5784,18 +5677,183 @@ struct Activity: View {
                                     maxWidth: .infinity,
                                     alignment: .center
                                 )
-                                .contentShape(Rectangle())
+                                .listRowBackground(Color(UIColor {
+                                    $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                }))
+                                .transition(.opacity.animation(.linear))
+                        } else {
+                            ForEach(Array(indexes.reversed().enumerated()), id: \.element) { (_, index) in
+                                if let name = contents[index].name {
+                                    VStack(alignment: .leading, spacing: 8.0) {
+                                        HStack(alignment: .center, spacing: 8.0) {
+                                            Text(name)
+                                                .foregroundColor(Color(uiColor: self.accent))
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .lineLimit(1)
+                                            Image(systemName: "arrow.down.left")
+                                                .frame(
+                                                    width: 16.0,
+                                                    height: 16.0,
+                                                    alignment: .center
+                                                )
+                                                .background(.clear)
+                                                .foregroundColor(Color(uiColor: self.accent))
+                                                .font(
+                                                    .system(size: 16.0)
+                                                )
+                                                .bold()
+                                        }
+                                        
+                                        if let text = contents[index].text {
+                                            Text(text)
+                                                .foregroundColor(Color(UIColor {
+                                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                                }))
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .frame(
+                                                    maxWidth: .infinity,
+                                                    alignment: .leading
+                                                )
+                                                .multilineTextAlignment(.leading)
+                                        }
+                                        
+                                        if let image = contents[index].image {
+                                            Image(uiImage: UIImage(cgImage: image))
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(
+                                                    maxWidth: .infinity,
+                                                    alignment: .leading
+                                                )
+                                                .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                                        }
+                                    }
+                                    .listRowBackground(Color(UIColor {
+                                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                    }))
+                                } else {
+                                    VStack(alignment: .leading, spacing: 8.0) {
+                                        if let text = contents[index].text, let image = contents[index].image {
+                                            HStack(alignment: .center, spacing: 8.0) {
+                                                Text(text)
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(.subheadline)
+                                                    .fontWeight(.semibold)
+                                                    .lineLimit(1)
+                                                Image(systemName: "arrow.up.right")
+                                                    .frame(
+                                                        width: 16.0,
+                                                        height: 16.0,
+                                                        alignment: .center
+                                                    )
+                                                    .background(.clear)
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(
+                                                        .system(size: 16.0)
+                                                    )
+                                                    .bold()
+                                            }
+                                            Image(uiImage: UIImage(cgImage: image))
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(
+                                                    maxWidth: .infinity,
+                                                    alignment: .leading
+                                                )
+                                                .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                                        } else if let text = contents[index].text {
+                                            HStack(alignment: .center, spacing: 8.0) {
+                                                Text(text)
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(.subheadline)
+                                                    .fontWeight(.semibold)
+                                                    .lineLimit(1)
+                                                Image(systemName: "arrow.up.right")
+                                                    .frame(
+                                                        width: 16.0,
+                                                        height: 16.0,
+                                                        alignment: .center
+                                                    )
+                                                    .background(.clear)
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(
+                                                        .system(size: 16.0)
+                                                    )
+                                                    .bold()
+                                            }
+                                        } else if let image = contents[index].image {
+                                            ZStack {
+                                                Image(uiImage: UIImage(cgImage: image))
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(
+                                                        maxWidth: .infinity,
+                                                        alignment: .leading
+                                                    )
+                                                    .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                                                Image(systemName: "arrow.up.right")
+                                                    .frame(
+                                                        width: 16.0,
+                                                        height: 16.0,
+                                                        alignment: .center
+                                                    )
+                                                    .background(.clear)
+                                                    .foregroundColor(Color(uiColor: self.accent))
+                                                    .font(
+                                                        .system(size: 16.0)
+                                                    )
+                                                    .bold()
+                                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                                    .offset(x: -8.0, y: 8.0)
+                                            }
+                                            .frame(
+                                                maxWidth: .infinity
+                                            )
+                                            .background(.clear)
+                                        }
+                                    }
+                                    .listRowBackground(Color(UIColor {
+                                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                                    }))
+                                }
+                            }
+                            .transition(.opacity.animation(.linear))
+                            Button(action: {
+                                indexes.removeAll()
+                                contents.removeAll()
+                                
+                                withAnimation {
+                                    self.indexes = indexes
+                                    self.contents = contents
+                                }
+                                
+                                self.logs.removeAll()
+                            }) {
+                                Text("Reset")
+                                    .foregroundColor(Color(UIColor {
+                                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                                    }))
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        alignment: .center
+                                    )
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .listRowBackground(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                            }))
+                            .transition(.opacity.animation(.linear))
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .listRowBackground(Color(UIColor {
-                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                        }))
-                        .transition(.opacity.animation(.linear))
                     }
                 }
     }
     
-    private func mean(data: [Int]) -> Double {
+    private nonisolated func mean(data: [Int]) -> Double {
         var sum = 0.0
         
         for x in data {
@@ -5805,7 +5863,7 @@ struct Activity: View {
         return sum / Double(data.count)
     }
     
-    private func variance(data: [Int], mean: Double) -> Double {
+    private nonisolated func variance(data: [Int], mean: Double) -> Double {
         var sum = 0.0
         
         for x in data {
@@ -7193,58 +7251,99 @@ struct Gallery: View {
     let accent: UIColor
     @Environment(\.dismiss) private var dismiss
     @State private var page = 0
+    @State private var position = 1
     @State private var paths: [String] = []
     @State private var playables: [(Bool, Bool)] = []
     
     var body: some View {
         NavigationStack {
-            TabView(selection: self.$page) {
-                ForEach(Array(self.paths.enumerated()), id: \.offset) { (index, path) in
-                    ZStack {
+            VStack(spacing: 0.0) {
+                TabView(selection: self.$page) {
+                    ForEach(Array(self.paths.enumerated()), id: \.offset) { (index, path) in
                         ZStack {
-                            if self.playables[index].1 {
-                                Player(path: path, accent: self.accent)
-                                    .frame(
-                                        maxWidth: .infinity,
-                                        maxHeight: .infinity
-                                    )
-                                    .background(.clear)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(UIColor {
-                            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                        }))
-                        .clipShape(RoundedRectangle(cornerRadius: 16.0))
-                        .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
-                        .opacity(self.playables[index].0 ? 1.0 : 0.0)
-                        .transaction {
-                            $0.addAnimationCompletion(criteria: .logicallyComplete) {
-                                if self.playables.indices.contains(index) && !self.playables[index].0 && self.playables[index].1 {
-                                    self.playables[index] = (false, false)
+                            ZStack {
+                                if self.playables[index].1 {
+                                    Player(path: path, accent: self.accent)
+                                        .frame(
+                                            maxWidth: .infinity,
+                                            maxHeight: .infinity
+                                        )
+                                        .background(.clear)
                                 }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
+                            }))
+                            .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                            .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
+                            .opacity(self.playables[index].0 ? 1.0 : 0.0)
+                            .transaction {
+                                $0.addAnimationCompletion(criteria: .logicallyComplete) {
+                                    if self.playables.indices.contains(index) && !self.playables[index].0 && self.playables[index].1 {
+                                        self.playables[index] = (false, false)
+                                    }
+                                }
+                            }
+                            .animation(.easeInOut(duration: 0.5), value: self.playables[index].0)
                         }
-                        .animation(.easeInOut(duration: 0.5), value: self.playables[index].0)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.clear)
-                    .padding(16.0)
-                    .tag(index)
-                    .transition(.opacity.animation(.linear))
-                    .onAppear {
-                        self.playables[index] = (true, true)
-                    }
-                    .onDisappear {
-                        guard self.paths.indices.contains(index) else {
-                            return
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.clear)
+                        .padding(16.0)
+                        .tag(index)
+                        .transition(.opacity.animation(.linear))
+                        .onAppear {
+                            self.playables[index] = (true, true)
                         }
-                        
-                        self.playables[index] = (false, false)
+                        .onDisappear {
+                            guard self.paths.indices.contains(index) else {
+                                return
+                            }
+                            
+                            self.playables[index] = (false, false)
+                        }
                     }
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity
+                )
+                .background(.clear)
+                ZStack {
+                    HStack(alignment: .center, spacing: 16.0) {
+                        Text(String(format: "%ld", self.position))
+                            .background(.clear)
+                            .foregroundColor(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                            }))
+                            .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize)))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .contentTransition(.numericText(value: Double(self.position)))
+                        Text(String(format: "%ld", max(self.paths.count, 1)))
+                            .background(.clear)
+                            .foregroundColor(Color(UIColor {
+                                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                            }))
+                            .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize)))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .contentTransition(.numericText(value: Double(max(self.paths.count, 1))))
+                    }
+                    Rectangle()
+                        .frame(
+                            width: 1.0,
+                            height: 16.0
+                        )
+                        .foregroundColor(Color(UIColor {
+                            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
+                        }))
+                }
+                .padding(0.0)
+                .opacity(self.paths.isEmpty ? 0.0 : 1.0)
+                .animation(.linear(duration: 0.5), value: self.paths.isEmpty)
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(
                 maxWidth: .infinity,
                 maxHeight: .infinity
@@ -7342,6 +7441,11 @@ struct Gallery: View {
                 }
             }
             .transition(.opacity)
+            .onChange(of: self.page) {
+                withAnimation {
+                    self.position = self.page + 1
+                }
+            }
             .task {
                 let paths = await self.load()
                 
@@ -7355,7 +7459,7 @@ struct Gallery: View {
         }
     }
     
-    private func load() async -> [String] {///
+    private func load() async -> [String] {
         return await Task.detached {
             var imagePaths = [String]()
             
