@@ -1977,7 +1977,6 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                                             if let pattern = sequence.state, let regex = try? Regex(pattern) {
                                                                 if let match = "\(oldCount)".firstMatch(of: regex), match.output.isEmpty {
                                                                     for i in oldCount + 1...newCount {
-                                                                        
                                                                         if let match = "\(i)".firstMatch(of: regex), !match.output.isEmpty {
                                                                             for j in 0..<sequence.count {
                                                                                 if let s1 = sequence[j] as? Sequence {
