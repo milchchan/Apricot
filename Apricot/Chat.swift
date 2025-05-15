@@ -20,7 +20,7 @@ struct Chat: View {
     @StateObject private var shortcut = Shortcut.shared
     @StateObject private var script: Script
     @State private var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double) = (nil, nil, false, nil, [], 0, 0)
-    @State private var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]()
+    @State private var logs = [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]()
     @State private var labels = [String]()
     @State private var likes = (old: 0, new: [String: [Date]]())
     @State private var likability: Double? = nil
@@ -394,9 +394,9 @@ struct Chat: View {
                                                                 self.shakes += 1
                                                             } else {
                                                                 let samples = 10
-                                                                var letterSet: Set<Character> = []
-                                                                var modifiers: [String] = []
-                                                                var words: [Word] = []
+                                                                var letterSet = Set<Character>()
+                                                                var modifiers = [String]()
+                                                                var words = [Word]()
                                                                 
                                                                 for _ in 0..<samples {
                                                                     let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
@@ -939,9 +939,9 @@ struct Chat: View {
                                             self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
                                         } else {
                                             let samples = 10
-                                            var letterSet: Set<Character> = []
-                                            var modifiers: [String] = []
-                                            var words: [Word] = []
+                                            var letterSet = Set<Character>()
+                                            var modifiers = [String]()
+                                            var words = [Word]()
                                             
                                             for _ in 0..<samples {
                                                 let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
@@ -1083,7 +1083,7 @@ struct Chat: View {
                     .sheet(isPresented: self.$showActivity, content: {
                         Activity(accent: self.convert(from: self.accent.wrappedValue), data: Script.shared.characters.reduce(into: [], { x, y in
                             if !y.guest {
-                                var sequences: [Sequence] = []
+                                var sequences = [Sequence]()
                                 
                                 for sequence in y.sequences {
                                     if sequence.name == "Like" {
@@ -1288,11 +1288,11 @@ struct Chat: View {
         
         if let first = queue.first {
             let input = word.name.filter { !$0.isNewline }
-            var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]()
+            var logs = [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]()
             let attributes = word.attributes ?? []
             let generateRequired: Bool
             let time: Double
-            var sequences = [(String, UUID?, Sequence, Double?, [(String, URL?)]?)]()
+            var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
             
             if multiple {
                 queue.removeFirst()
@@ -1384,9 +1384,14 @@ struct Chat: View {
                             }
                         }
                         
-                        if !parts.isEmpty, let text = logs[i - 1].content.text {
-                            messages.insert(["role": "user", "content": parts], at: 1)
-                            messages.insert(["role": "assistant", "content": text], at: 1)
+                        if !parts.isEmpty {
+                            if let raw = logs[i - 1].raw {
+                                messages.insert(["role": "user", "content": parts], at: 1)
+                                messages.insert(["role": "assistant", "content": raw], at: 1)
+                            } else if let text = logs[i - 1].content.text {
+                                messages.insert(["role": "user", "content": parts], at: 1)
+                                messages.insert(["role": "assistant", "content": text], at: 1)
+                            }
                         }
                         
                         i -= 2
@@ -1420,9 +1425,14 @@ struct Chat: View {
                                 }
                             }
                             
-                            if !parts.isEmpty, let text = self.logs[i].content.text {
-                                messages.insert(["role": "assistant", "content": text], at: 1)
-                                messages.insert(["role": "user", "content": parts], at: 1)
+                            if !parts.isEmpty {
+                                if let raw = self.logs[i].raw {
+                                    messages.insert(["role": "assistant", "content": raw], at: 1)
+                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                } else if let text = self.logs[i].content.text {
+                                    messages.insert(["role": "assistant", "content": text], at: 1)
+                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                }
                             }
                             
                             i -= 2
@@ -1434,7 +1444,7 @@ struct Chat: View {
                     messages.append(["role": "user", "content": [["type": "text", "text": input]]])
                 }
                 
-                if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
+                if let (output, content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                     var text = String(content)
                     let sequence = Sequence(name: "Activate", state: nil)
                     let id = UUID()
@@ -1461,7 +1471,7 @@ struct Chat: View {
                     }
                     
                     sequence.append(Sequence(name: "Emote", state: state ?? String()))
-                    sequences.append((first.name, id, sequence, likability, choices))
+                    sequences.append((first.name, id, output, sequence, likability, choices))
                     
                     while !queue.isEmpty {
                         let character = queue.removeFirst()
@@ -1506,9 +1516,14 @@ struct Chat: View {
                                         }
                                     }
                                     
-                                    if !parts.isEmpty, let text = logs[i].content.text {
-                                        messages.insert(["role": "assistant", "content": text], at: 1)
-                                        messages.insert(["role": "user", "content": parts], at: 1)
+                                    if !parts.isEmpty {
+                                        if let raw = logs[i].raw {
+                                            messages.insert(["role": "assistant", "content": raw], at: 1)
+                                            messages.insert(["role": "user", "content": parts], at: 1)
+                                        } else if let text = logs[i].content.text {
+                                            messages.insert(["role": "assistant", "content": text], at: 1)
+                                            messages.insert(["role": "user", "content": parts], at: 1)
+                                        }
                                     }
                                     
                                     i -= 2
@@ -1517,7 +1532,7 @@ struct Chat: View {
                                 }
                             }
                             
-                            if let (content, _, state, _, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
+                            if let (output, content, _, state, _, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                                 var text = String(content)
                                 let sequence = Sequence(name: "Activate", state: nil)
                                 let id = UUID()
@@ -1544,7 +1559,7 @@ struct Chat: View {
                                 }
                                 
                                 sequence.append(Sequence(name: "Emote", state: state ?? String()))
-                                sequences.append((character.name, id, sequence, nil, nil))
+                                sequences.append((character.name, id, output, sequence, nil, nil))
                             } else {
                                 sequences.removeAll()
                                 queue.removeAll()
@@ -1774,8 +1789,8 @@ struct Chat: View {
                         }
                     }
                     
-                    self.logs.append((id: nil, from: nil, to: first.name, group: time, content: (text: input, image: nil), choices: nil))
-                    self.logs.append((id: nil, from: first.name, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
+                    self.logs.append((id: nil, from: nil, to: first.name, group: time, raw: nil, content: (text: input, image: nil), choices: nil))
+                    self.logs.append((id: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
                     self.choices.removeAll()
                     
                     for sequence in newSequences {
@@ -1790,7 +1805,7 @@ struct Chat: View {
                 }
             } else {
                 for i in 0..<sequences.count {
-                    await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].2], words: []) { x in
+                    await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].3], words: []) { x in
                         var y = x
                         var content = [String]()
                         let choices: [String]?
@@ -1805,7 +1820,7 @@ struct Chat: View {
                         
                         y.append(Sequence(name: String()))
                         
-                        if let c = sequences[i].4 {
+                        if let c = sequences[i].5 {
                             choices = c.reduce(into: [String](), { x, y in
                                 x.append(y.0)
                             })
@@ -1816,13 +1831,13 @@ struct Chat: View {
                         }
                         
                         if i > 0 {
-                            self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                            self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                         } else {
-                            self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: (text: input, image: nil), choices: choices))
-                            self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                            self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: input, image: nil), choices: choices))
+                            self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                         }
                         
-                        if let likability = sequences[i].3 {
+                        if let likability = sequences[i].4 {
                             withAnimation {
                                 self.likability = likability
                             }
@@ -1898,7 +1913,7 @@ struct Chat: View {
         }.value
     }
     
-    private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, Double?, String?, [(String, URL?)], Data?)? {
+    private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, String?, [(String, URL?)], Data?)? {
         if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
             var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
             
@@ -1950,7 +1965,9 @@ struct Chat: View {
                     wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
                 }
                 
-                return (content, likability, state, choices, wave)
+                if let data = try? JSONSerialization.data(withJSONObject: jsonRoot, options: .prettyPrinted), let output = String(data: data, encoding: .utf8) {
+                    return (output, content, likability, state, choices, wave)
+                }
             }
         }
         
@@ -2285,7 +2302,7 @@ struct Chat: View {
 
 struct Stage: UIViewRepresentable {
     @Binding var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)
-    @Binding var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
+    @Binding var logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
     @Binding var resource: (old: String, new: String)
     @Binding var attributes: [String]
     @Binding var types: Int
@@ -2302,9 +2319,9 @@ struct Stage: UIViewRepresentable {
     var scale: Double
     var pause: Bool
     var mute: Bool
-    @State var permissions: Set<String> = []
+    @State var permissions = Set<String>()
     
-    init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likes: Binding<(old: Int, new: [String: [Date]])>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, changing: Binding<Bool>, idle: Binding<Bool>, loading: Binding<Bool>, intensity: Binding<Double>, temperature: Double, accent: UIColor, scale: Double, pause: Bool, mute: Bool) {
+    init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likes: Binding<(old: Int, new: [String: [Date]])>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, changing: Binding<Bool>, idle: Binding<Bool>, loading: Binding<Bool>, intensity: Binding<Double>, temperature: Double, accent: UIColor, scale: Double, pause: Bool, mute: Bool) {
         self._prompt = prompt
         self._logs = logs
         self._resource = resource
@@ -2659,7 +2676,7 @@ struct Stage: UIViewRepresentable {
                         let epsilon = powl(10, -6)
                         var mean = 0.0
                         var data = [String: Double]()
-                        var words: [Word] = []
+                        var words = [Word]()
                         
                         for (key, value) in Script.shared.scores {
                             if value.3 > yesterday && value.0 > epsilon {
@@ -2905,7 +2922,7 @@ struct Stage: UIViewRepresentable {
                         return x
                     })
                     var probabilities = [Double]()
-                    var letterSet: Set<Character> = []
+                    var letterSet = Set<Character>()
                     
                     if minProbability == Double.greatestFiniteMagnitude {
                         minProbability = epsilon
@@ -3135,7 +3152,7 @@ struct Stage: UIViewRepresentable {
                         let character = likes[i].content[likes[i].content.index(likes[i].content.startIndex, offsetBy: count)]
                         
                         if character.isNewline {
-                            var fixedAttributes: [(name: String?, start: Int, end: Int)] = []
+                            var fixedAttributes = [(name: String?, start: Int, end: Int)]()
                             
                             for attribute in attributes {
                                 if attribute.start - offset >= 0 && attribute.end <= count {
@@ -3185,7 +3202,7 @@ struct Stage: UIViewRepresentable {
                         let character = like.content[like.content.index(like.content.startIndex, offsetBy: count)]
                         
                         if character.isNewline {
-                            var fixedAttributes: [(name: String?, start: Int, end: Int)] = []
+                            var fixedAttributes = [(name: String?, start: Int, end: Int)]()
                             
                             for attribute in attributes {
                                 if attribute.start - offset >= 0 && attribute.end <= count {
@@ -3384,11 +3401,11 @@ struct Stage: UIViewRepresentable {
                 
                 if let first = queue.first {
                     let input = word.name.filter { !$0.isNewline }
-                    var logs = [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]()
+                    var logs = [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]()
                     let attributes = word.attributes ?? []
                     let generateRequired: Bool
                     let time: Double
-                    var sequences = [(String, UUID?, Sequence, Double?, [(String, URL?)]?)]()
+                    var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
                     
                     if multiple {
                         queue.removeFirst()
@@ -3480,9 +3497,14 @@ struct Stage: UIViewRepresentable {
                                     }
                                 }
                                 
-                                if !parts.isEmpty, let text = logs[i - 1].content.text {
-                                    messages.insert(["role": "user", "content": parts], at: 1)
-                                    messages.insert(["role": "assistant", "content": text], at: 1)
+                                if !parts.isEmpty {
+                                    if let raw = logs[i - 1].raw {
+                                        messages.insert(["role": "user", "content": parts], at: 1)
+                                        messages.insert(["role": "assistant", "content": raw], at: 1)
+                                    } else if let text = logs[i - 1].content.text {
+                                        messages.insert(["role": "user", "content": parts], at: 1)
+                                        messages.insert(["role": "assistant", "content": text], at: 1)
+                                    }
                                 }
                                 
                                 i -= 2
@@ -3516,9 +3538,14 @@ struct Stage: UIViewRepresentable {
                                         }
                                     }
                                     
-                                    if !parts.isEmpty, let text = self.parent.logs[i].content.text {
-                                        messages.insert(["role": "assistant", "content": text], at: 1)
-                                        messages.insert(["role": "user", "content": parts], at: 1)
+                                    if !parts.isEmpty {
+                                        if let raw = self.parent.logs[i].raw {
+                                            messages.insert(["role": "assistant", "content": raw], at: 1)
+                                            messages.insert(["role": "user", "content": parts], at: 1)
+                                        } else if let text = self.parent.logs[i].content.text {
+                                            messages.insert(["role": "assistant", "content": text], at: 1)
+                                            messages.insert(["role": "user", "content": parts], at: 1)
+                                        }
                                     }
                                     
                                     i -= 2
@@ -3530,7 +3557,7 @@ struct Stage: UIViewRepresentable {
                             messages.append(["role": "user", "content": [["type": "text", "text": input]]])
                         }
                         
-                        if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
+                        if let (output, content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                             var text = String(content)
                             let sequence = Sequence(name: "Activate", state: nil)
                             let id = UUID()
@@ -3557,7 +3584,7 @@ struct Stage: UIViewRepresentable {
                             }
                             
                             sequence.append(Sequence(name: "Emote", state: state ?? String()))
-                            sequences.append((first.name, id, sequence, likability, choices))
+                            sequences.append((first.name, id, output, sequence, likability, choices))
                             
                             while !queue.isEmpty {
                                 let character = queue.removeFirst()
@@ -3602,9 +3629,14 @@ struct Stage: UIViewRepresentable {
                                                 }
                                             }
                                             
-                                            if !parts.isEmpty, let text = logs[i].content.text {
-                                                messages.insert(["role": "assistant", "content": text], at: 1)
-                                                messages.insert(["role": "user", "content": parts], at: 1)
+                                            if !parts.isEmpty {
+                                                if let raw = logs[i].raw {
+                                                    messages.insert(["role": "assistant", "content": raw], at: 1)
+                                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                                } else if let text = logs[i].content.text {
+                                                    messages.insert(["role": "assistant", "content": text], at: 1)
+                                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                                }
                                             }
                                             
                                             i -= 2
@@ -3613,7 +3645,7 @@ struct Stage: UIViewRepresentable {
                                         }
                                     }
                                     
-                                    if let (content, _, state, _, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
+                                    if let (output, content, _, state, _, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                                         var text = String(content)
                                         let sequence = Sequence(name: "Activate", state: nil)
                                         let id = UUID()
@@ -3640,7 +3672,7 @@ struct Stage: UIViewRepresentable {
                                         }
                                         
                                         sequence.append(Sequence(name: "Emote", state: state ?? String()))
-                                        sequences.append((character.name, id, sequence, nil, nil))
+                                        sequences.append((character.name, id, output, sequence, nil, nil))
                                     } else {
                                         sequences.removeAll()
                                         queue.removeAll()
@@ -3869,8 +3901,8 @@ struct Stage: UIViewRepresentable {
                                 }
                             }
                             
-                            self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, content: (text: input, image: nil), choices: nil))
-                            self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
+                            self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, raw: nil, content: (text: input, image: nil), choices: nil))
+                            self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
                             self.parent.choices.removeAll()
                             
                             for sequence in newSequences {
@@ -3881,7 +3913,7 @@ struct Stage: UIViewRepresentable {
                         }
                     } else {
                         for i in 0..<sequences.count {
-                            await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].2], words: []) { x in
+                            await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].3], words: []) { x in
                                 var y = x
                                 var content = [String]()
                                 let choices: [String]?
@@ -3896,7 +3928,7 @@ struct Stage: UIViewRepresentable {
                                 
                                 y.append(Sequence(name: String()))
                                 
-                                if let c = sequences[i].4 {
+                                if let c = sequences[i].5 {
                                     choices = c.reduce(into: [String](), { x, y in
                                         x.append(y.0)
                                     })
@@ -3907,13 +3939,13 @@ struct Stage: UIViewRepresentable {
                                 }
                                 
                                 if i > 0 {
-                                    self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                                    self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                                 } else {
-                                    self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: (text: input, image: nil), choices: choices))
-                                    self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                                    self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: input, image: nil), choices: choices))
+                                    self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                                 }
                                 
-                                if let likability = sequences[i].3 {
+                                if let likability = sequences[i].4 {
                                     withAnimation {
                                         self.parent.likability = likability
                                     }
@@ -3990,7 +4022,7 @@ struct Stage: UIViewRepresentable {
             }.value
         }
         
-        private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, Double?, String?, [(String, URL?)], Data?)? {
+        private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, String?, [(String, URL?)], Data?)? {
             if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
                 var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
                 
@@ -4042,7 +4074,9 @@ struct Stage: UIViewRepresentable {
                         wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
                     }
                     
-                    return (content, likability, state, choices, wave)
+                    if let data = try? JSONSerialization.data(withJSONObject: jsonRoot, options: .prettyPrinted), let output = String(data: data, encoding: .utf8) {
+                        return (output, content, likability, state, choices, wave)
+                    }
                 }
             }
             
@@ -4192,9 +4226,9 @@ struct Stage: UIViewRepresentable {
             let alphabet: [Character] = Array("0123456789ABCDEFGHJKMNPQRSTVWXYZ")
             var time = UInt64(Date().timeIntervalSince1970 * 1000)
             var timeChars = [Character](repeating: "0", count: 10)
-            var digestChars: [Character] = []
+            var digestChars = [Character]()
             var bitBuffer = 0
-            var bitCount  = 0
+            var bitCount = 0
             
             for i in stride(from: 9, through: 0, by: -1) {
                 timeChars[i] = alphabet[Int(time & 0x1F)]
@@ -4271,7 +4305,7 @@ struct Peek: UIViewControllerRepresentable {
     @Binding private var peekable: Bool
     private var ready: Bool
     private var pause: Bool
-    @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
+    @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
     @Binding private var likability: Double?
     @Binding private var choices: [(String, URL?)]
     @Binding private var loading: Bool
@@ -4279,7 +4313,7 @@ struct Peek: UIViewControllerRepresentable {
     private var temperature: Double
     private var mute: Bool
     
-    init(peekable: Binding<Bool>, ready: Bool, pause: Bool, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, loading: Binding<Bool>, intensity: Double, temperature: Double, mute: Bool) {
+    init(peekable: Binding<Bool>, ready: Bool, pause: Bool, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, loading: Binding<Bool>, intensity: Double, temperature: Double, mute: Bool) {
         self._peekable = peekable
         self.ready = ready
         self.pause = pause
@@ -4366,7 +4400,7 @@ struct Peek: UIViewControllerRepresentable {
                 
                 if let first = queue.first {
                     let time = CACurrentMediaTime()
-                    var sequences = [(String, UUID?, Sequence, Double?, [(String, URL?)]?)]()
+                    var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
                     
                     if multiple {
                         queue.removeFirst()
@@ -4418,9 +4452,14 @@ struct Peek: UIViewControllerRepresentable {
                                     }
                                 }
                                 
-                                if !parts.isEmpty, let text = self.parent.logs[i].content.text {
-                                    messages.insert(["role": "assistant", "content": text], at: 1)
-                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                if !parts.isEmpty {
+                                    if let raw = self.parent.logs[i].raw {
+                                        messages.insert(["role": "assistant", "content": raw], at: 1)
+                                        messages.insert(["role": "user", "content": parts], at: 1)
+                                    } else if let text = self.parent.logs[i].content.text {
+                                        messages.insert(["role": "assistant", "content": text], at: 1)
+                                        messages.insert(["role": "user", "content": parts], at: 1)
+                                    }
                                 }
                                 
                                 i -= 2
@@ -4443,7 +4482,7 @@ struct Peek: UIViewControllerRepresentable {
                             return
                         }
                         
-                        if let (content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
+                        if let (output, content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                             let sequence = Sequence(name: "Activate", state: nil)
                             let id = UUID()
                             
@@ -4454,13 +4493,13 @@ struct Peek: UIViewControllerRepresentable {
                             }
                             
                             sequence.append(Sequence(name: "Emote", state: state ?? String()))
-                            sequences.append((first.name, id, sequence, likability, choices))
+                            sequences.append((first.name, id, output, sequence, likability, choices))
                             
                             while !queue.isEmpty {
                                 let character = queue.removeFirst()
                                 
                                 if let prompt = character.prompt {
-                                    if let (content, _, state, _, voice) = await self.generate(messages: [["role": "system", "content": await Task.detached {
+                                    if let (output, content, _, state, _, voice) = await self.generate(messages: [["role": "system", "content": await Task.detached {
                                         return self.replacePlaceholders(text: prompt, resolver: { format in
                                             
                                             if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
@@ -4485,7 +4524,7 @@ struct Peek: UIViewControllerRepresentable {
                                         }
                                         
                                         sequence.append(Sequence(name: "Emote", state: state ?? String()))
-                                        sequences.append((character.name, id, sequence, nil, nil))
+                                        sequences.append((character.name, id, output, sequence, nil, nil))
                                     } else {
                                         sequences.removeAll()
                                         queue.removeAll()
@@ -4511,7 +4550,7 @@ struct Peek: UIViewControllerRepresentable {
                     }
                     
                     for i in 0..<sequences.count {
-                        await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].2], words: []) { x in
+                        await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].3], words: []) { x in
                             var y = x
                             var content = [String]()
                             let choices: [String]?
@@ -4526,7 +4565,7 @@ struct Peek: UIViewControllerRepresentable {
                             
                             y.append(Sequence(name: String()))
                             
-                            if let c = sequences[i].4 {
+                            if let c = sequences[i].5 {
                                 choices = c.reduce(into: [String](), { x, y in
                                     x.append(y.0)
                                 })
@@ -4537,7 +4576,7 @@ struct Peek: UIViewControllerRepresentable {
                             }
                             
                             if i > 0 {
-                                self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                                self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                             } else {
                                 var index = self.parent.logs.count - 1
                                 
@@ -4559,11 +4598,11 @@ struct Peek: UIViewControllerRepresentable {
                                     index -= 1
                                 }
                                 
-                                self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, content: (text: nil, image: image), choices: choices))
-                                self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                                self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: nil, image: image), choices: choices))
+                                self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                             }
                             
-                            if let likability = sequences[i].3 {
+                            if let likability = sequences[i].4 {
                                 withAnimation {
                                     self.parent.likability = likability
                                 }
@@ -4639,7 +4678,7 @@ struct Peek: UIViewControllerRepresentable {
             }.value
         }
         
-        private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, Double?, String?, [(String, URL?)], Data?)? {
+        private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, String?, [(String, URL?)], Data?)? {
             if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
                 var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
                 
@@ -4691,7 +4730,9 @@ struct Peek: UIViewControllerRepresentable {
                         wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
                     }
                     
-                    return (content, likability, state, choices, wave)
+                    if let data = try? JSONSerialization.data(withJSONObject: jsonRoot, options: .prettyPrinted), let output = String(data: data, encoding: .utf8) {
+                        return (output, content, likability, state, choices, wave)
+                    }
                 }
             }
             
@@ -5084,7 +5125,7 @@ struct Activity: View {
     private let data: [(name: String, sequences: [Sequence], likes: [Date]?)]
     private let scores: [String: (Double, [String]?, String?, Date)]
     private let languages: [String?]
-    @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]
+    @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
     @Environment(\.dismiss) private var dismiss
     @Namespace private var topID
     @State private var mode = 0
@@ -5221,7 +5262,7 @@ struct Activity: View {
         }
     }
     
-    init(accent: UIColor, data: [(name: String, sequences: [Sequence], likes: [Date]?)], scores: [String: (Double, [String]?, String?, Date)], languages: [String?], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
+    init(accent: UIColor, data: [(name: String, sequences: [Sequence], likes: [Date]?)], scores: [String: (Double, [String]?, String?, Date)], languages: [String?], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
         self.accent = accent
         self.data = data
         self.scores = scores
@@ -5272,9 +5313,9 @@ struct Activity: View {
                 let likes = character.likes == nil ? 0 : character.likes!.count
                 var available = 0
                 var max = 0
-                var lockedAchievements: [String: Int] = [:]
-                var unlockableAchievementSet: Set<String> = []
-                var tempAchievements: [(name: String, count: Int?)] = []
+                var lockedAchievements = [String: Int]()
+                var unlockableAchievementSet = Set<String>()
+                var tempAchievements = [(name: String, count: Int?)]()
                 
                 for sequence in character.sequences {
                     var isLocked = true
@@ -5307,7 +5348,7 @@ struct Activity: View {
                                                 isAvailable = true
                                             }
                                         } else {
-                                            var queue: [Sequence] = []
+                                            var queue = [Sequence]()
                                             
                                             for obj in s2 {
                                                 if let s3 = obj as? Sequence {
@@ -5888,8 +5929,8 @@ struct Dictionary: View {
     @State private var isCapturing = false
     @State private var isModifier = false
     @State private var input = String()
-    @State private var selectedAttributes: Set<String> = []
-    @State private var path: [Word] = []
+    @State private var selectedAttributes = Set<String>()
+    @State private var path = [Word]()
     @State private var volumeLevel = 0.0
     @State private var audioEngine: AVAudioEngine? = nil
     @State private var speechRecognizer: SFSpeechRecognizer? = nil
@@ -7252,8 +7293,8 @@ struct Gallery: View {
     @Environment(\.dismiss) private var dismiss
     @State private var page = 0
     @State private var position = 1
-    @State private var paths: [String] = []
-    @State private var playables: [(Bool, Bool)] = []
+    @State private var paths = [String]()
+    @State private var playables = [(Bool, Bool)]()
     
     var body: some View {
         NavigationStack {
@@ -7956,9 +7997,9 @@ struct Settings: View {
     @Binding private var mute: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) var openURL
-    @State private var paths: [String] = []
+    @State private var paths = [String]()
     @State private var characters = [(String?, String, Bool, CGImage?, Bool)]()
-    @State private var purchased: Set<String> = []
+    @State private var purchased = Set<String>()
     @State private var isRestoring = false
     @State private var color: Color
     private let scaleRange: ClosedRange<Double>
@@ -8500,8 +8541,8 @@ struct Settings: View {
     
     private func load() async -> ([String], [(String?, String, String, CGImage?)]) {
         return await Task.detached {
-            var purchased: [String] = []
-            var resolvedPaths: [(String?, String, String, CGImage?)] = []
+            var purchased = [String]()
+            var resolvedPaths = [(String?, String, String, CGImage?)]()
             
             for await verificationResult in Transaction.currentEntitlements {
                 guard case .verified(let transaction) = verificationResult else {
@@ -8516,7 +8557,7 @@ struct Settings: View {
             if let window = await UIApplication.shared.connectedScenes.first as? UIWindowScene {
                 let scale = Int(round(await window.screen.scale))
                 let parser = Script.Parser()
-                var languages: [String?] = []
+                var languages = [String?]()
                 
                 parser.excludeSequences = true
                 
@@ -8530,7 +8571,7 @@ struct Settings: View {
                     let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
                     let documentsPath = documentsUrl.path(percentEncoded: false)
                     var urlQueue: [(URL, String)] = [(documentsUrl, "Documents")]
-                    var directories: [String] = []
+                    var directories = [String]()
                     
                     if !FileManager.default.fileExists(atPath: documentsPath) {
                         try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
@@ -8553,7 +8594,7 @@ struct Settings: View {
                     
                     for directory in directories {
                         if let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl.appending(path: directory, directoryHint: .isDirectory), includingPropertiesForKeys: [.nameKey], options: .skipsHiddenFiles) {
-                            var paths: [String: [(URL, String, String?, String?, String, String?)]] = [:]
+                            var paths = [String: [(URL, String, String?, String?, String, String?)]]()
                             
                             for url in urls {
                                 if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.xml$/) {
@@ -8712,7 +8753,7 @@ struct Settings: View {
                 }
                 
                 for resouce in ["Merku", "Milch"] {
-                    var paths: [String: [(String, String, String?, String?, String, String?)]] = [:]
+                    var paths = [String: [(String, String, String?, String?, String, String?)]]()
                     
                     for path in Bundle.main.paths(forResourcesOfType: "xml", inDirectory: resouce) {
                         let input = URL(filePath: path).deletingPathExtension().lastPathComponent
