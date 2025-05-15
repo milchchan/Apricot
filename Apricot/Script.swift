@@ -11,11 +11,11 @@ import CryptoKit
 
 final public class Script: NSObject, ObservableObject {
     public static let shared = Script()
-    @Published public var words: [Word] = []
-    @Published public var attributes: [String] = []
-    @Published public var scores: [String: (Double, [String]?, String?, Date)] = [:]
-    public var characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])] = []
-    public var likes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]] = [:]
+    @Published public var words = [Word]()
+    @Published public var attributes = [String]()
+    @Published public var scores = [String: (Double, [String]?, String?, Date)]()
+    public var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])]()
+    public var likes = [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]]()
     private let runtime = Script.Runtime()
     public var states: [String: String] {
         get {
@@ -89,7 +89,7 @@ final public class Script: NSObject, ObservableObject {
                             var name: String? = nil
                             var content: String? = nil
                             var language: String? = nil
-                            var attributes: [(name: String?, start: Int, end: Int)] = []
+                            var attributes = [(name: String?, start: Int, end: Int)]()
                             var date: Date? = nil
                             
                             if let value = likeObject["name"] as? String {
@@ -150,9 +150,9 @@ final public class Script: NSObject, ObservableObject {
                 }
                 
                 if let data = try? file.readToEnd(), let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [Any] {
-                    var words: [Word] = []
-                    var documents: [[String]] = []
-                    var metadata: [([[String]?], String?, Date)] = []
+                    var words = [Word]()
+                    var documents = [[String]]()
+                    var metadata = [([[String]?], String?, Date)]()
                     
                     for word in self.words {
                         if word.attributes == nil || !word.attributes!.isEmpty {
@@ -165,7 +165,7 @@ final public class Script: NSObject, ObservableObject {
                             var id: Int? = nil
                             var name: String? = nil
                             var content: String? = nil
-                            var attributes: [(name: String?, start: Int, end: Int)] = []
+                            var attributes = [(name: String?, start: Int, end: Int)]()
                             var language: String? = nil
                             var date: Date? = nil
                             
@@ -237,8 +237,8 @@ final public class Script: NSObject, ObservableObject {
                         for like in likes {
                             if !like.attributes.isEmpty {
                                 var index = 0
-                                var document: [String] = []
-                                var annotations: [[String]?] = []
+                                var document = [String]()
+                                var annotations = [[String]?]()
                                 
                                 while index < like.content.count {
                                     var maxEnd = index
@@ -252,7 +252,7 @@ final public class Script: NSObject, ObservableObject {
                                     }
                                     
                                     if index != maxEnd {
-                                        var attributes: [String] = []
+                                        var attributes = [String]()
                                         
                                         for attribute in like.attributes {
                                             if attribute.end == maxEnd, let name = attribute.name, !attributes.contains(name) {
@@ -297,11 +297,11 @@ final public class Script: NSObject, ObservableObject {
                     if !documents.isEmpty {
                         let scores = self.computeBM25(documents: documents)
                         let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
-                        var recentLikes: [([String: (Double, [String]?)], String?, Date)] = []
+                        var recentLikes = [([String: (Double, [String]?)], String?, Date)]()
                         
                         for i in 0..<documents.count {
                             if metadata[i].2 > yesterday {
-                                var temp: [String: (Double, [String]?)] = [:]
+                                var temp = [String: (Double, [String]?)]()
                                 
                                 for (key, value) in scores[i] {
                                     for j in 0..<documents[i].count {
@@ -319,7 +319,7 @@ final public class Script: NSObject, ObservableObject {
                         
                         if recentLikes.isEmpty {
                             for i in 0..<documents.count {
-                                var temp: [String: (Double, [String]?)] = [:]
+                                var temp = [String: (Double, [String]?)]()
                                 
                                 for (key, value) in scores[i] {
                                     for j in 0..<documents[i].count {
@@ -370,7 +370,7 @@ final public class Script: NSObject, ObservableObject {
     }
     
     public static func resolve(directory: String) -> [String] {
-        var paths: [String: [(String, String?)]] = [:]
+        var paths = [String: [(String, String?)]]()
         let parser = Parser()
         
         parser.excludeSequences = true
@@ -447,7 +447,7 @@ final public class Script: NSObject, ObservableObject {
         
         if let preferredLanguage = Locale.preferredLanguages.first {
             if let languageCode = Locale(identifier: preferredLanguage).language.languageCode {
-                var tempPaths: [String] = []
+                var tempPaths = [String]()
                 
                 for value in paths.values {
                     for tuple in value {
@@ -537,14 +537,14 @@ final public class Script: NSObject, ObservableObject {
         
         let tempJson = json
         let data = await Task.detached {
-            var likes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]] = [:]
-            var tempLikes: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]] = [:]
+            var likes = [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]]()
+            var tempLikes = [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]]()
             var idSet = Set<Int>()
-            var words: [Word] = []
+            var words = [Word]()
             var isUpdated = false
-            var documents: [[String]] = []
-            var metadata: [([[String]?], String?, Date)] = []
-            var data: [String: (Double, [String]?, String?, Date)] = [:]
+            var documents = [[String]]()
+            var metadata = [([[String]?], String?, Date)]()
+            var data = [String: (Double, [String]?, String?, Date)]()
             
             for (key, value) in self.likes {
                 for like in value {
@@ -575,7 +575,7 @@ final public class Script: NSObject, ObservableObject {
                     var name: String? = nil
                     var content: String? = nil
                     var language: String? = nil
-                    var attributes: [(name: String?, start: Int, end: Int)] = []
+                    var attributes = [(name: String?, start: Int, end: Int)]()
                     var date: Date? = nil
                     
                     if let value = likeObject["id"] as? Int {
@@ -656,8 +656,8 @@ final public class Script: NSObject, ObservableObject {
                 for like in value {
                     if !like.attributes.isEmpty {
                         var index = 0
-                        var document: [String] = []
-                        var annotations: [[String]?] = []
+                        var document = [String]()
+                        var annotations = [[String]?]()
                         
                         while index < like.content.count {
                             var maxEnd = index
@@ -671,7 +671,7 @@ final public class Script: NSObject, ObservableObject {
                             }
                             
                             if index != maxEnd {
-                                var attributes: [String] = []
+                                var attributes = [String]()
                                 
                                 for attribute in like.attributes {
                                     if attribute.end == maxEnd, let name = attribute.name, !attributes.contains(name) {
@@ -716,11 +716,11 @@ final public class Script: NSObject, ObservableObject {
             if !documents.isEmpty {
                 let scores = self.computeBM25(documents: documents)
                 let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
-                var recentLikes: [([String: (Double, [String]?)], String?, Date)] = []
+                var recentLikes = [([String: (Double, [String]?)], String?, Date)]()
                 
                 for i in 0..<documents.count {
                     if metadata[i].2 > yesterday {
-                        var temp: [String: (Double, [String]?)] = [:]
+                        var temp = [String: (Double, [String]?)]()
                         
                         for (key, value) in scores[i] {
                             for j in 0..<documents[i].count {
@@ -738,7 +738,7 @@ final public class Script: NSObject, ObservableObject {
                 
                 if recentLikes.isEmpty {
                     for i in 0..<documents.count {
-                        var temp: [String: (Double, [String]?)] = [:]
+                        var temp = [String: (Double, [String]?)]()
                         
                         for (key, value) in scores[i] {
                             for j in 0..<documents[i].count {
@@ -869,15 +869,15 @@ final public class Script: NSObject, ObservableObject {
     private func computeBM25(documents: [[String]], k1: Double = 1.2, b: Double = 0.75) -> [[String: Double]] {
         // Okapi BM25
         // Stephen E. Robertson, Steve Walker, Susan Jones, Micheline Hancock-Beaulieu, and Mike Gatford. Okapi at TREC-3. In Proceedings of the Third Text REtrieval Conference (TREC 1994). Gaithersburg, USA, November 1994.
-        var bags: [[String: Int]] = []
+        var bags = [[String: Int]]()
         var tokenSet = Set<String>()
-        var idf: [String: Double] = [:] // Inverse document frequency
+        var idf = [String: Double]() // Inverse document frequency
         var avgdl = 0.0 // Average document length
-        var d: [(tf: [String: Double], dl: Double)] = []
-        var bm25: [[String: Double]] = []
+        var d = [(tf: [String: Double], dl: Double)]()
+        var bm25 = [[String: Double]]()
         
         for document in documents {
-            var bow: [String: Int] = [:] // Bag-of-words
+            var bow = [String: Int]() // Bag-of-words
             
             for token in document {
                 if let count = bow[token] {
@@ -895,7 +895,7 @@ final public class Script: NSObject, ObservableObject {
         }
         
         for bag in bags {
-            var tf: [String: Double] = [:] // Term frequency
+            var tf = [String: Double]() // Term frequency
             var dl = 0.0 // Document length
             
             for (key, value) in bag {
@@ -927,7 +927,7 @@ final public class Script: NSObject, ObservableObject {
         avgdl /= Double(bags.count)
         
         for (tf, dl) in d {
-            var scores: [String: Double] = [:]
+            var scores = [String: Double]()
             
             for token in tokenSet {
                 if let f = tf[token] {
@@ -945,8 +945,8 @@ final public class Script: NSObject, ObservableObject {
     }
     
     public class Runtime: NSObject {
-        public var states: [String: String] = [:]
-        public var queue: [(String, Sequence)] = []
+        public var states = [String: String]()
+        public var queue = [(String, Sequence)]()
         private let innerSemaphore = Semaphore(value: 1)
         private let outerSemaphore = Semaphore(value: 1)
         
@@ -1669,7 +1669,7 @@ final public class Script: NSObject, ObservableObject {
                 let epsilon = powl(10, -6)
                 var preparedSequences = [Sequence]()
                 var data = [Int: [(Sequence, ([Word], Set<String>))]]()
-                var reverseDictionary: [String: [(String, [String])]] = [:]
+                var reverseDictionary = [String: [(String, [String])]]()
                 
                 for (key, value) in scores {
                     if let attributes = value.1 {
@@ -1687,7 +1687,7 @@ final public class Script: NSObject, ObservableObject {
                 repeat {
                     var i = 0
                     var wordQueue: [Word]? = nil
-                    var attributeSet: Set<String> = []
+                    var attributeSet = Set<String>()
                     var isAvailable = true
                     
                     await self.outerSemaphore.wait()
@@ -1807,9 +1807,9 @@ final public class Script: NSObject, ObservableObject {
                         
                         return false
                     }) == !attributeSet.isEmpty {
-                        var replacementCache: [String: (text: String, attributes: [String])] = [:]
-                        var tempAttributeSet: Set<String> = []
-                        var outputs: [([(text: String, attributes: [String]?)], [String: (text: String, attributes: [String])], Double)] = []
+                        var replacementCache = [String: (text: String, attributes: [String])]()
+                        var tempAttributeSet = Set<String>()
+                        var outputs = [([(text: String, attributes: [String]?)], [String: (text: String, attributes: [String])], Double)]()
                         
                         for sequence in preparedSequences {
                             var segments = [Any?]()
@@ -1846,9 +1846,9 @@ final public class Script: NSObject, ObservableObject {
                                                 
                                                 output.removeAll()
                                             } else if let regex = try? Regex(attributePattern) {
-                                                var selections: [(String, [String])] = []
-                                                var probabilities: [Double] = []
-                                                var candidates: [([(text: String, attributes: [String]?)], [String: (text: String, attributes: [String])], (text: String, attributes: [String]), Double)] = []
+                                                var selections = [(String, [String])]()
+                                                var probabilities = [Double]()
+                                                var candidates = [([(text: String, attributes: [String]?)], [String: (text: String, attributes: [String])], (text: String, attributes: [String]), Double)]()
                                                 
                                                 for word in words {
                                                     if let attributes = word.attributes {
@@ -1923,7 +1923,7 @@ final public class Script: NSObject, ObservableObject {
                                         }
                                     } while !input.isEmpty
                                     
-                                    var probabilities: [Double] = []
+                                    var probabilities = [Double]()
                                     
                                     for (_, _, probability) in outputs {
                                         probabilities.append(probability)
@@ -2082,8 +2082,8 @@ final public class Script: NSObject, ObservableObject {
     public class Parser: NSObject, XMLParserDelegate {
         public var excludeSequences = false
         private var workingStack: [Any]? = nil
-        private var characters: [(id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))] = []
-        private var attributes: [String] = []
+        private var characters = [(id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
+        private var attributes = [String]()
         
         public func parse(path: String) -> ([(id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))], [String]) {
             if let file = FileHandle(forReadingAtPath: path) {
@@ -2557,8 +2557,8 @@ final public class Script: NSObject, ObservableObject {
                 let obj = queue.removeFirst()
                 
                 if let animation = obj as? Animation {
-                    var cachedAnimations: [Int: [Animation]] = [:]
-                    var animations1: [Animation] = []
+                    var cachedAnimations = [Int: [Animation]]()
+                    var animations1 = [Animation]()
                     
                     cachedAnimations[animation.z] = [animation]
                     
@@ -2579,7 +2579,7 @@ final public class Script: NSObject, ObservableObject {
                     
                     for key in cachedAnimations.keys {
                         repeat {
-                            var animationQueue: [Animation] = []
+                            var animationQueue = [Animation]()
                             let type = cachedAnimations[key]!.first!.type
                             var indexes = [Int]()
                             
@@ -2603,7 +2603,7 @@ final public class Script: NSObject, ObservableObject {
                             
                             repeat {
                                 let dequeuedAnimation = animationQueue.removeFirst()
-                                var animations2: [Animation] = []
+                                var animations2 = [Animation]()
                                 
                                 while !animationQueue.isEmpty {
                                     if dequeuedAnimation.repeats == animationQueue.first!.repeats {
@@ -2642,7 +2642,7 @@ final public class Script: NSObject, ObservableObject {
     
     private actor Semaphore {
         private var count: Int
-        private var waiters: [CheckedContinuation<Void, Never>] = []
+        private var waiters = [CheckedContinuation<Void, Never>]()
         
         init(value: Int = 0) {
             self.count = value

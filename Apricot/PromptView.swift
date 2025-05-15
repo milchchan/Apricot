@@ -218,8 +218,8 @@ class PromptView: UIView {
                     let lineHeight = self.frame.size.height
                     let font = CTFontCreateWithFontDescriptor(f.fontDescriptor as CTFontDescriptor, f.pointSize, nil)
                     let margin = ceil(f.pointSize / 2.0)
-                    var current: [Segment] = []
-                    var target: [(text: String, highlight: Bool, size: CGSize)] = []
+                    var current = [Segment]()
+                    var target = [(text: String, highlight: Bool, size: CGSize)]()
                     var index = 0
                     var width = 0.0
                     var maxWidth = 0.0

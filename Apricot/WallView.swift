@@ -19,10 +19,10 @@ protocol WallDelegate: AnyObject {
 class WallView: UIView {
     weak var delegate: (any WallDelegate)? = nil
     private var tracker: (active: Bool, edge: Bool, movement: (x: Double, y: Double), velocity: (x: Double, y: Double)) = (active: false, edge: true, movement: (x: 0.0, y: 0.0), velocity: (x: 0.0, y: 0.0))
-    private var pinches: [(touches: [UITouch], center: (x: Double, y: Double), movement: (x: Double, y: Double), radius: Double, velocity: Double, current:(x: Double, y: Double, radius: Double))] = []
-    private var touches: [(touch: UITouch, location: (x: Double, y: Double), movement: (x: Double, y: Double), velocity: (x: Double, y: Double), timestamp: CFTimeInterval)] = []
-    private var blocks: [(running: Bool, time: Double, duration: Double, type: (elapsed: Double, speed: Double, reverse: Bool, buffer: String, count: Int), text: String, attributes: [(start: Int, end: Int)], current: String, safe: [(text: String, framesetter: CTFramesetter?, size: CGSize)], scroll: (touch: UITouch?, step: Double), shake: (time: Double?, x: Double), elapsed: Double, rtl: Bool)] = []
-    private var lines: [(text: String, attributes: [(start: Int, end: Int)])] = []
+    private var pinches = [(touches: [UITouch], center: (x: Double, y: Double), movement: (x: Double, y: Double), radius: Double, velocity: Double, current:(x: Double, y: Double, radius: Double))]()
+    private var touches = [(touch: UITouch, location: (x: Double, y: Double), movement: (x: Double, y: Double), velocity: (x: Double, y: Double), timestamp: CFTimeInterval)]()
+    private var blocks = [(running: Bool, time: Double, duration: Double, type: (elapsed: Double, speed: Double, reverse: Bool, buffer: String, count: Int), text: String, attributes: [(start: Int, end: Int)], current: String, safe: [(text: String, framesetter: CTFramesetter?, size: CGSize)], scroll: (touch: UITouch?, step: Double), shake: (time: Double?, x: Double), elapsed: Double, rtl: Bool)]()
+    private var lines = [(text: String, attributes: [(start: Int, end: Int)])]()
     private var isInvalidated = false
     private var isReloading = false
     private var isLoading = false
@@ -41,10 +41,10 @@ class WallView: UIView {
     private var blindLayer: CALayer? = nil
     private var imageLayer: CALayer? = nil
     private var backgroundLayer: CALayer? = nil
-    private var particles: [(layer: CALayer?, time: Double, delay: Double, duration: Double)] = []
+    private var particles = [(layer: CALayer?, time: Double, delay: Double, duration: Double)]()
     private var requestParticles = 0
-    private var fontCache: [String: CTFont] = [:]
-    private var textCache: [String: (CTFramesetter, CGSize, CGPath?)] = [:]
+    private var fontCache = [String: CTFont]()
+    private var textCache = [String: (CTFramesetter, CGSize, CGPath?)]()
     private let backgroundPattern = UIImage(named: "Stripes")!
     private let permutation = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9, 129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228, 251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180]
     var accentColor: CGColor? {
@@ -174,17 +174,17 @@ class WallView: UIView {
                     let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height) * window.screen.scale
                     let data = await Task.detached {
                         var data: ([(image: CGImage, delay: Double)]?, [(image: CGImage?, delay: Double)]?) = (nil, nil)
-                        var caches: [String: Data] = [:]
+                        var caches = [String: Data]()
                         var minX = 0.0
                         var minY = 0.0
                         var maxWidth = 0.0
                         var maxHeight = 0.0
                         var maxDuration = 0.0
-                        var animations: [[(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]] = []
+                        var animations = [[(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]]()
                         
                         for animation in frames {
                             if !animation.isEmpty {
-                                var tempFrames: [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)] = []
+                                var tempFrames = [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]()
                                 var duration = 0.0
                                 
                                 for frame in animation {
@@ -405,9 +405,9 @@ class WallView: UIView {
                         
                         if !animations.isEmpty {
                             var time = 0.0
-                            var splittedAnimations: [(layers: [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)], delay: Double)] = []
-                            var unscaledCompositedFrames: [(image: CGImage, delay: Double)] = []
-                            var scaledCompositedFrames: [(image: CGImage?, delay: Double)] = []
+                            var splittedAnimations = [(layers: [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)], delay: Double)]()
+                            var unscaledCompositedFrames = [(image: CGImage, delay: Double)]()
+                            var scaledCompositedFrames = [(image: CGImage?, delay: Double)]()
                             let imageScale: Double
                             let width: Double
                             let height: Double
@@ -433,7 +433,7 @@ class WallView: UIView {
                             }
                             
                             repeat {
-                                var layers: [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)] = []
+                                var layers = [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)]()
                                 var minDelay: Double = Double.greatestFiniteMagnitude
                                 
                                 for animation in animations {
@@ -671,7 +671,7 @@ class WallView: UIView {
                                 
                                 if let index {
                                     var pixels = [[Double]]()
-                                    var rgb: [Int: [Double]] = [:]
+                                    var rgb = [Int: [Double]]()
                                     
                                     for y in 0..<resizedImage.height {
                                         for x in 0..<resizedImage.width {
@@ -805,7 +805,7 @@ class WallView: UIView {
             var centerX = 0.0
             var centerY = 0.0
             var sum = 0.0
-            var tempTouches: [UITouch] = []
+            var tempTouches = [UITouch]()
             
             self.tracker.active = false
             self.tracker.velocity.x = 0.0
@@ -1472,7 +1472,7 @@ class WallView: UIView {
                     let fontName = "Futura-Bold"
                     let font: CTFont
                     let mutablePath = CGMutablePath()
-                    var paths: [CGPath] = []
+                    var paths = [CGPath]()
                     
                     if let cachedFont = self.fontCache[fontName] {
                         if CTFontGetSize(cachedFont) == fontSize {
@@ -1488,8 +1488,8 @@ class WallView: UIView {
                     
                     for (i, block) in self.blocks.enumerated() {
                         if block.running && !block.current.isEmpty {
-                            var current: [Segment] = []
-                            var target: [(text: String, size: CGSize)] = []
+                            var current = [Segment]()
+                            var target = [(text: String, size: CGSize)]()
                             var index = 0
                             var currentWidth = 0.0
                             var targetWidth = 0.0
@@ -2048,7 +2048,7 @@ class WallView: UIView {
             }
             
             if !self.particles.isEmpty {
-                var imageCache: [Int:(CGImage?, CGSize)] = [:]
+                var imageCache = [Int:(CGImage?, CGSize)]()
                 
                 for i in stride(from: self.particles.count - 1, through: 0, by: -1) {
                     var particle = self.particles[i]
