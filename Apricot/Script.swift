@@ -378,7 +378,7 @@ final public class Script: NSObject, ObservableObject {
         if let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
             if let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl.appending(path: directory, directoryHint: .isDirectory), includingPropertiesForKeys: [.nameKey], options: .skipsHiddenFiles) {
                 for url in urls {
-                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.xml$/) {
+                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.(?:json|xml)$/) {
                         let key = String(match.output.1)
                         let path = url.path(percentEncoded: false)
                         
@@ -2087,15 +2087,131 @@ final public class Script: NSObject, ObservableObject {
         
         public func parse(path: String) -> ([(id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))], [String]) {
             if let file = FileHandle(forReadingAtPath: path) {
+                var isXml = false
+                
                 defer {
                     try? file.close()
                 }
                 
-                if let data = try? file.readToEnd() {
-                    let parser = XMLParser(data: data)
+                if let data = try? file.read(upToCount: 4096) {
+                    var text = String(decoding: data, as: UTF8.self)
                     
-                    parser.delegate = self
-                    parser.parse()
+                    text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    if text.hasPrefix("\u{FEFF}") {
+                        text.removeFirst()
+                    }
+                    
+                    if text.hasPrefix("<?xml") {
+                        isXml = true
+                    } else if let first = text.first, first == "<" {
+                        isXml = true
+                    }
+                    
+                    try? file.seek(toOffset: 0)
+                }
+                
+                if let data = try? file.readToEnd() {
+                    if isXml {
+                        let parser = XMLParser(data: data)
+                        
+                        parser.delegate = self
+                        parser.parse()
+                    } else if let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any] {
+                        if let name = jsonRoot["name"] as? String, let width = jsonRoot["width"] as? Double, let height = jsonRoot["height"] as? Double {
+                            var sequences = [Sequence]()
+                            
+                            if !self.excludeSequences, let animations = jsonRoot["animations"] as? [[String: Any]] {
+                                for animation in animations {
+                                    let sequence = Sequence(name: animation["name"] as? String, state: animation["state"] as? String)
+                                    let repeats: UInt
+                                    var caches = [String: (Int, String?, [Sprite])]()
+                                    var animations = [Animation]()
+                                    
+                                    if let value = animation["repeats"] as? Double {
+                                        repeats = UInt(value)
+                                    } else {
+                                        repeats = 1
+                                    }
+                                    
+                                    if let frames = animation["frames"] as? [[String: Any]] {
+                                        for frame in frames {
+                                            var sprite = Sprite()
+                                            let z: Int
+                                            let type: String?
+                                            let key: String
+                                            
+                                            if let x = frame["x"] as? Double {
+                                                sprite.location.x = x
+                                            }
+                                            
+                                            if let y = frame["y"] as? Double {
+                                                sprite.location.y = y
+                                            }
+                                            
+                                            if let width = frame["width"] as? Double {
+                                                sprite.size.width = width
+                                            }
+                                            
+                                            if let height = frame["height"] as? Double {
+                                                sprite.size.height = height
+                                            }
+                                            
+                                            if let opacity = frame["opacity"] as? Double {
+                                                sprite.opacity = opacity
+                                            }
+                                            
+                                            if let delay = frame["delay"] as? Double {
+                                                sprite.delay = delay
+                                            }
+                                            
+                                            if let url = frame["url"] as? String {
+                                                sprite.path = url
+                                            }
+                                            
+                                            if let value = frame["z"] as? Double {
+                                                z = Int(value)
+                                            } else {
+                                                z = 0
+                                            }
+                                            
+                                            if let value = frame["type"] as? String {
+                                                type = value
+                                                key = "\(z)&\(value)"
+                                            } else {
+                                                type = nil
+                                                key = "\(z)"
+                                            }
+                                            
+                                            if let tuple = caches[key] {
+                                                var sprites = tuple.2
+                                                
+                                                sprites.append(sprite)
+                                                caches[key] = (tuple.0, tuple.1, sprites)
+                                            } else {
+                                                caches[key] = (z, type, [sprite])
+                                            }
+                                        }
+                                    }
+                                    
+                                    for (_, value) in caches {
+                                        let a = Animation(frames: value.2)
+                                        
+                                        a.repeats = repeats
+                                        a.z = value.0
+                                        a.type = value.1
+                                        
+                                        animations.append(a)
+                                    }
+                                    
+                                    sequence.append(animations)
+                                    sequences.append(sequence)
+                                }
+                            }
+                            
+                            self.characters.append((id: nil, name: name, location: CGPoint(x: jsonRoot["x"] as? Double ?? 0.0, y: jsonRoot["y"] as? Double ?? 0.0), size: CGSize(width: width, height: height), scale: jsonRoot["scale"] as? Double ?? 1.0, language: jsonRoot["language"] as? String, preview: jsonRoot["preview"] as? String, prompt: jsonRoot["prompt"] as? String, sequences: sequences, types: [:], insets: (top: Double.greatestFiniteMagnitude, left: Double.greatestFiniteMagnitude, bottom: -Double.greatestFiniteMagnitude, right: -Double.greatestFiniteMagnitude)))
+                        }
+                    }
                 }
             }
             
