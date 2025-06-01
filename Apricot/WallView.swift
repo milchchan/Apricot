@@ -27,7 +27,6 @@ class WallView: UIView {
     private var isReloading = false
     private var isLoading = false
     private var isFetched = false
-    private var time = 0.0
     private var revealStep: Double = 0.0
     private var loadingStep: Double = -1.0
     private var fetchedFrames: [(image: CGImage?, delay: Double)]? = nil
@@ -66,6 +65,7 @@ class WallView: UIView {
         let blindLayer = CALayer()
         
         self.maskLayer = CAShapeLayer()
+        self.maskLayer!.frame = CGRect.zero
         self.maskLayer!.fillRule = .nonZero
         self.maskLayer!.strokeColor = UIColor.clear.cgColor
         self.maskLayer!.lineWidth = 0.0
@@ -117,6 +117,7 @@ class WallView: UIView {
         visualEffectView.translatesAutoresizingMaskIntoConstraints = false
         visualEffectView.isUserInteractionEnabled = false
         visualEffectView.backgroundColor = .clear
+        visualEffectView.layer.mask = self.maskLayer
         visualEffectView.layer.addSublayer(self.backgroundLayer!)
         visualEffectView.contentView.isUserInteractionEnabled = false
         visualEffectView.contentView.layer.addSublayer(self.imageLayer!)
@@ -1451,361 +1452,354 @@ class WallView: UIView {
                 }
             }
             
-            if let subview = self.subviews.first(where: { $0 is UIVisualEffectView }), let maskLayer = self.maskLayer {
-                var renderRequired = false
+            if let maskLayer = self.maskLayer {
+                typealias Segment = (text: String, framesetter: CTFramesetter?, size: CGSize)
+                let blackColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])
+                let lineHeight = self.frame.size.height / Double(self.blocks.count)
+                let fontSize = ceil(self.blocks.count == 1 ? lineHeight : lineHeight / 1.5)
+                let margin = ceil(fontSize / 2.0)
+                let fontName = "Futura-Bold"
+                let font: CTFont
+                let mutablePath = CGMutablePath()
+                var paths = [CGPath]()
                 
-                self.time += deltaTime
-                
-                if self.time >= deltaTime * 2.0 {
-                    self.time = 0.0
-                    renderRequired = true
-                } else if maskLayer.frame.size.width != self.frame.size.width || maskLayer.frame.size.height != self.frame.size.height {
-                    renderRequired = true
-                }
-                
-                if renderRequired {
-                    typealias Segment = (text: String, framesetter: CTFramesetter?, size: CGSize)
-                    let blackColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])
-                    let lineHeight = self.frame.size.height / Double(self.blocks.count)
-                    let fontSize = ceil(self.blocks.count == 1 ? lineHeight : lineHeight / 1.5)
-                    let margin = ceil(fontSize / 2.0)
-                    let fontName = "Futura-Bold"
-                    let font: CTFont
-                    let mutablePath = CGMutablePath()
-                    var paths = [CGPath]()
-                    
-                    if let cachedFont = self.fontCache[fontName] {
-                        if CTFontGetSize(cachedFont) == fontSize {
-                            font = cachedFont
-                        } else {
-                            font = CTFontCreateWithName(fontName as CFString, fontSize, nil)
-                            self.fontCache[fontName] = font
-                        }
+                if let cachedFont = self.fontCache[fontName] {
+                    if CTFontGetSize(cachedFont) == fontSize {
+                        font = cachedFont
                     } else {
                         font = CTFontCreateWithName(fontName as CFString, fontSize, nil)
                         self.fontCache[fontName] = font
                     }
-                    
-                    for (i, block) in self.blocks.enumerated() {
-                        if block.running && !block.current.isEmpty {
-                            var current = [Segment]()
-                            var target = [(text: String, size: CGSize)]()
-                            var index = 0
-                            var currentWidth = 0.0
-                            var targetWidth = 0.0
-                            var offset = 0.0
-                            
-                            while index < block.current.count {
-                                if let attribute = block.attributes.first(where: { index >= $0.start && index < $0.end }) {
-                                    if attribute.end <= block.current.count {
-                                        current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: attribute.end)]), framesetter: nil, size: CGSize.zero))
-                                        index = attribute.end
-                                    } else {
-                                        current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: block.current.count)]), framesetter: nil, size: CGSize.zero))
-                                        
-                                        break
-                                    }
-                                } else {
-                                    var minimum: (start: Int?, distance: Int) = (start: nil, distance: Int.max)
-                                    
-                                    for attribute in block.attributes {
-                                        let distance = attribute.start - index
-                                        
-                                        if distance >= 0 && distance < minimum.distance {
-                                            minimum.distance = distance
-                                            minimum.start = attribute.start
-                                        }
-                                    }
-                                    
-                                    if let start = minimum.start {
-                                        if start <= block.current.count {
-                                            current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: start)]), framesetter: nil, size: CGSize.zero))
-                                            index = start
-                                        } else {
-                                            current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: block.current.count)]), framesetter: nil, size: CGSize.zero))
-                                            
-                                            break
-                                        }
-                                    } else {
-                                        current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: block.current.count)]), framesetter: nil, size: CGSize.zero))
-                                        
-                                        break
-                                    }
-                                }
-                            }
-                            
-                            for j in 0..<current.count {
-                                var segment = current[j]
-                                let key = "\(fontName)&\(fontSize)&\(segment.text)"
-                                var frameSize: CGSize
-                                
-                                if let value = self.textCache[key] {
-                                    segment.framesetter = value.0
-                                    frameSize = value.1
-                                } else {
-                                    let framesetter = self.createFramesetter(font: font, color: blackColor!, text: segment.text)
-                                    var spaces = 0
-                                    
-                                    segment.framesetter = framesetter
-                                    frameSize = CTFramesetterSuggestFrameSizeWithConstraints(framesetter, CFRange(), nil, CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), nil)
-                                    
-                                    for char in segment.text.reversed() {
-                                        if char.isWhitespace {
-                                            spaces += 1
-                                        } else {
-                                            break
-                                        }
-                                    }
-                                    
-                                    if spaces > 0 {
-                                        var spaceCharacter: UniChar = 0x0020
-                                        var glyph: CGGlyph = 0
-                                        
-                                        if CTFontGetGlyphsForCharacters(font, &spaceCharacter, &glyph, 1) {
-                                            var advance = CGSize()
-                                            
-                                            CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
-                                            
-                                            frameSize.width += advance.width * Double(spaces)
-                                        }
-                                    }
-                                }
-                                
-                                currentWidth += ceil(frameSize.width)
-                                segment.size = frameSize
-                                current[j] = segment
-                            }
-                            
-                            index = 0
-                            
-                            while index < block.text.count {
-                                if let attribute = block.attributes.first(where: { index >= $0.start && index < $0.end }) {
-                                    target.append((text: String(block.text[block.text.index(block.text.startIndex, offsetBy: index)..<block.text.index(block.text.startIndex, offsetBy: attribute.end)]), size: CGSize.zero))
+                } else {
+                    font = CTFontCreateWithName(fontName as CFString, fontSize, nil)
+                    self.fontCache[fontName] = font
+                }
+                
+                for (i, block) in self.blocks.enumerated() {
+                    if block.running && !block.current.isEmpty {
+                        var current = [Segment]()
+                        var target = [(text: String, size: CGSize)]()
+                        var index = 0
+                        var currentWidth = 0.0
+                        var targetWidth = 0.0
+                        var offset = 0.0
+                        
+                        while index < block.current.count {
+                            if let attribute = block.attributes.first(where: { index >= $0.start && index < $0.end }) {
+                                if attribute.end <= block.current.count {
+                                    current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: attribute.end)]), framesetter: nil, size: CGSize.zero))
                                     index = attribute.end
                                 } else {
-                                    var minimum: (start: Int?, distance: Int) = (start: nil, distance: Int.max)
+                                    current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: block.current.count)]), framesetter: nil, size: CGSize.zero))
                                     
-                                    for attribute in block.attributes {
-                                        let distance = attribute.start - index
-                                        
-                                        if distance >= 0 && distance < minimum.distance {
-                                            minimum.distance = distance
-                                            minimum.start = attribute.start
-                                        }
+                                    break
+                                }
+                            } else {
+                                var minimum: (start: Int?, distance: Int) = (start: nil, distance: Int.max)
+                                
+                                for attribute in block.attributes {
+                                    let distance = attribute.start - index
+                                    
+                                    if distance >= 0 && distance < minimum.distance {
+                                        minimum.distance = distance
+                                        minimum.start = attribute.start
                                     }
-                                    
-                                    if let start = minimum.start {
-                                        target.append((text: String(block.text[block.text.index(block.text.startIndex, offsetBy: index)..<block.text.index(block.text.startIndex, offsetBy: start)]), size: CGSize.zero))
+                                }
+                                
+                                if let start = minimum.start {
+                                    if start <= block.current.count {
+                                        current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: start)]), framesetter: nil, size: CGSize.zero))
                                         index = start
                                     } else {
-                                        target.append((text: String(block.text[block.text.index(block.text.startIndex, offsetBy: index)..<block.text.index(block.text.startIndex, offsetBy: block.text.count)]), size: CGSize.zero))
+                                        current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: block.current.count)]), framesetter: nil, size: CGSize.zero))
                                         
                                         break
                                     }
-                                }
-                            }
-                            
-                            for j in 0..<target.count {
-                                var segment = target[j]
-                                let key = "\(fontName)&\(fontSize)&\(segment.text)"
-                                var frameSize: CGSize
-                                
-                                if let value = self.textCache[key] {
-                                    frameSize = value.1
                                 } else {
-                                    let framesetter = self.createFramesetter(font: font, color: blackColor!, text: segment.text)
-                                    var spaces = 0
+                                    current.append((text: String(block.current[block.current.index(block.current.startIndex, offsetBy: index)..<block.current.index(block.current.startIndex, offsetBy: block.current.count)]), framesetter: nil, size: CGSize.zero))
                                     
-                                    frameSize = CTFramesetterSuggestFrameSizeWithConstraints(framesetter, CFRange(), nil, CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), nil)
-                                    
-                                    for char in segment.text.reversed() {
-                                        if char.isWhitespace {
-                                            spaces += 1
-                                        } else {
-                                            break
-                                        }
+                                    break
+                                }
+                            }
+                        }
+                        
+                        for j in 0..<current.count {
+                            var segment = current[j]
+                            let key = "\(fontName)&\(fontSize)&\(segment.text)"
+                            var frameSize: CGSize
+                            
+                            if let value = self.textCache[key] {
+                                segment.framesetter = value.0
+                                frameSize = value.1
+                            } else {
+                                let framesetter = self.createFramesetter(font: font, color: blackColor!, text: segment.text)
+                                var spaces = 0
+                                
+                                segment.framesetter = framesetter
+                                frameSize = CTFramesetterSuggestFrameSizeWithConstraints(framesetter, CFRange(), nil, CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), nil)
+                                
+                                for char in segment.text.reversed() {
+                                    if char.isWhitespace {
+                                        spaces += 1
+                                    } else {
+                                        break
                                     }
-                                    
-                                    if spaces > 0 {
-                                        var spaceCharacter: UniChar = 0x0020
-                                        var glyph: CGGlyph = 0
-                                        
-                                        if CTFontGetGlyphsForCharacters(font, &spaceCharacter, &glyph, 1) {
-                                            var advance = CGSize()
-                                            
-                                            CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
-                                            
-                                            frameSize.width += advance.width * Double(spaces)
-                                        }
-                                    }
-                                    
-                                    self.textCache[key] = (framesetter, frameSize, nil)
                                 }
                                 
-                                targetWidth += ceil(frameSize.width)
-                                segment.size = frameSize
-                                target[j] = segment
-                            }
-                            
-                            if currentWidth > targetWidth {
-                                current.removeAll()
-                                current.append(contentsOf: block.safe)
-                            } else {
-                                self.blocks[i].safe = current
-                            }
-                            
-                            let translation = fmod(fmod(block.elapsed, 60.0) / 60.0 + sin(block.scroll.step / 2.0 * .pi), 1.0) * -(targetWidth + margin) + block.shake.x
-                            
-                            if block.rtl {
-                                repeat {
-                                    for _ in 0..<2 {
-                                        var x = 0.0
+                                if spaces > 0 {
+                                    var spaceCharacter: UniChar = 0x0020
+                                    var glyph: CGGlyph = 0
+                                    
+                                    if CTFontGetGlyphsForCharacters(font, &spaceCharacter, &glyph, 1) {
+                                        var advance = CGSize()
                                         
-                                        for segment in current.reversed() {
-                                            if offset - translation - x >= 0 && offset - translation - x - segment.size.width < self.frame.size.width {
-                                                let key = "\(fontName)&\(fontSize)&\(segment.text)"
-                                                let transform = CGAffineTransformConcat(CGAffineTransformMakeTranslation(offset - translation - round(x) - ceil(segment.size.width), self.frame.size.height - round(lineHeight * Double(i) + (lineHeight - segment.size.height) / 2.0)), CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, -1.0), CGAffineTransformMakeTranslation(0.0, self.frame.size.height)))
-                                                
-                                                if let value = self.textCache[key] {
-                                                    if let path = value.2 {
-                                                        mutablePath.addPath(path, transform: transform)
-                                                    } else {
-                                                        let path = self.createTextPath(frame: CTFramesetterCreateFrame(segment.framesetter!, CFRange(), CGPath(rect: CGRect(origin: CGPoint.zero, size: segment.size), transform: nil), nil))
-                                                        
-                                                        mutablePath.addPath(path, transform: transform)
-                                                        self.textCache[key] = (value.0, value.1, path)
-                                                    }
-                                                } else {
-                                                    mutablePath.addPath(self.createTextPath(frame: CTFramesetterCreateFrame(segment.framesetter!, CFRange(), CGPath(rect: CGRect(origin: CGPoint.zero, size: segment.size), transform: nil), nil)), transform: transform)
-                                                }
-                                            }
-                                            
-                                            x += ceil(segment.size.width)
-                                        }
+                                        CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
                                         
-                                        for segment in target {
-                                            offset += ceil(segment.size.width)
-                                        }
-                                        
-                                        offset += margin
+                                        frameSize.width += advance.width * Double(spaces)
                                     }
-                                } while offset - margin < self.frame.size.width * 2.0
-                            } else {
-                                repeat {
-                                    for _ in 0..<2 {
-                                        var x = 0.0
-                                        
-                                        for segment in current {
-                                            if translation + offset + x + segment.size.width >= 0 && translation + offset + x < self.frame.size.width {
-                                                let key = "\(fontName)&\(fontSize)&\(segment.text)"
-                                                let transform = CGAffineTransformConcat(CGAffineTransformMakeTranslation(translation + offset + round(x), self.frame.size.height - round(lineHeight * Double(i) + (lineHeight - segment.size.height) / 2.0)), CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, -1.0), CGAffineTransformMakeTranslation(0.0, self.frame.size.height)))
-                                                
-                                                if let value = self.textCache[key] {
-                                                    if let path = value.2 {
-                                                        mutablePath.addPath(path, transform: transform)
-                                                    } else {
-                                                        let path = self.createTextPath(frame: CTFramesetterCreateFrame(segment.framesetter!, CFRange(), CGPath(rect: CGRect(origin: CGPoint.zero, size: segment.size), transform: nil), nil))
-                                                        
-                                                        mutablePath.addPath(path, transform: transform)
-                                                        self.textCache[key] = (value.0, value.1, path)
-                                                    }
-                                                } else {
-                                                    mutablePath.addPath(self.createTextPath(frame: CTFramesetterCreateFrame(segment.framesetter!, CFRange(), CGPath(rect: CGRect(origin: CGPoint.zero, size: segment.size), transform: nil), nil)), transform: transform)
-                                                }
-                                            }
-                                            
-                                            x += ceil(segment.size.width)
-                                        }
-                                        
-                                        for segment in target {
-                                            offset += ceil(segment.size.width)
-                                        }
-                                        
-                                        offset += margin
-                                    }
-                                } while offset - margin < self.frame.size.width * 2.0
+                                }
                             }
+                            
+                            currentWidth += ceil(frameSize.width)
+                            segment.size = frameSize
+                            current[j] = segment
                         }
-                    }
-                    
-                    for i in stride(from: self.pinches.count - 1, through: 0, by: -1) {
-                        if self.pinches[i].touches.allSatisfy({ (touch: UITouch) -> Bool in self.touches.contains(where: { $0.touch == touch }) }) {
-                            let speed = 2.0
-                            let x = self.pinches[i].center.x + self.pinches[i].movement.x
-                            let y = self.pinches[i].center.y + self.pinches[i].movement.y
-                            let radius = abs(self.pinches[i].radius)
-                            
-                            self.pinches[i].current.x = self.lerp(a: self.pinches[i].current.x, b: x, t: deltaTime * speed)
-                            self.pinches[i].current.y = self.lerp(a: self.pinches[i].current.y, b: y, t: deltaTime * speed)
-                            self.pinches[i].current.radius = self.lerp(a: abs(self.pinches[i].current.radius), b: radius, t: deltaTime * speed)
-                            
-                            if round(self.pinches[i].current.x) == round(x) {
-                                self.pinches[i].current.x = x
-                            }
-                            
-                            if round(self.pinches[i].current.y) == round(y) {
-                                self.pinches[i].current.y = y
-                            }
-                            
-                            if round(self.pinches[i].current.radius) == round(radius) {
-                                self.pinches[i].current.radius = radius
-                            }
-                            
-                            paths.append(CGPath(ellipseIn: CGRect(x: self.pinches[i].current.x - self.pinches[i].current.radius, y: self.pinches[i].current.y - self.pinches[i].current.radius, width: self.pinches[i].current.radius * 2.0, height: self.pinches[i].current.radius * 2.0), transform: nil))
-                        } else {
-                            let epsilon = 0.01
-                            let tension = 50.0
-                            let mass = 1.0
-                            let friction = 5.0
-                            let displacement = self.pinches[i].current.radius
-                            let tensionForce = -tension * displacement
-                            let dampingForce = -friction * self.pinches[i].velocity
-                            let acceleration = (tensionForce + dampingForce) / mass
-                            
-                            self.pinches[i].velocity += acceleration * deltaTime
-                            self.pinches[i].current.radius += self.pinches[i].velocity * deltaTime
-                            
-                            if abs(self.pinches[i].velocity) < epsilon {
-                                self.pinches.remove(at: i)
+                        
+                        index = 0
+                        
+                        while index < block.text.count {
+                            if let attribute = block.attributes.first(where: { index >= $0.start && index < $0.end }) {
+                                target.append((text: String(block.text[block.text.index(block.text.startIndex, offsetBy: index)..<block.text.index(block.text.startIndex, offsetBy: attribute.end)]), size: CGSize.zero))
+                                index = attribute.end
                             } else {
-                                let radius = abs(self.pinches[i].current.radius)
+                                var minimum: (start: Int?, distance: Int) = (start: nil, distance: Int.max)
                                 
-                                paths.append(CGPath(ellipseIn: CGRect(x: self.pinches[i].current.x - radius, y: self.pinches[i].current.y - radius, width: radius * 2.0, height: radius * 2.0), transform: nil))
+                                for attribute in block.attributes {
+                                    let distance = attribute.start - index
+                                    
+                                    if distance >= 0 && distance < minimum.distance {
+                                        minimum.distance = distance
+                                        minimum.start = attribute.start
+                                    }
+                                }
+                                
+                                if let start = minimum.start {
+                                    target.append((text: String(block.text[block.text.index(block.text.startIndex, offsetBy: index)..<block.text.index(block.text.startIndex, offsetBy: start)]), size: CGSize.zero))
+                                    index = start
+                                } else {
+                                    target.append((text: String(block.text[block.text.index(block.text.startIndex, offsetBy: index)..<block.text.index(block.text.startIndex, offsetBy: block.text.count)]), size: CGSize.zero))
+                                    
+                                    break
+                                }
                             }
                         }
+                        
+                        for j in 0..<target.count {
+                            var segment = target[j]
+                            let key = "\(fontName)&\(fontSize)&\(segment.text)"
+                            var frameSize: CGSize
+                            
+                            if let value = self.textCache[key] {
+                                frameSize = value.1
+                            } else {
+                                let framesetter = self.createFramesetter(font: font, color: blackColor!, text: segment.text)
+                                var spaces = 0
+                                
+                                frameSize = CTFramesetterSuggestFrameSizeWithConstraints(framesetter, CFRange(), nil, CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), nil)
+                                
+                                for char in segment.text.reversed() {
+                                    if char.isWhitespace {
+                                        spaces += 1
+                                    } else {
+                                        break
+                                    }
+                                }
+                                
+                                if spaces > 0 {
+                                    var spaceCharacter: UniChar = 0x0020
+                                    var glyph: CGGlyph = 0
+                                    
+                                    if CTFontGetGlyphsForCharacters(font, &spaceCharacter, &glyph, 1) {
+                                        var advance = CGSize()
+                                        
+                                        CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, &advance, 1)
+                                        
+                                        frameSize.width += advance.width * Double(spaces)
+                                    }
+                                }
+                                
+                                self.textCache[key] = (framesetter, frameSize, nil)
+                            }
+                            
+                            targetWidth += ceil(frameSize.width)
+                            segment.size = frameSize
+                            target[j] = segment
+                        }
+                        
+                        if currentWidth > targetWidth {
+                            current.removeAll()
+                            current.append(contentsOf: block.safe)
+                        } else {
+                            self.blocks[i].safe = current
+                        }
+                        
+                        let translation = fmod(fmod(block.elapsed, 60.0) / 60.0 + sin(block.scroll.step / 2.0 * .pi), 1.0) * -(targetWidth + margin) + block.shake.x
+                        
+                        if block.rtl {
+                            repeat {
+                                for _ in 0..<2 {
+                                    var x = 0.0
+                                    
+                                    for segment in current.reversed() {
+                                        if offset - translation - x >= 0 && offset - translation - x - segment.size.width < self.frame.size.width {
+                                            let key = "\(fontName)&\(fontSize)&\(segment.text)"
+                                            let transform = CGAffineTransformConcat(CGAffineTransformMakeTranslation(offset - translation - round(x) - ceil(segment.size.width), self.frame.size.height - round(lineHeight * Double(i) + (lineHeight - segment.size.height) / 2.0)), CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, -1.0), CGAffineTransformMakeTranslation(0.0, self.frame.size.height)))
+                                            
+                                            if let value = self.textCache[key] {
+                                                if let path = value.2 {
+                                                    mutablePath.addPath(path, transform: transform)
+                                                } else {
+                                                    let path = self.createTextPath(frame: CTFramesetterCreateFrame(segment.framesetter!, CFRange(), CGPath(rect: CGRect(origin: CGPoint.zero, size: segment.size), transform: nil), nil))
+                                                    
+                                                    mutablePath.addPath(path, transform: transform)
+                                                    self.textCache[key] = (value.0, value.1, path)
+                                                }
+                                            } else {
+                                                mutablePath.addPath(self.createTextPath(frame: CTFramesetterCreateFrame(segment.framesetter!, CFRange(), CGPath(rect: CGRect(origin: CGPoint.zero, size: segment.size), transform: nil), nil)), transform: transform)
+                                            }
+                                        }
+                                        
+                                        x += ceil(segment.size.width)
+                                    }
+                                    
+                                    for segment in target {
+                                        offset += ceil(segment.size.width)
+                                    }
+                                    
+                                    offset += margin
+                                }
+                            } while offset - margin < self.frame.size.width * 2.0
+                        } else {
+                            repeat {
+                                for _ in 0..<2 {
+                                    var x = 0.0
+                                    
+                                    for segment in current {
+                                        if translation + offset + x + segment.size.width >= 0 && translation + offset + x < self.frame.size.width {
+                                            let key = "\(fontName)&\(fontSize)&\(segment.text)"
+                                            let transform = CGAffineTransformConcat(CGAffineTransformMakeTranslation(translation + offset + round(x), self.frame.size.height - round(lineHeight * Double(i) + (lineHeight - segment.size.height) / 2.0)), CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, -1.0), CGAffineTransformMakeTranslation(0.0, self.frame.size.height)))
+                                            
+                                            if let value = self.textCache[key] {
+                                                if let path = value.2 {
+                                                    mutablePath.addPath(path, transform: transform)
+                                                } else {
+                                                    let path = self.createTextPath(frame: CTFramesetterCreateFrame(segment.framesetter!, CFRange(), CGPath(rect: CGRect(origin: CGPoint.zero, size: segment.size), transform: nil), nil))
+                                                    
+                                                    mutablePath.addPath(path, transform: transform)
+                                                    self.textCache[key] = (value.0, value.1, path)
+                                                }
+                                            } else {
+                                                mutablePath.addPath(self.createTextPath(frame: CTFramesetterCreateFrame(segment.framesetter!, CFRange(), CGPath(rect: CGRect(origin: CGPoint.zero, size: segment.size), transform: nil), nil)), transform: transform)
+                                            }
+                                        }
+                                        
+                                        x += ceil(segment.size.width)
+                                    }
+                                    
+                                    for segment in target {
+                                        offset += ceil(segment.size.width)
+                                    }
+                                    
+                                    offset += margin
+                                }
+                            } while offset - margin < self.frame.size.width * 2.0
+                        }
                     }
-                    
-                    if mutablePath.isEmpty {
-                        subview.layer.mask = nil
+                }
+                
+                for i in stride(from: self.pinches.count - 1, through: 0, by: -1) {
+                    if self.pinches[i].touches.allSatisfy({ (touch: UITouch) -> Bool in self.touches.contains(where: { $0.touch == touch }) }) {
+                        let speed = 2.0
+                        let x = self.pinches[i].center.x + self.pinches[i].movement.x
+                        let y = self.pinches[i].center.y + self.pinches[i].movement.y
+                        let radius = abs(self.pinches[i].radius)
+                        
+                        self.pinches[i].current.x = self.lerp(a: self.pinches[i].current.x, b: x, t: deltaTime * speed)
+                        self.pinches[i].current.y = self.lerp(a: self.pinches[i].current.y, b: y, t: deltaTime * speed)
+                        self.pinches[i].current.radius = self.lerp(a: abs(self.pinches[i].current.radius), b: radius, t: deltaTime * speed)
+                        
+                        if round(self.pinches[i].current.x) == round(x) {
+                            self.pinches[i].current.x = x
+                        }
+                        
+                        if round(self.pinches[i].current.y) == round(y) {
+                            self.pinches[i].current.y = y
+                        }
+                        
+                        if round(self.pinches[i].current.radius) == round(radius) {
+                            self.pinches[i].current.radius = radius
+                        }
+                        
+                        paths.append(CGPath(ellipseIn: CGRect(x: self.pinches[i].current.x - self.pinches[i].current.radius, y: self.pinches[i].current.y - self.pinches[i].current.radius, width: self.pinches[i].current.radius * 2.0, height: self.pinches[i].current.radius * 2.0), transform: nil))
                     } else {
+                        let epsilon = 0.01
+                        let tension = 50.0
+                        let mass = 1.0
+                        let friction = 5.0
+                        let displacement = self.pinches[i].current.radius
+                        let tensionForce = -tension * displacement
+                        let dampingForce = -friction * self.pinches[i].velocity
+                        let acceleration = (tensionForce + dampingForce) / mass
+                        
+                        self.pinches[i].velocity += acceleration * deltaTime
+                        self.pinches[i].current.radius += self.pinches[i].velocity * deltaTime
+                        
+                        if abs(self.pinches[i].velocity) < epsilon {
+                            self.pinches.remove(at: i)
+                        } else {
+                            let radius = abs(self.pinches[i].current.radius)
+                            
+                            paths.append(CGPath(ellipseIn: CGRect(x: self.pinches[i].current.x - radius, y: self.pinches[i].current.y - radius, width: radius * 2.0, height: radius * 2.0), transform: nil))
+                        }
+                    }
+                }
+                
+                if mutablePath.isEmpty {
+                    if !maskLayer.frame.isEmpty {
                         CATransaction.begin()
                         CATransaction.setDisableActions(true)
                         
-                        maskLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
-                        maskLayer.path = mutablePath
-                        
-                        if let sublayers = maskLayer.sublayers {
-                            for sublayer in sublayers {
-                                if let shapeLayer = sublayer as? CAShapeLayer {
-                                    shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
-                                    
-                                    if !paths.isEmpty {
-                                        var path: CGPath = paths[0]
-                                        
-                                        for i in 1..<paths.count {
-                                            path = path.union(paths[i], using: .winding)
-                                        }
-                                        
-                                        shapeLayer.path = path
-                                    }
-                                }
-                            }
-                        }
+                        maskLayer.frame = CGRect.zero
+                        maskLayer.path = nil
                         
                         CATransaction.commit()
                     }
+                } else {
+                    CATransaction.begin()
+                    CATransaction.setDisableActions(true)
                     
-                    subview.layer.mask = maskLayer
+                    maskLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
+                    maskLayer.path = mutablePath
+                    
+                    if let sublayers = maskLayer.sublayers {
+                        for sublayer in sublayers {
+                            if let shapeLayer = sublayer as? CAShapeLayer {
+                                shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
+                                
+                                if !paths.isEmpty {
+                                    var path: CGPath = paths[0]
+                                    
+                                    for i in 1..<paths.count {
+                                        path = path.union(paths[i], using: .winding)
+                                    }
+                                    
+                                    shapeLayer.path = path
+                                }
+                            }
+                        }
+                    }
+                    
+                    CATransaction.commit()
                 }
             }
             
