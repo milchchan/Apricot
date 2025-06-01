@@ -165,7 +165,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             var paths = [String: [(URL, String, String?, String, String?)]]()
                             
                             for url in urls {
-                                if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.xml$/) {
+                                if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.(?:json|xml)$/) {
                                     let key = String(match.output.1)
                                     let path = url.path(percentEncoded: false)
                                     var characterName: String? = nil
@@ -700,7 +700,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                                 var paths = [String: [(URL, String, String?, String, String?)]]()
                                                 
                                                 for url in urls {
-                                                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.xml$/) {
+                                                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.(?:json|xml)$/) {
                                                         let key = String(match.output.1)
                                                         let path = url.path(percentEncoded: false)
                                                         var characterName: String? = nil
@@ -1647,7 +1647,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         await Script.shared.run(name: characterView.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
                             if y.name == characterView.name {
                                 for sequence in y.sequences {
-                                    if sequence.name == "DoubleClick" {
+                                    if sequence.name == "DoubleClick" || sequence.name == "DoubleTap" {
                                         x.append(sequence)
                                     }
                                 }
@@ -4782,24 +4782,45 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     }
                 }
                 
-                if let state, state != Script.shared.states["DoubleClick"] {
-                    let sequences = Script.shared.characters.reduce(into: [Sequence](), { x, y in
-                        if y.name == self.name {
-                            for sequence in y.sequences {
-                                if sequence.name == "DoubleClick", let pattern = sequence.state, let regex = try? Regex(pattern), let match = state.firstMatch(of: regex), !match.output.isEmpty {
-                                    x.append(sequence)
+                if let state {
+                    if state != Script.shared.states["DoubleClick"] {
+                        let sequences = Script.shared.characters.reduce(into: [Sequence](), { x, y in
+                            if y.name == self.name {
+                                for sequence in y.sequences {
+                                    if sequence.name == "DoubleClick", let pattern = sequence.state, let regex = try? Regex(pattern), let match = state.firstMatch(of: regex), !match.output.isEmpty {
+                                        x.append(sequence)
+                                    }
                                 }
                             }
-                        }
-                    })
-                    
-                    if !sequences.isEmpty {
-                        Task {
-                            await Script.shared.run(name: self.name!, sequences: sequences, state: state, words: [])
-                        }
+                        })
                         
-                        self.feedbackGenerator?.impactOccurred()
-                        self.feedbackGenerator?.prepare()
+                        if !sequences.isEmpty {
+                            Task {
+                                await Script.shared.run(name: self.name!, sequences: sequences, state: state, words: [])
+                            }
+                            
+                            self.feedbackGenerator?.impactOccurred()
+                            self.feedbackGenerator?.prepare()
+                        }
+                    } else if state != Script.shared.states["DoubleTap"] {
+                        let sequences = Script.shared.characters.reduce(into: [Sequence](), { x, y in
+                            if y.name == self.name {
+                                for sequence in y.sequences {
+                                    if sequence.name == "DoubleTap", let pattern = sequence.state, let regex = try? Regex(pattern), let match = state.firstMatch(of: regex), !match.output.isEmpty {
+                                        x.append(sequence)
+                                    }
+                                }
+                            }
+                        })
+                        
+                        if !sequences.isEmpty {
+                            Task {
+                                await Script.shared.run(name: self.name!, sequences: sequences, state: state, words: [])
+                            }
+                            
+                            self.feedbackGenerator?.impactOccurred()
+                            self.feedbackGenerator?.prepare()
+                        }
                     }
                 }
                 
@@ -5294,7 +5315,7 @@ extension UIWindow {
                 for character in Script.shared.characters {
                     Task {
                         await Script.shared.run(name: character.name, sequences: character.sequences.reduce(into: [], { x, y in
-                            if y.name == "DoubleClick" {
+                            if y.name == "DoubleClick" || y.name == "DoubleTap" {
                                 x.append(y)
                             }
                         }), words: []) { sequences in
@@ -5310,7 +5331,7 @@ extension UIWindow {
             } else if let first = Script.shared.characters.first {
                 Task {
                     await Script.shared.run(name: first.name, sequences: first.sequences.reduce(into: [], { x, y in
-                        if y.name == "DoubleClick" {
+                        if y.name == "DoubleClick" || y.name == "DoubleTap" {
                             x.append(y)
                         }
                     }), words: []) { sequences in
