@@ -3134,6 +3134,12 @@ struct Stage: UIViewRepresentable {
                 }
             }
             
+            if likes.isEmpty {
+                for (_, value) in Script.shared.likes {
+                    likes.append(contentsOf: value)
+                }
+            }
+            
             likes.sort { $0.timestamp > $1.timestamp }
             
             for i in stride(from: likes.count - 1, through: 0, by: -1) {
@@ -8597,7 +8603,7 @@ struct Settings: View {
                             var paths = [String: [(URL, String, String?, String?, String, String?)]]()
                             
                             for url in urls {
-                                if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.xml$/) {
+                                if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.(?:json|xml)$/) {
                                     let key = String(match.output.1)
                                     let path = url.path(percentEncoded: false)
                                     var characterId: String? = nil
