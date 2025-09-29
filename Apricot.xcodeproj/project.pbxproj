@@ -38,6 +38,8 @@
 		50C0CA3E2C6B026300104E32 /* din-2014_extra-light.otf in Resources */ = {isa = PBXBuildFile; fileRef = 50C0CA372C6B026300104E32 /* din-2014_extra-light.otf */; };
 		50C0CA3F2C6B026300104E32 /* din-2014_light.otf in Resources */ = {isa = PBXBuildFile; fileRef = 50C0CA382C6B026300104E32 /* din-2014_light.otf */; };
 		50C0CA402C6B026300104E32 /* din-2014_regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 50C0CA392C6B026300104E32 /* din-2014_regular.otf */; };
+		50C4EF072D243E70002DCF8C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 50C4EF062D243E70002DCF8C /* AppIcon.icon */; };
+		50C4EF082D243E70002DCF8C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 50C4EF062D243E70002DCF8C /* AppIcon.icon */; };
 		50C820992B41B970000D8C28 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 50C820982B41B970000D8C28 /* PrivacyInfo.xcprivacy */; };
 		50ED84742A4F257000E18407 /* AgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ED84732A4F257000E18407 /* AgentView.swift */; };
 		50ED84762A4F257000E18407 /* Script.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ED84752A4F257000E18407 /* Script.swift */; };
@@ -110,6 +112,7 @@
 		50C0CA372C6B026300104E32 /* din-2014_extra-light.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "din-2014_extra-light.otf"; sourceTree = "<group>"; };
 		50C0CA382C6B026300104E32 /* din-2014_light.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "din-2014_light.otf"; sourceTree = "<group>"; };
 		50C0CA392C6B026300104E32 /* din-2014_regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "din-2014_regular.otf"; sourceTree = "<group>"; };
+		50C4EF062D243E70002DCF8C /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		50C820982B41B970000D8C28 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		50ED84732A4F257000E18407 /* AgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentView.swift; sourceTree = "<group>"; };
 		50ED84752A4F257000E18407 /* Script.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Script.swift; sourceTree = "<group>"; };
@@ -179,6 +182,7 @@
 			children = (
 				50ED84732A4F257000E18407 /* AgentView.swift */,
 				50ED84792A4F257100E18407 /* Animation.swift */,
+				50C4EF062D243E70002DCF8C /* AppIcon.icon */,
 				5052E3C72AC6E048004DF0AF /* Apricot.entitlements */,
 				506E0EDE296085F100099D3A /* ApricotApp.swift */,
 				506E0EE2296085F200099D3A /* Assets.xcassets */,
@@ -334,6 +338,7 @@
 				500C6EE429D72CF1008CD8B9 /* Milch in Resources */,
 				503AA1E72B21B18F00144D7E /* din-2014_extra-bold.otf in Resources */,
 				503AA1EB2B21B18F00144D7E /* din-2014_extra-light.otf in Resources */,
+				50C4EF072D243E70002DCF8C /* AppIcon.icon in Resources */,
 				50C820992B41B970000D8C28 /* PrivacyInfo.xcprivacy in Resources */,
 				500C6EE629D72CF1008CD8B9 /* Merku in Resources */,
 				503AA1EA2B21B18F00144D7E /* din-2014_light.otf in Resources */,
@@ -353,6 +358,7 @@
 			files = (
 				50C0CA232C6A439000104E32 /* Localizable.xcstrings in Resources */,
 				50C0CA3C2C6B026300104E32 /* din-2014_demi.otf in Resources */,
+				50C4EF082D243E70002DCF8C /* AppIcon.icon in Resources */,
 				50C0CA3E2C6B026300104E32 /* din-2014_extra-light.otf in Resources */,
 				50C0CA402C6B026300104E32 /* din-2014_regular.otf in Resources */,
 				50C0CA3F2C6B026300104E32 /* din-2014_light.otf in Resources */,
@@ -536,7 +542,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Apricot/Apricot.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 76;
+				CURRENT_PROJECT_VERSION = 78;
 				DEVELOPMENT_ASSET_PATHS = "\"Apricot/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -547,12 +553,12 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 7.6;
+				MARKETING_VERSION = 7.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milchchan.Apricot;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -568,7 +574,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Apricot/Apricot.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 76;
+				CURRENT_PROJECT_VERSION = 78;
 				DEVELOPMENT_ASSET_PATHS = "\"Apricot/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -579,12 +585,12 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 7.6;
+				MARKETING_VERSION = 7.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milchchan.Apricot;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -600,19 +606,19 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = Charm/CharmExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 76;
+				CURRENT_PROJECT_VERSION = 78;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Charm/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Charm;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 7.6;
+				MARKETING_VERSION = 7.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milchchan.Apricot.Charm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -630,19 +636,19 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = Charm/CharmExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 76;
+				CURRENT_PROJECT_VERSION = 78;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Charm/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Charm;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 7.6;
+				MARKETING_VERSION = 7.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milchchan.Apricot.Charm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
