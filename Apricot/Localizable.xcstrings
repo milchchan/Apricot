@@ -161,6 +161,16 @@
         }
       }
     },
+    "Message" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メッセージ"
+          }
+        }
+      }
+    },
     "Modifier" : {
       "localizations" : {
         "ja" : {
@@ -350,16 +360,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分散"
-          }
-        }
-      }
-    },
-    "Vision" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ビジョン"
           }
         }
       }
