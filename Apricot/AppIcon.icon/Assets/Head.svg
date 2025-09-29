@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(0.843493,0,0,0.843493,-0.0263591,0)">
+        <rect x="0.031" y="0" width="1214" height="1214" style="fill:none;"/>
+        <clipPath id="_clip1">
+            <rect x="0.031" y="0" width="1214" height="1214"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <g id="Milch-Dark" transform="matrix(7.72172,0,0,7.72172,-3376.91,-1827.11)">
+                <g transform="matrix(1,0,0,1,581.241,395.194)">
+                    <path d="M0,-148.861C0,-148.861 -22.045,-178.227 -63.64,-178.227C-105.236,-178.227 -128.896,-148.861 -128.896,-148.861C-165.564,-90.194 -135.943,-40.194 -135.943,-40.194C-144.096,-22.635 -114.549,-0.948 -76.811,-0.657C-66.152,0 -56.373,-0.102 -47.988,-0.771C-12.361,-2.525 13.189,-23.277 5.334,-40.194C5.334,-40.194 36.668,-90.194 0,-148.861" style="fill:rgb(255,254,243);fill-rule:nonzero;"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
