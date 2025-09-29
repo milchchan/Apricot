@@ -21,7 +21,7 @@ class WallView: UIView {
     private var tracker: (active: Bool, edge: Bool, movement: (x: Double, y: Double), velocity: (x: Double, y: Double)) = (active: false, edge: true, movement: (x: 0.0, y: 0.0), velocity: (x: 0.0, y: 0.0))
     private var pinches = [(touches: [UITouch], center: (x: Double, y: Double), movement: (x: Double, y: Double), radius: Double, velocity: Double, current:(x: Double, y: Double, radius: Double))]()
     private var touches = [(touch: UITouch, location: (x: Double, y: Double), movement: (x: Double, y: Double), velocity: (x: Double, y: Double), timestamp: CFTimeInterval)]()
-    private var blocks = [(running: Bool, time: Double, duration: Double, type: (elapsed: Double, speed: Double, reverse: Bool, buffer: String, count: Int), text: String, attributes: [(start: Int, end: Int)], current: String, safe: [(text: String, framesetter: CTFramesetter?, size: CGSize)], scroll: (touch: UITouch?, step: Double), shake: (time: Double?, x: Double), elapsed: Double, rtl: Bool)]()
+    private var blocks = [(running: Bool, time: Double, duration: Double, type: (elapsed: Double, speed: Double, reverse: Bool, buffer: String, count: Int), text: String, attributes: [(start: Int, end: Int)], current: String, scroll: (touch: UITouch?, step: Double), shake: (time: Double?, x: Double), elapsed: Double, rtl: Bool)]()
     private var lines = [(text: String, attributes: [(start: Int, end: Int)])]()
     private var isInvalidated = false
     private var isReloading = false
@@ -31,7 +31,7 @@ class WallView: UIView {
     private var loadingStep: Double = -1.0
     private var fetchedFrames: [(image: CGImage?, delay: Double)]? = nil
     private var backgroundFrames: [(image: CGImage?, delay: Double)]? = nil
-    private var fetchedImage: CGImage? = nil
+    private var pickedColor: CGColor? = nil
     private var blindColor: CGColor? = nil
     private var currentTime: Double? = nil
     private var sourceRect = CGRect.zero
@@ -45,7 +45,6 @@ class WallView: UIView {
     private var fontCache = [String: CTFont]()
     private var textCache = [String: (CTFramesetter, CGSize, CGPath?)]()
     private let backgroundPattern = UIImage(named: "Stripes")!
-    private let permutation = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9, 129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228, 251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180]
     var accentColor: CGColor? {
         get {
             return self.blindColor
@@ -58,8 +57,8 @@ class WallView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         
-        let visualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
-        let view = UIView()
+        let contentView = UIView()
+        let blindView = UIView()
         let maskSublayer = CAShapeLayer()
         let loadingLayer = CALayer()
         let blindLayer = CALayer()
@@ -114,31 +113,29 @@ class WallView: UIView {
         self.imageLayer = CALayer()
         self.imageLayer!.contentsGravity = .resizeAspect
         
-        visualEffectView.translatesAutoresizingMaskIntoConstraints = false
-        visualEffectView.isUserInteractionEnabled = false
-        visualEffectView.backgroundColor = .clear
-        visualEffectView.layer.mask = self.maskLayer
-        visualEffectView.layer.addSublayer(self.backgroundLayer!)
-        visualEffectView.contentView.isUserInteractionEnabled = false
-        visualEffectView.contentView.layer.addSublayer(self.imageLayer!)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.isUserInteractionEnabled = false
+        contentView.backgroundColor = .clear
+        contentView.layer.mask = self.maskLayer
+        contentView.layer.addSublayer(self.imageLayer!)
         
-        self.addSubview(visualEffectView)
+        self.addSubview(contentView)
         
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.isUserInteractionEnabled = false
-        view.backgroundColor = .clear
-        view.layer.addSublayer(self.blindLayer!)
+        blindView.translatesAutoresizingMaskIntoConstraints = false
+        blindView.isUserInteractionEnabled = false
+        blindView.backgroundColor = .clear
+        blindView.layer.addSublayer(self.blindLayer!)
         
-        self.addSubview(view)
+        self.addSubview(blindView)
         
-        self.addConstraint(NSLayoutConstraint(item: visualEffectView, attribute: .leading, relatedBy: .equal, toItem: self, attribute: .leading, multiplier: 1.0, constant: 0.0))
-        self.addConstraint(NSLayoutConstraint(item: visualEffectView, attribute: .top, relatedBy: .equal, toItem: self, attribute: .top, multiplier: 1.0, constant: 0.0))
-        self.addConstraint(NSLayoutConstraint(item: visualEffectView, attribute: .trailing, relatedBy: .equal, toItem: self, attribute: .trailing, multiplier: 1.0, constant: 0.0))
-        self.addConstraint(NSLayoutConstraint(item: visualEffectView, attribute: .bottom, relatedBy: .equal, toItem: self, attribute: .bottom, multiplier: 1.0, constant: 0.0))
-        self.addConstraint(NSLayoutConstraint(item: view, attribute: .leading, relatedBy: .equal, toItem: self, attribute: .leading, multiplier: 1.0, constant: 0.0))
-        self.addConstraint(NSLayoutConstraint(item: view, attribute: .top, relatedBy: .equal, toItem: self, attribute: .top, multiplier: 1.0, constant: 0.0))
-        self.addConstraint(NSLayoutConstraint(item: view, attribute: .trailing, relatedBy: .equal, toItem: self, attribute: .trailing, multiplier: 1.0, constant: 0.0))
-        self.addConstraint(NSLayoutConstraint(item: view, attribute: .bottom, relatedBy: .equal, toItem: self, attribute: .bottom, multiplier: 1.0, constant: 0.0))
+        self.addConstraint(NSLayoutConstraint(item: contentView, attribute: .leading, relatedBy: .equal, toItem: self, attribute: .leading, multiplier: 1.0, constant: 0.0))
+        self.addConstraint(NSLayoutConstraint(item: contentView, attribute: .top, relatedBy: .equal, toItem: self, attribute: .top, multiplier: 1.0, constant: 0.0))
+        self.addConstraint(NSLayoutConstraint(item: contentView, attribute: .trailing, relatedBy: .equal, toItem: self, attribute: .trailing, multiplier: 1.0, constant: 0.0))
+        self.addConstraint(NSLayoutConstraint(item: contentView, attribute: .bottom, relatedBy: .equal, toItem: self, attribute: .bottom, multiplier: 1.0, constant: 0.0))
+        self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .leading, relatedBy: .equal, toItem: self, attribute: .leading, multiplier: 1.0, constant: 0.0))
+        self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .top, relatedBy: .equal, toItem: self, attribute: .top, multiplier: 1.0, constant: 0.0))
+        self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .trailing, relatedBy: .equal, toItem: self, attribute: .trailing, multiplier: 1.0, constant: 0.0))
+        self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .bottom, relatedBy: .equal, toItem: self, attribute: .bottom, multiplier: 1.0, constant: 0.0))
         
         let displayLink = CADisplayLink(target: self, selector: #selector(self.update))
         
@@ -543,242 +540,205 @@ class WallView: UIView {
         self.isFetched = false
         
         Task {
-            if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+            self.pickedColor = await Task.detached {
+                var pickedColor: CGColor? = nil
                 
-                self.fetchedImage = await Task.detached {
-                    var generatedImage: CGImage? = nil
+                if let dataProvider = image.dataProvider {
+                    var minX = Int.max
+                    var minY = Int.max
+                    var maxX = 0
+                    var maxY = 0
+                    let bytes: UnsafePointer = CFDataGetBytePtr(dataProvider.data)
+                    let channels = image.bitsPerPixel / image.bitsPerComponent
+                    let alphaInfo: CGImageAlphaInfo? = CGImageAlphaInfo(rawValue: image.bitmapInfo.rawValue & type(of: image.bitmapInfo).alphaInfoMask.rawValue)
+                    let alphaFirst: Bool = alphaInfo == .premultipliedFirst || alphaInfo == .first || alphaInfo == .noneSkipFirst
+                    let alphaLast: Bool = alphaInfo == .premultipliedLast || alphaInfo == .last || alphaInfo == .noneSkipLast
+                    let littleEndian: Bool = image.bitmapInfo.contains(.byteOrder32Little)
+                    var index: (alpha: Int, red: Int, green: Int, blue: Int)?
                     
-                    if let dataProvider = image.dataProvider {
-                        var minX = Int.max
-                        var minY = Int.max
-                        var maxX = 0
-                        var maxY = 0
-                        let bytes: UnsafePointer = CFDataGetBytePtr(dataProvider.data)
-                        let channels = image.bitsPerPixel / image.bitsPerComponent
-                        let alphaInfo: CGImageAlphaInfo? = CGImageAlphaInfo(rawValue: image.bitmapInfo.rawValue & type(of: image.bitmapInfo).alphaInfoMask.rawValue)
-                        let alphaFirst: Bool = alphaInfo == .premultipliedFirst || alphaInfo == .first || alphaInfo == .noneSkipFirst
-                        let alphaLast: Bool = alphaInfo == .premultipliedLast || alphaInfo == .last || alphaInfo == .noneSkipLast
-                        let littleEndian: Bool = image.bitmapInfo.contains(.byteOrder32Little)
-                        var index: (alpha: Int, red: Int, green: Int, blue: Int)?
-                        
-                        if littleEndian {
-                            if alphaFirst {
-                                index = (alpha: 3, red: 2, green: 1, blue: 0)
-                            } else if alphaLast {
-                                index = (alpha: 0, red: 3, green: 2, blue: 1)
-                            } else {
-                                index = nil
-                            }
-                        } else if alphaFirst {
-                            index = (alpha: 0, red: 1, green: 2, blue: 3)
+                    if littleEndian {
+                        if alphaFirst {
+                            index = (alpha: 3, red: 2, green: 1, blue: 0)
                         } else if alphaLast {
-                            index = (alpha: 3, red: 0, green: 1, blue: 2)
+                            index = (alpha: 0, red: 3, green: 2, blue: 1)
                         } else {
                             index = nil
                         }
-                        
-                        if let index {
-                            for y in 0..<image.height {
-                                for x in 0..<image.width {
-                                    let offset = y * image.bytesPerRow + x * channels
-                                    
-                                    if bytes[offset + index.alpha] > 0 {
-                                        if x < minX {
-                                            minX = x
-                                        }
-                                        
-                                        if y < minY {
-                                            minY = y
-                                        }
-                                        
-                                        if x > maxX {
-                                            maxX = x
-                                        }
-                                        
-                                        if y > maxY {
-                                            maxY = y
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        let cropWidth = maxX - minX
-                        let cropHeight = maxY - minY
-                        
-                        if cropWidth > 0 && cropHeight > 0, let croppedImage = image.cropping(to: CGRect(x: minX, y: minY, width: cropWidth, height: cropHeight)) {
-                            let imageWidth = Double(croppedImage.width)
-                            let imageHeight = Double(croppedImage.height)
-                            let limit = 64.0
-                            let width: Double
-                            let height: Double
-                            var resizedImage: CGImage? = nil
-                            
-                            if imageWidth < imageHeight {
-                                if imageHeight > limit {
-                                    width = floor(limit / imageHeight * imageWidth)
-                                    height = limit
-                                } else {
-                                    width = imageWidth
-                                    height = imageHeight
-                                }
-                            } else if imageWidth > limit {
-                                width = limit
-                                height = floor(limit / imageWidth * imageHeight)
-                            } else {
-                                width = imageWidth
-                                height = imageHeight
-                            }
-                            
-                            UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
-                            
-                            if let context = UIGraphicsGetCurrentContext() {
-                                context.interpolationQuality = .high
-                                context.setAllowsAntialiasing(true)
-                                context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                                context.translateBy(x: 0.0, y: height)
-                                context.scaleBy(x: 1.0, y: -1.0)
-                                context.draw(croppedImage, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                                resizedImage = context.makeImage()
-                            }
-                            
-                            UIGraphicsEndImageContext()
-                            
-                            if let resizedImage, let dataProvider = resizedImage.dataProvider {
-                                let bytes: UnsafePointer = CFDataGetBytePtr(dataProvider.data)
-                                let channels = resizedImage.bitsPerPixel / resizedImage.bitsPerComponent
-                                let alphaInfo: CGImageAlphaInfo? = CGImageAlphaInfo(rawValue: resizedImage.bitmapInfo.rawValue & type(of: resizedImage.bitmapInfo).alphaInfoMask.rawValue)
-                                let alphaFirst: Bool = alphaInfo == .premultipliedFirst || alphaInfo == .first || alphaInfo == .noneSkipFirst
-                                let alphaLast: Bool = alphaInfo == .premultipliedLast || alphaInfo == .last || alphaInfo == .noneSkipLast
-                                let littleEndian: Bool = resizedImage.bitmapInfo.contains(.byteOrder32Little)
-                                var index: (alpha: Int, red: Int, green: Int, blue: Int)?
+                    } else if alphaFirst {
+                        index = (alpha: 0, red: 1, green: 2, blue: 3)
+                    } else if alphaLast {
+                        index = (alpha: 3, red: 0, green: 1, blue: 2)
+                    } else {
+                        index = nil
+                    }
+                    
+                    if let index {
+                        for y in 0..<image.height {
+                            for x in 0..<image.width {
+                                let offset = y * image.bytesPerRow + x * channels
                                 
-                                if littleEndian {
-                                    if alphaFirst {
-                                        index = (alpha: 3, red: 2, green: 1, blue: 0)
-                                    } else if alphaLast {
-                                        index = (alpha: 0, red: 3, green: 2, blue: 1)
-                                    } else {
-                                        index = nil
-                                    }
-                                } else if alphaFirst {
-                                    index = (alpha: 0, red: 1, green: 2, blue: 3)
-                                } else if alphaLast {
-                                    index = (alpha: 3, red: 0, green: 1, blue: 2)
-                                } else {
-                                    index = nil
-                                }
-                                
-                                if let index {
-                                    var pixels = [[Double]]()
-                                    var rgb = [Int: [Double]]()
-                                    
-                                    for y in 0..<resizedImage.height {
-                                        for x in 0..<resizedImage.width {
-                                            let offset = y * resizedImage.bytesPerRow + x * channels
-                                            let alpha = bytes[offset + index.alpha]
-                                            
-                                            if alpha > 0 {
-                                                let r = Double(bytes[offset + index.red]) / Double(resizedImage.bitsPerPixel * 8 - 1)
-                                                let g = Double(bytes[offset + index.green]) / Double(resizedImage.bitsPerPixel * 8 - 1)
-                                                let b = Double(bytes[offset + index.blue]) / Double(resizedImage.bitsPerPixel * 8 - 1)
-                                                let (hue, saturation, value) = self.rgbToHsv(red: r, green: g, blue: b)
-                                                let (red, green, blue) = self.hsvToRgb(hue: hue, saturation: min(saturation * 1.0, 1.0), value: min(value * 1.0, 1.0))
-                                                
-                                                if saturation > 0.0 && 0.0 < value && value < 1.0 {
-                                                    pixels.append([hue, saturation, value])
-                                                }
-                                                
-                                                rgb[y * resizedImage.width + x] = [red, green, blue, Double(alpha) / Double(resizedImage.bitsPerPixel * 8 - 1)]
-                                            }
-                                        }
+                                if bytes[offset + index.alpha] > 0 {
+                                    if x < minX {
+                                        minX = x
                                     }
                                     
-                                    if !pixels.isEmpty {
-                                        let kMeans = KMeans(numberOfClusters: 5)
-                                        var stats = [Int: (count: Int, color: (hue: Double, saturation: Double, value: Double))]()
-                                        var sum = 0
-                                        var probabilities = [Double]()
-                                        var palette = [CGColor]()
-                                        let colorSpace = CGColorSpaceCreateDeviceRGB()
-                                        let noiseScale = Double.random(in: 0.0005...0.005)
-                                        let maxZ = 255
-                                        
-                                        kMeans.fit(data: pixels, iterations: 100)
-                                        
-                                        for pixel in pixels {
-                                            let (id, vector) = kMeans.predict(vector: pixel)
-                                            
-                                            if let value = stats[id] {
-                                                stats[id] = (count: value.count + 1, color: value.color)
-                                            } else {
-                                                stats[id] = (count: 1, color: (hue: vector[0], saturation: vector[1], value: vector[2]))
-                                            }
-                                            
-                                            sum += 1
-                                        }
-                                        
-                                        for (_, value) in stats {
-                                            let (red, green, blue) = self.hsvToRgb(hue: value.color.hue, saturation: min(value.color.saturation * 2.0, 1.0), value: min(value.color.value * 2.0, 1.0))
-                                            
-                                            probabilities.append(Double(value.count) / Double(sum))
-                                            palette.append(CGColor(colorSpace: colorSpace, components: [red, green, blue, 1.0])!)
-                                        }
-                                        
-                                        UIGraphicsBeginImageContextWithOptions(CGSize(width: length, height: length), false, 0)
-                                        
-                                        if let context = UIGraphicsGetCurrentContext() {
-                                            context.interpolationQuality = .default
-                                            context.setAllowsAntialiasing(true)
-                                            context.clear(CGRect(x: 0.0, y: 0.0, width: length, height: length))
-                                            context.setLineWidth(1.0)
-                                            context.setLineCap(.round)
-                                            context.setLineJoin(.round)
-                                            
-                                            for _ in 0..<5000 {
-                                                var x = floor(Double.random(in: 0..<length + Double(maxZ / 2)))
-                                                var y = floor(Double.random(in: 0..<length))
-                                                let mutablePath = CGMutablePath()
-                                                
-                                                mutablePath.move(to: CGPoint(x: x, y: y))
-                                                
-                                                for z in stride(from: 0, to: Int.random(in: maxZ / 2...maxZ), by: 2) {
-                                                    var a = self.fBm(x: x * noiseScale, y: y * noiseScale, z: Double(z) * noiseScale * noiseScale, octaves: 1, persistence: 1.0) * .pi * 2.0
-                                                    
-                                                    x += cos(a)
-                                                    y += sin(a)
-                                                    
-                                                    let point = CGPoint(x: x, y: y)
-                                                    
-                                                    a = self.fBm(x: x * noiseScale, y: y * noiseScale, z: Double(z + 1) * noiseScale * noiseScale, octaves: 1, persistence: 1.0) * .pi * 2.0
-                                                    x += cos(a)
-                                                    y += sin(a)
-                                                    
-                                                    mutablePath.addQuadCurve(to: CGPoint(x: x, y: y), control: point)
-                                                }
-                                                
-                                                context.saveGState()
-                                                context.setStrokeColor(palette[min(self.choice(probabilities: probabilities), probabilities.count - 1)])
-                                                context.addPath(mutablePath)
-                                                context.strokePath()
-                                                context.restoreGState()
-                                            }
-                                            
-                                            generatedImage = context.makeImage()
-                                        }
-                                        
-                                        UIGraphicsEndImageContext()
+                                    if y < minY {
+                                        minY = y
+                                    }
+                                    
+                                    if x > maxX {
+                                        maxX = x
+                                    }
+                                    
+                                    if y > maxY {
+                                        maxY = y
                                     }
                                 }
                             }
                         }
                     }
                     
-                    return generatedImage
-                }.value
-            }
-            
+                    let cropWidth = maxX - minX
+                    let cropHeight = maxY - minY
+                    
+                    if cropWidth > 0 && cropHeight > 0, let croppedImage = image.cropping(to: CGRect(x: minX, y: minY, width: cropWidth, height: cropHeight)) {
+                        let imageWidth = Double(croppedImage.width)
+                        let imageHeight = Double(croppedImage.height)
+                        let limit = 64.0
+                        let width: Double
+                        let height: Double
+                        var resizedImage: CGImage? = nil
+                        
+                        if imageWidth < imageHeight {
+                            if imageHeight > limit {
+                                width = floor(limit / imageHeight * imageWidth)
+                                height = limit
+                            } else {
+                                width = imageWidth
+                                height = imageHeight
+                            }
+                        } else if imageWidth > limit {
+                            width = limit
+                            height = floor(limit / imageWidth * imageHeight)
+                        } else {
+                            width = imageWidth
+                            height = imageHeight
+                        }
+                        
+                        UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+                        
+                        if let context = UIGraphicsGetCurrentContext() {
+                            context.interpolationQuality = .high
+                            context.setAllowsAntialiasing(true)
+                            context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                            context.translateBy(x: 0.0, y: height)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.draw(croppedImage, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                            resizedImage = context.makeImage()
+                        }
+                        
+                        UIGraphicsEndImageContext()
+                        
+                        if let resizedImage, let dataProvider = resizedImage.dataProvider {
+                            let bytes: UnsafePointer = CFDataGetBytePtr(dataProvider.data)
+                            let channels = resizedImage.bitsPerPixel / resizedImage.bitsPerComponent
+                            let alphaInfo: CGImageAlphaInfo? = CGImageAlphaInfo(rawValue: resizedImage.bitmapInfo.rawValue & type(of: resizedImage.bitmapInfo).alphaInfoMask.rawValue)
+                            let alphaFirst: Bool = alphaInfo == .premultipliedFirst || alphaInfo == .first || alphaInfo == .noneSkipFirst
+                            let alphaLast: Bool = alphaInfo == .premultipliedLast || alphaInfo == .last || alphaInfo == .noneSkipLast
+                            let littleEndian: Bool = resizedImage.bitmapInfo.contains(.byteOrder32Little)
+                            var index: (alpha: Int, red: Int, green: Int, blue: Int)?
+                            
+                            if littleEndian {
+                                if alphaFirst {
+                                    index = (alpha: 3, red: 2, green: 1, blue: 0)
+                                } else if alphaLast {
+                                    index = (alpha: 0, red: 3, green: 2, blue: 1)
+                                } else {
+                                    index = nil
+                                }
+                            } else if alphaFirst {
+                                index = (alpha: 0, red: 1, green: 2, blue: 3)
+                            } else if alphaLast {
+                                index = (alpha: 3, red: 0, green: 1, blue: 2)
+                            } else {
+                                index = nil
+                            }
+                            
+                            if let index {
+                                var pixels = [[Double]]()
+                                
+                                for y in 0..<resizedImage.height {
+                                    for x in 0..<resizedImage.width {
+                                        let offset = y * resizedImage.bytesPerRow + x * channels
+                                        let alpha = bytes[offset + index.alpha]
+                                        
+                                        if alpha > 0 {
+                                            let red = Double(bytes[offset + index.red]) / Double(resizedImage.bitsPerPixel * 8 - 1)
+                                            let green = Double(bytes[offset + index.green]) / Double(resizedImage.bitsPerPixel * 8 - 1)
+                                            let blue = Double(bytes[offset + index.blue]) / Double(resizedImage.bitsPerPixel * 8 - 1)
+                                            let (hue, saturation, value) = self.rgbToHsv(red: red, green: green, blue: blue)
+                                            let t = hue / 360.0 * 2.0 * Double.pi
+                                            let x = saturation * cos(t)
+                                            let y = saturation * sin(t)
+                                            let z = value
+                                            
+                                            pixels.append([x, y, z])
+                                        }
+                                    }
+                                }
+                                
+                                if !pixels.isEmpty {
+                                    let kMeans = KMeans(numberOfClusters: 8)
+                                    var stats = [Int: (count: Int, color: (hue: Double, saturation: Double, value: Double))]()
+                                    var maximum = 0
+                                    var scored = [(score: Double, color: (hue: Double, saturation: Double, value: Double))]()
+                                    
+                                    kMeans.fit(data: pixels, iterations: 50)
+                                    
+                                    for pixel in pixels {
+                                        let (id, vector) = kMeans.predict(vector: pixel)
+                                        var hue = atan2(vector[1], vector[0]) / (2.0 * Double.pi)
+                                        
+                                        if hue < 0 {
+                                            hue += 1.0
+                                        }
+                                        
+                                        hue *= 360.0
+                                        
+                                        let saturation = min(max(hypot(vector[0], vector[1]), 0.0), 1.0)
+                                        let value = min(max(vector[2], 0.0), 1.0)
+                                        
+                                        if let value = stats[id] {
+                                            stats[id] = (count: value.count + 1, color: value.color)
+                                        } else {
+                                            stats[id] = (count: 1, color: (hue: hue, saturation: saturation, value: value))
+                                        }
+                                    }
+                                    
+                                    for (_, value) in stats {
+                                        if value.count > maximum {
+                                            maximum = value.count
+                                        }
+                                    }
+                                    
+                                    for (_, value) in stats {
+                                        scored.append((score: 1.0 / (1.0 + exp(-10.0 * (value.color.value - 0.25))) * (min(Double(value.count) / Double(maximum), 0.25) + value.color.saturation), color: value.color))
+                                    }
+                                    
+                                    scored.sort { $0.score > $1.score }
+                                    
+                                    let color = scored[0].color
+                                    let (red, green, blue) = self.hsvToRgb(hue: color.hue, saturation: min(color.saturation * 1.5, 1.0), value: min(color.value * 1.5, 1.0))
+                                    
+                                    pickedColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [red, green, blue, 1.0])
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return pickedColor
+            }.value
             self.isReloading = false
         }
     }
@@ -928,7 +888,7 @@ class WallView: UIView {
                 if y <= self.touches[0].location.y && self.touches[0].location.y < y + fontSize {
                     let point = CGPoint(x: self.touches[0].location.x, y: self.touches[0].location.y)
                     
-                    if !self.subviews.contains(where: { $0 is UIVisualEffectView == false && $0.hitTest(point, with: nil) != nil }), let delegate = self.delegate {
+                    if !self.subviews.contains(where: { $0.hitTest(point, with: nil) != nil }), let delegate = self.delegate {
                         if delegate.wallCanSelect(self, at: index) {
                             if self.blocks[index].scroll.touch == nil {
                                 self.blocks[index].scroll.touch = self.touches[0].touch
@@ -984,7 +944,7 @@ class WallView: UIView {
                 self.textCache.removeAll()
                 
                 for (i, line) in self.lines.enumerated() {
-                    self.blocks.append((running: true, time: 0.0, duration: -1.0, type: (elapsed: -1.0, speed: 50.0, reverse: false, buffer: String(), count: 0), text: line.text, attributes: line.attributes, current: String(), safe: [], scroll: (touch: nil, step: 0.0), shake: (time: nil, x: 0.0), elapsed: Double.random(in: 0.0..<60.0), rtl: i % 2 == 1))
+                    self.blocks.append((running: true, time: 0.0, duration: -1.0, type: (elapsed: -1.0, speed: 50.0, reverse: false, buffer: String(), count: 0), text: line.text, attributes: line.attributes, current: String(), scroll: (touch: nil, step: 0.0), shake: (time: nil, x: 0.0), elapsed: Double.random(in: 0.0..<60.0), rtl: i % 2 == 1))
                 }
             }
             
@@ -1285,24 +1245,12 @@ class WallView: UIView {
                         self.revealStep = 0.0
                         
                         if !self.isReloading {
-                            if let image = self.fetchedImage {
-                                if let backgroundLayer = self.backgroundLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                    CATransaction.begin()
-                                    CATransaction.setDisableActions(true)
+                            for subview in self.subviews {
+                                if let sublayers = subview.layer.sublayers, sublayers.contains(where: { $0 === self.imageLayer }) {
+                                    subview.layer.backgroundColor = self.pickedColor
                                     
-                                    backgroundLayer.frame = CGRect(x: 0.0, y: 0.0, width: Double(image.width) / window.screen.scale, height: Double(image.height) / window.screen.scale)
-                                    backgroundLayer.contents = image
-                                    
-                                    CATransaction.commit()
+                                    break
                                 }
-                            } else if let backgroundLayer = self.backgroundLayer {
-                                CATransaction.begin()
-                                CATransaction.setDisableActions(true)
-                                
-                                backgroundLayer.frame = CGRect.zero
-                                backgroundLayer.contents = nil
-                                
-                                CATransaction.commit()
                             }
                             
                             self.backgroundFrames = self.fetchedFrames
@@ -1374,24 +1322,12 @@ class WallView: UIView {
                         self.revealStep = 0.0
                         
                         if !self.isReloading {
-                            if let image = self.fetchedImage {
-                                if let backgroundLayer = self.backgroundLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                    CATransaction.begin()
-                                    CATransaction.setDisableActions(true)
+                            for subview in self.subviews {
+                                if let sublayers = subview.layer.sublayers, sublayers.contains(where: { $0 === self.imageLayer }) {
+                                    subview.layer.backgroundColor = self.pickedColor
                                     
-                                    backgroundLayer.frame = CGRect(x: 0.0, y: 0.0, width: Double(image.width) / window.screen.scale, height: Double(image.height) / window.screen.scale)
-                                    backgroundLayer.contents = image
-                                    
-                                    CATransaction.commit()
+                                    break
                                 }
-                            } else if let backgroundLayer = self.backgroundLayer {
-                                CATransaction.begin()
-                                CATransaction.setDisableActions(true)
-                                
-                                backgroundLayer.frame = CGRect.zero
-                                backgroundLayer.contents = nil
-                                
-                                CATransaction.commit()
                             }
                             
                             self.backgroundFrames = self.fetchedFrames
@@ -1634,13 +1570,6 @@ class WallView: UIView {
                             targetWidth += ceil(frameSize.width)
                             segment.size = frameSize
                             target[j] = segment
-                        }
-                        
-                        if currentWidth > targetWidth {
-                            current.removeAll()
-                            current.append(contentsOf: block.safe)
-                        } else {
-                            self.blocks[i].safe = current
                         }
                         
                         let translation = fmod(fmod(block.elapsed, 60.0) / 60.0 + sin(block.scroll.step / 2.0 * .pi), 1.0) * -(targetWidth + margin) + block.shake.x
@@ -2234,23 +2163,6 @@ class WallView: UIView {
         return mutablePath
     }
     
-    private nonisolated func choice(probabilities: [Double]) -> Int {
-        let random = Double.random(in: 0.0..<1.0)
-        var sum = 0.0
-        var index = 0
-        
-        for probability in probabilities {
-            if sum <= random && random < sum + probability {
-                break
-            }
-            
-            sum += probability
-            index += 1
-        }
-        
-        return index
-    }
-    
     private nonisolated func rgbToHsv(red: Double, green: Double, blue: Double) -> (Double, Double, Double) {
         let max = max(max(red, green), blue)
         let min = min(min(red, green), blue)
@@ -2323,97 +2235,6 @@ class WallView: UIView {
         }
         
         return (red: red, green: green, blue: blue)
-    }
-    
-    private nonisolated func fBm(x: Double, y: Double, z: Double, octaves: Int = 4, persistence: Double = 0.5) -> Double {
-        // fractional Brownian motion
-        var total = 0.0
-        var frequency = 1.0
-        var amplitude = 1.0
-        var maximum = 0.0
-        
-        for _ in 0..<octaves {
-            total += self.noise(x: x * frequency, y: y * frequency, z: z * frequency) * amplitude
-            maximum += amplitude
-            amplitude *= persistence
-            frequency *= 2.0
-        }
-        
-        return total / maximum
-    }
-    
-    private nonisolated func noise(x: Double, y: Double = 0.0, z: Double = 0.0) -> Double {
-        // Perlin noise
-        let xi = Int(x) & 255
-        let yi = Int(y) & 255
-        let zi = Int(z) & 255
-        let xf = x - floor(x)
-        let yf = y - floor(y)
-        let zf = z - floor(z)
-        let u = self.fade(t: xf)
-        let v = self.fade(t: yf)
-        let w = self.fade(t: zf)
-        let aaa = self.permutation[(self.permutation[(self.permutation[xi] + yi) % self.permutation.count] + zi) % self.permutation.count]
-        let aba = self.permutation[(self.permutation[(self.permutation[xi] + yi + 1) % self.permutation.count] + zi) % self.permutation.count]
-        let aab = self.permutation[(self.permutation[(self.permutation[xi] + yi) % self.permutation.count] + zi + 1) % self.permutation.count]
-        let abb = self.permutation[(self.permutation[(self.permutation[xi] + yi + 1) % self.permutation.count] + zi + 1) % self.permutation.count]
-        let baa = self.permutation[(self.permutation[(self.permutation[(xi + 1) % self.permutation.count] + yi) % self.permutation.count] + zi) % self.permutation.count]
-        let bba = self.permutation[(self.permutation[(self.permutation[(xi + 1) % self.permutation.count] + yi + 1) % self.permutation.count] + zi) % self.permutation.count]
-        let bab = self.permutation[(self.permutation[(self.permutation[(xi + 1) % self.permutation.count] + yi) % self.permutation.count] + zi + 1) % self.permutation.count]
-        let bbb = self.permutation[(self.permutation[(self.permutation[(xi + 1) % self.permutation.count] + yi + 1) % self.permutation.count] + zi + 1) % self.permutation.count]
-        var x1 = self.lerp(a: self.grad(hash: aaa, x: xf, y: yf, z: zf), b: self.grad(hash: baa, x: xf-1, y: yf, z: zf), t: u)
-        var x2 = self.lerp(a: self.grad(hash: aba, x: xf, y: yf - 1, z: zf), b: self.grad(hash: bba, x: xf - 1, y: yf - 1, z: zf), t: u)
-        let y1 = self.lerp(a: x1, b: x2, t: v)
-        
-        x1 = self.lerp(a: self.grad(hash: aab, x: xf, y: yf, z: zf - 1), b: self.grad(hash: bab, x: xf - 1, y: yf, z: zf - 1), t: u)
-        x2 = self.lerp(a: self.grad(hash: abb, x: xf, y: yf - 1, z: zf-1), b: self.grad(hash: bbb, x: xf - 1, y: yf - 1, z: zf - 1), t: u)
-        
-        let y2 = self.lerp(a: x1, b: x2, t: v)
-        
-        return (self.lerp(a: y1, b: y2, t: w) + 1.0) / 2.0
-    }
-    
-    private nonisolated func grad(hash: Int, x: Double, y: Double, z: Double) -> Double {
-        switch hash & 0xF {
-        case 0x0:
-            return x + y
-        case 0x1:
-            return -x + y
-        case 0x2:
-            return x - y
-        case 0x3:
-            return -x - y
-        case 0x4:
-            return x + z
-        case 0x5:
-            return -x + z
-        case 0x6:
-            return x - z
-        case 0x7:
-            return -x - z
-        case 0x8:
-            return y + z
-        case 0x9:
-            return -y + z
-        case 0xA:
-            return y - z
-        case 0xB:
-            return -y - z
-        case 0xC:
-            return y + x
-        case 0xD:
-            return -y + z
-        case 0xE:
-            return y - x
-        case 0xF:
-            return -y - z
-        default:
-            return 0
-        }
-    }
-    
-    private nonisolated func fade(t: Double) -> Double {
-        return t * t * t * (t * (t * 6 - 15) + 10) // 6t^5 - 15t^4 + 10t^3
     }
     
     private nonisolated func lerp(a: Double, b: Double, t: Double) -> Double {
