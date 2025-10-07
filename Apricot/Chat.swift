@@ -1211,6 +1211,7 @@ struct Chat: View {
                         .textInputAutocapitalization(.never)
                         .disableAutocorrection(true)
                         .background(.clear)
+                        .tint(Color(self.convert(from: self.accent.wrappedValue)))
                         .frame(
                            maxWidth: .infinity
                         )
@@ -6341,6 +6342,7 @@ struct Dictionary: View {
                      .textInputAutocapitalization(.never)
                      .disableAutocorrection(true)
                      .background(.clear)
+                     .tint(Color(uiColor: self.accent))
                      .onChange(of: self.input) {
                         if self.input.isEmpty {
                            withAnimation(.easeIn(duration: 0.5)) {
