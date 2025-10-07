@@ -2933,14 +2933,20 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             }()
                             
                             if !characterView.messageQueue[0].lines[index].current.isEmpty {
-                                var components: [(text: String, highlight: Int?)] = [(text: String(characterView.messageQueue[0].lines[index].current[characterView.messageQueue[0].lines[index].current.startIndex]), highlight: characterView.messageQueue[0].attributes.firstIndex(where: { message.offset >= $0.start && message.offset < $0.end }))]
+                                var offset = 0
+                                
+                                for i in 0..<index {
+                                    offset += characterView.messageQueue[0].lines[i].current.count
+                                }
+                                
+                                var components: [(text: String, highlight: Int?)] = [(text: String(characterView.messageQueue[0].lines[index].current[characterView.messageQueue[0].lines[index].current.startIndex]), highlight: characterView.messageQueue[0].attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
                                 
                                 for i in 1..<characterView.messageQueue[0].lines[index].current.count {
                                     if characterView.messageQueue[0].lines[index].breaks.contains(i) {
                                         lines.append(components)
-                                        components = [(text: String(characterView.messageQueue[0].lines[index].current[characterView.messageQueue[0].lines[index].current.index(characterView.messageQueue[0].lines[index].current.startIndex, offsetBy: i)]), highlight: characterView.messageQueue[0].attributes.firstIndex(where: { message.offset + i >= $0.start && message.offset + i < $0.end }))]
+                                        components = [(text: String(characterView.messageQueue[0].lines[index].current[characterView.messageQueue[0].lines[index].current.index(characterView.messageQueue[0].lines[index].current.startIndex, offsetBy: i)]), highlight: characterView.messageQueue[0].attributes.firstIndex(where: { offset + i >= $0.start && offset + i < $0.end }))]
                                     } else {
-                                        let highlight = characterView.messageQueue[0].attributes.firstIndex(where: { message.offset + i >= $0.start && message.offset + i < $0.end })
+                                        let highlight = characterView.messageQueue[0].attributes.firstIndex(where: { offset + i >= $0.start && offset + i < $0.end })
                                         var component = components[components.count - 1]
                                         
                                         if highlight == component.highlight {
@@ -4249,7 +4255,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
         var isLoaded = true
         var isMirror = false
         var maxLines = 5
-        var messageQueue = [(step: Double?, index: Int, lines: [(labels: [UILabel], text: String, offset: Int, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)], time: Double, speed: Double, duration: Double, slide: (index: Int, step: Double?), reverse: Bool, attributes: [(start: Int, end: Int)], source: Message)]()
+        var messageQueue = [(step: Double?, index: Int, lines: [(labels: [UILabel], text: String, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)], time: Double, speed: Double, duration: Double, slide: (index: Int, step: Double?), reverse: Bool, attributes: [(start: Int, end: Int)], source: Message)]()
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -4317,11 +4323,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     var content = String()
                     var index = 0
                     var i = 0
-                    var offset = 0
                     var current = String()
                     var text = String()
                     var breaks = Set<Int>()
-                    var lines = [(labels: [UILabel], text: String, offset: Int, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)]()
+                    var lines = [(labels: [UILabel], text: String, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)]()
                     var count = 0
                     var attributes = [(start: Int, end: Int)]()
                     let hasAttributes = message.contains(where: { $0.attributes != nil })
@@ -4366,14 +4371,14 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     for inline in message {
                         if inline.attributes == nil {
                             content.append(inline.text)
+                            index += inline.text.count
                         } else {
                             let s = inline.text.filter { !$0.isNewline }
                             
                             content.append(s)
                             attributes.append((start: index, end: index + s.count))
+                            index += s.count
                         }
-                        
-                        index += inline.text.count
                     }
                     
                     while i < content.count {
@@ -4412,7 +4417,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 count += 1
                             }
                             
-                            lines.append((labels: labels, text: text, offset: offset, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
+                            lines.append((labels: labels, text: text, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
                             
                             if i == content.count - 1 {
                                 let messageLabel = UILabel(frame: CGRect.zero)
@@ -4441,19 +4446,17 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
                                 
                                 count += 1
-                                lines.append((labels: [messageLabel], text: String(), offset: offset, breaks: [], step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
+                                lines.append((labels: [messageLabel], text: String(), breaks: [], step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
                                 
                                 break
                             }
                             
-                            offset = i + 1
                             current.removeAll()
                             text.removeAll()
                             breaks.removeAll()
                         } else if character.isWhitespace {
                             if current.isEmpty {
                                 i += 1
-                                offset += 1
                                 
                                 continue
                             }
@@ -4461,6 +4464,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             current.append(character)
                             text.append(character)
                             
+                            let offset = lines.reduce(0, { $0 + $1.text.count })
                             var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
                             let mutableAttributedString = NSMutableAttributedString()
                             let paragraphStyle = NSMutableParagraphStyle()
@@ -4485,7 +4489,6 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             }
                             
                             if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
-                                offset += 1
                                 current.removeSubrange(current.startIndex..<current.endIndex)
                                 text.remove(at: text.index(text.endIndex, offsetBy: -1))
                                 breaks.insert(text.count)
@@ -4494,6 +4497,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             current.append(character)
                             text.append(character)
                             
+                            let offset = lines.reduce(0, { $0 + $1.text.count })
                             var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
                             let mutableAttributedString = NSMutableAttributedString()
                             let paragraphStyle = NSMutableParagraphStyle()
@@ -4580,7 +4584,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             count += 1
                         }
                         
-                        lines.append((labels: labels, text: text, offset: offset, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
+                        lines.append((labels: labels, text: text, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
                     }
                     
                     self.messageQueue.append((step: 0.0, index: 0, lines: lines, time: 0.0, speed: 1.0, duration: message.duration, slide: (index: 0, step: nil), reverse: false, attributes: attributes, source: message))
