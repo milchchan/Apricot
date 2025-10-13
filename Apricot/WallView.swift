@@ -1694,12 +1694,40 @@ class WallView: UIView {
                 }
                 
                 if mutablePath.isEmpty {
-                    if !maskLayer.frame.isEmpty {
+                    if !paths.isEmpty {
+                        maskLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
+                        maskLayer.path = nil
+
+                        if let sublayers = maskLayer.sublayers {
+                            for sublayer in sublayers {
+                                if let shapeLayer = sublayer as? CAShapeLayer {
+                                    var path: CGPath = paths[0]
+                                    
+                                    shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
+                                    
+                                    for i in 1..<paths.count {
+                                        path = path.union(paths[i], using: .winding)
+                                    }
+                                    
+                                    shapeLayer.path = path
+                                }
+                            }
+                        }
+                    } else if !maskLayer.frame.isEmpty {
                         CATransaction.begin()
                         CATransaction.setDisableActions(true)
                         
                         maskLayer.frame = CGRect.zero
                         maskLayer.path = nil
+                        
+                        if let sublayers = maskLayer.sublayers {
+                            for sublayer in sublayers {
+                                if let shapeLayer = sublayer as? CAShapeLayer {
+                                    shapeLayer.frame = CGRect.zero
+                                    shapeLayer.path = nil
+                                }
+                            }
+                        }
                         
                         CATransaction.commit()
                     }
@@ -1713,10 +1741,13 @@ class WallView: UIView {
                     if let sublayers = maskLayer.sublayers {
                         for sublayer in sublayers {
                             if let shapeLayer = sublayer as? CAShapeLayer {
-                                shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
-                                
-                                if !paths.isEmpty {
+                                if paths.isEmpty {
+                                    shapeLayer.frame = CGRect.zero
+                                    shapeLayer.path = nil
+                                } else {
                                     var path: CGPath = paths[0]
+                                    
+                                    shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
                                     
                                     for i in 1..<paths.count {
                                         path = path.union(paths[i], using: .winding)
