@@ -1,4 +1,4 @@
-<img src="https://github.com/user-attachments/assets/803d94d4-ddb5-40f1-b988-bcbcd6722621" width="180px" height="180px" alt="Icon" />
+<img src="https://github.com/user-attachments/assets/2a84a471-167f-4c88-87b9-7eb2c22bd34f" width="180px" height="180px" alt="Icon" />
 
 # Apricot
 
@@ -10,7 +10,7 @@ Download the Apricot free from the App Store and it'll be continuously updated:
 
 ### iOS
 
-<a href='https://apps.apple.com/jp/app/apricot/id6476104729'><img src="https://github.com/user-attachments/assets/8a1000b7-adce-4d75-aa9e-303aac25752c" width="249px" height="512px" alt="Screenshot" /></a>
+<a href='https://apps.apple.com/jp/app/apricot/id6476104729'><img src="https://github.com/user-attachments/assets/48c6b1b0-001c-4963-8de0-b120d49c6add" width="248px" height="512px" alt="Screenshot" /></a>
 
 <a href='https://apps.apple.com/jp/app/apricot/id6476104729'><img src='https://github.com/user-attachments/assets/e1451b1a-d52c-4e8e-9416-0c48f80b042c' alt='Download on the App Store' width='120px' height='40px' /></a>
 
