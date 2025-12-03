@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Apricot/Apricot.csproj" />
+  <Project Path="Notifications/Notifications.csproj" />
+  <Project Path="Weather/Weather.csproj" />
+</Solution>
