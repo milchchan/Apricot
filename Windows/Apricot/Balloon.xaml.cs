@@ -2704,7 +2704,6 @@ namespace Apricot
                                 if (isFragmented || !isTyped || isReady && this.nextHistoryPoint.HasValue || this.embedColorStepDictionary!.Values.Any(step => isReady && this.nextHistoryPoint.HasValue && step > 0 || (!isReady || !this.nextHistoryPoint.HasValue) && step < 1) || this.embedIsScrollableHashSet!.Count > 0 || this.embedScrollStepDictionary!.Count > 0 || this.hoverEmbeddedIndex.HasValue && this.embedIsScrollableHashSet.Count == 0 && this.embedScrollStepDictionary.Count == 0)
                                 {
                                     List<char> charList = new List<char>();
-                                    Random random = new Random(Environment.TickCount);
                                     StringBuilder randomStringBuilder = new StringBuilder();
                                     string text = this.messageCollection[this.historyPoint.Value].Text.Replace(Environment.NewLine, String.Empty);
                                     int minScrollIndex = (int)Math.Floor(Math.Min(this.sourceScrollPosition, this.targetScrollPosition));
@@ -2762,7 +2761,7 @@ namespace Apricot
                                         }
                                         else if (charList.Count > 0)
                                         {
-                                            randomStringBuilder.Append(charList[random.Next(charList.Count)]);
+                                            randomStringBuilder.Append(charList[Random.Shared.Next(charList.Count)]);
                                         }
                                     }
 

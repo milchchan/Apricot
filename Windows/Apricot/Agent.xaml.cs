@@ -3766,7 +3766,7 @@ namespace Apricot
 
                         if (cachedCharacterList.Count > 0)
                         {
-                            Character character = cachedCharacterList[new Random(Environment.TickCount).Next(cachedCharacterList.Count)];
+                            Character character = cachedCharacterList[Random.Shared.Next(cachedCharacterList.Count)];
                             var characters = from c in Script.Instance.Characters where c.Name!.Equals(this.characterName) select c;
                             var sequences = from sequence in Script.Instance.Sequences where sequence.Owner!.Equals(character.Name) select sequence;
                             

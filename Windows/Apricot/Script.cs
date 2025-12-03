@@ -554,11 +554,10 @@ namespace Apricot
                         else
                         {
                             List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories) let extension = Path.GetExtension(filename) let attributes = File.GetAttributes(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
-                            Random random = new Random(Environment.TickCount);
-
+                            
                             while (pathList2.Count > 0)
                             {
-                                int i = random.Next(pathList2.Count);
+                                int i = Random.Shared.Next(pathList2.Count);
                                 Tuple<bool, string> tuple1 = pathList2[i];
 
                                 pathList2.RemoveAt(i);
@@ -776,7 +775,7 @@ namespace Apricot
 
                                         while (pathList2.Count > 0)
                                         {
-                                            int j = random.Next(pathList2.Count);
+                                            int j = Random.Shared.Next(pathList2.Count);
                                             Tuple<bool, string> tuple2 = pathList2[j];
                                             string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                             Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
@@ -956,7 +955,7 @@ namespace Apricot
 
                                         while (pathList2.Count > 0)
                                         {
-                                            int j = random.Next(pathList2.Count);
+                                            int j = Random.Shared.Next(pathList2.Count);
                                             Tuple<bool, string> tuple2 = pathList2[j];
                                             string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                             Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
@@ -1750,11 +1749,10 @@ namespace Apricot
                                 {
                                     string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
                                     List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
-                                    Random random = new Random(Environment.TickCount);
-
+                                    
                                     while (pathList2.Count > 0)
                                     {
-                                        int i = random.Next(pathList2.Count);
+                                        int i = Random.Shared.Next(pathList2.Count);
                                         Tuple<bool, string> tuple1 = pathList2[i];
 
                                         pathList2.RemoveAt(i);
@@ -1972,7 +1970,7 @@ namespace Apricot
 
                                                 while (pathList2.Count > 0)
                                                 {
-                                                    int j = random.Next(pathList2.Count);
+                                                    int j = Random.Shared.Next(pathList2.Count);
                                                     Tuple<bool, string> tuple2 = pathList2[j];
                                                     string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                                     Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
@@ -2152,7 +2150,7 @@ namespace Apricot
 
                                                 while (pathList2.Count > 0)
                                                 {
-                                                    int j = random.Next(pathList2.Count);
+                                                    int j = Random.Shared.Next(pathList2.Count);
                                                     Tuple<bool, string> tuple2 = pathList2[j];
                                                     string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                                     Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
@@ -2510,11 +2508,10 @@ namespace Apricot
                             {
                                 string directory3 = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
                                 List<Tuple<bool, string>> pathList2 = (from filename in Directory.EnumerateFiles(directory3, "*", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(directory1, "*", SearchOption.AllDirectories)) let attributes = File.GetAttributes(filename) let extension = Path.GetExtension(filename) let isZip = extension.Equals(".zip", StringComparison.OrdinalIgnoreCase) where (attributes & FileAttributes.Hidden) != FileAttributes.Hidden && (isZip || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)) select Tuple.Create<bool, string>(isZip, filename)).ToList();
-                                Random random = new Random(Environment.TickCount);
-
+                                
                                 while (pathList2.Count > 0)
                                 {
-                                    int i = random.Next(pathList2.Count);
+                                    int i = Random.Shared.Next(pathList2.Count);
                                     Tuple<bool, string> tuple1 = pathList2[i];
 
                                     pathList2.RemoveAt(i);
@@ -2732,7 +2729,7 @@ namespace Apricot
 
                                             while (pathList2.Count > 0)
                                             {
-                                                int j = random.Next(pathList2.Count);
+                                                int j = Random.Shared.Next(pathList2.Count);
                                                 Tuple<bool, string> tuple2 = pathList2[j];
                                                 string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                                 Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
@@ -2912,7 +2909,7 @@ namespace Apricot
 
                                             while (pathList2.Count > 0)
                                             {
-                                                int j = random.Next(pathList2.Count);
+                                                int j = Random.Shared.Next(pathList2.Count);
                                                 Tuple<bool, string> tuple2 = pathList2[j];
                                                 string filename2 = Path.GetFileNameWithoutExtension(tuple2.Item2);
                                                 Match match2 = Regex.Match(filename2, "^(.+?)\\.([a-z]{2,3})$", RegexOptions.CultureInvariant);
@@ -5754,7 +5751,7 @@ namespace Apricot
             {
                 Sequence[] tempSequences = collection.ToArray();
 
-                return new Sequence[] { tempSequences[new Random(Environment.TickCount).Next(tempSequences.Length)] };
+                return new Sequence[] { tempSequences[Random.Shared.Next(tempSequences.Length)] };
             });
         }
 
@@ -6797,7 +6794,7 @@ namespace Apricot
             TryEnqueue(Prepare(query, term, delegate (IEnumerable<Sequence> collection)
             {
                 Sequence[] sequences = collection.ToArray();
-                Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
+                Sequence sequence = sequences[Random.Shared.Next(sequences.Length)];
 
                 if (query.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                 {
@@ -7000,7 +6997,7 @@ namespace Apricot
             IEnumerable<Sequence> preparedSequences = Prepare(query, null, delegate (IEnumerable<Sequence> collection)
             {
                 Sequence[] sequences = collection.ToArray();
-                Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
+                Sequence sequence = sequences[Random.Shared.Next(sequences.Length)];
 
                 if (query.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                 {
@@ -7146,7 +7143,7 @@ namespace Apricot
             IEnumerable<Sequence> preparedSequences = Prepare(query, null, delegate (IEnumerable<Sequence> collection)
             {
                 Sequence[] sequences = collection.ToArray();
-                Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
+                Sequence sequence = sequences[Random.Shared.Next(sequences.Length)];
 
                 if (query.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                 {
@@ -7434,7 +7431,7 @@ namespace Apricot
                 TryEnqueue(Prepare(q, query, delegate (IEnumerable<Sequence> collection)
                 {
                     Sequence[] sequences = collection.ToArray();
-                    Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
+                    Sequence sequence = sequences[Random.Shared.Next(sequences.Length)];
 
                     if (q.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                     {
@@ -7638,7 +7635,7 @@ namespace Apricot
             TryEnqueue(Prepare(query, caption, delegate (IEnumerable<Sequence> collection)
             {
                 Sequence[] sequences = collection.ToArray();
-                Sequence sequence = sequences[new Random(Environment.TickCount).Next(sequences.Length)];
+                Sequence sequence = sequences[Random.Shared.Next(sequences.Length)];
 
                 if (query.Any(character => character == sequence) || sequenceHashSet.Contains(sequence))
                 {
@@ -8383,11 +8380,10 @@ namespace Apricot
             // Fisher-Yates algorithm
             T[] array = collection.ToArray();
             int n = array.Length; // The number of items left to shuffle (loop invariant).
-            Random r = new Random(Environment.TickCount);
             
             while (n > 1)
             {
-                int k = r.Next(n); // 0 <= k < n.
+                int k = Random.Shared.Next(n); // 0 <= k < n.
 
                 n--; // n is now the last pertinent index;
                 T temp = array[n]; // swap list[n] with list[k] (does nothing if k == n).
@@ -8400,7 +8396,7 @@ namespace Apricot
 
         private int Choice(IEnumerable<double> probabilities)
         {
-            double number = new Random(Environment.TickCount).NextDouble();
+            double number = Random.Shared.NextDouble();
             double sum = 0.0;
             int index = 0;
 
