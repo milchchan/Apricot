@@ -20,7 +20,7 @@ using System.Xml.XPath;
 namespace Apricot
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Interaction logic for Agent.xaml
     /// </summary>
     public partial class Agent : Window
     {
@@ -89,6 +89,7 @@ namespace Apricot
                 MenuItem menuItem = new MenuItem();
 
                 menuItem.Header = String.Concat(((int)Math.Floor(opacity * 100)).ToString(System.Globalization.CultureInfo.CurrentCulture), Apricot.Resources.Percent);
+                menuItem.IsCheckable = true;
                 menuItem.Tag = opacity;
                 menuItem.Click += new RoutedEventHandler(delegate
                 {
@@ -183,6 +184,7 @@ namespace Apricot
                 MenuItem menuItem = new MenuItem();
 
                 menuItem.Header = String.Concat(((int)Math.Floor(scale * 100)).ToString(System.Globalization.CultureInfo.CurrentCulture), Apricot.Resources.Percent);
+                menuItem.IsCheckable = true;
                 menuItem.Tag = scale;
                 menuItem.Click += new RoutedEventHandler(delegate
                 {
@@ -1014,6 +1016,7 @@ namespace Apricot
                                     MenuItem childMenuItem = new MenuItem();
 
                                     childMenuItem.Header = type;
+                                    childMenuItem.IsCheckable = true;
                                     childMenuItem.Tag = nextLinkedListNode.Value.Item1.Name;
                                     childMenuItem.Click += new RoutedEventHandler(delegate
                                     {
@@ -1496,6 +1499,7 @@ namespace Apricot
                                         }
                                     });
 
+                                    selectedMenuItem.IsCheckable = false;
                                     selectedMenuItem.IsChecked = false;
 
                                     if (childMenuItemList.Count > 0)
@@ -1515,6 +1519,7 @@ namespace Apricot
                                 }
                                 else if (childMenuItemList.Count > 0)
                                 {
+                                    selectedMenuItem.IsCheckable = false;
                                     selectedMenuItem.IsChecked = false;
 
                                     childMenuItemList.ForEach(delegate (MenuItem mi)
@@ -1524,6 +1529,7 @@ namespace Apricot
                                 }
                                 else
                                 {
+                                    selectedMenuItem.IsCheckable = true;
                                     selectedMenuItem.IsChecked = true;
                                 }
 
