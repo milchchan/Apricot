@@ -101807,7 +101807,7 @@
     <sequence name="Merku.Smile" />
   </sequence>
   <sequence name="Activate">
-    <message>ミルヒちゃんといつもいっしょに遊んでるよ</message>
+    <message>ミルヒちゃんといつもいっしょに遊んでるよぉ</message>
     <sound>Sounds/Merku-118.ja.wav</sound>
     <sequence name="Merku.Smile" />
   </sequence>
