@@ -1537,8 +1537,16 @@ struct Chat: View {
                self.isLoading = true
             }
             
+            let memory = await Task.detached {
+               if let data = self.load() {
+                  return String(data: data, encoding: .utf8)
+               }
+               
+               return nil
+            }.value
+            
             var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-               return self.replacePlaceholders(text: prompt, resolver: { format in
+               var text = self.replacePlaceholders(text: prompt, resolver: { format in
                   
                   if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
                      let dateFormatter = DateFormatter()
@@ -1551,6 +1559,12 @@ struct Chat: View {
                   
                   return nil
                })
+               
+               if let memory {
+                  text += "\n\(memory)"
+               }
+               
+               return text
             }.value]]
             var i = logs.count - 1
             
@@ -1595,48 +1609,55 @@ struct Chat: View {
             if messages.count == 1 {
                var i = self.logs.count - 1
                
-               while i > 0 {
-                  if self.logs[i].from == first.name && self.logs[i].to == nil && self.logs[i - 1].from == nil && self.logs[i - 1].to == first.name {
-                     var parts = [[String: Any]]()
-                     
-                     if let text = self.logs[i - 1].content.text {
-                        parts.append(["type": "text", "text": text])
-                     }
-                     
-                     if let image = self.logs[i - 1].content.image {
-                        if let dataURL = (await Task.detached {
-                           var dataURL: String? = nil
-                           
-                           if let resizedImage = self.resize(image: image) {
-                              dataURL = self.convert(image: resizedImage)
+               while i >= 0 {
+                  if self.logs[i].from == first.name && self.logs[i].to == nil {
+                     if i - 1 >= 0 && self.logs[i].group == self.logs[i - 1].group && self.logs[i - 1].from == nil && self.logs[i - 1].to == first.name {
+                        var parts = [[String: Any]]()
+                        
+                        if let text = self.logs[i - 1].content.text {
+                           parts.append(["type": "text", "text": text])
+                        }
+                        
+                        if let image = self.logs[i - 1].content.image {
+                           if let dataURL = (await Task.detached {
+                              var dataURL: String? = nil
+                              
+                              if let resizedImage = self.resize(image: image) {
+                                 dataURL = self.convert(image: resizedImage)
+                              }
+                              
+                              return dataURL
+                           }.value) {
+                              parts.append(["type": "image", "image": dataURL])
                            }
-                           
-                           return dataURL
-                        }.value) {
-                           parts.append(["type": "image", "image": dataURL])
                         }
-                     }
-                     
-                     if !parts.isEmpty {
-                        if let raw = self.logs[i].raw {
-                           messages.insert(["role": "assistant", "content": raw], at: 1)
-                           messages.insert(["role": "user", "content": parts], at: 1)
-                        } else if let text = self.logs[i].content.text {
-                           messages.insert(["role": "assistant", "content": text], at: 1)
-                           messages.insert(["role": "user", "content": parts], at: 1)
+                        
+                        if !parts.isEmpty {
+                           if let raw = self.logs[i].raw {
+                              messages.insert(["role": "assistant", "content": raw], at: 1)
+                              messages.insert(["role": "user", "content": parts], at: 1)
+                           } else if let text = self.logs[i].content.text {
+                              messages.insert(["role": "assistant", "content": text], at: 1)
+                              messages.insert(["role": "user", "content": parts], at: 1)
+                           }
                         }
+                        
+                        i -= 1
+                     } else if let raw = self.logs[i].raw {
+                        messages.insert(["role": "assistant", "content": raw], at: 1)
+                     } else if let text = self.logs[i].content.text {
+                        messages.insert(["role": "assistant", "content": text], at: 1)
                      }
-                     
-                     i -= 2
-                  } else {
-                     i -= 1
                   }
+                  
+                  i -= 1
                }
                
                messages.append(["role": "user", "content": [["type": "text", "text": input]]])
             }
             
-            if let (output, content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
+            ///
+            if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                var text = String(content)
                let sequence = Sequence(name: "Activate", state: nil)
                let id = UUID()
@@ -1665,12 +1686,28 @@ struct Chat: View {
                sequence.append(Sequence(name: "Emote", state: state ?? String()))
                sequences.append((first.name, id, output, sequence, likability, choices))
                
+               if let memory {
+                  await Task.detached {
+                     if let data = memory.data(using: .utf8) {
+                        self.save(data)
+                     }
+                  }.value
+               }
+               
                while !queue.isEmpty {
                   let character = queue.removeFirst()
                   
                   if let prompt = character.prompt {
+                     let memory = await Task.detached {
+                        if let data = self.load() {
+                           return String(data: data, encoding: .utf8)
+                        }
+                        
+                        return nil
+                     }.value
+                     
                      var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                        return self.replacePlaceholders(text: prompt, resolver: { format in
+                        var text = self.replacePlaceholders(text: prompt, resolver: { format in
                            
                            if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
                               let dateFormatter = DateFormatter()
@@ -1683,6 +1720,12 @@ struct Chat: View {
                            
                            return nil
                         })
+                        
+                        if let memory {
+                           text += "\n\(memory)"
+                        }
+                        
+                        return text
                      }.value], ["role": "user", "content": [["type": "text", "text": content]]]]
                      var i = logs.count - 1
                      
@@ -1724,7 +1767,8 @@ struct Chat: View {
                         }
                      }
                      
-                     if let (output, content, _, state, _, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
+                     ///
+                     if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                         var text = String(content)
                         let sequence = Sequence(name: "Activate", state: nil)
                         let id = UUID()
@@ -1752,6 +1796,14 @@ struct Chat: View {
                         
                         sequence.append(Sequence(name: "Emote", state: state ?? String()))
                         sequences.append((character.name, id, output, sequence, nil, nil))
+                        
+                        if let memory {
+                           await Task.detached {
+                              if let data = memory.data(using: .utf8) {
+                                 self.save(data)
+                              }
+                           }.value
+                        }
                      } else {
                         sequences.removeAll()
                         queue.removeAll()
@@ -2052,6 +2104,41 @@ struct Chat: View {
       }
    }
    
+   private nonisolated func load(from filename: String = "MEMORY.md") -> Data? {
+      if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+         let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
+         
+         if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+            defer {
+               try? file.close()
+            }
+            
+            return try? file.readToEnd()
+         }
+      }
+      
+      return nil
+   }
+   
+   private nonisolated func save(_ data: Data, to filename: String = "MEMORY.md") {
+      if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+         let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
+         
+         if FileManager.default.fileExists(atPath: path) {
+            if let file = FileHandle(forWritingAtPath: path) {
+               defer {
+                  try? file.close()
+               }
+               
+               try? file.truncate(atOffset: 0)
+               try? file.write(contentsOf: data)
+            }
+         } else {
+            FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+         }
+      }
+   }
+   
    private func sample(path: String, sequences: [Sequence]) async -> Data? {
       return await Task.detached {
          var sequenceQueue = sequences
@@ -2105,7 +2192,7 @@ struct Chat: View {
       }.value
    }
    
-   private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, String?, [(String, URL?)], Data?)? {
+   private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, [[String]], String?, [(String, URL?)], String?, Data?)? {
       if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
          var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
          
@@ -2116,12 +2203,28 @@ struct Chat: View {
          
          if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
             var likability: Double? = nil
+            var terms = [[String]]()
             var state: String? = nil
             var choices = [(String, URL?)]()
+            var memory: String? = nil
             var wave: Data? = nil
             
             if let value = jsonRoot["likability"] as? Double {
                likability = value
+            }
+            
+            if let value = jsonRoot["terms"] as? [Any] {
+               let array: [[String]] = []
+               
+               for item in value {
+                  if let s = item as? String {
+                     terms.append([s])
+                  } else if let a = item as? [String] {
+                     terms.append(a)
+                  }
+               }
+               
+               terms = array
             }
             
             if let states = jsonRoot["states"] as? [String: Any] {
@@ -2153,12 +2256,16 @@ struct Chat: View {
                }
             }
             
+            if let value = jsonRoot["memory"] as? String {
+               memory = value
+            }
+            
             if let voice, let language {
                wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
             }
             
             if let data = try? JSONSerialization.data(withJSONObject: jsonRoot, options: .prettyPrinted), let output = String(data: data, encoding: .utf8) {
-               return (output, content, likability, state, choices, wave)
+               return (output, content, likability, terms, state, choices, memory, wave)
             }
          }
       }
@@ -3665,8 +3772,16 @@ struct Stage: UIViewRepresentable {
                      self.parent.loading = true
                   }
                   
+                  let memory = await Task.detached {
+                     if let data = self.load() {
+                        return String(data: data, encoding: .utf8)
+                     }
+                     
+                     return nil
+                  }.value
+                  
                   var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                     return self.replacePlaceholders(text: prompt, resolver: { format in
+                     var text = self.replacePlaceholders(text: prompt, resolver: { format in
                         
                         if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
                            let dateFormatter = DateFormatter()
@@ -3679,6 +3794,12 @@ struct Stage: UIViewRepresentable {
                         
                         return nil
                      })
+                     
+                     if let memory {
+                        text += "\n\(memory)"
+                     }
+                     
+                     return text
                   }.value]]
                   var i = logs.count - 1
                   
@@ -3723,48 +3844,55 @@ struct Stage: UIViewRepresentable {
                   if messages.count == 1 {
                      var i = self.parent.logs.count - 1
                      
-                     while i > 0 {
-                        if self.parent.logs[i].from == first.name && self.parent.logs[i].to == nil && self.parent.logs[i - 1].from == nil && self.parent.logs[i - 1].to == first.name {
-                           var parts = [[String: Any]]()
-                           
-                           if let text = self.parent.logs[i - 1].content.text {
-                              parts.append(["type": "text", "text": text])
-                           }
-                           
-                           if let image = self.parent.logs[i - 1].content.image {
-                              if let dataURL = (await Task.detached {
-                                 var dataURL: String? = nil
-                                 
-                                 if let resizedImage = self.resize(image: image) {
-                                    dataURL = self.convert(image: resizedImage)
+                     while i >= 0 {
+                        if self.parent.logs[i].from == first.name && self.parent.logs[i].to == nil {
+                           if i - 1 >= 0 && self.parent.logs[i].group == self.parent.logs[i - 1].group && self.parent.logs[i - 1].from == nil && self.parent.logs[i - 1].to == first.name {
+                              var parts = [[String: Any]]()
+                              
+                              if let text = self.parent.logs[i - 1].content.text {
+                                 parts.append(["type": "text", "text": text])
+                              }
+                              
+                              if let image = self.parent.logs[i - 1].content.image {
+                                 if let dataURL = (await Task.detached {
+                                    var dataURL: String? = nil
+                                    
+                                    if let resizedImage = self.resize(image: image) {
+                                       dataURL = self.convert(image: resizedImage)
+                                    }
+                                    
+                                    return dataURL
+                                 }.value) {
+                                    parts.append(["type": "image", "image": dataURL])
                                  }
-                                 
-                                 return dataURL
-                              }.value) {
-                                 parts.append(["type": "image", "image": dataURL])
                               }
-                           }
-                           
-                           if !parts.isEmpty {
-                              if let raw = self.parent.logs[i].raw {
-                                 messages.insert(["role": "assistant", "content": raw], at: 1)
-                                 messages.insert(["role": "user", "content": parts], at: 1)
-                              } else if let text = self.parent.logs[i].content.text {
-                                 messages.insert(["role": "assistant", "content": text], at: 1)
-                                 messages.insert(["role": "user", "content": parts], at: 1)
+                              
+                              if !parts.isEmpty {
+                                 if let raw = self.parent.logs[i].raw {
+                                    messages.insert(["role": "assistant", "content": raw], at: 1)
+                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                 } else if let text = self.parent.logs[i].content.text {
+                                    messages.insert(["role": "assistant", "content": text], at: 1)
+                                    messages.insert(["role": "user", "content": parts], at: 1)
+                                 }
                               }
+                              
+                              i -= 1
+                           } else if let raw = self.parent.logs[i].raw {
+                              messages.insert(["role": "assistant", "content": raw], at: 1)
+                           } else if let text = self.parent.logs[i].content.text {
+                              messages.insert(["role": "assistant", "content": text], at: 1)
                            }
-                           
-                           i -= 2
-                        } else {
-                           i -= 1
                         }
+                        
+                        i -= 1
                      }
                      
                      messages.append(["role": "user", "content": [["type": "text", "text": input]]])
                   }
                   
-                  if let (output, content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
+                  ///
+                  if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                      var text = String(content)
                      let sequence = Sequence(name: "Activate", state: nil)
                      let id = UUID()
@@ -3793,12 +3921,28 @@ struct Stage: UIViewRepresentable {
                      sequence.append(Sequence(name: "Emote", state: state ?? String()))
                      sequences.append((first.name, id, output, sequence, likability, choices))
                      
+                     if let memory {
+                        await Task.detached {
+                           if let data = memory.data(using: .utf8) {
+                              self.save(data)
+                           }
+                        }.value
+                     }
+                     
                      while !queue.isEmpty {
                         let character = queue.removeFirst()
                         
                         if let prompt = character.prompt {
+                           let memory = await Task.detached {
+                              if let data = self.load() {
+                                 return String(data: data, encoding: .utf8)
+                              }
+                              
+                              return nil
+                           }.value
+                           
                            var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                              return self.replacePlaceholders(text: prompt, resolver: { format in
+                              var text = self.replacePlaceholders(text: prompt, resolver: { format in
                                  
                                  if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
                                     let dateFormatter = DateFormatter()
@@ -3811,6 +3955,12 @@ struct Stage: UIViewRepresentable {
                                  
                                  return nil
                               })
+                              
+                              if let memory {
+                                 text += "\n\(memory)"
+                              }
+                              
+                              return text
                            }.value], ["role": "user", "content": [["type": "text", "text": content]]]]
                            var i = logs.count - 1
                            
@@ -3852,7 +4002,8 @@ struct Stage: UIViewRepresentable {
                               }
                            }
                            
-                           if let (output, content, _, state, _, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
+                           ///
+                           if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                               var text = String(content)
                               let sequence = Sequence(name: "Activate", state: nil)
                               let id = UUID()
@@ -3880,6 +4031,14 @@ struct Stage: UIViewRepresentable {
                               
                               sequence.append(Sequence(name: "Emote", state: state ?? String()))
                               sequences.append((character.name, id, output, sequence, nil, nil))
+                              
+                              if let memory {
+                                 await Task.detached {
+                                    if let data = memory.data(using: .utf8) {
+                                       self.save(data)
+                                    }
+                                 }.value
+                              }
                            } else {
                               sequences.removeAll()
                               queue.removeAll()
@@ -4176,6 +4335,41 @@ struct Stage: UIViewRepresentable {
          }
       }
       
+      private nonisolated func load(from filename: String = "MEMORY.md") -> Data? {
+         if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+            let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
+            
+            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+               defer {
+                  try? file.close()
+               }
+               
+               return try? file.readToEnd()
+            }
+         }
+         
+         return nil
+      }
+      
+      private nonisolated func save(_ data: Data, to filename: String = "MEMORY.md") {
+         if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+            let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
+            
+            if FileManager.default.fileExists(atPath: path) {
+               if let file = FileHandle(forWritingAtPath: path) {
+                  defer {
+                     try? file.close()
+                  }
+                  
+                  try? file.truncate(atOffset: 0)
+                  try? file.write(contentsOf: data)
+               }
+            } else {
+               FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+            }
+         }
+      }
+      
       private func sample(path: String, sequences: [Sequence]) async -> Data? {
          return await Task.detached {
             var sequenceQueue = sequences
@@ -4229,7 +4423,7 @@ struct Stage: UIViewRepresentable {
          }.value
       }
       
-      private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, String?, [(String, URL?)], Data?)? {
+      private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, [[String]], String?, [(String, URL?)], String?, Data?)? {
          if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
             var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
             
@@ -4240,12 +4434,28 @@ struct Stage: UIViewRepresentable {
             
             if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
                var likability: Double? = nil
+               var terms = [[String]]()
                var state: String? = nil
                var choices = [(String, URL?)]()
+               var memory: String? = nil
                var wave: Data? = nil
                
                if let value = jsonRoot["likability"] as? Double {
                   likability = value
+               }
+               
+               if let value = jsonRoot["terms"] as? [Any] {
+                  let array: [[String]] = []
+                  
+                  for item in value {
+                     if let s = item as? String {
+                        terms.append([s])
+                     } else if let a = item as? [String] {
+                        terms.append(a)
+                     }
+                  }
+                  
+                  terms = array
                }
                
                if let states = jsonRoot["states"] as? [String: Any] {
@@ -4277,12 +4487,16 @@ struct Stage: UIViewRepresentable {
                   }
                }
                
+               if let value = jsonRoot["memory"] as? String {
+                  memory = value
+               }
+               
                if let voice, let language {
                   wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
                }
                
                if let data = try? JSONSerialization.data(withJSONObject: jsonRoot, options: .prettyPrinted), let output = String(data: data, encoding: .utf8) {
-                  return (output, content, likability, state, choices, wave)
+                  return (output, content, likability, terms, state, choices, memory, wave)
                }
             }
          }
@@ -4620,8 +4834,16 @@ struct Peek: UIViewControllerRepresentable {
                      self.parent.loading = true
                   }
                   
+                  let memory = await Task.detached {
+                     if let data = self.load() {
+                        return String(data: data, encoding: .utf8)
+                     }
+                     
+                     return nil
+                  }.value
+                  
                   var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                     return self.replacePlaceholders(text: prompt, resolver: { format in
+                     var text = self.replacePlaceholders(text: prompt, resolver: { format in
                         
                         if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
                            let dateFormatter = DateFormatter()
@@ -4634,6 +4856,12 @@ struct Peek: UIViewControllerRepresentable {
                         
                         return nil
                      })
+                     
+                     if let memory {
+                        text += "\n\(memory)"
+                     }
+                     
+                     return text
                   }.value]]
                   var i = self.parent.logs.count - 1
                   
@@ -4689,7 +4917,8 @@ struct Peek: UIViewControllerRepresentable {
                      return
                   }
                   
-                  if let (output, content, likability, state, choices, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
+                  ///
+                  if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                      let sequence = Sequence(name: "Activate", state: nil)
                      let id = UUID()
                      
@@ -4702,12 +4931,29 @@ struct Peek: UIViewControllerRepresentable {
                      sequence.append(Sequence(name: "Emote", state: state ?? String()))
                      sequences.append((first.name, id, output, sequence, likability, choices))
                      
+                     if let memory {
+                        await Task.detached {
+                           if let data = memory.data(using: .utf8) {
+                              self.save(data)
+                           }
+                        }.value
+                     }
+                     
                      while !queue.isEmpty {
                         let character = queue.removeFirst()
                         
                         if let prompt = character.prompt {
-                           if let (output, content, _, state, _, voice) = await self.generate(messages: [["role": "system", "content": await Task.detached {
-                              return self.replacePlaceholders(text: prompt, resolver: { format in
+                           let memory = await Task.detached {
+                              if let data = self.load() {
+                                 return String(data: data, encoding: .utf8)
+                              }
+                              
+                              return nil
+                           }.value
+                           
+                           ///
+                           if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: [["role": "system", "content": await Task.detached {
+                              var text = self.replacePlaceholders(text: prompt, resolver: { format in
                                  
                                  if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
                                     let dateFormatter = DateFormatter()
@@ -4720,6 +4966,12 @@ struct Peek: UIViewControllerRepresentable {
                                  
                                  return nil
                               })
+                              
+                              if let memory {
+                                 text += "\n\(memory)"
+                              }
+                              
+                              return text
                            }.value], ["role": "user", "content": [["type": "text", "text": content]]]], voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                               let sequence = Sequence(name: "Activate", state: nil)
                               let id = UUID()
@@ -4732,6 +4984,14 @@ struct Peek: UIViewControllerRepresentable {
                               
                               sequence.append(Sequence(name: "Emote", state: state ?? String()))
                               sequences.append((character.name, id, output, sequence, nil, nil))
+                              
+                              if let memory {
+                                 await Task.detached {
+                                    if let data = memory.data(using: .utf8) {
+                                       self.save(data)
+                                    }
+                                 }.value
+                              }
                            } else {
                               sequences.removeAll()
                               queue.removeAll()
@@ -4832,6 +5092,41 @@ struct Peek: UIViewControllerRepresentable {
          }
       }
       
+      private nonisolated func load(from filename: String = "MEMORY.md") -> Data? {
+         if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+            let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
+            
+            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+               defer {
+                  try? file.close()
+               }
+               
+               return try? file.readToEnd()
+            }
+         }
+         
+         return nil
+      }
+      
+      private nonisolated func save(_ data: Data, to filename: String = "MEMORY.md") {
+         if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+            let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
+            
+            if FileManager.default.fileExists(atPath: path) {
+               if let file = FileHandle(forWritingAtPath: path) {
+                  defer {
+                     try? file.close()
+                  }
+                  
+                  try? file.truncate(atOffset: 0)
+                  try? file.write(contentsOf: data)
+               }
+            } else {
+               FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+            }
+         }
+      }
+      
       private func sample(path: String, sequences: [Sequence]) async -> Data? {
          return await Task.detached {
             var sequenceQueue = sequences
@@ -4885,7 +5180,7 @@ struct Peek: UIViewControllerRepresentable {
          }.value
       }
       
-      private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, String?, [(String, URL?)], Data?)? {
+      private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, [[String]], String?, [(String, URL?)], String?, Data?)? {
          if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
             var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
             
@@ -4896,12 +5191,28 @@ struct Peek: UIViewControllerRepresentable {
             
             if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
                var likability: Double? = nil
+               var terms = [[String]]()
                var state: String? = nil
                var choices = [(String, URL?)]()
+               var memory: String? = nil
                var wave: Data? = nil
                
                if let value = jsonRoot["likability"] as? Double {
                   likability = value
+               }
+               
+               if let value = jsonRoot["terms"] as? [Any] {
+                  let array: [[String]] = []
+                  
+                  for item in value {
+                     if let s = item as? String {
+                        terms.append([s])
+                     } else if let a = item as? [String] {
+                        terms.append(a)
+                     }
+                  }
+                  
+                  terms = array
                }
                
                if let states = jsonRoot["states"] as? [String: Any] {
@@ -4933,12 +5244,16 @@ struct Peek: UIViewControllerRepresentable {
                   }
                }
                
+               if let value = jsonRoot["memory"] as? String {
+                  memory = value
+               }
+               
                if let voice, let language {
                   wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
                }
                
                if let data = try? JSONSerialization.data(withJSONObject: jsonRoot, options: .prettyPrinted), let output = String(data: data, encoding: .utf8) {
-                  return (output, content, likability, state, choices, wave)
+                  return (output, content, likability, terms, state, choices, memory, wave)
                }
             }
          }
