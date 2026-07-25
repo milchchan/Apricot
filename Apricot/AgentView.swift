@@ -13,6 +13,7 @@ import WidgetKit
 
 protocol AgentDelegate: AnyObject {
     func agentShouldIdle(_ agent: AgentView, by name: String) -> Bool
+    func agentDidStart(_ agent: AgentView)
     func agentDidRender(_ agent: AgentView, image: CGImage, by name: String)
     func agentDidRefresh(_ agent: AgentView, forcibly flag: Bool)
     func agentDidTransition(_ agent: AgentView)
@@ -352,7 +353,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                 interval = (window.screen.bounds.width - 32.0) / Double(characters.count)
                 offset = -16.0 - interval / 2.0 + window.screen.bounds.width / 2.0
                 
-                self.systemScale = min(window.screen.bounds.height / 2.0 / characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? window.screen.scale : $1.scale) * scale / window.screen.scale, $0) }), 1.0)
+                self.systemScale = min(window.screen.bounds.height / 2.0 / characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * scale / self.traitCollection.displayScale, $0) }), 1.0)
             } else {
                 alpha = 0.0
                 interval = 0.0
@@ -449,6 +450,19 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         
                         return nil
                     }).first
+                    
+                    if i == 0 {
+                        let sequence = Sequence(name: nil, state: String())
+                        
+                        for s in x {
+                            for obj in s {
+                                sequence.append(obj)
+                            }
+                        }
+                        
+                        y.append(sequence)
+                    }
+                    
                     y.append(Sequence(name: String()))
                     
                     return y
@@ -456,7 +470,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                 
                 if let animations {
                     let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
-                    let screenScale = Int(round(window.screen.scale))
+                    let screenScale = Int(round(self.traitCollection.displayScale))
                     var pathSet = Set<String>()
                     
                     for animation in animations {
@@ -518,7 +532,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     
                     if let image {
                         let actualScale = scale * self.systemScale
-                        let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / window.screen.scale) * actualScale
+                        let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
                         let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
                         
                         UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
@@ -945,7 +959,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             interval = (window.screen.bounds.width - 32.0) / Double(characters.count)
                             offset = -16.0 - interval / 2.0 + window.screen.bounds.width / 2.0
                             
-                            self.systemScale = min(window.screen.bounds.height / 2.0 / characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? window.screen.scale : $1.scale) * self.userScale / window.screen.scale, $0) }), 1.0)
+                            self.systemScale = min(window.screen.bounds.height / 2.0 / characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) }), 1.0)
                         } else {
                             alpha = 0.0
                             interval = 0.0
@@ -1038,6 +1052,19 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                     
                                     return nil
                                 }).first
+                                
+                                if i == 0 {
+                                    let sequence = Sequence(name: nil, state: String())
+                                    
+                                    for s in x {
+                                        for obj in s {
+                                            sequence.append(obj)
+                                        }
+                                    }
+                                    
+                                    y.append(sequence)
+                                }
+                                
                                 y.append(Sequence(name: String()))
                                 
                                 return y
@@ -1045,7 +1072,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             
                             if let animations {
                                 let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
-                                let screenScale = Int(round(window.screen.scale))
+                                let screenScale = Int(round(self.traitCollection.displayScale))
                                 let loadedImages = await Task.detached {
                                     var pathSet = Set<String>()
                                     var images = [String: CGImage]()
@@ -1116,7 +1143,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 
                                 if let image {
                                     let actualScale = self.userScale * self.systemScale
-                                    let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / window.screen.scale) * actualScale
+                                    let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
                                     let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
                                     
                                     UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
@@ -1190,13 +1217,13 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     self.userScale = scale
                     
                     for characterView in self.characterViews {
-                        let preferredScale = (characterView.scale == 0.0 ? window.screen.scale : characterView.scale) * scale * self.systemScale
-                        let frame = CGRect(x: characterView.origin.x * preferredScale / window.screen.scale, y: characterView.origin.y * preferredScale / window.screen.scale, width: characterView.size.width * preferredScale / window.screen.scale, height: characterView.size.height * preferredScale / window.screen.scale)
+                        let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * scale * self.systemScale
+                        let frame = CGRect(x: characterView.origin.x * preferredScale / self.traitCollection.displayScale, y: characterView.origin.y * preferredScale / self.traitCollection.displayScale, width: characterView.size.width * preferredScale / self.traitCollection.displayScale, height: characterView.size.height * preferredScale / self.traitCollection.displayScale)
                         let messageWidth = floor(UIDevice.current.userInterfaceIdiom == .phone ? min(window.screen.bounds.width, window.screen.bounds.height) - 32.0 : min(window.screen.bounds.width, window.screen.bounds.height) / 2.0 - 32.0)
                         let maxScale = (messageWidth + 16.0) / messageWidth
                         let balloonHeight = characterView.constraints.reduce(0.0, { $1.firstItem === characterView.balloonView && $1.firstAttribute == .height ? $1.constant : $0 })
-                        let horizontalPadding = round((characterView.contentInsets.leading + characterView.contentInsets.trailing) * preferredScale / window.screen.scale / 2.0)
-                        let verticalPadding = round((characterView.contentInsets.top + characterView.contentInsets.bottom) * preferredScale / window.screen.scale / 2.0)
+                        let horizontalPadding = round((characterView.contentInsets.leading + characterView.contentInsets.trailing) * preferredScale / self.traitCollection.displayScale / 2.0)
+                        let verticalPadding = round((characterView.contentInsets.top + characterView.contentInsets.bottom) * preferredScale / self.traitCollection.displayScale / 2.0)
                         
                         for motionEffect in characterView.contentView.motionEffects {
                             if let motionEffectGroup = motionEffect as? UIMotionEffectGroup, let motionEffects = motionEffectGroup.motionEffects {
@@ -1241,7 +1268,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             
                             if let image {
                                 let actualScale = scale * self.systemScale
-                                let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / window.screen.scale) * actualScale
+                                let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
                                 let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
                                 
                                 UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
@@ -1440,14 +1467,33 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
             let systemScale = self.systemScale
             let messageWidth = floor(UIDevice.current.userInterfaceIdiom == .phone ? min(window.screen.bounds.width, window.screen.bounds.height) - 32.0 : min(window.screen.bounds.width, window.screen.bounds.height) / 2.0 - 32.0)
             
-            if UIDevice.current.orientation.isLandscape {
+            if self.bounds.width < self.bounds.height {
+                for i in 0..<self.characterViews.count {
+                    let characterView = self.characterViews[i]
+                    
+                    if characterView.transform.tx != 0.0 {
+                        if i > 0 {
+                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
+                                characterView.alpha = 0.0
+                                characterView.transform.tx = 0.0
+                            })
+                        } else {
+                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
+                                characterView.transform.tx = 0.0
+                            })
+                        }
+                    }
+                }
+                
+                self.systemScale = 1.0
+            } else {
                 let interval = (window.screen.bounds.width - 32.0) / Double(Script.shared.characters.count)
                 let offset = -16.0 - interval / 2.0 + window.screen.bounds.width / 2.0
                 var maxHeight = 0.0
                 
                 for i in 0..<self.characterViews.count {
                     let characterView = self.characterViews[i]
-                    let height = (characterView.size.height - characterView.contentInsets.top) * (characterView.scale == 0.0 ? window.screen.scale : characterView.scale) * self.userScale / window.screen.scale
+                    let height = (characterView.size.height - characterView.contentInsets.top) * (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
                     let tx = offset - interval * Double(i)
                     
                     if characterView.transform.tx != tx {
@@ -1469,25 +1515,6 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                 }
                 
                 self.systemScale = min(window.screen.bounds.height / 2.0 / maxHeight, 1.0)
-            } else {
-                for i in 0..<self.characterViews.count {
-                    let characterView = self.characterViews[i]
-                    
-                    if characterView.transform.tx != 0.0 {
-                        if i > 0 {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
-                                characterView.alpha = 0.0
-                                characterView.transform.tx = 0.0
-                            })
-                        } else {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
-                                characterView.transform.tx = 0.0
-                            })
-                        }
-                    }
-                }
-                
-                self.systemScale = 1.0
             }
             
             if self.characterViews.contains(where: { x in
@@ -1521,7 +1548,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                 
                 UIGraphicsEndImageContext()
                 
-                if let image, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene, self.getColor(image: image, scale: window.screen.scale, x: Int(floor(point.x - characterView.frame.origin.x - characterView.contentView.superview!.frame.origin.x)), y: Int(floor(point.y - characterView.frame.origin.y - characterView.frame.size.height + characterView.contentView.frame.size.height))).alpha > 0.0 {
+                if let image, self.getColor(image: image, scale: self.traitCollection.displayScale, x: Int(floor(point.x - characterView.frame.origin.x - characterView.contentView.superview!.frame.origin.x)), y: Int(floor(point.y - characterView.frame.origin.y - characterView.frame.size.height + characterView.contentView.frame.size.height))).alpha > 0.0 {
                     return view
                 }
             } else if let messageLabel = view as? UILabel {
@@ -1549,7 +1576,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
     }
     
     @objc private func doubleTapped(sender: UITapGestureRecognizer) {
-        if sender.state == .ended, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+        if sender.state == .ended {
             for characterView in self.characterViews {
                 if characterView.contentView === sender.view {
                     let types = characterView.types.compactMap({ $0.value.1 ? $0.key : nil })
@@ -1624,7 +1651,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                     let y = round(characterView.origin.y + current.location.y)
                                     var width = current.size.width
                                     var height = current.size.height
-                                    let scale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / window.screen.scale) * self.userScale * self.systemScale
+                                    let scale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * self.userScale * self.systemScale
                                     
                                     if width == 0.0 && height == 0.0 {
                                         width = Double(image.width)
@@ -1961,514 +1988,512 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             Task {
                                 var frames = [[(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]]()
                                 
-                                if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                    if isRunnable {
-                                        let newCount = messages.reduce(0, { $1.id == nil ? $0 + 1 : $0 })
-                                        var unlockedAchievements = [(String, String)]()
-                                        
-                                        for (index, item) in self.characterViews.reduce(into: [(String, String, [String: (Int, Bool, Set<Int>)], Double, [Animation], [Sequence])](), { x, y in
-                                            for character in Script.shared.characters {
-                                                if character.name == y.name {
-                                                    var likeSequences = [Sequence]()
-                                                    
-                                                    for sequence in character.sequences {
-                                                        if sequence.name == "Like" {
-                                                            likeSequences.append(sequence)
-                                                        }
-                                                    }
-                                                    
-                                                    x.append((character.name, y.path!, y.types, y.scale, y.cachedAnimations, likeSequences))
-                                                    
-                                                    break
-                                                }
-                                            }
-                                        }).enumerated() {
-                                            for name in (await Task.detached {
-                                                var names = [String]()
+                                if isRunnable {
+                                    let newCount = messages.reduce(0, { $1.id == nil ? $0 + 1 : $0 })
+                                    var unlockedAchievements = [(String, String)]()
+                                    
+                                    for (index, item) in self.characterViews.reduce(into: [(String, String, [String: (Int, Bool, Set<Int>)], Double, [Animation], [Sequence])](), { x, y in
+                                        for character in Script.shared.characters {
+                                            if character.name == y.name {
+                                                var likeSequences = [Sequence]()
                                                 
-                                                for sequence in item.5 {
-                                                    if let pattern = sequence.state, let regex = try? Regex(pattern) {
-                                                        if let match = "\(oldCount)".firstMatch(of: regex), match.output.isEmpty {
-                                                            for i in oldCount + 1...newCount {
-                                                                if let match = "\(i)".firstMatch(of: regex), !match.output.isEmpty {
-                                                                    for j in 0..<sequence.count {
-                                                                        if let s1 = sequence[j] as? Sequence {
-                                                                            if let name = s1.name, s1.state == nil && !s1.isEmpty {
-                                                                                for k in j + 1..<sequence.count {
-                                                                                    if let s2 = sequence[k] as? Sequence {
-                                                                                        var isAvailable = false
+                                                for sequence in character.sequences {
+                                                    if sequence.name == "Like" {
+                                                        likeSequences.append(sequence)
+                                                    }
+                                                }
+                                                
+                                                x.append((character.name, y.path!, y.types, y.scale, y.cachedAnimations, likeSequences))
+                                                
+                                                break
+                                            }
+                                        }
+                                    }).enumerated() {
+                                        for name in (await Task.detached {
+                                            var names = [String]()
+                                            
+                                            for sequence in item.5 {
+                                                if let pattern = sequence.state, let regex = try? Regex(pattern) {
+                                                    if let match = "\(oldCount)".firstMatch(of: regex), match.output.isEmpty {
+                                                        for i in oldCount + 1...newCount {
+                                                            if let match = "\(i)".firstMatch(of: regex), !match.output.isEmpty {
+                                                                for j in 0..<sequence.count {
+                                                                    if let s1 = sequence[j] as? Sequence {
+                                                                        if let name = s1.name, s1.state == nil && !s1.isEmpty {
+                                                                            for k in j + 1..<sequence.count {
+                                                                                if let s2 = sequence[k] as? Sequence {
+                                                                                    var isAvailable = false
+                                                                                    
+                                                                                    if s2.isEmpty {
+                                                                                        if s1.name == s2.name && s2.state == nil {
+                                                                                            isAvailable = true
+                                                                                        }
+                                                                                    } else {
+                                                                                        var queue = [Sequence]()
                                                                                         
-                                                                                        if s2.isEmpty {
-                                                                                            if s1.name == s2.name && s2.state == nil {
-                                                                                                isAvailable = true
+                                                                                        for obj in s2 {
+                                                                                            if let s3 = obj as? Sequence {
+                                                                                                queue.append(s3)
                                                                                             }
-                                                                                        } else {
-                                                                                            var queue = [Sequence]()
+                                                                                        }
+                                                                                        
+                                                                                        while !queue.isEmpty {
+                                                                                            let s = queue.removeFirst()
                                                                                             
-                                                                                            for obj in s2 {
-                                                                                                if let s3 = obj as? Sequence {
-                                                                                                    queue.append(s3)
+                                                                                            if s.isEmpty {
+                                                                                                if s1.name == s.name && s.state == nil {
+                                                                                                    isAvailable = true
                                                                                                 }
-                                                                                            }
-                                                                                            
-                                                                                            while !queue.isEmpty {
-                                                                                                let s = queue.removeFirst()
-                                                                                                
-                                                                                                if s.isEmpty {
-                                                                                                    if s1.name == s.name && s.state == nil {
-                                                                                                        isAvailable = true
-                                                                                                    }
-                                                                                                } else {
-                                                                                                    for obj in s {
-                                                                                                        if let s3 = obj as? Sequence {
-                                                                                                            queue.append(s3)
-                                                                                                        }
+                                                                                            } else {
+                                                                                                for obj in s {
+                                                                                                    if let s3 = obj as? Sequence {
+                                                                                                        queue.append(s3)
                                                                                                     }
                                                                                                 }
                                                                                             }
                                                                                         }
-                                                                                        
-                                                                                        if isAvailable {
-                                                                                            if !names.contains(where: { $0 == name }) {
-                                                                                                names.append(name)
-                                                                                            }
-                                                                                            
-                                                                                            break
+                                                                                    }
+                                                                                    
+                                                                                    if isAvailable {
+                                                                                        if !names.contains(where: { $0 == name }) {
+                                                                                            names.append(name)
                                                                                         }
+                                                                                        
+                                                                                        break
                                                                                     }
                                                                                 }
                                                                             }
                                                                         }
                                                                     }
-                                                                    
-                                                                    break
                                                                 }
+                                                                
+                                                                break
                                                             }
                                                         }
                                                     }
                                                 }
-                                                
-                                                return names
-                                            }.value) {
-                                                unlockedAchievements.append((item.0, name))
                                             }
                                             
-                                            if index > 0 {
-                                                await Script.shared.run(name: item.0, sequences: item.5, state: String(newCount), words: []) { sequences in
-                                                    var tempSequences = [Sequence]()
-                                                    var cachedAnimations = [Int: [UInt]]()
-                                                    let types = item.2.compactMap({ $0.value.1 ? $0.key : nil })
+                                            return names
+                                        }.value) {
+                                            unlockedAchievements.append((item.0, name))
+                                        }
+                                        
+                                        if index > 0 {
+                                            await Script.shared.run(name: item.0, sequences: item.5, state: String(newCount), words: []) { sequences in
+                                                var tempSequences = [Sequence]()
+                                                var cachedAnimations = [Int: [UInt]]()
+                                                let types = item.2.compactMap({ $0.value.1 ? $0.key : nil })
+                                                
+                                                for sequence in sequences {
+                                                    let tempSequence = Sequence(name: sequence.name, state: sequence.state)
                                                     
-                                                    for sequence in sequences {
-                                                        let tempSequence = Sequence(name: sequence.name, state: sequence.state)
-                                                        
-                                                        for obj in sequence {
-                                                            if let animations = obj as? [Animation] {
-                                                                var tempAnimations2 = [Animation]()
+                                                    for obj in sequence {
+                                                        if let animations = obj as? [Animation] {
+                                                            var tempAnimations2 = [Animation]()
+                                                            
+                                                            for animation in animations {
+                                                                var tempTypes: [String?]? = nil
+                                                                let isVisible: Bool
                                                                 
-                                                                for animation in animations {
-                                                                    var tempTypes: [String?]? = nil
-                                                                    let isVisible: Bool
+                                                                if animation.type == nil {
+                                                                    tempTypes = []
                                                                     
-                                                                    if animation.type == nil {
-                                                                        tempTypes = []
-                                                                        
-                                                                        for a in item.4 {
-                                                                            if a.z == animation.z {
-                                                                                tempTypes!.append(a.type)
-                                                                            }
+                                                                    for a in item.4 {
+                                                                        if a.z == animation.z {
+                                                                            tempTypes!.append(a.type)
                                                                         }
-                                                                    }
-                                                                    
-                                                                    if let tempTypes {
-                                                                        if types.isEmpty {
-                                                                            isVisible = true
-                                                                        } else {
-                                                                            isVisible = !tempTypes.contains { type in
-                                                                                if let type {
-                                                                                    return types.contains(type)
-                                                                                }
-                                                                                
-                                                                                return false
-                                                                            }
-                                                                        }
-                                                                    } else if types.isEmpty {
-                                                                        isVisible = false
-                                                                    } else {
-                                                                        tempTypes = []
-                                                                        
-                                                                        for a in item.4 {
-                                                                            if let type = a.type, a.z == animation.z && types.contains(type) {
-                                                                                tempTypes!.append(type)
-                                                                            }
-                                                                        }
-                                                                        
-                                                                        isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: animation.type!) == tempTypes!.count - 1
-                                                                    }
-                                                                    
-                                                                    if isVisible && animation.z < 0 {
-                                                                        var group = cachedAnimations[animation.z] ?? []
-                                                                        
-                                                                        group.append(animation.repeats)
-                                                                        cachedAnimations[animation.z] = group
-                                                                    } else {
-                                                                        tempAnimations2.append(animation)
                                                                     }
                                                                 }
                                                                 
-                                                                tempSequence.append(tempAnimations2)
-                                                            } else {
-                                                                tempSequence.append(obj)
-                                                            }
-                                                        }
-                                                        
-                                                        tempSequences.append(tempSequence)
-                                                    }
-                                                    
-                                                    if !cachedAnimations.isEmpty && cachedAnimations.allSatisfy({ $0.value.count == 1 && $0.value[0] == 0 }) {
-                                                        return tempSequences
-                                                    }
-                                                    
-                                                    return sequences
-                                                }
-                                            } else {
-                                                let scale = item.3 == 0.0 ? window.screen.scale : item.3
-                                                
-                                                await Script.shared.run(name: item.0, sequences: item.5, state: String(newCount), words: []) { sequences in
-                                                    let baseUrl = URL(filePath: item.1).deletingLastPathComponent()
-                                                    var tempSequences = [Sequence]()
-                                                    var cachedAnimations = [Int: [(UInt, [(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)])]]()
-                                                    var minZIndex = Int.max
-                                                    let types = item.2.compactMap({ $0.value.1 ? $0.key : nil })
-                                                    
-                                                    for sequence in sequences {
-                                                        let tempSequence = Sequence(name: sequence.name, state: sequence.state)
-                                                        
-                                                        for obj in sequence {
-                                                            if let animations = obj as? [Animation] {
-                                                                var tempAnimations2 = [Animation]()
-                                                                
-                                                                for animation in animations {
-                                                                    var tempTypes: [String?]? = nil
-                                                                    let isVisible: Bool
-                                                                    
-                                                                    if animation.type == nil {
-                                                                        tempTypes = []
-                                                                        
-                                                                        for a in item.4 {
-                                                                            if a.z == animation.z {
-                                                                                tempTypes!.append(a.type)
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    if let tempTypes {
-                                                                        if types.isEmpty {
-                                                                            isVisible = true
-                                                                        } else {
-                                                                            isVisible = !tempTypes.contains { type in
-                                                                                if let type {
-                                                                                    return types.contains(type)
-                                                                                }
-                                                                                
-                                                                                return false
-                                                                            }
-                                                                        }
-                                                                    } else if types.isEmpty {
-                                                                        isVisible = false
+                                                                if let tempTypes {
+                                                                    if types.isEmpty {
+                                                                        isVisible = true
                                                                     } else {
-                                                                        tempTypes = []
-                                                                        
-                                                                        for a in item.4 {
-                                                                            if let type = a.type, a.z == animation.z && types.contains(type) {
-                                                                                tempTypes!.append(type)
+                                                                        isVisible = !tempTypes.contains { type in
+                                                                            if let type {
+                                                                                return types.contains(type)
                                                                             }
+                                                                            
+                                                                            return false
                                                                         }
-                                                                        
-                                                                        isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: animation.type!) == tempTypes!.count - 1
+                                                                    }
+                                                                } else if types.isEmpty {
+                                                                    isVisible = false
+                                                                } else {
+                                                                    tempTypes = []
+                                                                    
+                                                                    for a in item.4 {
+                                                                        if let type = a.type, a.z == animation.z && types.contains(type) {
+                                                                            tempTypes!.append(type)
+                                                                        }
                                                                     }
                                                                     
-                                                                    if isVisible && animation.z < 0 {
-                                                                        var group = cachedAnimations[animation.z] ?? []
-                                                                        var images = [(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]()
-                                                                        
-                                                                        for sprite in animation {
-                                                                            let url: URL?
+                                                                    isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: animation.type!) == tempTypes!.count - 1
+                                                                }
+                                                                
+                                                                if isVisible && animation.z < 0 {
+                                                                    var group = cachedAnimations[animation.z] ?? []
+                                                                    
+                                                                    group.append(animation.repeats)
+                                                                    cachedAnimations[animation.z] = group
+                                                                } else {
+                                                                    tempAnimations2.append(animation)
+                                                                }
+                                                            }
+                                                            
+                                                            tempSequence.append(tempAnimations2)
+                                                        } else {
+                                                            tempSequence.append(obj)
+                                                        }
+                                                    }
+                                                    
+                                                    tempSequences.append(tempSequence)
+                                                }
+                                                
+                                                if !cachedAnimations.isEmpty && cachedAnimations.allSatisfy({ $0.value.count == 1 && $0.value[0] == 0 }) {
+                                                    return tempSequences
+                                                }
+                                                
+                                                return sequences
+                                            }
+                                        } else {
+                                            let scale = item.3 == 0.0 ? self.traitCollection.displayScale : item.3
+                                            
+                                            await Script.shared.run(name: item.0, sequences: item.5, state: String(newCount), words: []) { sequences in
+                                                let baseUrl = URL(filePath: item.1).deletingLastPathComponent()
+                                                var tempSequences = [Sequence]()
+                                                var cachedAnimations = [Int: [(UInt, [(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)])]]()
+                                                var minZIndex = Int.max
+                                                let types = item.2.compactMap({ $0.value.1 ? $0.key : nil })
+                                                
+                                                for sequence in sequences {
+                                                    let tempSequence = Sequence(name: sequence.name, state: sequence.state)
+                                                    
+                                                    for obj in sequence {
+                                                        if let animations = obj as? [Animation] {
+                                                            var tempAnimations2 = [Animation]()
+                                                            
+                                                            for animation in animations {
+                                                                var tempTypes: [String?]? = nil
+                                                                let isVisible: Bool
+                                                                
+                                                                if animation.type == nil {
+                                                                    tempTypes = []
+                                                                    
+                                                                    for a in item.4 {
+                                                                        if a.z == animation.z {
+                                                                            tempTypes!.append(a.type)
+                                                                        }
+                                                                    }
+                                                                }
+                                                                
+                                                                if let tempTypes {
+                                                                    if types.isEmpty {
+                                                                        isVisible = true
+                                                                    } else {
+                                                                        isVisible = !tempTypes.contains { type in
+                                                                            if let type {
+                                                                                return types.contains(type)
+                                                                            }
                                                                             
-                                                                            if let path = sprite.path {
-                                                                                if path.lowercased().hasPrefix("https://") {
-                                                                                    url = URL(string: path)
-                                                                                } else {
-                                                                                    url = baseUrl.appending(path: path, directoryHint: .inferFromPath)
-                                                                                }
+                                                                            return false
+                                                                        }
+                                                                    }
+                                                                } else if types.isEmpty {
+                                                                    isVisible = false
+                                                                } else {
+                                                                    tempTypes = []
+                                                                    
+                                                                    for a in item.4 {
+                                                                        if let type = a.type, a.z == animation.z && types.contains(type) {
+                                                                            tempTypes!.append(type)
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: animation.type!) == tempTypes!.count - 1
+                                                                }
+                                                                
+                                                                if isVisible && animation.z < 0 {
+                                                                    var group = cachedAnimations[animation.z] ?? []
+                                                                    var images = [(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]()
+                                                                    
+                                                                    for sprite in animation {
+                                                                        let url: URL?
+                                                                        
+                                                                        if let path = sprite.path {
+                                                                            if path.lowercased().hasPrefix("https://") {
+                                                                                url = URL(string: path)
                                                                             } else {
-                                                                                url = nil
+                                                                                url = baseUrl.appending(path: path, directoryHint: .inferFromPath)
                                                                             }
-                                                                            
-                                                                            images.append((url: url, x: sprite.location.x * scale, y: sprite.location.y * scale, width: sprite.size.width * scale, height: sprite.size.height * scale, opacity: sprite.opacity, delay: sprite.delay))
+                                                                        } else {
+                                                                            url = nil
                                                                         }
                                                                         
-                                                                        group.append((animation.repeats, images))
-                                                                        cachedAnimations[animation.z] = group
-                                                                        
-                                                                        if animation.z < minZIndex {
-                                                                            minZIndex = animation.z
-                                                                        }
-                                                                    } else {
-                                                                        tempAnimations2.append(animation)
+                                                                        images.append((url: url, x: sprite.location.x * scale, y: sprite.location.y * scale, width: sprite.size.width * scale, height: sprite.size.height * scale, opacity: sprite.opacity, delay: sprite.delay))
                                                                     }
+                                                                    
+                                                                    group.append((animation.repeats, images))
+                                                                    cachedAnimations[animation.z] = group
+                                                                    
+                                                                    if animation.z < minZIndex {
+                                                                        minZIndex = animation.z
+                                                                    }
+                                                                } else {
+                                                                    tempAnimations2.append(animation)
                                                                 }
-                                                                
-                                                                tempSequence.append(tempAnimations2)
-                                                            } else {
-                                                                tempSequence.append(obj)
                                                             }
+                                                            
+                                                            tempSequence.append(tempAnimations2)
+                                                        } else {
+                                                            tempSequence.append(obj)
                                                         }
-                                                        
-                                                        tempSequences.append(tempSequence)
                                                     }
                                                     
-                                                    if !cachedAnimations.isEmpty && cachedAnimations.allSatisfy({ $0.value.count == 1 && $0.value[0].0 == 0 }) {
-                                                        for i in minZIndex..<0 {
-                                                            if let images = cachedAnimations[i] {
-                                                                frames.append(images[0].1)
-                                                            }
-                                                        }
-                                                        
-                                                        return tempSequences
-                                                    }
-                                                    
-                                                    return sequences
+                                                    tempSequences.append(tempSequence)
                                                 }
-                                            }
-                                        }
-                                        
-                                        if !unlockedAchievements.isEmpty {
-                                            Task.detached {
-                                                let image = UIImage(systemName: "lock.open", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
                                                 
-                                                await MainActor.run { [weak self] in
-                                                    for unlockedAchievement in unlockedAchievements {
-                                                        if let characterView = self?.characterViews.first(where: { $0.name == unlockedAchievement.0 }) {
-                                                            self?.notify(characterView: characterView, image: image, text: unlockedAchievement.1, duration: 5.0)
+                                                if !cachedAnimations.isEmpty && cachedAnimations.allSatisfy({ $0.value.count == 1 && $0.value[0].0 == 0 }) {
+                                                    for i in minZIndex..<0 {
+                                                        if let images = cachedAnimations[i] {
+                                                            frames.append(images[0].1)
                                                         }
+                                                    }
+                                                    
+                                                    return tempSequences
+                                                }
+                                                
+                                                return sequences
+                                            }
+                                        }
+                                    }
+                                    
+                                    if !unlockedAchievements.isEmpty {
+                                        Task.detached {
+                                            let image = UIImage(systemName: "lock.open", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
+                                            
+                                            await MainActor.run { [weak self] in
+                                                for unlockedAchievement in unlockedAchievements {
+                                                    if let characterView = self?.characterViews.first(where: { $0.name == unlockedAchievement.0 }) {
+                                                        self?.notify(characterView: characterView, image: image, text: unlockedAchievement.1, duration: 5.0)
                                                     }
                                                 }
                                             }
                                         }
+                                    }
+                                    
+                                    if let userDefaults = UserDefaults(suiteName: "group.com.milchchan.Apricot") {
+                                        userDefaults.setValue(newCount, forKey: "likes")
                                         
-                                        if let userDefaults = UserDefaults(suiteName: "group.com.milchchan.Apricot") {
-                                            userDefaults.setValue(newCount, forKey: "likes")
-                                            
-                                            WidgetCenter.shared.reloadAllTimelines()
-                                        }
-                                    } else {
-                                        let newCount = (Script.shared.likes[self.characterViews[0].name!] ?? []).reduce(0, { $1.id == nil ? $0 + 1 : $0 })
+                                        WidgetCenter.shared.reloadAllTimelines()
+                                    }
+                                } else {
+                                    let newCount = (Script.shared.likes[self.characterViews[0].name!] ?? []).reduce(0, { $1.id == nil ? $0 + 1 : $0 })
+                                    
+                                    for view in self.characterViews {
+                                        let scale = view.scale == 0.0 ? self.traitCollection.displayScale : view.scale
                                         
-                                        for view in self.characterViews {
-                                            let scale = view.scale == 0.0 ? window.screen.scale : view.scale
-                                            
-                                            if view.name == characterView.name {
-                                                await Script.shared.run(name: view.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                                                    if y.name == view.name {
-                                                        for sequence in y.sequences {
-                                                            if sequence.name == "Like" {
-                                                                x.append(sequence)
-                                                            }
+                                        if view.name == characterView.name {
+                                            await Script.shared.run(name: view.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                                if y.name == view.name {
+                                                    for sequence in y.sequences {
+                                                        if sequence.name == "Like" {
+                                                            x.append(sequence)
                                                         }
                                                     }
-                                                }), state: String(newCount), words: []) { sequences in
-                                                    let baseUrl = URL(filePath: view.path!).deletingLastPathComponent()
-                                                    var tempSequences = [Sequence]()
-                                                    var cachedAnimations = [Int: [(UInt, [(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)])]]()
-                                                    var minZIndex = Int.max
-                                                    let types = view.types.compactMap({ $0.value.1 ? $0.key : nil })
+                                                }
+                                            }), state: String(newCount), words: []) { sequences in
+                                                let baseUrl = URL(filePath: view.path!).deletingLastPathComponent()
+                                                var tempSequences = [Sequence]()
+                                                var cachedAnimations = [Int: [(UInt, [(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)])]]()
+                                                var minZIndex = Int.max
+                                                let types = view.types.compactMap({ $0.value.1 ? $0.key : nil })
+                                                
+                                                for sequence in sequences {
+                                                    let tempSequence = Sequence(name: sequence.name, state: sequence.state)
                                                     
-                                                    for sequence in sequences {
-                                                        let tempSequence = Sequence(name: sequence.name, state: sequence.state)
-                                                        
-                                                        for obj in sequence {
-                                                            if let animations = obj as? [Animation] {
-                                                                var tempAnimations2 = [Animation]()
+                                                    for obj in sequence {
+                                                        if let animations = obj as? [Animation] {
+                                                            var tempAnimations2 = [Animation]()
+                                                            
+                                                            for animation in animations {
+                                                                var tempTypes: [String?]? = nil
+                                                                let isVisible: Bool
                                                                 
-                                                                for animation in animations {
-                                                                    var tempTypes: [String?]? = nil
-                                                                    let isVisible: Bool
+                                                                if animation.type == nil {
+                                                                    tempTypes = []
                                                                     
-                                                                    if animation.type == nil {
-                                                                        tempTypes = []
-                                                                        
-                                                                        for a in view.cachedAnimations {
-                                                                            if a.z == animation.z {
-                                                                                tempTypes!.append(a.type)
-                                                                            }
+                                                                    for a in view.cachedAnimations {
+                                                                        if a.z == animation.z {
+                                                                            tempTypes!.append(a.type)
                                                                         }
                                                                     }
-                                                                    
-                                                                    if let tempTypes {
-                                                                        if types.isEmpty {
-                                                                            isVisible = true
-                                                                        } else {
-                                                                            isVisible = !tempTypes.contains { type in
-                                                                                if let type {
-                                                                                    return types.contains(type)
-                                                                                }
-                                                                                
-                                                                                return false
-                                                                            }
-                                                                        }
-                                                                    } else if types.isEmpty {
-                                                                        isVisible = false
+                                                                }
+                                                                
+                                                                if let tempTypes {
+                                                                    if types.isEmpty {
+                                                                        isVisible = true
                                                                     } else {
-                                                                        tempTypes = []
-                                                                        
-                                                                        for a in view.cachedAnimations {
-                                                                            if let type = a.type, a.z == animation.z && types.contains(type) {
-                                                                                tempTypes!.append(type)
+                                                                        isVisible = !tempTypes.contains { type in
+                                                                            if let type {
+                                                                                return types.contains(type)
                                                                             }
+                                                                            
+                                                                            return false
                                                                         }
-                                                                        
-                                                                        isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: animation.type!) == tempTypes!.count - 1
+                                                                    }
+                                                                } else if types.isEmpty {
+                                                                    isVisible = false
+                                                                } else {
+                                                                    tempTypes = []
+                                                                    
+                                                                    for a in view.cachedAnimations {
+                                                                        if let type = a.type, a.z == animation.z && types.contains(type) {
+                                                                            tempTypes!.append(type)
+                                                                        }
                                                                     }
                                                                     
-                                                                    if isVisible && animation.z < 0 {
-                                                                        var group = cachedAnimations[animation.z] ?? []
-                                                                        var images = [(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]()
+                                                                    isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: animation.type!) == tempTypes!.count - 1
+                                                                }
+                                                                
+                                                                if isVisible && animation.z < 0 {
+                                                                    var group = cachedAnimations[animation.z] ?? []
+                                                                    var images = [(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]()
+                                                                    
+                                                                    for sprite in animation {
+                                                                        let url: URL?
                                                                         
-                                                                        for sprite in animation {
-                                                                            let url: URL?
-                                                                            
-                                                                            if let path = sprite.path {
-                                                                                if path.lowercased().hasPrefix("https://") {
-                                                                                    url = URL(string: path)
-                                                                                } else {
-                                                                                    url = baseUrl.appending(path: path, directoryHint: .inferFromPath)
-                                                                                }
+                                                                        if let path = sprite.path {
+                                                                            if path.lowercased().hasPrefix("https://") {
+                                                                                url = URL(string: path)
                                                                             } else {
-                                                                                url = nil
+                                                                                url = baseUrl.appending(path: path, directoryHint: .inferFromPath)
+                                                                            }
+                                                                        } else {
+                                                                            url = nil
+                                                                        }
+                                                                        
+                                                                        images.append((url: url, x: sprite.location.x * scale, y: sprite.location.y * scale, width: sprite.size.width * scale, height: sprite.size.height * scale, opacity: sprite.opacity, delay: sprite.delay))
+                                                                    }
+                                                                    
+                                                                    group.append((animation.repeats, images))
+                                                                    cachedAnimations[animation.z] = group
+                                                                    
+                                                                    if animation.z < minZIndex {
+                                                                        minZIndex = animation.z
+                                                                    }
+                                                                } else {
+                                                                    tempAnimations2.append(animation)
+                                                                }
+                                                            }
+                                                            
+                                                            tempSequence.append(tempAnimations2)
+                                                        } else {
+                                                            tempSequence.append(obj)
+                                                        }
+                                                    }
+                                                    
+                                                    tempSequences.append(tempSequence)
+                                                }
+                                                
+                                                if !cachedAnimations.isEmpty && cachedAnimations.allSatisfy({ $0.value.count == 1 && $0.value[0].0 == 0 }) {
+                                                    for i in minZIndex..<0 {
+                                                        if let images = cachedAnimations[i] {
+                                                            frames.append(images[0].1)
+                                                        }
+                                                    }
+                                                    
+                                                    return tempSequences
+                                                }
+                                                
+                                                return sequences
+                                            }
+                                        } else {
+                                            await Script.shared.run(name: view.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                                if y.name == view.name {
+                                                    for sequence in y.sequences {
+                                                        if sequence.name == "Like" {
+                                                            x.append(sequence)
+                                                        }
+                                                    }
+                                                }
+                                            }), state: String(newCount), words: []) { sequences in
+                                                var tempSequences = [Sequence]()
+                                                var cachedAnimations = [Int: [UInt]]()
+                                                let types = view.types.compactMap({ $0.value.1 ? $0.key : nil })
+                                                
+                                                for sequence in sequences {
+                                                    let tempSequence = Sequence(name: sequence.name, state: sequence.state)
+                                                    
+                                                    for obj in sequence {
+                                                        if let animations = obj as? [Animation] {
+                                                            var tempAnimations2 = [Animation]()
+                                                            
+                                                            for animation in animations {
+                                                                var tempTypes: [String?]? = nil
+                                                                let isVisible: Bool
+                                                                
+                                                                if animation.type == nil {
+                                                                    tempTypes = []
+                                                                    
+                                                                    for a in view.cachedAnimations {
+                                                                        if a.z == animation.z {
+                                                                            tempTypes!.append(a.type)
+                                                                        }
+                                                                    }
+                                                                }
+                                                                
+                                                                if let tempTypes {
+                                                                    if types.isEmpty {
+                                                                        isVisible = true
+                                                                    } else {
+                                                                        isVisible = !tempTypes.contains { type in
+                                                                            if let type {
+                                                                                return types.contains(type)
                                                                             }
                                                                             
-                                                                            images.append((url: url, x: sprite.location.x * scale, y: sprite.location.y * scale, width: sprite.size.width * scale, height: sprite.size.height * scale, opacity: sprite.opacity, delay: sprite.delay))
+                                                                            return false
                                                                         }
-                                                                        
-                                                                        group.append((animation.repeats, images))
-                                                                        cachedAnimations[animation.z] = group
-                                                                        
-                                                                        if animation.z < minZIndex {
-                                                                            minZIndex = animation.z
-                                                                        }
-                                                                    } else {
-                                                                        tempAnimations2.append(animation)
                                                                     }
+                                                                } else if types.isEmpty {
+                                                                    isVisible = false
+                                                                } else {
+                                                                    tempTypes = []
+                                                                    
+                                                                    for a in view.cachedAnimations {
+                                                                        if let type = a.type, a.z == animation.z && types.contains(type) {
+                                                                            tempTypes!.append(type)
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: animation.type!) == tempTypes!.count - 1
                                                                 }
                                                                 
-                                                                tempSequence.append(tempAnimations2)
-                                                            } else {
-                                                                tempSequence.append(obj)
-                                                            }
-                                                        }
-                                                        
-                                                        tempSequences.append(tempSequence)
-                                                    }
-                                                    
-                                                    if !cachedAnimations.isEmpty && cachedAnimations.allSatisfy({ $0.value.count == 1 && $0.value[0].0 == 0 }) {
-                                                        for i in minZIndex..<0 {
-                                                            if let images = cachedAnimations[i] {
-                                                                frames.append(images[0].1)
-                                                            }
-                                                        }
-                                                        
-                                                        return tempSequences
-                                                    }
-                                                    
-                                                    return sequences
-                                                }
-                                            } else {
-                                                await Script.shared.run(name: view.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                                                    if y.name == view.name {
-                                                        for sequence in y.sequences {
-                                                            if sequence.name == "Like" {
-                                                                x.append(sequence)
-                                                            }
-                                                        }
-                                                    }
-                                                }), state: String(newCount), words: []) { sequences in
-                                                    var tempSequences = [Sequence]()
-                                                    var cachedAnimations = [Int: [UInt]]()
-                                                    let types = view.types.compactMap({ $0.value.1 ? $0.key : nil })
-                                                    
-                                                    for sequence in sequences {
-                                                        let tempSequence = Sequence(name: sequence.name, state: sequence.state)
-                                                        
-                                                        for obj in sequence {
-                                                            if let animations = obj as? [Animation] {
-                                                                var tempAnimations2 = [Animation]()
-                                                                
-                                                                for animation in animations {
-                                                                    var tempTypes: [String?]? = nil
-                                                                    let isVisible: Bool
+                                                                if isVisible && animation.z < 0 {
+                                                                    var group = cachedAnimations[animation.z] ?? []
                                                                     
-                                                                    if animation.type == nil {
-                                                                        tempTypes = []
-                                                                        
-                                                                        for a in view.cachedAnimations {
-                                                                            if a.z == animation.z {
-                                                                                tempTypes!.append(a.type)
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    if let tempTypes {
-                                                                        if types.isEmpty {
-                                                                            isVisible = true
-                                                                        } else {
-                                                                            isVisible = !tempTypes.contains { type in
-                                                                                if let type {
-                                                                                    return types.contains(type)
-                                                                                }
-                                                                                
-                                                                                return false
-                                                                            }
-                                                                        }
-                                                                    } else if types.isEmpty {
-                                                                        isVisible = false
-                                                                    } else {
-                                                                        tempTypes = []
-                                                                        
-                                                                        for a in view.cachedAnimations {
-                                                                            if let type = a.type, a.z == animation.z && types.contains(type) {
-                                                                                tempTypes!.append(type)
-                                                                            }
-                                                                        }
-                                                                        
-                                                                        isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: animation.type!) == tempTypes!.count - 1
-                                                                    }
-                                                                    
-                                                                    if isVisible && animation.z < 0 {
-                                                                        var group = cachedAnimations[animation.z] ?? []
-                                                                        
-                                                                        group.append(animation.repeats)
-                                                                        cachedAnimations[animation.z] = group
-                                                                    } else {
-                                                                        tempAnimations2.append(animation)
-                                                                    }
+                                                                    group.append(animation.repeats)
+                                                                    cachedAnimations[animation.z] = group
+                                                                } else {
+                                                                    tempAnimations2.append(animation)
                                                                 }
-                                                                
-                                                                tempSequence.append(tempAnimations2)
-                                                            } else {
-                                                                tempSequence.append(obj)
                                                             }
+                                                            
+                                                            tempSequence.append(tempAnimations2)
+                                                        } else {
+                                                            tempSequence.append(obj)
                                                         }
-                                                        
-                                                        tempSequences.append(tempSequence)
                                                     }
                                                     
-                                                    if !cachedAnimations.isEmpty && cachedAnimations.allSatisfy({ $0.value.count == 1 && $0.value[0] == 0 }) {
-                                                        return tempSequences
-                                                    }
-                                                    
-                                                    return sequences
+                                                    tempSequences.append(tempSequence)
                                                 }
+                                                
+                                                if !cachedAnimations.isEmpty && cachedAnimations.allSatisfy({ $0.value.count == 1 && $0.value[0] == 0 }) {
+                                                    return tempSequences
+                                                }
+                                                
+                                                return sequences
                                             }
                                         }
                                     }
@@ -2994,8 +3019,8 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
     
     private func make(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double), screen: UIScreen) -> CharacterView {
         let characterView = CharacterView(frame: .zero)
-        let preferredScale = (scale == 0.0 ? screen.scale : scale) * self.userScale * self.systemScale
-        let frame = CGRect(x: location.x * preferredScale / screen.scale, y: location.y * preferredScale / screen.scale, width: size.width * preferredScale / screen.scale, height: insets.bottom * preferredScale / screen.scale)
+        let preferredScale = (scale == 0.0 ? self.traitCollection.displayScale : scale) * self.userScale * self.systemScale
+        let frame = CGRect(x: location.x * preferredScale / self.traitCollection.displayScale, y: location.y * preferredScale / self.traitCollection.displayScale, width: size.width * preferredScale / self.traitCollection.displayScale, height: insets.bottom * preferredScale / self.traitCollection.displayScale)
         let visualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
         var likeImage = UIImage(named: "Star")!
         let imageScale = min(1.0, UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize, weight: .bold).capHeight / likeImage.size.height)
@@ -3011,8 +3036,8 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
         let verticalMotionEffect = UIInterpolatingMotionEffect(keyPath: "layer.transform.translation.y", type: .tiltAlongVerticalAxis)
         let motionEffectGroup = UIMotionEffectGroup()
         let contentInsets: NSDirectionalEdgeInsets = .init(top: abs(insets.top), leading: abs(insets.left), bottom: size.height - abs(insets.bottom), trailing: size.width - abs(insets.right))
-        let horizontalPadding = round((contentInsets.leading + contentInsets.trailing) * preferredScale / screen.scale / 2.0)
-        let verticalPadding = round((contentInsets.top + contentInsets.bottom) * preferredScale / screen.scale / 2.0)
+        let horizontalPadding = round((contentInsets.leading + contentInsets.trailing) * preferredScale / self.traitCollection.displayScale / 2.0)
+        let verticalPadding = round((contentInsets.top + contentInsets.bottom) * preferredScale / self.traitCollection.displayScale / 2.0)
         
         UIGraphicsBeginImageContextWithOptions(CGSize(width: ceil(likeImage.size.width * imageScale), height: ceil(likeImage.size.height * imageScale)), false, likeImage.scale)
         
@@ -3154,8 +3179,12 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                         let (name, sequence) = Script.shared.queue.removeFirst()
                         
                         if sequence.name == nil {
-                            self.isRunning = false
-                            self.delegate?.agentDidStop(self)
+                            if sequence.state == nil {
+                                self.isRunning = false
+                                self.delegate?.agentDidStop(self)
+                            } else if !sequence.contains(where: { $0 is Message }) {
+                                self.delegate?.agentDidStart(self)
+                            }
                             
                             return
                         }
@@ -3682,9 +3711,9 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     } else {
                         let paths = imagePaths
                         
-                        if let characterPath = characterView.path, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                        if let characterPath = characterView.path {
                             let baseUrl = URL(filePath: characterPath).deletingLastPathComponent()
-                            let scale = Int(round(window.screen.scale))
+                            let scale = Int(round(self.traitCollection.displayScale))
                             
                             characterView.isLoaded = false
                             
@@ -4589,8 +4618,8 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     
                     self.messageQueue.append((step: 0.0, index: 0, lines: lines, time: 0.0, speed: 1.0, duration: message.duration, slide: (index: 0, step: nil), reverse: false, attributes: attributes, source: message))
                     
-                    let preferredScale = (self.scale == 0.0 ? window.screen.scale : self.scale) * parentView.userScale * parentView.systemScale
-                    let frame = CGRect(x: self.origin.x * preferredScale / window.screen.scale, y: self.origin.y * preferredScale / window.screen.scale, width: self.size.width * preferredScale / window.screen.scale, height: self.size.height * preferredScale / window.screen.scale)
+                    let preferredScale = (self.scale == 0.0 ? self.traitCollection.displayScale : self.scale) * parentView.userScale * parentView.systemScale
+                    let frame = CGRect(x: self.origin.x * preferredScale / self.traitCollection.displayScale, y: self.origin.y * preferredScale / self.traitCollection.displayScale, width: self.size.width * preferredScale / self.traitCollection.displayScale, height: self.size.height * preferredScale / self.traitCollection.displayScale)
                     let contentHeight = count > 1 ? font.lineHeight + lineHeight * Double(min(count, self.maxLines) - 1) : font.lineHeight
                     let messageHeight = ceil(radius * 2.0 + contentHeight)
                     let maxScale = (messageWidth + 16.0) / messageWidth
@@ -4690,10 +4719,6 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
         }
         
         override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-            guard let window = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
-                return
-            }
-            
             if let touch = self.touch, touches.contains(touch) {
                 let location = touch.location(in: self.contentView)
                 let types = self.types.compactMap({ $0.value.1 ? $0.key : nil })
@@ -4767,7 +4792,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 let y = round(self.origin.y + current.location.y)
                                 var width = current.size.width
                                 var height = current.size.height
-                                let scale = (self.scale == 0.0 ? 1.0 : self.scale / window.screen.scale) * parentView.userScale * parentView.systemScale
+                                let scale = (self.scale == 0.0 ? 1.0 : self.scale / self.traitCollection.displayScale) * parentView.userScale * parentView.systemScale
                                 
                                 if width == 0.0 && height == 0.0 {
                                     width = Double(image.width)
@@ -5063,8 +5088,8 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
             
             UIGraphicsEndImageContext()
             
-            if let image, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene, let parentView = self.parentView {
-                let scale = (self.scale == 0.0 ? 1.0 : self.scale / window.screen.scale) * parentView.userScale * parentView.systemScale
+            if let image, let parentView = self.parentView {
+                let scale = (self.scale == 0.0 ? 1.0 : self.scale / self.traitCollection.displayScale) * parentView.userScale * parentView.systemScale
                 let size = CGSize(width: ceil(self.size.width * scale), height: ceil(self.size.height * scale))
                 
                 UIGraphicsBeginImageContextWithOptions(size, false, 0)

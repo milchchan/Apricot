@@ -27,8 +27,9 @@ class WallView: UIView {
     private var isReloading = false
     private var isLoading = false
     private var isFetched = false
-    private var revealStep: Double = 0.0
-    private var loadingStep: Double = -1.0
+    private var revealStep: Double = -1.0
+    private var loadingStep: Double = 0.0
+    private var colorStep: Double = 0.0
     private var fetchedFrames: [(image: CGImage?, delay: Double)]? = nil
     private var backgroundFrames: [(image: CGImage?, delay: Double)]? = nil
     private var pickedColor: CGColor? = nil
@@ -77,6 +78,7 @@ class WallView: UIView {
         
         self.maskLayer!.addSublayer(maskSublayer)
         
+        loadingLayer.frame = CGRect.zero
         loadingLayer.backgroundColor = UIColor(patternImage: self.backgroundPattern).cgColor
         loadingLayer.contentsGravity = .topLeft
         loadingLayer.opacity = 0.125
@@ -88,16 +90,10 @@ class WallView: UIView {
         
         UIColor(named: "AccentColor")!.getRed(&red, green: &green, blue: &blue, alpha: nil)
         
+        blindLayer.frame = CGRect.zero
         blindLayer.backgroundColor = CGColor(colorSpace: CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB(), components: [red, green, blue, 1.0])!
         blindLayer.contentsGravity = .resizeAspect
         blindLayer.masksToBounds = true
-        
-        if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
-            
-            blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
-            loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
-        }
         
         blindLayer.addSublayer(loadingLayer)
         
@@ -116,6 +112,7 @@ class WallView: UIView {
         contentView.translatesAutoresizingMaskIntoConstraints = false
         contentView.isUserInteractionEnabled = false
         contentView.backgroundColor = .clear
+        contentView.layer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: self.traitCollection.userInterfaceStyle == .dark ? [0.0, 0.0, 0.0, 1.0] : [1.0, 1.0, 1.0, 1.0])!
         contentView.layer.mask = self.maskLayer
         contentView.layer.addSublayer(self.imageLayer!)
         
@@ -146,6 +143,22 @@ class WallView: UIView {
         super.init(coder: aDecoder)
     }
     
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        if self.isLoading, let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+            let length = max(self.bounds.width, self.bounds.height)
+            
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            
+            blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
+            loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
+            
+            CATransaction.commit()
+        }
+    }
+    
     func reload(lines: [(text: String, attributes: [(start: Int, end: Int)])]) {
         self.lines.removeAll()
         
@@ -167,9 +180,9 @@ class WallView: UIView {
             Task {
                 var compositedFrames: [(image: CGImage, delay: Double)]? = nil
                 
-                if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                    let scale = Int(round(window.screen.scale))
-                    let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height) * window.screen.scale
+                if let window = self.window, let windowScene = window.windowScene {
+                    let scale = Int(round(windowScene.screen.scale))
+                    let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height) * windowScene.screen.scale
                     let data = await Task.detached {
                         var data: ([(image: CGImage, delay: Double)]?, [(image: CGImage?, delay: Double)]?) = (nil, nil)
                         var caches = [String: Data]()
@@ -535,10 +548,6 @@ class WallView: UIView {
     }
     
     func reload(image: CGImage) async {
-        self.isReloading = true
-        self.isLoading = true
-        self.isFetched = false
-        
         Task {
             self.pickedColor = await Task.detached {
                 var pickedColor: CGColor? = nil
@@ -739,7 +748,6 @@ class WallView: UIView {
                 
                 return pickedColor
             }.value
-            self.isReloading = false
         }
     }
     
@@ -1173,6 +1181,38 @@ class WallView: UIView {
                 self.blocks[i] = block
             }
             
+            if let pickedColor = self.pickedColor {
+                for subview in self.subviews {
+                    if let sublayers = subview.layer.sublayers, sublayers.contains(where: { $0 === self.imageLayer }) {
+                        if subview.layer.backgroundColor != pickedColor, let backgroundColor = subview.layer.backgroundColor, let sourceComponents = backgroundColor.components, let targetComponents = pickedColor.components {
+                            let epsilon = 0.01
+                            
+                            if abs(sourceComponents[0] - targetComponents[0]) < epsilon && abs(sourceComponents[1] - targetComponents[1]) < epsilon && abs(sourceComponents[2] - targetComponents[2]) < epsilon {
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                subview.layer.backgroundColor = pickedColor
+                                
+                                CATransaction.commit()
+                                
+                                self.pickedColor = nil
+                            } else {
+                                let speed = 2.0
+                                
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                subview.layer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [self.lerp(a: sourceComponents[0], b: targetComponents[0], t: deltaTime * speed), self.lerp(a: sourceComponents[1], b: targetComponents[1], t: deltaTime * speed), self.lerp(a: sourceComponents[2], b: targetComponents[2], t: deltaTime * speed), 1.0])!
+                                
+                                CATransaction.commit()
+                            }
+                        }
+                        
+                        break
+                    }
+                }
+            }
+            
             if self.isLoading {
                 if self.isFetched {
                     let step = self.revealStep + deltaTime
@@ -1192,8 +1232,8 @@ class WallView: UIView {
                         self.loadingStep = 0.0
                         self.isLoading = false
                     } else {
-                        if let blindLayer = self.blindLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                            let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                        if let blindLayer = self.blindLayer {
+                            let length = max(self.bounds.width, self.bounds.height)
                             
                             CATransaction.begin()
                             CATransaction.setDisableActions(true)
@@ -1230,8 +1270,8 @@ class WallView: UIView {
                     }
                     
                     if step <= 0.0 {
-                        if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                            let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                        if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                            let length = max(self.bounds.width, self.bounds.height)
                             
                             CATransaction.begin()
                             CATransaction.setDisableActions(true)
@@ -1245,14 +1285,6 @@ class WallView: UIView {
                         self.revealStep = 0.0
                         
                         if !self.isReloading {
-                            for subview in self.subviews {
-                                if let sublayers = subview.layer.sublayers, sublayers.contains(where: { $0 === self.imageLayer }) {
-                                    subview.layer.backgroundColor = self.pickedColor
-                                    
-                                    break
-                                }
-                            }
-                            
                             self.backgroundFrames = self.fetchedFrames
                             self.currentTime = nil
                             self.sourceRect = CGRect.zero
@@ -1267,8 +1299,8 @@ class WallView: UIView {
                             self.requestParticles = 0
                         }
                     } else {
-                        if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                            let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                        if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                            let length = max(self.bounds.width, self.bounds.height)
                             
                             CATransaction.begin()
                             CATransaction.setDisableActions(true)
@@ -1288,8 +1320,8 @@ class WallView: UIView {
                         if self.loadingStep < 0.0 {
                             self.loadingStep = 0.0
                             
-                            if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                            if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                                let length = max(self.bounds.width, self.bounds.height)
                                 
                                 CATransaction.begin()
                                 CATransaction.setDisableActions(true)
@@ -1306,8 +1338,8 @@ class WallView: UIView {
                                 self.loadingStep = 0.0
                             }
                             
-                            if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                            if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                                let length = max(self.bounds.width, self.bounds.height)
                                 
                                 CATransaction.begin()
                                 CATransaction.setDisableActions(true)
@@ -1322,14 +1354,6 @@ class WallView: UIView {
                         self.revealStep = 0.0
                         
                         if !self.isReloading {
-                            for subview in self.subviews {
-                                if let sublayers = subview.layer.sublayers, sublayers.contains(where: { $0 === self.imageLayer }) {
-                                    subview.layer.backgroundColor = self.pickedColor
-                                    
-                                    break
-                                }
-                            }
-                            
                             self.backgroundFrames = self.fetchedFrames
                             self.currentTime = nil
                             self.sourceRect = CGRect.zero
@@ -1345,8 +1369,8 @@ class WallView: UIView {
                         }
                     } else {
                         if self.revealStep > -1.0 {
-                            if let blindLayer = self.blindLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                            if let blindLayer = self.blindLayer {
+                                let length = max(self.bounds.width, self.bounds.height)
                                 
                                 CATransaction.begin()
                                 CATransaction.setDisableActions(true)
@@ -1370,8 +1394,8 @@ class WallView: UIView {
                                 
                                 CATransaction.commit()
                             }
-                        } else if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                            let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height)
+                        } else if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                            let length = max(self.bounds.width, self.bounds.height)
                             
                             CATransaction.begin()
                             CATransaction.setDisableActions(true)
@@ -1843,7 +1867,7 @@ class WallView: UIView {
                     self.currentTime = 0.0
                 }
                 
-                if let image, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                if let image, let window = self.window, let windowScene = window.windowScene {
                     let top = 0.5
                     let left = 0.5
                     let screenAspect = self.frame.size.width / self.frame.size.height
@@ -1854,15 +1878,15 @@ class WallView: UIView {
                     var sh: Double
                     
                     if screenAspect > imageAspect {
-                        let ratio = self.frame.size.width * window.screen.scale / Double(image.width)
+                        let ratio = self.frame.size.width * windowScene.screen.scale / Double(image.width)
                         
                         sx = 0.0
-                        sh = self.frame.size.height * window.screen.scale / ratio
-                        sy = max(0.0, min(Double(image.height) - sh, (Double(image.height) * ratio - self.frame.size.height * window.screen.scale) / ratio * top - self.tracker.movement.y * window.screen.scale / ratio))
+                        sh = self.frame.size.height * windowScene.screen.scale / ratio
+                        sy = max(0.0, min(Double(image.height) - sh, (Double(image.height) * ratio - self.frame.size.height * windowScene.screen.scale) / ratio * top - self.tracker.movement.y * windowScene.screen.scale / ratio))
                         sw = Double(image.width)
                         
-                        let insetTop = (Double(image.height) * ratio - self.frame.size.height * window.screen.scale) * top / window.screen.scale
-                        let insetBottom = (self.frame.size.height * window.screen.scale - Double(image.height) * ratio + (Double(image.height) * ratio - self.frame.size.height * window.screen.scale) * top) / window.screen.scale
+                        let insetTop = (Double(image.height) * ratio - self.frame.size.height * windowScene.screen.scale) * top / windowScene.screen.scale
+                        let insetBottom = (self.frame.size.height * windowScene.screen.scale - Double(image.height) * ratio + (Double(image.height) * ratio - self.frame.size.height * windowScene.screen.scale) * top) / windowScene.screen.scale
                         
                         if insetTop < self.tracker.movement.y {
                             if self.tracker.active {
@@ -1888,15 +1912,15 @@ class WallView: UIView {
                             self.tracker.edge = false
                         }
                     } else {
-                        let ratio = self.frame.size.height * window.screen.scale / Double(image.height)
+                        let ratio = self.frame.size.height * windowScene.screen.scale / Double(image.height)
                         
-                        sw = self.frame.size.width * window.screen.scale / ratio
-                        sx = max(0.0, min(Double(image.width) - sw, (Double(image.width) * ratio - self.frame.size.width * window.screen.scale) / ratio * left - self.tracker.movement.x * window.screen.scale / ratio))
+                        sw = self.frame.size.width * windowScene.screen.scale / ratio
+                        sx = max(0.0, min(Double(image.width) - sw, (Double(image.width) * ratio - self.frame.size.width * windowScene.screen.scale) / ratio * left - self.tracker.movement.x * windowScene.screen.scale / ratio))
                         sy = 0.0
                         sh = Double(image.height)
                         
-                        let insetLeft = (Double(image.width) * ratio - self.frame.size.width * window.screen.scale) * left / window.screen.scale
-                        let insetRight = (self.frame.size.width * window.screen.scale - Double(image.width) * ratio + (Double(image.width) * ratio - self.frame.size.width * window.screen.scale) * left) / window.screen.scale
+                        let insetLeft = (Double(image.width) * ratio - self.frame.size.width * windowScene.screen.scale) * left / windowScene.screen.scale
+                        let insetRight = (self.frame.size.width * windowScene.screen.scale - Double(image.width) * ratio + (Double(image.width) * ratio - self.frame.size.width * windowScene.screen.scale) * left) / windowScene.screen.scale
                         
                         if insetLeft < self.tracker.movement.x {
                             if self.tracker.active {
@@ -1926,9 +1950,9 @@ class WallView: UIView {
                     let rect = CGRect(x: round(sx), y: round(sy), width: floor(sw), height: floor(sh))
                     
                     if updateRequired, let imageLayer = self.imageLayer {
-                        let scaleX = self.frame.size.width * window.screen.scale / rect.size.width
-                        let scaleY = self.frame.size.height * window.screen.scale / rect.size.height
-                        let size = CGSize(width: floor(Double(image.width) * scaleX / window.screen.scale), height: floor(Double(image.height) * scaleY / window.screen.scale))
+                        let scaleX = self.frame.size.width * windowScene.screen.scale / rect.size.width
+                        let scaleY = self.frame.size.height * windowScene.screen.scale / rect.size.height
+                        let size = CGSize(width: floor(Double(image.width) * scaleX / windowScene.screen.scale), height: floor(Double(image.height) * scaleY / windowScene.screen.scale))
                         var i: CGImage? = nil
                         
                         UIGraphicsBeginImageContextWithOptions(size, false, 0)
@@ -1963,7 +1987,7 @@ class WallView: UIView {
                                 CATransaction.begin()
                                 CATransaction.setDisableActions(true)
                                 
-                                imageLayer.frame = CGRect(x: -floor(scaleX * rect.origin.x / window.screen.scale), y: -floor(scaleY * rect.origin.y / window.screen.scale), width: floor(scaleX * Double(image.width) / window.screen.scale), height: floor(scaleY * Double(image.height) / window.screen.scale))
+                                imageLayer.frame = CGRect(x: -floor(scaleX * rect.origin.x / windowScene.screen.scale), y: -floor(scaleY * rect.origin.y / windowScene.screen.scale), width: floor(scaleX * Double(image.width) / windowScene.screen.scale), height: floor(scaleY * Double(image.height) / windowScene.screen.scale))
                                 imageLayer.contents = i
                                 
                                 CATransaction.commit()
@@ -1973,13 +1997,13 @@ class WallView: UIView {
                         }
                     } else if !self.sourceRect.equalTo(rect) {
                         if let imageLayer = self.imageLayer {
-                            let scaleX = self.frame.size.width * window.screen.scale / rect.size.width
-                            let scaleY = self.frame.size.height * window.screen.scale / rect.size.height
+                            let scaleX = self.frame.size.width * windowScene.screen.scale / rect.size.width
+                            let scaleY = self.frame.size.height * windowScene.screen.scale / rect.size.height
                             
                             CATransaction.begin()
                             CATransaction.setDisableActions(true)
                             
-                            imageLayer.frame = CGRect(x: -floor(scaleX * rect.origin.x / window.screen.scale), y: -floor(scaleY * rect.origin.y / window.screen.scale), width: floor(scaleX * Double(image.width) / window.screen.scale), height: floor(scaleY * Double(image.height) / window.screen.scale))
+                            imageLayer.frame = CGRect(x: -floor(scaleX * rect.origin.x / windowScene.screen.scale), y: -floor(scaleY * rect.origin.y / windowScene.screen.scale), width: floor(scaleX * Double(image.width) / windowScene.screen.scale), height: floor(scaleY * Double(image.height) / windowScene.screen.scale))
                             
                             CATransaction.commit()
                         }
