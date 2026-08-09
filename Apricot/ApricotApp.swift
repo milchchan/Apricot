@@ -40,7 +40,7 @@ struct ApricotApp: App {
             
             config.sessionSendsLaunchEvents = true
             
-            let url = URL(string: "https://milchchan.com/api/likes")!
+            let url = URL(string: "https://milchchan.com/api/words")!
             let session = URLSession(configuration: config)
             let request = URLRequest(url: url)
             if let (data, response) = await withTaskCancellationHandler(operation: {
