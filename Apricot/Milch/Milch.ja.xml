@@ -142619,13 +142619,13 @@
     <message>リーダーシップとは、{人を表す言葉}から間抜けを取り除く自然の摂理だよ</message>
     <sequence name="Milch.Scorn" />
   </sequence>
-  <sequence name="Like" state="^[1-4]$">
-    <!--1-4-->
+  <sequence name="Star" state="^[1-9]$">
+    <!--1-9-->
     <sequence name="水着">
       <sequence name="Milch.CutIn" state="Default">
         <sequence name="Milch.Action">
           <animation z="-1" repeats="0">
-            <image x="0" y="0" delay="0">https://milchchan.com/api/upload/bd4464cd-90aa-4a45-b0e7-bc4027c7b4b5</image>
+            <image x="0" y="0" delay="0">https://milchchan.com/api/upload/9d47836c-0bd8-456b-97aa-d0826c2bdee8</image>
           </animation>
         </sequence>
         <sequence name="Milch.Action">
@@ -142774,13 +142774,13 @@
     </sequence>
     <sequence name="水着" />
   </sequence>
-  <sequence name="Like" state="^[5-9]$">
-    <!--5-9-->
+  <sequence name="Star" state="^[1-4][0-9]$">
+    <!--10-49-->
     <sequence name="見えない服">
       <sequence name="Milch.CutIn" state="Default">
         <sequence name="Milch.Action">
           <animation z="-1" repeats="0">
-            <image x="0" y="0" delay="0">https://milchchan.com/api/upload/bd4464cd-90aa-4a45-b0e7-bc4027c7b4b5</image>
+            <image x="0" y="0" delay="0">https://milchchan.com/api/upload/9d47836c-0bd8-456b-97aa-d0826c2bdee8</image>
           </animation>
         </sequence>
         <sequence name="Milch.Action">
@@ -142990,13 +142990,13 @@
     </sequence>
     <sequence name="見えない服" />
   </sequence>
-  <sequence name="Like" state="^([1-9][0-9])|([0-9]{3,})$">
-    <!--10+-->
+  <sequence name="Star" state="^([5-9][0-9]|[1-9][0-9]{2,})$">
+    <!--50+-->
     <sequence name="スーパーミルヒちゃん">
       <sequence name="Milch.CutIn" state="Default">
         <sequence name="Milch.Action">
           <animation z="-1" repeats="0">
-            <image x="0" y="0" delay="0">https://milchchan.com/api/upload/bd4464cd-90aa-4a45-b0e7-bc4027c7b4b5</image>
+            <image x="0" y="0" delay="0">https://milchchan.com/api/upload/9d47836c-0bd8-456b-97aa-d0826c2bdee8</image>
           </animation>
         </sequence>
         <sequence name="Milch.Action">
@@ -143208,11 +143208,11 @@
     </sequence>
     <sequence name="スーパーミルヒちゃん" />
   </sequence>
-  <sequence name="Like">
+  <sequence name="Star">
     <sequence name="Milch.CutIn" state="Default">
       <sequence name="Milch.Action">
         <animation z="-1" repeats="0">
-          <image x="0" y="0" delay="0">https://milchchan.com/api/upload/bd4464cd-90aa-4a45-b0e7-bc4027c7b4b5</image>
+          <image x="0" y="0" delay="0">https://milchchan.com/api/upload/9d47836c-0bd8-456b-97aa-d0826c2bdee8</image>
         </animation>
       </sequence>
       <sequence name="Milch.Action">

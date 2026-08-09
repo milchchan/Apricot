@@ -58385,75 +58385,6 @@
                 <image x="217" y="228" width="65" height="71" delay="0.033">Images/Merku-Transformed-Body-LeftArm-Down.png</image>
                 <image x="217" y="228" width="65" height="71" delay="0.033">Images/Merku-Transformed-Body-LeftArm-Down.png</image>
               </animation>
-              <animation z="58" repeats="2">
-                <image x="200" y="169" width="34" height="71" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="40" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-355.png</image>
-                <image x="200" y="167" width="40" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-355.png</image>
-                <image x="200" y="167" width="40" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-355.png</image>
-                <image x="200" y="167" width="40" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-355.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="169" width="34" height="71" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1.png</image>
-                <image x="200" y="169" width="34" height="71" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1.png</image>
-                <image x="200" y="169" width="34" height="71" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1.png</image>
-              </animation>
-              <animation z="58" type="Summer Uniform" repeats="2">
-                <image x="201" y="168" width="30" height="24" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="166" width="31" height="26" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-355.png</image>
-                <image x="201" y="166" width="31" height="26" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-355.png</image>
-                <image x="201" y="166" width="31" height="26" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-355.png</image>
-                <image x="201" y="166" width="31" height="26" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-355.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="168" width="30" height="24" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm.png</image>
-                <image x="201" y="168" width="30" height="24" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm.png</image>
-                <image x="201" y="168" width="30" height="24" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm.png</image>
-              </animation>
-              <animation z="59" repeats="2">
-                <image x="216" y="222" width="44" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="221" y="219" width="48" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-355.png</image>
-                <image x="221" y="219" width="48" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-355.png</image>
-                <image x="221" y="219" width="48" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-355.png</image>
-                <image x="221" y="219" width="48" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-355.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="216" y="222" width="44" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down.png</image>
-                <image x="216" y="222" width="44" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down.png</image>
-                <image x="216" y="222" width="44" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down.png</image>
-              </animation>
-              <animation z="59" type="Summer Uniform">
-                <image x="0" y="0" opacity="0" delay="0.033" />
-              </animation>
             </sequence>
             <sequence name="Merku.TryUnlock" state="^1$">
               <animation z="12" repeats="2">
@@ -58631,75 +58562,6 @@
                 <image x="217" y="228" width="65" height="71" delay="0.033">Images/Merku-Transformed-Body-LeftArm-Down.png</image>
                 <image x="217" y="228" width="65" height="71" delay="0.033">Images/Merku-Transformed-Body-LeftArm-Down.png</image>
                 <image x="217" y="228" width="65" height="71" delay="0.033">Images/Merku-Transformed-Body-LeftArm-Down.png</image>
-              </animation>
-              <animation z="58" repeats="2">
-                <image x="200" y="169" width="34" height="71" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="40" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-355.png</image>
-                <image x="200" y="167" width="40" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-355.png</image>
-                <image x="200" y="167" width="40" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-355.png</image>
-                <image x="200" y="167" width="40" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-355.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="167" width="39" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-356.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="168" width="35" height="72" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1-359.png</image>
-                <image x="200" y="169" width="34" height="71" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1.png</image>
-                <image x="200" y="169" width="34" height="71" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1.png</image>
-                <image x="200" y="169" width="34" height="71" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part1.png</image>
-              </animation>
-              <animation z="58" type="Summer Uniform" repeats="2">
-                <image x="201" y="168" width="30" height="24" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="166" width="31" height="26" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-355.png</image>
-                <image x="201" y="166" width="31" height="26" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-355.png</image>
-                <image x="201" y="166" width="31" height="26" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-355.png</image>
-                <image x="201" y="166" width="31" height="26" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-355.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="31" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-356.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="167" width="30" height="25" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm-359.png</image>
-                <image x="201" y="168" width="30" height="24" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm.png</image>
-                <image x="201" y="168" width="30" height="24" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm.png</image>
-                <image x="201" y="168" width="30" height="24" delay="0.033">Images/Merku-Normal-Summer-Body-LeftArm.png</image>
-              </animation>
-              <animation z="59" repeats="2">
-                <image x="216" y="222" width="44" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="221" y="219" width="48" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-355.png</image>
-                <image x="221" y="219" width="48" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-355.png</image>
-                <image x="221" y="219" width="48" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-355.png</image>
-                <image x="221" y="219" width="48" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-355.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="220" y="220" width="47" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-356.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="217" y="221" width="45" height="58" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down-359.png</image>
-                <image x="216" y="222" width="44" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down.png</image>
-                <image x="216" y="222" width="44" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down.png</image>
-                <image x="216" y="222" width="44" height="57" delay="0.033">Images/Merku-Normal-Body-LeftArm-Part2-Down.png</image>
-              </animation>
-              <animation z="59" type="Summer Uniform">
-                <image x="0" y="0" opacity="0" delay="0.033" />
               </animation>
             </sequence>
             <sequence name="Merku.TryUnlock" />
@@ -59772,12 +59634,12 @@
     <message>Brace yourself, {Person} is coming.</message>
     <sequence name="Merku.Scorn" />
   </sequence>
-  <sequence name="Like" state="^([1-9][0-9])|([0-9]{3,})$">
-    <!--10+-->
+  <sequence name="Star" state="^([5-9][0-9]|[1-9][0-9]{2,})$">
+    <!--50+-->
     <sequence name="Merku.CutIn" state="Default">
       <sequence name="Merku.Action">
         <animation z="-1" repeats="0">
-          <image x="0" y="0" delay="0">https://milchchan.com/api/upload/59d46789-7386-4961-9554-00c7260d8d97</image>
+          <image x="0" y="0" delay="0">https://milchchan.com/api/upload/0aa147fe-f917-44aa-a774-f1b20bfea96c</image>
         </animation>
       </sequence>
       <sequence name="Merku.Action" state="Default">
@@ -59828,11 +59690,11 @@
     </sequence>
     <sequence name="Super Merku-chan" />
   </sequence>
-  <sequence name="Like">
+  <sequence name="Star">
     <sequence name="Merku.CutIn" state="Default">
       <sequence name="Merku.Action">
         <animation z="-1" repeats="0">
-          <image x="0" y="0" delay="0">https://milchchan.com/api/upload/59d46789-7386-4961-9554-00c7260d8d97</image>
+          <image x="0" y="0" delay="0">https://milchchan.com/api/upload/0aa147fe-f917-44aa-a774-f1b20bfea96c</image>
         </animation>
       </sequence>
       <sequence name="Merku.Action" />

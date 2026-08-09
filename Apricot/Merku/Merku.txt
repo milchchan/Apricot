@@ -41,8 +41,8 @@ Your response must follow the JSON structure below.
  "likability": 0.0-1.0,
  "content": "<Dialogue text>",
  "terms": [
-  "<A word representing the content>",
-  ["<A word modifying the content>", "<A word representing the content>"]
+  "<A highly distinctive term or phrase that appears in content (when applicable, represent it as a string; if it is accompanied by a modifying term or phrase, use the array format shown below; use an empty array if no applicable term or phrase exists)>",
+  ["<A modifying term or phrase that appears in content and characterizes the following term or phrase>", "<A highly distinctive term or phrase that appears in content>"]
  ],
  "states": {
   "Angry": 0.0-1.0,
@@ -60,6 +60,6 @@ Your response must follow the JSON structure below.
    "url": "<Relevant URL for the dialogue, or null>"
   }
  ],
- "memory": "<Describe any memories to carry over to future sessions in Markdown format, or return an empty string if there are none>"
+ "memory": "<Organize and update the existing memory, then provide the complete updated version in Markdown format, adding only information from the current conversation that will be useful in future conversations; return an empty string if there is nothing to remember>"
 }
 ```
