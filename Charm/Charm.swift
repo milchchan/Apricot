@@ -10,24 +10,24 @@ import SwiftUI
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> CharmEntry {
-        CharmEntry(date: Date(), likes: 0)
+        CharmEntry(date: Date(), stars: 0)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (CharmEntry) -> ()) {
-        completion(CharmEntry(date: Date(), likes: 0))
+        completion(CharmEntry(date: Date(), stars: 0))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
         Task {
             let applicationGroupIdentifier = "group.com.milchchan.Apricot"
             let currentDate = Date()
-            let likes: Int
+            let stars: Int
             var image: Image? = nil
             
             if let userDefaults = UserDefaults(suiteName: applicationGroupIdentifier) {
-                likes = userDefaults.integer(forKey: "likes")
+                stars = userDefaults.integer(forKey: "stars")
             } else {
-                likes = 0
+                stars = 0
             }
             
             if let containerUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: applicationGroupIdentifier), let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
@@ -100,21 +100,21 @@ struct Provider: TimelineProvider {
                 }
             }
             
-            completion(Timeline(entries: [CharmEntry(date: currentDate, likes: likes, image: image)], policy: .after(Calendar.current.date(byAdding: DateComponents(minute: 30), to: currentDate)!)))
+            completion(Timeline(entries: [CharmEntry(date: currentDate, stars: stars, image: image)], policy: .after(Calendar.current.date(byAdding: DateComponents(minute: 30), to: currentDate)!)))
         }
     }
 }
 
 struct CharmEntry: TimelineEntry {
     let date: Date
-    let likes: Int
+    let stars: Int
     let image: Image
     let offset: Double
     
-    init(date: Date, likes: Int, image: Image? = nil) {
+    init(date: Date, stars: Int, image: Image? = nil) {
         self.date = date
         
-        self.likes = likes
+        self.stars = stars
         
         if let image {
             self.image = image
@@ -144,7 +144,7 @@ struct CharmEntryView : View {
                     .foregroundStyle(.foreground)
                     .zIndex(1)
                     .scaleEffect(0.75)
-                Text(String(format: "%ld", self.entry.likes))
+                Text(String(format: "%ld", self.entry.stars))
                     .foregroundStyle(.foreground)
                     .font(.system(size: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize * 1.5, weight: .bold))
                     .fontWeight(.heavy)
@@ -216,13 +216,13 @@ struct CharmEntryView : View {
                         .foregroundColor(Color(uiColor: UIColor(named: "AccentColor")!))
                         .zIndex(1)
                         .scaleEffect(0.75)
-                    Text(String(format: "%ld", self.entry.likes))
+                    Text(String(format: "%ld", self.entry.stars))
                         .foregroundColor(Color(uiColor: UIColor(named: "AccentColor")!))
                         .font(.custom("DIN2014-Bold", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 2.0)))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: ceil(UIFont(name: "DIN2014-Bold", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 2.0))!.capHeight))
-                        .contentTransition(.numericText(value: Double(self.entry.likes)))
+                        .contentTransition(.numericText(value: Double(self.entry.stars)))
                 }
             }
             .containerBackground(for: .widget) {
@@ -296,5 +296,5 @@ struct Charm: Widget {
 #Preview(as: .systemSmall) {
     Charm()
 } timeline: {
-    CharmEntry(date: .now, likes: 0)
+    CharmEntry(date: .now, stars: 0)
 }
