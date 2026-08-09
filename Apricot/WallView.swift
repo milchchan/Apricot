@@ -23,6 +23,7 @@ class WallView: UIView {
     private var touches = [(touch: UITouch, location: (x: Double, y: Double), movement: (x: Double, y: Double), velocity: (x: Double, y: Double), timestamp: CFTimeInterval)]()
     private var blocks = [(running: Bool, time: Double, duration: Double, type: (elapsed: Double, speed: Double, reverse: Bool, buffer: String, count: Int), text: String, attributes: [(start: Int, end: Int)], current: String, scroll: (touch: UITouch?, step: Double), shake: (time: Double?, x: Double), elapsed: Double, rtl: Bool)]()
     private var lines = [(text: String, attributes: [(start: Int, end: Int)])]()
+    private var isRunning = false
     private var isInvalidated = false
     private var isReloading = false
     private var isLoading = false
@@ -46,6 +47,14 @@ class WallView: UIView {
     private var fontCache = [String: CTFont]()
     private var textCache = [String: (CTFramesetter, CGSize, CGPath?)]()
     private let backgroundPattern = UIImage(named: "Stripes")!
+    var running: Bool {
+        get {
+            return self.isRunning
+        }
+        set(runnable) {
+            self.isRunning = runnable
+        }
+    }
     var accentColor: CGColor? {
         get {
             return self.blindColor
@@ -134,7 +143,7 @@ class WallView: UIView {
         self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .trailing, relatedBy: .equal, toItem: self, attribute: .trailing, multiplier: 1.0, constant: 0.0))
         self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .bottom, relatedBy: .equal, toItem: self, attribute: .bottom, multiplier: 1.0, constant: 0.0))
         
-        let displayLink = CADisplayLink(target: self, selector: #selector(self.update))
+        let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
         
         displayLink.add(to: .current, forMode: .common)
     }
@@ -928,8 +937,8 @@ class WallView: UIView {
         }
     }
     
-    @objc private func update(displayLink: CADisplayLink) {
-        if self.frame.size.width > 0 && self.frame.size.height > 0 {
+    @objc private func step(displayLink: CADisplayLink) {
+        if self.frame.size.width > 0 && self.frame.size.height > 0 && self.isRunning {
             let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
             
             if self.isInvalidated {
