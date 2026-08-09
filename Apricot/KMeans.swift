@@ -31,7 +31,7 @@ public class KMeans {
         // k-means++
         var clusters = [Int]()
         var centerVector = data[Int.random(in: 0..<data.count)]
-        let epsilon = powl(10, -8)
+        let epsilon: Double = 1e-8
         var t = 0
         
         self.centers.removeAll()
@@ -114,7 +114,7 @@ public class KMeans {
     }
     
     private func cosineSimilarity(x: [Double], y: [Double]) -> Double {
-        let epsilon: Double = pow(10, -8)
+        let epsilon: Double = 1e-8
         var sum = 0.0
         var normX = 0.0
         var normY = 0.0
