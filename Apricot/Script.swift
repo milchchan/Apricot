@@ -13,9 +13,8 @@ final public class Script: NSObject, ObservableObject {
     public static let shared = Script()
     @Published public var words = [Word]()
     @Published public var attributes = [String]()
-    @Published public var scores = [String: (Double, [String]?, String?, Date)]()
+    @Published public var scores = [String: (String, Double, [String]?, Date)]()
     public var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])]()
-    public var likes = [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]]()
     private let runtime = Script.Runtime()
     public var states: [String: String] {
         get {
@@ -75,74 +74,8 @@ final public class Script: NSObject, ObservableObject {
             }
         }
         
-        if let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            let path = url.appending(path: "likes.json", directoryHint: .inferFromPath).path(percentEncoded: false)
-            
-            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                defer {
-                    try? file.close()
-                }
-                
-                if let data = try? file.readToEnd(), let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [Any] {
-                    for obj in jsonRoot {
-                        if let likeObject = obj as? [String: Any?] {
-                            var name: String? = nil
-                            var content: String? = nil
-                            var language: String? = nil
-                            var attributes = [(name: String?, start: Int, end: Int)]()
-                            var date: Date? = nil
-                            
-                            if let value = likeObject["name"] as? String {
-                                name = value
-                            }
-                            
-                            if let value = likeObject["content"] as? String {
-                                content = value
-                            }
-                            
-                            if let value = likeObject["language"] as? String {
-                                language = value
-                            }
-                            
-                            if let attributeArray = likeObject["attributes"] as? [[String: Any]] {
-                                for dictionaryObject in attributeArray {
-                                    var attributeStart: Int? = nil
-                                    var attributeEnd: Int? = nil
-                                    
-                                    if let value = dictionaryObject["start"] as? Double {
-                                        attributeStart = Int(value)
-                                    }
-                                    
-                                    if let value = dictionaryObject["end"] as? Double {
-                                        attributeEnd = Int(value)
-                                    }
-                                    
-                                    if let attributeStart, let attributeEnd {
-                                        attributes.append((name: dictionaryObject["name"] as? String, start: attributeStart, end: attributeEnd))
-                                    }
-                                }
-                            }
-                            
-                            if let value = likeObject["timestamp"] as? Double {
-                                date = Date(timeIntervalSince1970: value)
-                            }
-                            
-                            if let name, let content, let language, let date {
-                                if var values = self.likes[name] {
-                                    values.append((id: nil, name: name, content: content, language: language, attributes: attributes, timestamp: date))
-                                    self.likes[name] = values
-                                } else {
-                                    self.likes[name] = [(id: nil, name: name, content: content, language: language, attributes: attributes, timestamp: date)]
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
         if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-            let path = cachesUrl.appendingPathComponent(SHA256.hash(data: Data(URL(string: "https://milchchan.com/api/likes")!.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined()).path(percentEncoded: false)
+            let path = cachesUrl.appendingPathComponent(SHA256.hash(data: Data(URL(string: "https://milchchan.com/api/words")!.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined()).path(percentEncoded: false)
             
             if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
                 defer {
@@ -150,218 +83,141 @@ final public class Script: NSObject, ObservableObject {
                 }
                 
                 if let data = try? file.readToEnd(), let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [Any] {
-                    var words = [Word]()
+                    var words = [(name: String, language: String?, date: Date)]()
+                    let locale = Locale(identifier: "en_US_POSIX")
                     var documents = [[String]]()
-                    var metadata = [([[String]?], String?, Date)]()
-                    
-                    for word in self.words {
-                        if word.attributes == nil || !word.attributes!.isEmpty {
-                            words.append(word)
-                        }
-                    }
+                    var timestamps = [Date]()
                     
                     for obj in jsonRoot {
-                        if let likeObject = obj as? [String: Any?] {
-                            var id: Int? = nil
+                        if let wordObject = obj as? [String: Any?] {
                             var name: String? = nil
-                            var content: String? = nil
-                            var attributes = [(name: String?, start: Int, end: Int)]()
                             var language: String? = nil
                             var date: Date? = nil
                             
-                            if let value = likeObject["id"] as? Int {
-                                id = value
-                            }
-                            
-                            if let value = likeObject["name"] as? String {
+                            if let value = wordObject["name"] as? String {
                                 name = value
                             }
                             
-                            if let value = likeObject["content"] as? String {
-                                content = value
-                            }
-                            
-                            if let value = likeObject["language"] as? String {
+                            if let value = wordObject["language"] as? String {
                                 language = value
                             }
                             
-                            if let attributeArray = likeObject["attributes"] as? [[String: Any]] {
-                                for dictionaryObject in attributeArray {
-                                    var attributeStart: Int? = nil
-                                    var attributeEnd: Int? = nil
-                                    
-                                    if let value = dictionaryObject["start"] as? Double {
-                                        attributeStart = Int(value)
-                                    }
-                                    
-                                    if let value = dictionaryObject["end"] as? Double {
-                                        attributeEnd = Int(value)
-                                    }
-                                    
-                                    if let attributeStart, let attributeEnd {
-                                        attributes.append((name: dictionaryObject["name"] as? String, start: attributeStart, end: attributeEnd))
-                                    }
-                                }
-                            }
-                            
-                            if let value = likeObject["timestamp"] as? Double {
+                            if let value = wordObject["timestamp"] as? Double {
                                 date = Date(timeIntervalSince1970: value)
                             }
                             
-                            if let id, let name, let content, let language, let date {
-                                if var values = self.likes[name] {
-                                    if !values.contains(where: { like in
-                                        if like.id == nil && like.content == content && like.attributes.count == attributes.count {
-                                            for i in 0..<attributes.count {
-                                                if like.attributes[i].start != attributes[i].start || like.attributes[i].end != attributes[i].end {
-                                                    return false
-                                                }
-                                            }
-                                            
-                                            return true
-                                        }
-                                        
-                                        return false
-                                    }) {
-                                        values.append((id: id, name: name, content: content, language: language, attributes: attributes, timestamp: date))
-                                        self.likes[name] = values
-                                    }
-                                } else {
-                                    self.likes[name] = [(id: id, name: name, content: content, language: language, attributes: attributes, timestamp: date)]
-                                }
+                            if let name, let date {
+                                words.append((name: name, language: language, date: date))
                             }
                         }
                     }
                     
-                    for likes in self.likes.values {
-                        for like in likes {
-                            if !like.attributes.isEmpty {
-                                var index = 0
-                                var document = [String]()
-                                var annotations = [[String]?]()
-                                
-                                while index < like.content.count {
-                                    var maxEnd = index
-                                    var boundaryIndex = index
-                                    
-                                    for attribute in like.attributes {
-                                        if attribute.start == index && attribute.end > maxEnd {
-                                            boundaryIndex = maxEnd
-                                            maxEnd = attribute.end
-                                        }
-                                    }
-                                    
-                                    if index != maxEnd {
-                                        var attributes = [String]()
-                                        
-                                        for attribute in like.attributes {
-                                            if attribute.end == maxEnd, let name = attribute.name, !attributes.contains(name) {
-                                                attributes.append(name)
-                                            }
-                                        }
-                                        
-                                        if boundaryIndex == index {
-                                            document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)]))
-                                            
-                                            if attributes.isEmpty {
-                                                annotations.append(nil)
-                                            } else {
-                                                annotations.append(attributes)
-                                            }
-                                        } else {
-                                            document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: boundaryIndex)]).trimmingCharacters(in: .whitespaces))
-                                            annotations.append([])
-                                            document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: boundaryIndex)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)]))
-                                            
-                                            if attributes.isEmpty {
-                                                annotations.append(nil)
-                                            } else {
-                                                annotations.append(attributes)
-                                            }
-                                        }
-                                        
-                                        index = maxEnd
-                                        
-                                        continue
-                                    }
-                                    
-                                    index += 1
-                                }
-                                
-                                documents.append(document)
-                                metadata.append((annotations, like.language, like.timestamp))
+                    for (_, value) in words.reduce(into: [Int64: (words: [String], latest: Date)](), { dictionary, word in
+                        let hour = Int64(floor(word.date.timeIntervalSince1970 / 3600.0))
+
+                        if var value = dictionary[hour] {
+                            value.words.append(word.name.folding(options: [.caseInsensitive], locale: locale))
+
+                            if word.date > value.latest {
+                                value.latest = word.date
                             }
+
+                            dictionary[hour] = value
+                        } else {
+                            dictionary[hour] = (words: [word.name.folding(options: [.caseInsensitive], locale: locale)], latest: word.date)
                         }
+                    }).sorted(by: { $0.key < $1.key }) {
+                        documents.append(value.words)
+                        timestamps.append(value.latest)
                     }
                     
                     if !documents.isEmpty {
                         let scores = self.computeBM25(documents: documents)
                         let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
-                        var recentLikes = [([String: (Double, [String]?)], String?, Date)]()
+                        var recents = [([String: Double], Date)]()
                         
                         for i in 0..<documents.count {
-                            if metadata[i].2 > yesterday {
-                                var temp = [String: (Double, [String]?)]()
+                            if timestamps[i] > yesterday {
+                                var temp = [String: Double]()
                                 
                                 for (key, value) in scores[i] {
                                     for j in 0..<documents[i].count {
-                                        if key == documents[i][j] {
-                                            temp[key] = (value, metadata[i].0[j])
-                                            
-                                            break
+                                        if key == documents[i][j] && temp[key] == nil {
+                                            temp[key] = value
                                         }
                                     }
                                 }
                                 
-                                recentLikes.append((temp, metadata[i].1, metadata[i].2))
+                                recents.append((temp, timestamps[i]))
                             }
                         }
                         
-                        if recentLikes.isEmpty {
+                        if recents.isEmpty {
                             for i in 0..<documents.count {
-                                var temp = [String: (Double, [String]?)]()
+                                var temp = [String: Double]()
                                 
                                 for (key, value) in scores[i] {
                                     for j in 0..<documents[i].count {
-                                        if key == documents[i][j] {
-                                            temp[key] = (value, metadata[i].0[j])
-                                            
-                                            break
+                                        if key == documents[i][j] && temp[key] == nil {
+                                            temp[key] = value
                                         }
                                     }
                                 }
                                 
-                                recentLikes.append((temp, metadata[i].1, metadata[i].2))
+                                recents.append((temp, timestamps[i]))
                             }
                             
-                            recentLikes.sort { $0.2 > $1.2 }
-                            recentLikes = Array(recentLikes[0..<max(Int(round(Double(documents.count) * 0.1)), 1)])
+                            recents.sort { $0.1 > $1.1 }
+                            recents = Array(recents[0..<max(Int(round(Double(documents.count) * 0.1)), 1)])
                         }
                         
-                        for like in recentLikes {
-                            for (key, value) in like.0 {
+                        for item in recents {
+                            for (key, value) in item.0 {
                                 if let tuple = self.scores[key] {
-                                    if var currentAttributes = tuple.1 {
-                                        if let attributes = value.1 {
-                                            for attribute in attributes {
-                                                if !currentAttributes.contains(attribute) {
-                                                    currentAttributes.append(attribute)
+                                    self.scores[key] = (tuple.0, value + tuple.1, tuple.2, tuple.3)
+                                } else {
+                                    var names = [String: (Int, Date)]()
+                                    var languages = [String]()
+                                    var isNeutral = false
+                                    var latest = Date.distantPast
+                                    
+                                    for word in words {
+                                        if word.name.folding(options: [.caseInsensitive], locale: locale) == key {
+                                            if let (count, date) = names[word.name] {
+                                                if word.date > date {
+                                                    names[word.name] = (count + 1, word.date)
+                                                } else {
+                                                    names[word.name] = (count + 1, date)
                                                 }
+                                            } else {
+                                                names[word.name] = (1, word.date)
+                                            }
+                                            
+                                            if let language = word.language {
+                                                languages.append(language)
+                                            } else {
+                                                isNeutral = true
+                                            }
+                                            
+                                            if word.date > latest {
+                                                latest = word.date
                                             }
                                         }
-                                        
-                                        self.scores[key] = (value.0 + tuple.0, currentAttributes, like.1, tuple.3)
-                                    } else {
-                                        self.scores[key] = (value.0 + tuple.0, value.1, like.1, tuple.3)
                                     }
-                                } else {
-                                    self.scores[key] = (value.0, value.1, like.1, like.2)
+                                    
+                                    self.scores[key] = (names.max(by: { lhs, rhs in
+                                        if lhs.value.0 == rhs.value.0 {
+                                            return lhs.value.1 < rhs.value.1
+                                        }
+
+                                        return lhs.value.0 < rhs.value.0
+                                    })!.key, value, isNeutral ? nil : languages, latest)
                                 }
                             }
                         }
                         
                         for (key, value) in self.scores {
-                            self.scores[key] = (value.0 / Double(recentLikes.count), value.1, value.2, value.3)
+                            self.scores[key] = (value.0, value.1 / Double(recents.count), value.2, value.3)
                         }
                     }
                 }
@@ -473,7 +329,7 @@ final public class Script: NSObject, ObservableObject {
     }
     
     public func update() async -> Bool {
-        let url = URL(string: "https://milchchan.com/api/likes")!
+        let url = URL(string: "https://milchchan.com/api/words")!
         var json: [Any] = []
         
         json.append(contentsOf: await Task.detached {
@@ -537,319 +393,183 @@ final public class Script: NSObject, ObservableObject {
         
         let tempJson = json
         let data = await Task.detached {
-            var likes = [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]]()
-            var tempLikes = [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]]()
-            var idSet = Set<Int>()
-            var words = [Word]()
             var isUpdated = false
+            var words = [(id: Int, name: String, language: String?, date: Date)]()
+            let locale = Locale(identifier: "en_US_POSIX")
             var documents = [[String]]()
-            var metadata = [([[String]?], String?, Date)]()
-            var data = [String: (Double, [String]?, String?, Date)]()
-            
-            for (key, value) in self.likes {
-                for like in value {
-                    if let id = like.id {
-                        idSet.insert(id)
-                    } else {
-                        if var value = likes[key] {
-                            value.append(like)
-                            likes[key] = value
-                            tempLikes[key] = value
-                        } else {
-                            likes[key] = [like]
-                            tempLikes[key] = [like]
-                        }
-                    }
-                }
-            }
-            
-            for word in self.words {
-                if word.attributes == nil || !word.attributes!.isEmpty {
-                    words.append(word)
-                }
-            }
+            var timestamps = [Date]()
+            var data = [String: (String, Double, [String]?, Date)]()
             
             for obj in tempJson {
-                if let likeObject = obj as? [String: Any?] {
+                if let wordObject = obj as? [String: Any?] {
                     var id: Int? = nil
                     var name: String? = nil
-                    var content: String? = nil
                     var language: String? = nil
-                    var attributes = [(name: String?, start: Int, end: Int)]()
                     var date: Date? = nil
                     
-                    if let value = likeObject["id"] as? Int {
+                    if let value = wordObject["id"] as? Int {
                         id = value
                     }
                     
-                    if let value = likeObject["name"] as? String {
+                    if let value = wordObject["name"] as? String {
                         name = value
                     }
                     
-                    if let value = likeObject["content"] as? String {
-                        content = value
-                    }
-                    
-                    if let value = likeObject["language"] as? String {
+                    if let value = wordObject["language"] as? String {
                         language = value
                     }
                     
-                    if let attributeArray = likeObject["attributes"] as? [[String: Any]] {
-                        for dictionaryObject in attributeArray {
-                            var attributeStart: Int? = nil
-                            var attributeEnd: Int? = nil
-                            
-                            if let value = dictionaryObject["start"] as? Double {
-                                attributeStart = Int(value)
-                            }
-                            
-                            if let value = dictionaryObject["end"] as? Double {
-                                attributeEnd = Int(value)
-                            }
-                            
-                            if let attributeStart, let attributeEnd {
-                                attributes.append((name: dictionaryObject["name"] as? String, start: attributeStart, end: attributeEnd))
-                            }
-                        }
-                    }
-                    
-                    if let value = likeObject["timestamp"] as? Double {
+                    if let value = wordObject["timestamp"] as? Double {
                         date = Date(timeIntervalSince1970: value)
                     }
                     
-                    if let id, let name, let content, let language, let date {
-                        if var values = tempLikes[name] {
-                            if !values.contains(where: { like in
-                                if like.id == nil {
-                                    if like.content == content && like.attributes.count == attributes.count {
-                                        for i in 0..<attributes.count {
-                                            if like.attributes[i].start != attributes[i].start || like.attributes[i].end != attributes[i].end {
-                                                return false
-                                            }
-                                        }
-                                        
-                                        return true
-                                    }
-                                }
-                                
-                                return like.id == id
-                            }) {
-                                values.append((id: id, name: name, content: content, language: language, attributes: attributes, timestamp: date))
-                                tempLikes[name] = values
-                                
-                                if !idSet.contains(id) && Script.shared.characters.contains(where: { $0.language == language }) {
-                                    isUpdated = true
-                                }
+                    if let id, let name, let date {
+                        var latest = Date.distantPast
+                        
+                        if !words.contains(where: { $0.id == id }) {
+                            words.append((id: id, name: name, language: language, date: date))
+                        }
+                        
+                        for value in Script.shared.scores.values {
+                            if value.3 > latest {
+                                latest = value.3
                             }
-                        } else {
-                            tempLikes[name] = [(id: id, name: name, content: content, language: language, attributes: attributes, timestamp: date)]
-                            
-                            if !idSet.contains(id) && Script.shared.characters.contains(where: { $0.language == language }) {
+                        }
+                        
+                        for word in words {
+                            if word.date > latest {
                                 isUpdated = true
+                                
+                                break
                             }
                         }
                     }
                 }
             }
             
-            for value in tempLikes.values {
-                for like in value {
-                    if !like.attributes.isEmpty {
-                        var index = 0
-                        var document = [String]()
-                        var annotations = [[String]?]()
-                        
-                        while index < like.content.count {
-                            var maxEnd = index
-                            var boundaryIndex = index
-                            
-                            for attribute in like.attributes {
-                                if attribute.start == index && attribute.end > maxEnd {
-                                    boundaryIndex = maxEnd
-                                    maxEnd = attribute.end
-                                }
-                            }
-                            
-                            if index != maxEnd {
-                                var attributes = [String]()
-                                
-                                for attribute in like.attributes {
-                                    if attribute.end == maxEnd, let name = attribute.name, !attributes.contains(name) {
-                                        attributes.append(name)
-                                    }
-                                }
-                                
-                                if boundaryIndex == index {
-                                    document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)]))
-                                    
-                                    if attributes.isEmpty {
-                                        annotations.append(nil)
-                                    } else {
-                                        annotations.append(attributes)
-                                    }
-                                } else {
-                                    document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: index)..<like.content.index(like.content.startIndex, offsetBy: boundaryIndex)]).trimmingCharacters(in: .whitespaces))
-                                    annotations.append([])
-                                    document.append(String(like.content[like.content.index(like.content.startIndex, offsetBy: boundaryIndex)..<like.content.index(like.content.startIndex, offsetBy: maxEnd)]))
-                                    
-                                    if attributes.isEmpty {
-                                        annotations.append(nil)
-                                    } else {
-                                        annotations.append(attributes)
-                                    }
-                                }
-                                
-                                index = maxEnd
-                                
-                                continue
-                            }
-                            
-                            index += 1
-                        }
-                        
-                        documents.append(document)
-                        metadata.append((annotations, like.language, like.timestamp))
+            for (_, value) in words.reduce(into: [Int64: (words: [String], latest: Date)](), { dictionary, word in
+                let hour = Int64(floor(word.date.timeIntervalSince1970 / 3600.0))
+
+                if var value = dictionary[hour] {
+                    value.words.append(word.name.folding(options: [.caseInsensitive], locale: locale))
+
+                    if word.date > value.latest {
+                        value.latest = word.date
                     }
+
+                    dictionary[hour] = value
+                } else {
+                    dictionary[hour] = (words: [word.name.folding(options: [.caseInsensitive], locale: locale)], latest: word.date)
                 }
+            }).sorted(by: { $0.key < $1.key }) {
+                documents.append(value.words)
+                timestamps.append(value.latest)
             }
             
             if !documents.isEmpty {
                 let scores = self.computeBM25(documents: documents)
                 let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
-                var recentLikes = [([String: (Double, [String]?)], String?, Date)]()
+                var recents = [([String: Double], Date)]()
                 
                 for i in 0..<documents.count {
-                    if metadata[i].2 > yesterday {
-                        var temp = [String: (Double, [String]?)]()
+                    if timestamps[i] > yesterday {
+                        var temp = [String: Double]()
                         
                         for (key, value) in scores[i] {
                             for j in 0..<documents[i].count {
-                                if key == documents[i][j] {
-                                    temp[key] = (value, metadata[i].0[j])
-                                    
-                                    break
+                                if key == documents[i][j] && temp[key] == nil {
+                                    temp[key] = value
                                 }
                             }
                         }
                         
-                        recentLikes.append((temp, metadata[i].1, metadata[i].2))
+                        recents.append((temp, timestamps[i]))
                     }
                 }
                 
-                if recentLikes.isEmpty {
+                if recents.isEmpty {
                     for i in 0..<documents.count {
-                        var temp = [String: (Double, [String]?)]()
+                        var temp = [String: Double]()
                         
                         for (key, value) in scores[i] {
                             for j in 0..<documents[i].count {
-                                if key == documents[i][j] {
-                                    temp[key] = (value, metadata[i].0[j])
-                                    
-                                    break
+                                if key == documents[i][j] && temp[key] == nil {
+                                    temp[key] = value
                                 }
                             }
                         }
                         
-                        recentLikes.append((temp, metadata[i].1, metadata[i].2))
+                        recents.append((temp, timestamps[i]))
                     }
                     
-                    recentLikes.sort { $0.2 > $1.2 }
+                    recents.sort { $0.1 > $1.1 }
+                    recents = Array(recents[0..<max(Int(round(Double(documents.count) * 0.1)), 1)])
                 }
                 
-                for like in recentLikes {
-                    for (key, value) in like.0 {
+                for item in recents {
+                    for (key, value) in item.0 {
                         if let tuple = data[key] {
-                            if var currentAttributes = tuple.1 {
-                                if let attributes = value.1 {
-                                    for attribute in attributes {
-                                        if !currentAttributes.contains(attribute) {
-                                            currentAttributes.append(attribute)
+                            data[key] = (tuple.0, value + tuple.1, tuple.2, tuple.3)
+                        } else {
+                            var names = [String: (Int, Date)]()
+                            var languages = [String]()
+                            var isNeutral = false
+                            var latest = Date.distantPast
+                            
+                            for word in words {
+                                if word.name.folding(options: [.caseInsensitive], locale: locale) == key {
+                                    if let (count, date) = names[word.name] {
+                                        if word.date > date {
+                                            names[word.name] = (count + 1, word.date)
+                                        } else {
+                                            names[word.name] = (count + 1, date)
                                         }
+                                    } else {
+                                        names[word.name] = (1, word.date)
+                                    }
+                                    
+                                    if let language = word.language {
+                                        languages.append(language)
+                                    } else {
+                                        isNeutral = true
+                                    }
+                                    
+                                    if word.date > latest {
+                                        latest = word.date
                                     }
                                 }
-                                
-                                data[key] = (value.0 + tuple.0, currentAttributes, like.1, tuple.3)
-                            } else {
-                                data[key] = (value.0 + tuple.0, value.1, like.1, tuple.3)
                             }
-                        } else {
-                            data[key] = (value.0, value.1, like.1, like.2)
+                            
+                            data[key] = (names.max(by: { lhs, rhs in
+                                if lhs.value.0 == rhs.value.0 {
+                                    return lhs.value.1 < rhs.value.1
+                                }
+
+                                return lhs.value.0 < rhs.value.0
+                            })!.key, value, isNeutral ? nil : languages, latest)
                         }
                     }
                 }
                 
                 for (key, value) in data {
-                    data[key] = (value.0 / Double(recentLikes.count), value.1, value.2, value.3)
+                    data[key] = (value.0, value.1 / Double(recents.count), value.2, value.3)
                 }
             }
             
-            return (isUpdated, tempLikes.reduce(into: [String: [(id: Int?, name: String, content: String, language: String?, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)]](), { x, y in
-                for like in y.value {
-                    if like.id != nil {
-                        if var value = x[y.key] {
-                            value.append(like)
-                            x[y.key] = value
-                        } else {
-                            x[y.key] = [like]
-                        }
-                    }
-                }
-            }), data)
+            return (isUpdated, data)
         }.value
         
         await MainActor.run { [weak self] in
-            guard var likes = self?.likes, let scores = self?.scores else {
+            guard let scores = self?.scores else {
                 return
             }
             
-            for (key, value) in likes {
-                for i in stride(from: value.count - 1, through: 0, by: -1) {
-                    if value[i].id != nil {
-                        likes[key]!.remove(at: i)
-                        self?.likes[key]!.remove(at: i)
-                    }
-                }
-            }
-            
-            for (_, value) in data.1 {
-                for like in value {
-                    if var values = likes[like.name] {
-                        if !values.contains(where: { x in
-                            if x.id == nil && x.content == like.content && x.attributes.count == like.attributes.count {
-                                for i in 0..<like.attributes.count {
-                                    if x.attributes[i].start != like.attributes[i].start || x.attributes[i].end != like.attributes[i].end {
-                                        return false
-                                    }
-                                }
-                                
-                                return true
-                            }
-                            
-                            return false
-                        }) {
-                            values.append(like)
-                            likes[like.name] = values
-                            self?.likes[like.name] = values
-                        }
-                    } else {
-                        likes[like.name] = [like]
-                        self?.likes[like.name] = [like]
-                    }
-                }
-            }
-            
-            for (key, value) in likes {
-                if value.isEmpty {
-                    self?.likes.removeValue(forKey: key)
-                }
-            }
-            
-            for (key, value) in data.2 {
+            for (key, value) in data.1 {
                 self?.scores[key] = value
             }
             
             for (key, _) in scores {
-                if data.2[key] == nil {
+                if data.1[key] == nil {
                     self?.scores.removeValue(forKey: key)
                 }
             }
@@ -921,7 +641,7 @@ final public class Script: NSObject, ObservableObject {
         }
         
         for (key, value) in idf {
-            idf[key] = logl(1.0 + (Double(bags.count) - value + 0.5) / (value + 0.5))
+            idf[key] = log(1.0 + (Double(bags.count) - value + 0.5) / (value + 0.5))
         }
         
         avgdl /= Double(bags.count)
@@ -965,7 +685,7 @@ final public class Script: NSObject, ObservableObject {
             }
         }
         
-        public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (Double, [String]?, String?, Date)], words: [Word], temperature: Double = 1.0, completion: (([Sequence]) -> [Sequence])? = nil) async {
+        public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (String, Double, [String]?, Date)], words: [Word], temperature: Double = 1.0, completion: (([Sequence]) -> [Sequence])? = nil) async {
             var preparedSequences = await self.prepareAsync(characters: characters, name: name, sequences: sequences, state: state, scores: scores, words: words, temperature: temperature)
             
             if let completion {
@@ -1664,25 +1384,11 @@ final public class Script: NSObject, ObservableObject {
             }.value
         }
         
-        private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (Double, [String]?, String?, Date)], words: [Word], temperature: Double = 1.0, beamWidth: Int = 3) async -> [Sequence] {
+        private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (String, Double, [String]?, Date)], words: [Word], temperature: Double = 1.0, beamWidth: Int = 3) async -> [Sequence] {
             return await Task.detached {
-                let epsilon = powl(10, -6)
+                let epsilon: Double = 1e-6
                 var preparedSequences = [Sequence]()
                 var data = [Int: [(Sequence, ([Word], Set<String>))]]()
-                var reverseDictionary = [String: [(String, [String])]]()
-                
-                for (key, value) in scores {
-                    if let attributes = value.1 {
-                        for attribute in attributes {
-                            if var tuple = reverseDictionary[attribute] {
-                                tuple.append((key, attributes))
-                                reverseDictionary[attribute] = tuple
-                            } else {
-                                reverseDictionary[attribute] = [(key, attributes)]
-                            }
-                        }
-                    }
-                }
                 
                 repeat {
                     var i = 0
@@ -1847,6 +1553,7 @@ final public class Script: NSObject, ObservableObject {
                                                 output.removeAll()
                                             } else if let regex = try? Regex(attributePattern) {
                                                 var selections = [(String, [String])]()
+                                                let locale = Locale(identifier: "en_US_POSIX")
                                                 var probabilities = [Double]()
                                                 var candidates = [([(text: String, attributes: [String]?)], [String: (text: String, attributes: [String])], (text: String, attributes: [String]), Double)]()
                                                 
@@ -1856,29 +1563,13 @@ final public class Script: NSObject, ObservableObject {
                                                             if let match = attribute.firstMatch(of: regex), !match.output.isEmpty {
                                                                 selections.append((word.name, attributes))
                                                                 
-                                                                if let (score, _, _, _) = scores[word.name] {
+                                                                if let (_, score, _, _) = scores[word.name.folding(options: [.caseInsensitive], locale: locale)] {
                                                                     probabilities.append(score)
                                                                 } else {
                                                                     probabilities.append(epsilon)
                                                                 }
                                                                 
                                                                 break
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                
-                                                if selections.isEmpty {
-                                                    for key in reverseDictionary.keys {
-                                                        if let match = key.firstMatch(of: regex), !match.output.isEmpty {
-                                                            for (name, attributes) in reverseDictionary[key]! {
-                                                                selections.append((name, attributes))
-                                                                
-                                                                if let (score, _, _, _) = scores[name] {
-                                                                    probabilities.append(score)
-                                                                } else {
-                                                                    probabilities.append(epsilon)
-                                                                }
                                                             }
                                                         }
                                                     }
@@ -2057,6 +1748,7 @@ final public class Script: NSObject, ObservableObject {
         }
         
         private func softmax(x: [Double], temperature: Double = 1.0) -> [Double] {
+            let epsilon: Double = 1e-6
             var q = [Double]()
             var max = -Double.greatestFiniteMagnitude
             var sum = 0.0
@@ -2068,11 +1760,11 @@ final public class Script: NSObject, ObservableObject {
             }
             
             for z in x {
-                sum += exp((z - max) / temperature);
+                sum += exp((z - max) / (temperature + epsilon));
             }
             
             for z in x {
-                q.append(exp((z - max) / temperature) / sum)
+                q.append(exp((z - max) / (temperature + epsilon)) / sum)
             }
             
             return q
