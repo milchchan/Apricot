@@ -16,12 +16,20 @@ class PromptView: UIView {
     var scrambleLetters: Set<Character>? = nil
     private var block: (running: Bool, time: Double, duration: Double, type: (elapsed: Double, speed: Double, reverse: Bool, buffer: String, count: Int), text: String, attributes: [(start: Int, end: Int)], current: String, color: (CGColor?, CGColor?), x: Double, width: Double, elapsed: Double) = (running: false, time: 0.0, duration: -1.0, type: (elapsed: -1.0, speed: 50.0, reverse: false, buffer: String(), count: 0), text: String(), attributes: [], current: String(), color: (nil, nil), x: 0.0, width: 0.0, elapsed: 0.0)
     private var line: String? = nil
-    private var foregroundColor: CGColor? = nil
-    private var accentColor: UIColor? = nil
+    private var isRunning = false
     private var isInvalidated = false
     private var isReloading = false
+    private var foregroundColor: CGColor? = nil
+    private var accentColor: UIColor? = nil
     private var underline: Double? = nil
-    
+    var running: Bool {
+        get {
+            return self.isRunning
+        }
+        set(runnable) {
+            self.isRunning = runnable
+        }
+    }
     var accent: UIColor {
         get {
             return self.accentColor ?? UIColor(named: "AccentColor")!
@@ -50,7 +58,7 @@ class PromptView: UIView {
             }
         })
         
-        let displayLink = CADisplayLink(target: self, selector: #selector(self.update))
+        let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
         
         displayLink.add(to: .current, forMode: .common)
     }
@@ -65,8 +73,8 @@ class PromptView: UIView {
         self.line = text?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "")
     }
     
-    @objc private func update(displayLink: CADisplayLink) {
-        if self.frame.size.width > 0 && self.frame.size.height > 0 {
+    @objc private func step(displayLink: CADisplayLink) {
+        if self.frame.size.width > 0 && self.frame.size.height > 0 && self.isRunning {
             let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
             
             if self.isInvalidated {
