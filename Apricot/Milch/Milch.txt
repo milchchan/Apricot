@@ -41,8 +41,8 @@ Your response must follow the JSON structure below.
  "likability": 0.0-1.0,
  "content": "<Dialogue text>",
  "terms": [
-  "<A highly distinctive term or phrase that appears in content (when applicable, represent it as a string; if it is accompanied by a modifying term or phrase, use the array format shown below; use an empty array if no applicable term or phrase exists)>",
-  ["<A modifying term or phrase that appears in content and characterizes the following term or phrase>", "<A highly distinctive term or phrase that appears in content>"]
+  "<A highly distinctive noun that appears in content (including proper nouns and compound nouns; represent it as a string when it has no modifying term or phrase, and use the array format shown below when it does; use an empty array if there are no applicable nouns)>",
+  ["<A modifying term or phrase that appears in content and characterizes the following noun>", "<A highly distinctive noun that appears in content (including proper nouns and compound nouns)>"]
  ],
  "states": {
   "Angry": 0.0-1.0,
