@@ -28,7 +28,7 @@ struct Chat: View {
    @State private var labels = [String]()
    @State private var likability: Double? = nil
    @State private var choices = [(String, URL?)]()
-   @State private var notifications = [Word]()
+   @State private var discoveries = [Word]()
    @State private var revealMenu = false
    @State private var showActivity = false
    @State private var showDictionary = false
@@ -73,7 +73,7 @@ struct Chat: View {
                   Stage(prompt: self.$prompt, logs: self.$logs, resource: Binding<(old: String, new: String)>(get: { (old: self.selection, new: self.path.wrappedValue) }, set: { newValue in
                      self.selection = newValue.old
                      self.path.wrappedValue = newValue.new
-                  }), attributes: self.$script.attributes, types: self.$types, labels: self.$labels, likability: self.$likability, choices: self.$choices, words: self.$script.words, active: self.isActive, pause: self.revealMenu || self.showActivity || self.showDictionary || self.showGallery || self.showSettings, idle: self.$isIdle, changing: self.$isChanging, loading: self.$isLoading, notifications: self.$notifications, temperature: self.temperature, accent: self.convert(from: self.accent.wrappedValue), scale: self.scale, mute: self.mute)
+                  }), attributes: self.$script.attributes, types: self.$types, labels: self.$labels, likability: self.$likability, choices: self.$choices, words: self.$script.words, active: self.isActive, pause: self.revealMenu || self.showActivity || self.showDictionary || self.showGallery || self.showSettings, idle: self.$isIdle, changing: self.$isChanging, loading: self.$isLoading, discoveries: self.$discoveries, temperature: self.temperature, accent: self.convert(from: self.accent.wrappedValue), scale: self.scale, mute: self.mute)
                   .frame(
                      minWidth: 0.0,
                      maxWidth: .infinity,
@@ -139,7 +139,7 @@ struct Chat: View {
                      if self.isPeeking {
                         ZStack {
                            ZStack {
-                              Peek(peekable: self.$isPeekable, ready: self.isActive && self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showGallery && !self.showSettings, pause: self.isPaused, logs: self.$logs, likability: self.$likability, choices: self.$choices, loading: self.$isLoading, notifications: self.$notifications, temperature: self.temperature, mute: self.mute)
+                              Peek(peekable: self.$isPeekable, ready: self.isActive && self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showGallery && !self.showSettings, pause: self.isPaused, logs: self.$logs, likability: self.$likability, choices: self.$choices, loading: self.$isLoading, discoveries: self.$discoveries, temperature: self.temperature, mute: self.mute)
                                  .frame(
                                     maxWidth: .infinity,
                                     maxHeight: .infinity
@@ -1730,7 +1730,7 @@ struct Chat: View {
                sequences.append((first.name, id, output, sequence, likability, choices))
                
                if !words.isEmpty {
-                  self.notifications.append(words[Int.random(in: 0..<words.count)])
+                  self.discoveries.append(words[Int.random(in: 0..<words.count)])
                }
                
                if let memory {
@@ -1889,7 +1889,7 @@ struct Chat: View {
                         sequences.append((character.name, id, output, sequence, nil, nil))
                         
                         if !words.isEmpty {
-                           self.notifications.append(words[Int.random(in: 0..<words.count)])
+                           self.discoveries.append(words[Int.random(in: 0..<words.count)])
                         }
                         
                         if let memory {
@@ -2683,14 +2683,14 @@ struct Stage: UIViewRepresentable {
    @Binding var idle: Bool
    @Binding var changing: Bool
    @Binding var loading: Bool
-   @Binding var notifications: [Word]
+   @Binding var discoveries: [Word]
    var temperature: Double
    var accent: UIColor
    var scale: Double
    var mute: Bool
    @State var permissions = Set<String>()
    
-   init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, words: Binding<[Word]>, active: Bool, pause: Bool, idle: Binding<Bool>, changing: Binding<Bool>, loading: Binding<Bool>, notifications: Binding<[Word]>, temperature: Double, accent: UIColor, scale: Double, mute: Bool) {
+   init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, words: Binding<[Word]>, active: Bool, pause: Bool, idle: Binding<Bool>, changing: Binding<Bool>, loading: Binding<Bool>, discoveries: Binding<[Word]>, temperature: Double, accent: UIColor, scale: Double, mute: Bool) {
       self._prompt = prompt
       self._logs = logs
       self._resource = resource
@@ -2705,7 +2705,7 @@ struct Stage: UIViewRepresentable {
       self._idle = idle
       self._changing = changing
       self._loading = loading
-      self._notifications = notifications
+      self._discoveries = discoveries
       self.temperature = temperature
       self.accent = accent
       self.scale = scale
@@ -2782,8 +2782,8 @@ struct Stage: UIViewRepresentable {
                      agentView.update(stars: self.words.count)
                   }
                   
-                  if !self.notifications.isEmpty {
-                     let words = self.notifications
+                  if !self.discoveries.isEmpty {
+                     let words = self.discoveries
                      
                      for word in words {
                         withAnimation {
@@ -2791,7 +2791,7 @@ struct Stage: UIViewRepresentable {
                         }
                      }
                      
-                     self.notifications.removeAll()
+                     self.discoveries.removeAll()
                      
                      Task.detached {
                         let encoder = JSONEncoder()
@@ -3323,7 +3323,7 @@ struct Stage: UIViewRepresentable {
                
                if !words.isEmpty {
                   Task { @MainActor in
-                     self.parent.notifications.append(words[Int.random(in: 0..<words.count)])
+                     self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
                   }
                }
             }
@@ -3828,7 +3828,7 @@ struct Stage: UIViewRepresentable {
                      sequences.append((first.name, id, output, sequence, likability, choices))
                      
                      if !words.isEmpty {
-                        self.parent.notifications.append(words[Int.random(in: 0..<words.count)])
+                        self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
                      }
                      
                      if let memory {
@@ -3987,7 +3987,7 @@ struct Stage: UIViewRepresentable {
                               sequences.append((character.name, id, output, sequence, nil, nil))
                               
                               if !words.isEmpty {
-                                 self.parent.notifications.append(words[Int.random(in: 0..<words.count)])
+                                 self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
                               }
                               
                               if let memory {
@@ -4506,7 +4506,7 @@ struct Stage: UIViewRepresentable {
                   sequences.append((first.name, id, output, sequence, likability, choices))
                   
                   if !words.isEmpty {
-                     self.parent.notifications.append(words[Int.random(in: 0..<words.count)])
+                     self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
                   }
                   
                   if let memory {
@@ -4665,7 +4665,7 @@ struct Stage: UIViewRepresentable {
                            sequences.append((character.name, id, output, sequence, nil, nil))
                            
                            if !words.isEmpty {
-                              self.parent.notifications.append(words[Int.random(in: 0..<words.count)])
+                              self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
                            }
                            
                            if let memory {
@@ -5137,11 +5137,11 @@ struct Peek: UIViewControllerRepresentable {
    @Binding private var likability: Double?
    @Binding private var choices: [(String, URL?)]
    @Binding private var loading: Bool
-   @Binding private var notifications: [Word]
+   @Binding private var discoveries: [Word]
    private var temperature: Double
    private var mute: Bool
    
-   init(peekable: Binding<Bool>, ready: Bool, pause: Bool, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, loading: Binding<Bool>, notifications: Binding<[Word]>, temperature: Double, mute: Bool) {
+   init(peekable: Binding<Bool>, ready: Bool, pause: Bool, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, loading: Binding<Bool>, discoveries: Binding<[Word]>, temperature: Double, mute: Bool) {
       self._peekable = peekable
       self.ready = ready
       self.pause = pause
@@ -5149,7 +5149,7 @@ struct Peek: UIViewControllerRepresentable {
       self._likability = likability
       self._choices = choices
       self._loading = loading
-      self._notifications = notifications
+      self._discoveries = discoveries
       self.temperature = temperature
       self.mute = mute
    }
@@ -5394,7 +5394,7 @@ struct Peek: UIViewControllerRepresentable {
                      sequences.append((first.name, id, output, sequence, likability, choices))
                      
                      if !words.isEmpty {
-                        self.parent.notifications.append(words[Int.random(in: 0..<words.count)])
+                        self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
                      }
                      
                      if let memory {
@@ -5512,7 +5512,7 @@ struct Peek: UIViewControllerRepresentable {
                               sequences.append((character.name, id, output, sequence, nil, nil))
                               
                               if !words.isEmpty {
-                                 self.parent.notifications.append(words[Int.random(in: 0..<words.count)])
+                                 self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
                               }
                               
                               if let memory {
