@@ -8,30 +8,20 @@
 import Foundation
 
 public class KMeans {
-    private var numberOfClusters: UInt
+    private var numberOfClusters: Int
     private var centers: [Int: [Double]] = [:]
     var clusters: [Int: [Double]] {
         return self.centers
     }
     
-    public init(numberOfClusters: UInt) {
+    public init(numberOfClusters: Int) {
         self.numberOfClusters = numberOfClusters
     }
     
-    public func fit(data: [[Double]], iterations: Int = 1000, distance: ([Double], [Double]) -> Double = { x, y in
-        // Euclidean distance
-        var distance = 0.0
-        
-        for i in 0..<x.count {
-            distance += (x[i] - y[i]) * (x[i] - y[i])
-        }
-        
-        return sqrt(distance)
-    }) {
+    public func fit(data: [[Double]], iterations: Int = 1000) {
         // k-means++
         var clusters = [Int]()
         var centerVector = data[Int.random(in: 0..<data.count)]
-        let epsilon: Double = 1e-8
         var t = 0
         
         self.centers.removeAll()
@@ -41,15 +31,25 @@ public class KMeans {
             clusters.append(0)
         }
         
-        for i in 1..<Int(self.numberOfClusters) {
+        for i in 1..<self.numberOfClusters {
             var probabilities = [Double]()
-            var sum = epsilon
+            var sum = 0.0
             
             for vector in data {
-                let distance = distance(centerVector, vector) + epsilon
+                var minDistance = Double.greatestFiniteMagnitude
                 
-                probabilities.append(distance)
-                sum += distance
+                for center in self.centers.values {
+                    minDistance = min(minDistance, self.euclideanDistance(x: center, y: vector))
+                }
+                
+                let squaredDistance = minDistance * minDistance
+                
+                probabilities.append(squaredDistance)
+                sum += squaredDistance
+            }
+            
+            if (sum == 0.0) {
+                break
             }
             
             for j in 0..<probabilities.count {
@@ -67,7 +67,7 @@ public class KMeans {
                 var assignedClusterId = -1
                 
                 for (key, value) in self.centers {
-                    let distance = distance(value, data[i])
+                    let distance = self.euclideanDistance(x: value, y: data[i])
                     
                     if distance < minDistance {
                         minDistance = distance
@@ -98,14 +98,14 @@ public class KMeans {
     }
     
     public func predict(vector: [Double]) -> (Int, [Double]) {
-        var maxSimilarity = 0.0
+        var minDistance = Double.greatestFiniteMagnitude
         var predictedClusterId = 0
         
         for (key, value) in self.centers {
-            let similarity = self.cosineSimilarity(x: value, y: vector)
+            let distance = self.euclideanDistance(x: value, y: vector)
             
-            if similarity > maxSimilarity {
-                maxSimilarity = similarity
+            if distance < minDistance {
+                minDistance = distance
                 predictedClusterId = key
             }
         }
@@ -113,19 +113,14 @@ public class KMeans {
         return (predictedClusterId, self.centers[predictedClusterId]!)
     }
     
-    private func cosineSimilarity(x: [Double], y: [Double]) -> Double {
-        let epsilon: Double = 1e-8
-        var sum = 0.0
-        var normX = 0.0
-        var normY = 0.0
+    private func euclideanDistance(x: [Double], y: [Double]) -> Double {
+        var distance = 0.0
         
         for i in 0..<x.count {
-            sum += x[i] * y[i]
-            normX += x[i] * x[i]
-            normY += y[i] * y[i]
+            distance += (x[i] - y[i]) * (x[i] - y[i])
         }
         
-        return (sum + epsilon) / (sqrt(normX) * sqrt(normY) + epsilon)
+        return sqrt(distance)
     }
     
     private func choice(probabilities: [Double]) -> Int {
