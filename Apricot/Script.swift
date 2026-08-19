@@ -227,6 +227,7 @@ final public class Script: NSObject, ObservableObject {
     
     public static func resolve(directory: String) -> [String] {
         var paths = [String: [(String, String?)]]()
+        var languages = [String?]()
         let parser = Parser()
         
         parser.excludeSequences = true
@@ -234,36 +235,36 @@ final public class Script: NSObject, ObservableObject {
         if let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
             if let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl.appending(path: directory, directoryHint: .isDirectory), includingPropertiesForKeys: [.nameKey], options: .skipsHiddenFiles) {
                 for url in urls {
-                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.(?:json|xml)$/) {
+                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?))?\.(?:json|xml)$/) {
                         let key = String(match.output.1)
                         let path = url.path(percentEncoded: false)
                         
                         if var tuple = paths[key] {
                             if let output = match.output.2 {
-                                var languageCode = String(output)
+                                var code = String(output)
                                 
                                 for character in parser.parse(path: path).0 {
                                     if let language = character.language {
-                                        languageCode = language
+                                        code = language
                                     }
                                 }
                                 
-                                tuple.append((path, String(languageCode)))
+                                tuple.append((path, String(code)))
                             } else {
                                 tuple.append((path, nil))
                             }
                             
                             paths[key] = tuple
                         } else if let output = match.output.2 {
-                            var languageCode = String(output)
+                            var code = String(output)
                             
                             for character in parser.parse(path: path).0 {
                                 if let language = character.language {
-                                    languageCode = language
+                                    code = language
                                 }
                             }
                             
-                            paths[key] = [(path, String(languageCode))]
+                            paths[key] = [(path, String(code))]
                         } else {
                             paths[key] = [(path, nil)]
                         }
@@ -276,21 +277,21 @@ final public class Script: NSObject, ObservableObject {
             for path in Bundle.main.paths(forResourcesOfType: "xml", inDirectory: directory) {
                 let input = URL(filePath: path).deletingPathExtension().lastPathComponent
                 
-                if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3})$/) {
+                if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?)$/) {
                     let key = String(match.output.1)
-                    var languageCode = String(match.output.2)
+                    var code = String(match.output.2)
                     
                     for character in parser.parse(path: path).0 {
                         if let language = character.language {
-                            languageCode = language
+                            code = language
                         }
                     }
                     
                     if var tuple = paths[key] {
-                        tuple.append((path, languageCode))
+                        tuple.append((path, code))
                         paths[key] = tuple
                     } else {
-                        paths[key] = [(path, languageCode)]
+                        paths[key] = [(path, code)]
                     }
                 } else if var tuple = paths[input] {
                     tuple.append((path, nil))
@@ -302,30 +303,28 @@ final public class Script: NSObject, ObservableObject {
         }
         
         if let preferredLanguage = Locale.preferredLanguages.first {
-            if let languageCode = Locale(identifier: preferredLanguage).language.languageCode {
-                var tempPaths = [String]()
-                
-                for value in paths.values {
-                    for tuple in value {
-                        if tuple.1 == languageCode.identifier {
-                            tempPaths.append(tuple.0)
-                        }
-                    }
+            let components = Locale.Language.Components(identifier: preferredLanguage)
+            
+            if let languageCode = components.languageCode {
+                if let script = components.script {
+                    languages.append("\(languageCode.identifier)-\(script.identifier)")
                 }
                 
-                if !tempPaths.isEmpty {
-                    return tempPaths
-                }
+                languages.append(languageCode.identifier)
             }
         }
         
-        return paths.values.reduce(into: [], { x, y in
-            for tuple in y {
-                if tuple.1 == nil {
-                    x.append(tuple.0)
+        languages.append(nil)
+        
+        return paths.values.compactMap { value in
+            for language in languages {
+                if let tuple = value.first(where: { $0.1 == language }) {
+                    return tuple.0
                 }
             }
-        })
+
+            return nil
+        }
     }
     
     public func update() async -> Bool {
