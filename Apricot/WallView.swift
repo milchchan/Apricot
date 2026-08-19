@@ -696,11 +696,9 @@ class WallView: UIView {
                                             let blue = Double(bytes[offset + index.blue]) / Double(resizedImage.bitsPerPixel * 8 - 1)
                                             let (hue, saturation, value) = self.rgbToHsv(red: red, green: green, blue: blue)
                                             let t = hue / 360.0 * 2.0 * Double.pi
-                                            let x = saturation * cos(t)
-                                            let y = saturation * sin(t)
-                                            let z = value
+                                            let chroma = saturation * value
                                             
-                                            pixels.append([x, y, z])
+                                            pixels.append([chroma * cos(t), chroma * sin(t), value])
                                         }
                                     }
                                 }
@@ -715,21 +713,22 @@ class WallView: UIView {
                                     
                                     for pixel in pixels {
                                         let (id, vector) = kMeans.predict(vector: pixel)
-                                        var hue = atan2(vector[1], vector[0]) / (2.0 * Double.pi)
-                                        
-                                        if hue < 0 {
-                                            hue += 1.0
-                                        }
-                                        
-                                        hue *= 360.0
-                                        
-                                        let saturation = min(max(hypot(vector[0], vector[1]), 0.0), 1.0)
-                                        let value = min(max(vector[2], 0.0), 1.0)
                                         
                                         if let value = stats[id] {
                                             stats[id] = (count: value.count + 1, color: value.color)
                                         } else {
-                                            stats[id] = (count: 1, color: (hue: hue, saturation: saturation, value: value))
+                                            var hue = atan2(vector[1], vector[0]) / (2.0 * Double.pi)
+                                            
+                                            if hue < 0 {
+                                                hue += 1.0
+                                            }
+                                            
+                                            hue *= 360.0
+                                            
+                                            let chroma = hypot(vector[0], vector[1])
+                                            let value = min(max(vector[2], 0.0), 1.0)
+                                            
+                                            stats[id] = (count: 1, color: (hue: hue, saturation: value > 0.0 ? min(max(chroma / value, 0.0), 1.0) : 0.0, value: value))
                                         }
                                     }
                                     
