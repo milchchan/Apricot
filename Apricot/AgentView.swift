@@ -135,8 +135,16 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
             
             parser.excludeSequences = true
             
-            if let preferredLanguage = Locale.preferredLanguages.first, let languageCode = Locale(identifier: preferredLanguage).language.languageCode {
-                languages.append(languageCode.identifier)
+            if let preferredLanguage = Locale.preferredLanguages.first {
+                let components = Locale.Language.Components(identifier: preferredLanguage)
+                
+                if let languageCode = components.languageCode {
+                    if let script = components.script {
+                        languages.append("\(languageCode.identifier)-\(script.identifier)")
+                    }
+                    
+                    languages.append(languageCode.identifier)
+                }
             }
             
             languages.append(nil)
@@ -169,7 +177,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                             var paths = [String: [(URL, String, String?, String, String?)]]()
                             
                             for url in urls {
-                                if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.(?:json|xml)$/) {
+                                if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?))?\.(?:json|xml)$/) {
                                     let key = String(match.output.1)
                                     let path = url.path(percentEncoded: false)
                                     var characterName: String? = nil
@@ -231,10 +239,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 }
                             }
                             
-                            for language in languages {
+                            for value in paths.values {
                                 var isResolved = false
-                                
-                                for value in paths.values {
+
+                                for language in languages {
                                     for tuple in value {
                                         if tuple.2 == language {
                                             if let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
@@ -244,10 +252,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                             isResolved = true
                                         }
                                     }
-                                }
-                                
-                                if isResolved {
-                                    break
+                                    
+                                    if isResolved {
+                                        break
+                                    }
                                 }
                             }
                         }
@@ -263,7 +271,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     var characterName: String? = nil
                     var prompt: String? = nil
                     
-                    if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3})$/) {
+                    if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?)$/) {
                         let key = String(match.output.1)
                         var languageCode = String(match.output.2)
                         
@@ -301,10 +309,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                     }
                 }
                 
-                for language in languages {
+                for value in paths.values {
                     var isResolved = false
                     
-                    for value in paths.values {
+                    for language in languages {
                         for tuple in value {
                             if tuple.2 == language {
                                 if !resolvedPaths.contains(where: { $0.1 == tuple.3 }), let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
@@ -314,10 +322,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 isResolved = true
                             }
                         }
-                    }
-                    
-                    if isResolved {
-                        break
+                        
+                        if isResolved {
+                            break
+                        }
                     }
                 }
             }
@@ -664,8 +672,16 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                 
                                 parser.excludeSequences = true
                                 
-                                if let preferredLanguage = Locale.preferredLanguages.first, let languageCode = Locale(identifier: preferredLanguage).language.languageCode {
-                                    languages.append(languageCode.identifier)
+                                if let preferredLanguage = Locale.preferredLanguages.first {
+                                    let components = Locale.Language.Components(identifier: preferredLanguage)
+                                    
+                                    if let languageCode = components.languageCode {
+                                        if let script = components.script {
+                                            languages.append("\(languageCode.identifier)-\(script.identifier)")
+                                        }
+                                        
+                                        languages.append(languageCode.identifier)
+                                    }
                                 }
                                 
                                 languages.append(nil)
@@ -698,7 +714,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                                 var paths = [String: [(URL, String, String?, String, String?)]]()
                                                 
                                                 for url in urls {
-                                                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}))?\.(?:json|xml)$/) {
+                                                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?))?\.(?:json|xml)$/) {
                                                         let key = String(match.output.1)
                                                         let path = url.path(percentEncoded: false)
                                                         var characterName: String? = nil
@@ -760,10 +776,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                                     }
                                                 }
                                                 
-                                                for language in languages {
+                                                for value in paths.values {
                                                     var isResolved = false
                                                     
-                                                    for value in paths.values {
+                                                    for language in languages {
                                                         for tuple in value {
                                                             if tuple.2 == language {
                                                                 if let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
@@ -773,10 +789,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                                                 isResolved = true
                                                             }
                                                         }
-                                                    }
-                                                    
-                                                    if isResolved {
-                                                        break
+                                                        
+                                                        if isResolved {
+                                                            break
+                                                        }
                                                     }
                                                 }
                                             }
@@ -792,7 +808,7 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                         var characterName: String? = nil
                                         var prompt: String? = nil
                                         
-                                        if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3})$/) {
+                                        if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?)$/) {
                                             let key = String(match.output.1)
                                             var languageCode = String(match.output.2)
                                             
@@ -830,10 +846,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                         }
                                     }
                                     
-                                    for language in languages {
+                                    for value in paths.values {
                                         var isResolved = false
                                         
-                                        for value in paths.values {
+                                        for language in languages {
                                             for tuple in value {
                                                 if tuple.2 == language {
                                                     if !resolvedPaths.contains(where: { $0.1 == tuple.3 }), let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
@@ -843,10 +859,10 @@ class AgentView: UIView, CAAnimationDelegate, AVAudioPlayerDelegate {
                                                     isResolved = true
                                                 }
                                             }
-                                        }
-                                        
-                                        if isResolved {
-                                            break
+                                            
+                                            if isResolved {
+                                                break
+                                            }
                                         }
                                     }
                                 }
