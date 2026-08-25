@@ -7,6 +7,6 @@
 
 import Foundation
 
-public struct Sound {
+public struct Sound: Sendable {
     public var path: String? = nil
 }
