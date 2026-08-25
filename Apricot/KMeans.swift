@@ -113,7 +113,7 @@ public class KMeans {
         return (predictedClusterId, self.centers[predictedClusterId]!)
     }
     
-    private func euclideanDistance(x: [Double], y: [Double]) -> Double {
+    private nonisolated func euclideanDistance(x: [Double], y: [Double]) -> Double {
         var distance = 0.0
         
         for i in 0..<x.count {
@@ -123,7 +123,7 @@ public class KMeans {
         return sqrt(distance)
     }
     
-    private func choice(probabilities: [Double]) -> Int {
+    private nonisolated func choice(probabilities: [Double]) -> Int {
         let random = Double.random(in: 0.0..<1.0)
         var sum = 0.0
         var index = 0
@@ -140,7 +140,7 @@ public class KMeans {
         return index
     }
     
-    private func mean(x: [[Double]]) -> [Double] {
+    private nonisolated func mean(x: [[Double]]) -> [Double] {
         var vector = [Double]()
         
         for i in 0..<x[0].count {
