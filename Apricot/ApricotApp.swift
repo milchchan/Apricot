@@ -127,6 +127,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 }
 
+@MainActor
 final class Shortcut: ObservableObject {
     static let shared = Shortcut()
     @Published var type: [String]?
