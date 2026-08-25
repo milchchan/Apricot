@@ -13,11 +13,11 @@ struct Provider: TimelineProvider {
         CharmEntry(date: Date(), stars: 0)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (CharmEntry) -> ()) {
+    func getSnapshot(in context: Context, completion: @escaping @Sendable (CharmEntry) -> ()) {
         completion(CharmEntry(date: Date(), stars: 0))
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+    func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<Entry>) -> ()) {
         Task {
             let applicationGroupIdentifier = "group.com.milchchan.Apricot"
             let currentDate = Date()
