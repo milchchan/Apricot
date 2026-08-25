@@ -46,6 +46,7 @@
 		50ED847A2A4F257100E18407 /* Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ED84792A4F257100E18407 /* Animation.swift */; };
 		50ED847E2A4F257100E18407 /* Sequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ED847D2A4F257100E18407 /* Sequence.swift */; };
 		50ED84802A4F257100E18407 /* Sound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50ED847F2A4F257100E18407 /* Sound.swift */; };
+		50F1E8892A4F25700098077F /* Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F1E8882A4F25700098077F /* Timeline.swift */; };
 		50F587532A4F2571007CE3E5 /* Sprite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F587522A4F2571007CE3E5 /* Sprite.swift */; };
 		50F587552A4F2571007CE3E5 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F587542A4F2571007CE3E5 /* Message.swift */; };
 		50F587572A4F2571007CE3E5 /* Word.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F587562A4F2571007CE3E5 /* Word.swift */; };
@@ -119,6 +120,7 @@
 		50ED84792A4F257100E18407 /* Animation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Animation.swift; sourceTree = "<group>"; };
 		50ED847D2A4F257100E18407 /* Sequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sequence.swift; sourceTree = "<group>"; };
 		50ED847F2A4F257100E18407 /* Sound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sound.swift; sourceTree = "<group>"; };
+		50F1E8882A4F25700098077F /* Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Timeline.swift; sourceTree = "<group>"; };
 		50F587522A4F2571007CE3E5 /* Sprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sprite.swift; sourceTree = "<group>"; };
 		50F587542A4F2571007CE3E5 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		50F587562A4F2571007CE3E5 /* Word.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Word.swift; sourceTree = "<group>"; };
@@ -202,6 +204,7 @@
 				50ED847F2A4F257100E18407 /* Sound.swift */,
 				50F587522A4F2571007CE3E5 /* Sprite.swift */,
 				505B25672AA0E2700008375B /* Star.wav */,
+				50F1E8882A4F25700098077F /* Timeline.swift */,
 				50742B7929612EB1001A5EA8 /* WallView.swift */,
 				50F587562A4F2571007CE3E5 /* Word.swift */,
 			);
@@ -383,6 +386,7 @@
 				503C7DED296085F000E2065B /* PromptView.swift in Sources */,
 				50ED84742A4F257000E18407 /* AgentView.swift in Sources */,
 				50742B7A29612EB1001A5EA8 /* WallView.swift in Sources */,
+				50F1E8892A4F25700098077F /* Timeline.swift in Sources */,
 				506E0EDF296085F100099D3A /* ApricotApp.swift in Sources */,
 				50F587552A4F2571007CE3E5 /* Message.swift in Sources */,
 				50ED847E2A4F257100E18407 /* Sequence.swift in Sources */,
@@ -465,7 +469,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -525,7 +529,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -544,7 +548,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Apricot/Apricot.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 85;
+				CURRENT_PROJECT_VERSION = 86;
 				DEVELOPMENT_ASSET_PATHS = "\"Apricot/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -560,11 +564,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 8.5;
+				MARKETING_VERSION = 8.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milchchan.Apricot;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -576,7 +580,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Apricot/Apricot.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 85;
+				CURRENT_PROJECT_VERSION = 86;
 				DEVELOPMENT_ASSET_PATHS = "\"Apricot/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -592,11 +596,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 8.5;
+				MARKETING_VERSION = 8.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milchchan.Apricot;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -608,7 +612,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = Charm/CharmExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 85;
+				CURRENT_PROJECT_VERSION = 86;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Charm/Info.plist;
@@ -620,13 +624,13 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 8.5;
+				MARKETING_VERSION = 8.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milchchan.Apricot.Charm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -638,7 +642,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = Charm/CharmExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 85;
+				CURRENT_PROJECT_VERSION = 86;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Charm/Info.plist;
@@ -650,12 +654,12 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 8.5;
+				MARKETING_VERSION = 8.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.milchchan.Apricot.Charm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
