@@ -10,6 +10,7 @@ import Charts
 import AppIntents
 import UniformTypeIdentifiers
 import AVFoundation
+import Synchronization
 import Speech
 import Vision
 import CryptoKit
@@ -37,7 +38,6 @@ struct Chat: View {
    @State private var showComposer = false
    @State private var selection: String
    @State private var isActive = false
-   @State private var isLongPressed = false
    @State private var isRecording = false
    @State private var isPeeking = false
    @State private var isPeekable = true
@@ -83,6 +83,23 @@ struct Chat: View {
                   .background(.clear)
                   .ignoresSafeArea(.all)
                }
+               Color.clear
+                  .contentShape(Rectangle())
+                  .allowsHitTesting(self.showComposer)
+                  .ignoresSafeArea(.all)
+                  .onTapGesture {
+                     self.composerFocused = false
+                     
+                     Task {
+                        await Task.detached {
+                           await MainActor.run {
+                              withAnimation {
+                                 self.showComposer = false
+                              }
+                           }
+                        }.value
+                     }
+                  }
                VStack(spacing: 0.0) {
                   VStack(spacing: 16.0) {
                      ZStack(alignment: .bottom) {
@@ -139,12 +156,27 @@ struct Chat: View {
                      if self.isPeeking {
                         ZStack {
                            ZStack {
-                              Peek(peekable: self.$isPeekable, ready: self.isActive && self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showGallery && !self.showSettings, pause: self.isPaused, logs: self.$logs, likability: self.$likability, choices: self.$choices, loading: self.$isLoading, discoveries: self.$discoveries, temperature: self.temperature, mute: self.mute)
-                                 .frame(
-                                    maxWidth: .infinity,
-                                    maxHeight: .infinity
-                                 )
-                                 .background(.clear)
+                              Peek(peekable: self.$isPeekable, ready: self.isActive && self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showGallery && !self.showSettings, pause: self.isPaused, onChange: { image in
+                                 if self.energy >= 1.0 {
+                                    self.choices.removeAll()
+                                    self.timestamp = Int(Date().timeIntervalSince1970)
+                                    
+                                    withAnimation {
+                                       self.energy -= 1.0
+                                    }
+                                    
+                                    Task {
+                                       await self.talk(image: image, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.mute)
+                                    }
+                                 } else {
+                                    self.shakes += 1
+                                 }
+                              })
+                              .frame(
+                                 maxWidth: .infinity,
+                                 maxHeight: .infinity
+                              )
+                              .background(.clear)
                               
                               if !self.isPeekable {
                                  Image(systemName: "exclamationmark.triangle")
@@ -178,6 +210,81 @@ struct Chat: View {
                               alignment: .top
                            )
                            .background(Color(UIColor(white: 0.0, alpha: 1.0)))
+                           .overlay {
+                              if !self.revealMenu {
+                                 GeometryReader { proxy in
+                                    ZStack(alignment: .bottom) {
+                                       Rectangle()
+                                          .fill(Color(self.convert(from: self.accent.wrappedValue)).opacity(0.25))
+                                          .frame(
+                                             width: proxy.size.width + 32.0,
+                                             height: proxy.size.height
+                                          )
+                                       Rectangle()
+                                          .fill(Color(self.convert(from: self.accent.wrappedValue)))
+                                          .frame(
+                                             width: proxy.size.width + 32.0,
+                                             height: proxy.size.height * CGFloat(min(max(self.energy / self.maxEnergy, 0.0), 1.0))
+                                          )
+                                    }
+                                    .frame(
+                                       width: proxy.size.width + 32.0,
+                                       height: proxy.size.height,
+                                       alignment: .bottom
+                                    )
+                                    .mask {
+                                       Path { path in
+                                          path.addRect(CGRect(x: 0.0, y: 0.0, width: proxy.size.width + 32.0, height: proxy.size.height))
+                                          path.addRoundedRect(in: CGRect(x: 20.0, y: 4.0, width: proxy.size.width - 8.0, height: proxy.size.height - 8.0), cornerSize: CGSize(width: 12.0, height: 12.0))
+                                       }
+                                       .fill(Color.white, style: FillStyle(eoFill: true))
+                                    }
+                                    .frame(
+                                       width: proxy.size.width,
+                                       height: proxy.size.height,
+                                       alignment: .center
+                                    )
+                                 }
+                                 .allowsHitTesting(false)
+                                 .animation(.easeInOut(duration: 0.5), value: self.energy)
+                                 .keyframeAnimator(initialValue: 0, trigger: self.shakes, content: { view, value in
+                                    view
+                                       .offset(x: value)
+                                 }, keyframes: { _ in
+                                    MoveKeyframe(5.0)
+                                    LinearKeyframe(5.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(0.0)
+                                    LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(-5.0)
+                                    LinearKeyframe(-5.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(4.0)
+                                    LinearKeyframe(4.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(0.0)
+                                    LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(-4.0)
+                                    LinearKeyframe(-4.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(3.0)
+                                    LinearKeyframe(3.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(0.0)
+                                    LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(-3.0)
+                                    LinearKeyframe(-3.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(2.0)
+                                    LinearKeyframe(2.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(0.0)
+                                    LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(-2.0)
+                                    LinearKeyframe(-2.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(1.0)
+                                    LinearKeyframe(1.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(0.0)
+                                    LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(-1.0)
+                                    LinearKeyframe(-1.0, duration: 0.5 / 15.0)
+                                    MoveKeyframe(0.0)
+                                 })
+                              }
+                           }
                            .clipShape(RoundedRectangle(cornerRadius: 16.0))
                            .transition(.opacity)
                            .onLongPressGesture(perform: {
@@ -281,90 +388,68 @@ struct Chat: View {
                                  }
                                  
                                  Button(action: {
-                                    if self.isLongPressed {
-                                       self.isLongPressed = false
-                                    } else if self.isRecording {
-                                       self.stopRecognize()
+                                    if self.revealMenu {
+                                       withAnimation {
+                                          self.revealMenu.toggle()
+                                       }
                                     } else {
-                                       if self.revealMenu {
-                                          withAnimation {
-                                             self.revealMenu.toggle()
-                                          }
+                                       let now = Int(Date().timeIntervalSince1970)
+                                       let elapsed = now - self.timestamp
+                                       
+                                       if self.script.words.isEmpty {
+                                          self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
                                        } else {
-                                          let now = Int(Date().timeIntervalSince1970)
-                                          let elapsed = now - self.timestamp
+                                          let samples = 10
+                                          var letterSet = Set<Character>()
+                                          var modifiers = [String]()
+                                          var words = [Word]()
                                           
-                                          if self.script.words.isEmpty {
+                                          for _ in 0..<samples {
+                                             let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
+                                             
+                                             for i in 0..<word.name.count {
+                                                let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
+                                                
+                                                if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
+                                                   letterSet.insert(character)
+                                                }
+                                             }
+                                             
+                                             if let attributes = word.attributes, attributes.isEmpty {
+                                                modifiers.append(word.name)
+                                             } else {
+                                                words.append(word)
+                                             }
+                                          }
+                                          
+                                          if words.isEmpty {
                                              self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
                                           } else {
-                                             let samples = 10
-                                             var letterSet = Set<Character>()
-                                             var modifiers = [String]()
-                                             var words = [Word]()
+                                             var word = words[Int.random(in: 0..<words.count)]
                                              
-                                             for _ in 0..<samples {
-                                                let word = self.script.words[Int.random(in: 0..<self.script.words.count)]
+                                             if Double.random(in: 0.0..<1.0) < Double(modifiers.count) / Double(samples) {
+                                                let modifier = modifiers[Int.random(in: 0..<modifiers.count)]
                                                 
-                                                for i in 0..<word.name.count {
-                                                   let character = word.name[word.name.index(word.name.startIndex, offsetBy: i)]
-                                                   
-                                                   if !letterSet.contains(character) && !character.isNewline && !character.isWhitespace {
-                                                      letterSet.insert(character)
-                                                   }
-                                                }
-                                                
-                                                if let attributes = word.attributes, attributes.isEmpty {
-                                                   modifiers.append(word.name)
+                                                if modifier.allSatisfy({ $0.isASCII }) && word.name.allSatisfy({ $0.isASCII }) {
+                                                   word.name = modifier + String("\u{0020}\u{000A}") + word.name
                                                 } else {
-                                                   words.append(word)
+                                                   word.name = modifier + "\n" + word.name
                                                 }
                                              }
                                              
-                                             if words.isEmpty {
-                                                self.prompt = (nil, nil, false, nil, self.choices, 0, CACurrentMediaTime())
-                                             } else {
-                                                var word = words[Int.random(in: 0..<words.count)]
-                                                
-                                                if Double.random(in: 0.0..<1.0) < Double(modifiers.count) / Double(samples) {
-                                                   let modifier = modifiers[Int.random(in: 0..<modifiers.count)]
-                                                   
-                                                   if modifier.allSatisfy({ $0.isASCII }) && word.name.allSatisfy({ $0.isASCII }) {
-                                                      word.name = modifier + String("\u{0020}\u{000A}") + word.name
-                                                   } else {
-                                                      word.name = modifier + "\n" + word.name
-                                                   }
-                                                }
-                                                
-                                                self.prompt = (word.name, word, true, letterSet, self.choices, 0, CACurrentMediaTime())
-                                             }
+                                             self.prompt = (word.name, word, true, letterSet, self.choices, 0, CACurrentMediaTime())
                                           }
-                                          
-                                          self.timestamp = now
-                                          
-                                          withAnimation {
-                                             self.energy = min(self.energy + Double(max(elapsed, 0)) / self.recoveryDuration * self.maxEnergy, self.maxEnergy)
-                                             self.revealMenu.toggle()
-                                          }
+                                       }
+                                       
+                                       self.timestamp = now
+                                       
+                                       withAnimation {
+                                          self.energy = min(self.energy + Double(max(elapsed, 0)) / self.recoveryDuration * self.maxEnergy, self.maxEnergy)
+                                          self.revealMenu.toggle()
                                        }
                                     }
                                  }) {
-                                    if self.isRecording {
-                                       Image(systemName: "mic")
-                                          .frame(
-                                             width: 48.0,
-                                             height: 48.0,
-                                             alignment: .center
-                                          )
-                                          .background(.clear)
-                                          .foregroundStyle(Color(self.convert(from: self.accent.wrappedValue)))
-                                          .font(
-                                             .system(size: 16.0)
-                                          )
-                                          .bold()
-                                          .padding(0.0)
-                                          .opacity(0.5 + 0.5 * (1.0 - self.volumeLevel))
-                                          .transition(.opacity)
-                                    } else if self.revealMenu {
+                                    if self.revealMenu {
                                        Image(systemName: "chevron.down")
                                           .frame(
                                              width: 48.0,
@@ -404,12 +489,6 @@ struct Chat: View {
                                  .glassEffectID("menu", in: self.menuNamespace)
                                  .glassEffectTransition(.matchedGeometry)
                                  .clipShape(Circle())
-                                 .simultaneousGesture(LongPressGesture().onEnded{ _ in
-                                    if let first = Script.shared.characters.first, first.prompt != nil && !self.revealMenu && !self.isRecording {
-                                       self.startRecognize()
-                                       self.isLongPressed = true
-                                    }
-                                 })
                                  
                                  if self.revealMenu {
                                     Button(action: {
@@ -528,23 +607,6 @@ struct Chat: View {
                }
                .background(.clear)
                .ignoresSafeArea(.all)
-               Color.clear
-                  .contentShape(Rectangle())
-                  .allowsHitTesting(self.showComposer)
-                  .ignoresSafeArea(.all)
-                  .onTapGesture {
-                     self.composerFocused = false
-                     
-                     Task {
-                        await Task.detached {
-                           await MainActor.run {
-                              withAnimation {
-                                 self.showComposer = false
-                              }
-                           }
-                        }.value
-                     }
-                  }
             }
             .frame(
                minWidth: 0.0,
@@ -557,34 +619,196 @@ struct Chat: View {
          .safeAreaInset(edge: .bottom) {
             if self.showComposer {
                ZStack(alignment: .bottom) {
-                  HStack(spacing: 16.0) {
-                     TextField("Message", text: self.$message)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
-                        .submitLabel(.send)
-                        .focused(self.$composerFocused)
-                        .textInputAutocapitalization(.never)
-                        .disableAutocorrection(true)
-                        .background(.clear)
-                        .tint(Color(self.convert(from: self.accent.wrappedValue)))
-                        .frame(
-                           maxWidth: .infinity
-                        )
-                        .onSubmit {
-                           if self.message.isEmpty {
-                              self.composerFocused = false
-                              
-                              Task {
-                                 await Task.detached {
-                                    await MainActor.run {
-                                       withAnimation {
-                                          self.showComposer = false
-                                       }
-                                    }
-                                 }.value
+                  VStack(spacing: 16.0) {
+                     ZStack(alignment: .topLeading) {
+                        TextField("Message", text: self.$message, axis: .vertical)
+                           .font(.headline)
+                           .fontWeight(.semibold)
+                           .lineLimit(2)
+                           .focused(self.$composerFocused)
+                           .textInputAutocapitalization(.never)
+                           .disableAutocorrection(true)
+                           .background(.clear)
+                           .tint(Color(self.convert(from: self.accent.wrappedValue)))
+                           .frame(
+                              maxWidth: .infinity
+                           )
+                           .onKeyPress(.return, phases: .down) { press in
+                              guard press.modifiers.contains(.command) else {
+                                 return .ignored
                               }
+                              
+                              if self.message.isEmpty {
+                                 self.composerFocused = false
+                                 
+                                 Task {
+                                    await Task.detached {
+                                       await MainActor.run {
+                                          withAnimation {
+                                             self.showComposer = false
+                                          }
+                                       }
+                                    }.value
+                                 }
+                              } else if self.energy >= 1.0 {
+                                 self.choices.removeAll()
+                                 self.timestamp = Int(Date().timeIntervalSince1970)
+                                 
+                                 withAnimation {
+                                    self.energy -= 1.0
+                                 }
+                                 
+                                 Task {
+                                    let message = self.message
+                                    
+                                    await Task.detached {
+                                       await MainActor.run {
+                                          self.composerFocused = false
+                                          self.message = String()
+                                       }
+                                       
+                                       await MainActor.run {
+                                          withAnimation {
+                                             self.showComposer = false
+                                          }
+                                       }
+                                    }.value
+                                    
+                                    await self.talk(word: Word(name: message, attributes: [String](Script.shared.words.reduce(into: Set<String>(), { x, y in
+                                       if y.name == message, let attributes = y.attributes {
+                                          for attribute in attributes {
+                                             if !x.contains(attribute) {
+                                                x.insert(attribute)
+                                             }
+                                          }
+                                       }
+                                    }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
+                                 }
+                              } else {
+                                 self.shakes += 1
+                              }
+                              
+                              return .handled
+                           }
+                     }
+                     .background(.clear)
+                     .padding(EdgeInsets(
+                        top: 24.0,
+                        leading: 24.0,
+                        bottom: 0.0,
+                        trailing: 24.0
+                     ))
+                     HStack(spacing: 8.0) {
+                        ZStack {
+                           Circle()
+                              .stroke(Color(self.convert(from: self.accent.wrappedValue)).opacity(0.25), lineWidth: 2.0)
+                           Circle()
+                              .trim(from: 0.0, to: CGFloat(min(max(self.energy / self.maxEnergy, 0.0), 1.0)))
+                              .stroke(Color(self.convert(from: self.accent.wrappedValue)), style: StrokeStyle(lineWidth: 2.0, lineCap: .round))
+                              .rotationEffect(.degrees(-90.0))
+                        }
+                        .frame(
+                           width: 16.0,
+                           height: 16.0
+                        )
+                        .padding(EdgeInsets(
+                           top: 0.0,
+                           leading: 16.0,
+                           bottom: 0.0,
+                           trailing: 0.0
+                        ))
+                        .animation(.easeInOut(duration: 0.5), value: self.energy)
+                        .keyframeAnimator(initialValue: 0, trigger: self.shakes, content: { view, value in
+                           view
+                              .offset(x: value)
+                        }, keyframes: { _ in
+                           MoveKeyframe(5.0)
+                           LinearKeyframe(5.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(0.0)
+                           LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(-5.0)
+                           LinearKeyframe(-5.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(4.0)
+                           LinearKeyframe(4.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(0.0)
+                           LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(-4.0)
+                           LinearKeyframe(-4.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(3.0)
+                           LinearKeyframe(3.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(0.0)
+                           LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(-3.0)
+                           LinearKeyframe(-3.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(2.0)
+                           LinearKeyframe(2.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(0.0)
+                           LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(-2.0)
+                           LinearKeyframe(-2.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(1.0)
+                           LinearKeyframe(1.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(0.0)
+                           LinearKeyframe(0.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(-1.0)
+                           LinearKeyframe(-1.0, duration: 0.5 / 15.0)
+                           MoveKeyframe(0.0)
+                        })
+                        Spacer()
+                        Button(action: {
+                           if self.isRecording {
+                              self.stopRecognize()
                            } else {
+                              self.startRecognize()
+                           }
+                        }) {
+                           if self.isRecording {
+                              Image(systemName: "mic")
+                                 .frame(
+                                    width: 48.0,
+                                    height: 48.0,
+                                    alignment: .center
+                                 )
+                                 .background(.clear)
+                                 .foregroundStyle(Color(self.convert(from: self.accent.wrappedValue)))
+                                 .font(
+                                    .system(size: 16.0)
+                                 )
+                                 .bold()
+                                 .padding(0.0)
+                                 .opacity(0.5 + 0.5 * (1.0 - self.volumeLevel))
+                                 .transition(.opacity)
+                           } else {
+                              Image(systemName: "mic")
+                                 .frame(
+                                    width: 48.0,
+                                    height: 48.0,
+                                    alignment: .center
+                                 )
+                                 .background(.clear)
+                                 .foregroundStyle(.primary)
+                                 .font(
+                                    .system(size: 16.0)
+                                 )
+                                 .bold()
+                                 .padding(0.0)
+                                 .transition(.opacity)
+                           }
+                        }
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .clipShape(Circle())
+                        Button(action: {
+                           if self.energy >= 1.0 {
+                              self.choices.removeAll()
+                              self.timestamp = Int(Date().timeIntervalSince1970)
+                              
+                              withAnimation {
+                                 self.energy -= 1.0
+                              }
+                              
                               Task {
                                  let message = self.message
                                  
@@ -611,84 +835,55 @@ struct Chat: View {
                                     }
                                  }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                               }
-                              
-                              self.choices.removeAll()
+                           } else {
+                              self.shakes += 1
                            }
+                        }) {
+                           Image(systemName: "arrow.up")
+                              .frame(
+                                 width: 48.0,
+                                 height: 48.0,
+                                 alignment: .center
+                              )
+                              .background(.clear)
+                              .foregroundStyle(Color(self.convert(from: self.accent.wrappedValue)))
+                              .font(
+                                 .system(size: 16.0)
+                              )
+                              .bold()
+                              .opacity(self.message.isEmpty ? 0.5 : 1.0)
+                              .animation(.linear(duration: 0.5), value: self.message.isEmpty)
                         }
-                     Button(action: {
-                        if self.message.isEmpty {
-                           self.composerFocused = false
-                           
-                           Task {
-                              await Task.detached {
-                                 await MainActor.run {
-                                    withAnimation {
-                                       self.showComposer = false
-                                    }
-                                 }
-                              }.value
-                           }
-                        } else {
-                           Task {
-                              let message = self.message
-                              
-                              await Task.detached {
-                                 await MainActor.run {
-                                    self.composerFocused = false
-                                    self.message = String()
-                                 }
-                                 
-                                 await MainActor.run {
-                                    withAnimation {
-                                       self.showComposer = false
-                                    }
-                                 }
-                              }.value
-                              
-                              await self.talk(word: Word(name: message, attributes: [String](Script.shared.words.reduce(into: Set<String>(), { x, y in
-                                 if y.name == message, let attributes = y.attributes {
-                                    for attribute in attributes {
-                                       if !x.contains(attribute) {
-                                          x.insert(attribute)
-                                       }
-                                    }
-                                 }
-                              }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
-                           }
-                           
-                           self.choices.removeAll()
-                        }
-                     }) {
-                        Image(systemName: "arrow.up")
-                           .frame(
-                              width: 48.0,
-                              height: 48.0,
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(.primary)
-                           .font(
-                              .system(size: 16.0)
-                           )
-                           .bold()
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .clipShape(Circle())
+                        .disabled(self.message.isEmpty)
                      }
-                     .frame(
-                        alignment: .center
-                     )
                      .background(.clear)
-                     .clipShape(Circle())
+                     .padding(EdgeInsets(
+                        top: 0.0,
+                        leading: 8.0,
+                        bottom: 8.0,
+                        trailing: 8.0
+                     ))
                   }
-                  .background(.clear)
-                  .padding(EdgeInsets(
-                     top: 0.0,
-                     leading: 16.0,
-                     bottom: 0.0,
-                     trailing: 0.0
-                  ))
+                  .background {
+                     ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true)
+                        .fill(.clear)
+                        .contentShape(.interaction, ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true))
+                  }
+                  .padding(0.0)
                   .foregroundStyle(.primary)
                   .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true))
                   .compositingGroup()
                   .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
+                  .geometryGroup()
+                  .animation(.easeInOut(duration: 0.5),value: self.message)
+                  .onTapGesture {
+                     self.composerFocused = false
+                  }
                }
                .frame(
                   maxWidth: .infinity
@@ -730,6 +925,13 @@ struct Chat: View {
          .onChange(of: self.shortcut.type) {
             if let type = self.shortcut.type, !type.isEmpty {
                if type[0].isEmpty {
+                  self.choices.removeAll()
+                  self.showActivity = false
+                  self.showDictionary = false
+                  self.showGallery = false
+                  self.showSettings = false
+                  self.shortcut.type = nil
+                  
                   Task {
                      await self.talk(word: Word(name: type[1], attributes: [String](Script.shared.words.reduce(into: Set<String>(), { x, y in
                         if y.name == type[1], let attributes = y.attributes {
@@ -741,13 +943,6 @@ struct Chat: View {
                         }
                      }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                   }
-                  
-                  self.choices.removeAll()
-                  self.showActivity = false
-                  self.showDictionary = false
-                  self.showGallery = false
-                  self.showSettings = false
-                  self.shortcut.type = nil
                } else if type[0] == "Dictionary" {
                   if self.isRecording {
                      self.stopRecognize()
@@ -758,10 +953,9 @@ struct Chat: View {
                   self.showSettings = false
                   self.showDictionary = true
                   
-                  if self.revealMenu {
-                     withAnimation {
-                        self.revealMenu = false
-                     }
+                  withAnimation {
+                     self.isPeeking = false
+                     self.revealMenu = false
                   }
                }
             }
@@ -769,6 +963,8 @@ struct Chat: View {
          .onAppear {
             if let type = self.shortcut.type, !type.isEmpty {
                if type[0].isEmpty {
+                  self.shortcut.type = nil
+                  
                   Task {
                      await self.talk(word: Word(name: type[1], attributes: [String](Script.shared.words.reduce(into: Set<String>(), { x, y in
                         if y.name == type[1], let attributes = y.attributes {
@@ -780,8 +976,6 @@ struct Chat: View {
                         }
                      }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
                   }
-                  
-                  self.shortcut.type = nil
                } else if type[0] == "Dictionary" {
                   self.showDictionary = true
                }
@@ -871,32 +1065,32 @@ struct Chat: View {
                               self.revealMenu = false
                            }
                         } else if self.energy >= 1.0 {
-                           Task {
-                              await self.talk(word: Word(name: self.prompt.4[self.prompt.5 - 1].0), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
-                           }
-                           
                            self.choices.removeAll()
                            self.timestamp = Int(Date().timeIntervalSince1970)
                            
                            withAnimation {
                               self.energy -= 1.0
                               self.revealMenu = false
+                           }
+                           
+                           Task {
+                              await self.talk(word: Word(name: self.prompt.4[self.prompt.5 - 1].0), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
                            }
                         } else {
                            self.shakes += 1
                         }
                      } else if let word = self.prompt.1 {
                         if self.energy >= 1.0 {
-                           Task {
-                              await self.talk(word: word, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
-                           }
-                           
                            self.choices.removeAll()
                            self.timestamp = Int(Date().timeIntervalSince1970)
                            
                            withAnimation {
                               self.energy -= 1.0
                               self.revealMenu = false
+                           }
+                           
+                           Task {
+                              await self.talk(word: word, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
                            }
                         } else {
                            self.shakes += 1
@@ -1194,6 +1388,7 @@ struct Chat: View {
                         self.showActivity = true
                         
                         withAnimation {
+                           self.isPeeking = false
                            self.revealMenu = false
                         }
                      }) {
@@ -1239,6 +1434,7 @@ struct Chat: View {
                         self.showDictionary = true
                         
                         withAnimation {
+                           self.isPeeking = false
                            self.revealMenu = false
                         }
                      }) {
@@ -1284,6 +1480,7 @@ struct Chat: View {
                         self.showGallery = true
                         
                         withAnimation {
+                           self.isPeeking = false
                            self.revealMenu = false
                         }
                      }) {
@@ -1331,6 +1528,7 @@ struct Chat: View {
                         self.showSettings = true
                         
                         withAnimation {
+                           self.isPeeking = false
                            self.revealMenu = false
                         }
                      }) {
@@ -1467,11 +1665,11 @@ struct Chat: View {
          bottom: geometryProxy.safeAreaInsets.bottom + 72.0,
          trailing: 0.0
       ))
+      .background(.clear)
       .transition(AnyTransition.opacity.combined(with: .scale(scale: 0.5, anchor: .bottom)))
       .onDisappear {
          self.shakes = 0
       }
-      .background(.clear)
    }
    
    private func talk(word: Word, temperature: Double, multiple: Bool, fallback: Bool, mute: Bool) async {
@@ -1531,40 +1729,22 @@ struct Chat: View {
             }
          }
          
-         if let prompt = first.prompt, generateRequired {
+         if var prompt = first.prompt, generateRequired {
             withAnimation(.easeOut(duration: 0.5)) {
                self.isLoading = true
             }
             
-            let memory = await Task.detached {
+            if let memory = (await Task.detached {
                if let data = self.load() {
                   return String(data: data, encoding: .utf8)
                }
                
                return nil
-            }.value
+            }.value) {
+               prompt.append("\n\(memory)")
+            }
             
-            var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-               var text = self.replacePlaceholders(text: prompt, resolver: { format in
-                  
-                  if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                     let dateFormatter = DateFormatter()
-                     
-                     dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                     dateFormatter.dateFormat = format
-                     
-                     return dateFormatter.string(from: Date())
-                  }
-                  
-                  return nil
-               })
-               
-               if let memory {
-                  text += "\n\(memory)"
-               }
-               
-               return text
-            }.value]]
+            var messages: [[String: Any]] = [["role": "system", "content": prompt]]
             var i = logs.count - 1
             
             while i > 0 {
@@ -1656,7 +1836,7 @@ struct Chat: View {
             }
             
             if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
-               let sequence = Sequence(name: "Activate", state: nil)
+               var sequence = Sequence(name: "Activate", state: nil)
                let id = UUID()
                var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
                   let term = value.filter { !$0.isEmpty }
@@ -1720,13 +1900,13 @@ struct Chat: View {
                   }
                }
                
-               sequence.append(Message(id: id, inlines: inlines))
+               sequence.append(.message(Message(id: id, inlines: inlines)))
                
                if let voice {
-                  sequence.append(voice)
+                  sequence.append(.audio(voice))
                }
                
-               sequence.append(Sequence(name: "Emote", state: state ?? String()))
+               sequence.append(.sequence(Sequence(name: "Emote", state: state ?? String())))
                sequences.append((first.name, id, output, sequence, likability, choices))
                
                if !words.isEmpty {
@@ -1744,36 +1924,18 @@ struct Chat: View {
                while !queue.isEmpty {
                   let character = queue.removeFirst()
                   
-                  if let prompt = character.prompt {
-                     let memory = await Task.detached {
+                  if var prompt = character.prompt {
+                     if let memory = (await Task.detached {
                         if let data = self.load() {
                            return String(data: data, encoding: .utf8)
                         }
                         
                         return nil
-                     }.value
+                     }.value) {
+                        prompt.append("\n\(memory)")
+                     }
                      
-                     var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                        var text = self.replacePlaceholders(text: prompt, resolver: { format in
-                           
-                           if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                              let dateFormatter = DateFormatter()
-                              
-                              dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                              dateFormatter.dateFormat = format
-                              
-                              return dateFormatter.string(from: Date())
-                           }
-                           
-                           return nil
-                        })
-                        
-                        if let memory {
-                           text += "\n\(memory)"
-                        }
-                        
-                        return text
-                     }.value], ["role": "user", "content": [["type": "text", "text": content]]]]
+                     var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
                      var i = logs.count - 1
                      
                      while i > 0 {
@@ -1815,7 +1977,7 @@ struct Chat: View {
                      }
                      
                      if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
-                        let sequence = Sequence(name: "Activate", state: nil)
+                        var sequence = Sequence(name: "Activate", state: nil)
                         let id = UUID()
                         var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
                            let term = value.filter { !$0.isEmpty }
@@ -1879,13 +2041,13 @@ struct Chat: View {
                            }
                         }
                         
-                        sequence.append(Message(id: id, inlines: inlines))
+                        sequence.append(.message(Message(id: id, inlines: inlines)))
                         
                         if let voice {
-                           sequence.append(voice)
+                           sequence.append(.audio(voice))
                         }
                         
-                        sequence.append(Sequence(name: "Emote", state: state ?? String()))
+                        sequence.append(.sequence(Sequence(name: "Emote", state: state ?? String())))
                         sequences.append((character.name, id, output, sequence, nil, nil))
                         
                         if !words.isEmpty {
@@ -1961,10 +2123,10 @@ struct Chat: View {
                   
                   if modifier.isEmpty {
                      for sequence in oldSequences {
-                        let tempSequence = Sequence(name: sequence.name)
+                        var tempSequence = Sequence(name: sequence.name)
                         
-                        for (i, obj) in sequence.enumerated() {
-                           if let message = obj as? Message {
+                        for (i, step) in sequence.enumerated() {
+                           if case .message(let message) = step {
                               let s = message.reduce(into: String()) { content, inline in
                                  if inline.attributes == nil {
                                     content.append(inline.text)
@@ -1973,16 +2135,16 @@ struct Chat: View {
                                  }
                               }
                               
-                              if i + 1 < sequence.count && sequence[i + 1] is Sound {
-                                 tempSequence.append(message)
+                              if i + 1 < sequence.count, case .sound = sequence[i + 1] {
+                                 tempSequence.append(.message(message))
                               } else {
-                                 tempSequence.append((message, s))
+                                 tempSequence.append(.synthesis(message, s))
                                  generateRequired = true
                               }
                               
                               content.append(s)
                            } else {
-                              tempSequence.append(obj)
+                              tempSequence.append(step)
                            }
                         }
                         
@@ -1990,10 +2152,10 @@ struct Chat: View {
                      }
                   } else {
                      for sequence in oldSequences {
-                        let tempSequence = Sequence(name: sequence.name)
+                        var tempSequence = Sequence(name: sequence.name)
                         
-                        for (i, obj) in sequence.enumerated() {
-                           if let message = obj as? Message {
+                        for (i, step) in sequence.enumerated() {
+                           if case .message(let message) = step {
                               var m = Message()
                               var s = String()
                               
@@ -2021,16 +2183,16 @@ struct Chat: View {
                                  }
                               }
                               
-                              if i + 1 < sequence.count && sequence[i + 1] is Sound {
-                                 tempSequence.append(m)
+                              if i + 1 < sequence.count, case .sound = sequence[i + 1] {
+                                 tempSequence.append(.message(m))
                               } else {
-                                 tempSequence.append((m, s))
+                                 tempSequence.append(.synthesis(m, s))
                                  generateRequired = true
                               }
                               
                               content.append(s)
                            } else {
-                              tempSequence.append(obj)
+                              tempSequence.append(step)
                            }
                         }
                         
@@ -2044,17 +2206,17 @@ struct Chat: View {
                      }
                      
                      for i in 0..<newSequences.count {
-                        let tempSequence = Sequence(name: newSequences[i].name)
+                        var tempSequence = Sequence(name: newSequences[i].name)
                         
-                        for obj in newSequences[i] {
-                           if let (message, input) = obj as? (Message, String) {
-                              tempSequence.append(message)
+                        for step in newSequences[i] {
+                           if case .synthesis(let message, let input) = step {
+                              tempSequence.append(.message(message))
                               
                               if let wave = await self.generate(prompt: prompt, input: input, language: language, temperature: temperature) {
-                                 tempSequence.append(wave)
+                                 tempSequence.append(.audio(wave))
                               }
                            } else {
-                              tempSequence.append(obj)
+                              tempSequence.append(step)
                            }
                         }
                         
@@ -2067,11 +2229,11 @@ struct Chat: View {
                   }
                } else if modifier.isEmpty {
                   for sequence in oldSequences {
-                     let tempSequence = Sequence(name: sequence.name)
+                     var tempSequence = Sequence(name: sequence.name)
                      
-                     for obj in sequence {
-                        if let message = obj as? Message {
-                           tempSequence.append(message)
+                     for step in sequence {
+                        if case .message(let message) = step {
+                           tempSequence.append(.message(message))
                            content.append(message.reduce(into: String(), { content, inline in
                               if inline.attributes == nil {
                                  content.append(inline.text)
@@ -2080,7 +2242,7 @@ struct Chat: View {
                               }
                            }))
                         } else {
-                           tempSequence.append(obj)
+                           tempSequence.append(step)
                         }
                      }
                      
@@ -2088,10 +2250,10 @@ struct Chat: View {
                   }
                } else {
                   for sequence in oldSequences {
-                     let tempSequence = Sequence(name: sequence.name)
+                     var tempSequence = Sequence(name: sequence.name)
                      
-                     for obj in sequence {
-                        if let message = obj as? Message {
+                     for step in sequence {
+                        if case .message(let message) = step {
                            var m = Message()
                            var s = String()
                            
@@ -2119,10 +2281,10 @@ struct Chat: View {
                               }
                            }
                            
-                           tempSequence.append(m)
+                           tempSequence.append(.message(m))
                            content.append(s)
                         } else {
-                           tempSequence.append(obj)
+                           tempSequence.append(step)
                         }
                      }
                      
@@ -2134,8 +2296,8 @@ struct Chat: View {
                self.logs.append((id: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
                self.choices.removeAll()
                
-               for sequence in newSequences {
-                  sequence.append(nil)
+               for var sequence in newSequences {
+                  sequence.append(.completion)
                   
                   Script.shared.queue.append((first.name, sequence))
                }
@@ -2152,8 +2314,8 @@ struct Chat: View {
                   let choices: [String]?
                   
                   for sequence in x {
-                     for obj in sequence {
-                        if let message = obj as? Message {
+                     for step in sequence {
+                        if case .message(let message) = step {
                            content.append(message.reduce(into: String(), { content, inline in
                               if inline.attributes == nil {
                                  content.append(inline.text)
@@ -2192,6 +2354,373 @@ struct Chat: View {
                   
                   return y
                }
+            }
+         }
+         
+         while self.logs.count > 10 {
+            let group = self.logs[0].group
+            
+            for i in stride(from: self.logs.count - 1, through: 0, by: -1) {
+               if self.logs[i].group == group {
+                  self.logs.remove(at: i)
+               }
+            }
+         }
+      }
+   }
+   
+   private func talk(image: CGImage, temperature: Double, multiple: Bool, mute: Bool) async {
+      var queue = Script.shared.characters
+      
+      if let first = queue.first {
+         let time = CACurrentMediaTime()
+         var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
+         
+         if multiple {
+            queue.removeFirst()
+         } else {
+            queue.removeAll()
+         }
+         
+         if var prompt = first.prompt {
+            withAnimation(.easeOut(duration: 0.5)) {
+               self.isLoading = true
+            }
+            
+            if let memory = (await Task.detached {
+               if let data = self.load() {
+                  return String(data: data, encoding: .utf8)
+               }
+               
+               return nil
+            }.value) {
+               prompt.append("\n\(memory)")
+            }
+            
+            var messages: [[String: Any]] = [["role": "system", "content": prompt]]
+            var i = self.logs.count - 1
+            
+            while i > 0 {
+               if self.logs[i].from == first.name && self.logs[i].to == nil && self.logs[i - 1].from == nil && self.logs[i - 1].to == first.name {
+                  var parts = [[String: Any]]()
+                  
+                  if let text = self.logs[i - 1].content.text {
+                     parts.append(["type": "text", "text": text])
+                  }
+                  
+                  if let image = self.logs[i - 1].content.image {
+                     if let dataURL = (await Task.detached {
+                        var dataURL: String? = nil
+                        
+                        if let resizedImage = self.resize(image: image) {
+                           dataURL = self.convert(image: resizedImage)
+                        }
+                        
+                        return dataURL
+                     }.value) {
+                        parts.append(["type": "image", "image": dataURL])
+                     }
+                  }
+                  
+                  if !parts.isEmpty {
+                     if let raw = self.logs[i].raw {
+                        messages.insert(["role": "assistant", "content": raw], at: 1)
+                        messages.insert(["role": "user", "content": parts], at: 1)
+                     } else if let text = self.logs[i].content.text {
+                        messages.insert(["role": "assistant", "content": text], at: 1)
+                        messages.insert(["role": "user", "content": parts], at: 1)
+                     }
+                  }
+                  
+                  i -= 2
+               } else {
+                  i -= 1
+               }
+            }
+            
+            if let dataURL = (await Task.detached {
+               var dataURL: String? = nil
+               
+               if let resizedImage = self.resize(image: image) {
+                  dataURL = self.convert(image: resizedImage)
+               }
+               
+               return dataURL
+            }.value) {
+               messages.append(["role": "user", "content": [["type": "image", "image": dataURL]]])
+            } else {
+               withAnimation(.easeIn(duration: 0.5)) {
+                  self.isLoading = false
+               }
+               
+               return
+            }
+            
+            if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
+               var sequence = Sequence(name: "Activate", state: nil)
+               let id = UUID()
+               var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
+                  let term = value.filter { !$0.isEmpty }
+                  
+                  guard let word = term.last else {
+                     return
+                  }
+                  
+                  if term.count == 1 {
+                     output.append((target: word, words: [Word(name: word, attributes: nil)]))
+                  } else {
+                     for index in 0..<term.count - 1 {
+                        let parts = Array(term[index...])
+                        let separator = parts.allSatisfy { $0.allSatisfy { $0.isASCII } } ? String("\u{0020}") : String()
+                        
+                        output.append((target: parts.joined(separator: separator), words: parts.enumerated().map { Word(name: $0.element, attributes: $0.offset < parts.count - 1 ? [] : nil) }))
+                     }
+                  }
+               }
+               
+               candidates.sort { $0.target.count > $1.target.count }
+               
+               var inlines: [(text: String, attributes: [String]?)] = content.isEmpty ? [] : [(content, nil)]
+               var words = [Word]()
+               
+               for candidate in candidates {
+                  inlines = inlines.reduce(into: []) { output, inline in
+                     guard inline.attributes == nil else {
+                        output.append(inline)
+                        
+                        return
+                     }
+                     
+                     var text = inline.text
+                     
+                     while let range = text.range(of: candidate.target, options: .caseInsensitive) {
+                        if range.lowerBound != text.startIndex {
+                           output.append((text: String(text[..<range.lowerBound]), attributes: nil))
+                        }
+                        
+                        var inline = String(text[range])
+                        
+                        if candidate.words.count > 1, let lastWord = candidate.words.last?.name, let lastRange = inline.range(of: lastWord, options: [.caseInsensitive, .backwards]) {
+                           inline.insert("\n", at: lastRange.lowerBound)
+                        }
+                        
+                        output.append((text: inline, attributes: []))
+                        
+                        for word in candidate.words {
+                           if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !Script.shared.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
+                              words.append(word)
+                           }
+                        }
+                        
+                        text = String(text[range.upperBound...])
+                     }
+                     
+                     if !text.isEmpty {
+                        output.append((text: text, attributes: nil))
+                     }
+                  }
+               }
+               
+               sequence.append(.message(Message(id: id, inlines: inlines)))
+               
+               if let voice {
+                  sequence.append(.audio(voice))
+               }
+               
+               sequence.append(.sequence(Sequence(name: "Emote", state: state ?? String())))
+               sequences.append((first.name, id, output, sequence, likability, choices))
+               
+               if !words.isEmpty {
+                  self.discoveries.append(words[Int.random(in: 0..<words.count)])
+               }
+               
+               if let memory {
+                  await Task.detached {
+                     if let data = memory.data(using: .utf8) {
+                        self.save(data)
+                     }
+                  }.value
+               }
+               
+               while !queue.isEmpty {
+                  let character = queue.removeFirst()
+                  
+                  if var prompt = character.prompt {
+                     if let memory = (await Task.detached {
+                        if let data = self.load() {
+                           return String(data: data, encoding: .utf8)
+                        }
+                        
+                        return nil
+                     }.value) {
+                        prompt.append("\n\(memory)")
+                     }
+                     
+                     if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]], voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
+                        var sequence = Sequence(name: "Activate", state: nil)
+                        let id = UUID()
+                        var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
+                           let term = value.filter { !$0.isEmpty }
+                           
+                           guard let word = term.last else {
+                              return
+                           }
+                           
+                           if term.count == 1 {
+                              output.append((target: word, words: [Word(name: word, attributes: nil)]))
+                           } else {
+                              for index in 0..<term.count - 1 {
+                                 let parts = Array(term[index...])
+                                 let separator = parts.allSatisfy { $0.allSatisfy { $0.isASCII } } ? String("\u{0020}") : String()
+                                 
+                                 output.append((target: parts.joined(separator: separator), words: parts.enumerated().map { Word(name: $0.element, attributes: $0.offset < parts.count - 1 ? [] : nil) }))
+                              }
+                           }
+                        }
+                        
+                        candidates.sort { $0.target.count > $1.target.count }
+                        
+                        var inlines: [(text: String, attributes: [String]?)] = content.isEmpty ? [] : [(content, nil)]
+                        var words = [Word]()
+                        
+                        for candidate in candidates {
+                           inlines = inlines.reduce(into: []) { output, inline in
+                              guard inline.attributes == nil else {
+                                 output.append(inline)
+                                 
+                                 return
+                              }
+                              
+                              var text = inline.text
+                              
+                              while let range = text.range(of: candidate.target, options: .caseInsensitive) {
+                                 if range.lowerBound != text.startIndex {
+                                    output.append((text: String(text[..<range.lowerBound]), attributes: nil))
+                                 }
+                                 
+                                 var inline = String(text[range])
+                                 
+                                 if candidate.words.count > 1, let lastWord = candidate.words.last?.name, let lastRange = inline.range(of: lastWord, options: [.caseInsensitive, .backwards]) {
+                                    inline.insert("\n", at: lastRange.lowerBound)
+                                 }
+                                 
+                                 output.append((text: inline, attributes: []))
+                                 
+                                 for word in candidate.words {
+                                    if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !Script.shared.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
+                                       words.append(word)
+                                    }
+                                 }
+                                 
+                                 text = String(text[range.upperBound...])
+                              }
+                              
+                              if !text.isEmpty {
+                                 output.append((text: text, attributes: nil))
+                              }
+                           }
+                        }
+                        
+                        sequence.append(.message(Message(id: id, inlines: inlines)))
+                        
+                        if let voice {
+                           sequence.append(.audio(voice))
+                        }
+                        
+                        sequence.append(.sequence(Sequence(name: "Emote", state: state ?? String())))
+                        sequences.append((character.name, id, output, sequence, nil, nil))
+                        
+                        if !words.isEmpty {
+                           self.discoveries.append(words[Int.random(in: 0..<words.count)])
+                        }
+                        
+                        if let memory {
+                           await Task.detached {
+                              if let data = memory.data(using: .utf8) {
+                                 self.save(data)
+                              }
+                           }.value
+                        }
+                     } else {
+                        break
+                     }
+                  } else {
+                     break
+                  }
+               }
+            }
+            
+            withAnimation(.easeIn(duration: 0.5)) {
+               self.isLoading = false
+            }
+         }
+         
+         for i in 0..<sequences.count {
+            await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].3], words: []) { x in
+               var y = x
+               var content = [String]()
+               let choices: [String]?
+               
+               for sequence in x {
+                  for step in sequence {
+                     if case .message(let message) = step {
+                        content.append(message.reduce(into: String(), { content, inline in
+                           if inline.attributes == nil {
+                              content.append(inline.text)
+                           } else {
+                              content.append(inline.text.filter { !$0.isNewline })
+                           }
+                        }))
+                     }
+                  }
+               }
+               
+               y.append(Sequence(name: String()))
+               
+               if let c = sequences[i].5 {
+                  choices = c.reduce(into: [String](), { x, y in
+                     x.append(y.0)
+                  })
+                  self.choices.removeAll()
+                  self.choices.append(contentsOf: c)
+               } else {
+                  choices = nil
+               }
+               
+               if i > 0 {
+                  self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+               } else {
+                  var index = self.logs.count - 1
+                  
+                  while index >= 0 {
+                     if self.logs[index].content.image != nil {
+                        let group = self.logs[index].group
+                        
+                        for j in stride(from: self.logs.count - 1, through: 0, by: -1) {
+                           if self.logs[j].group == group {
+                              self.logs.remove(at: j)
+                           }
+                        }
+                        
+                        index = self.logs.count - 1
+                        
+                        continue
+                     }
+                     
+                     index -= 1
+                  }
+                  
+                  self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: nil, image: image), choices: choices))
+                  self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+               }
+               
+               if let likability = sequences[i].4 {
+                  withAnimation {
+                     self.likability = likability
+                  }
+               }
+               
+               return y
             }
          }
          
@@ -2250,12 +2779,12 @@ struct Chat: View {
             let sequence = sequenceQueue.removeFirst()
             var index: Int? = nil
             
-            for (i, obj) in sequence.enumerated() {
-               if let s = obj as? Sequence {
+            for (i, step) in sequence.enumerated() {
+               if case .sequence(let s) = step {
                   sequenceQueue.append(s)
-               } else if obj is Message {
+               } else if case .message = step {
                   index = i
-               } else if let sound = obj as? Sound, i - 1 == index, let soundPath = sound.path {
+               } else if case .sound(let sound) = step, i - 1 == index, let soundPath = sound.path {
                   let path = URL(filePath: path).deletingLastPathComponent().appending(path: soundPath, directoryHint: .inferFromPath).path(percentEncoded: false)
                   
                   if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
@@ -2408,36 +2937,6 @@ struct Chat: View {
       return nil
    }
    
-   private nonisolated func replacePlaceholders(text: String, resolver: (String) -> String?) -> String {
-      var input = String(text)
-      var output = String()
-      
-      repeat {
-         if let match = input.firstMatch(of: /({{1,2})([^{}\r\n]+)(}{1,2})/), let replacement = resolver(String(match.output.2)) {
-            output.append(String(input[input.startIndex..<match.range.lowerBound]))
-            
-            if match.output.1.count == 2 {
-               if match.output.3.count == 2 {
-                  output.append("{\(match.output.2)}")
-               } else {
-                  output.append("{\(replacement)")
-               }
-            } else if match.output.3.count == 2 {
-               output.append("\(replacement)}")
-            } else {
-               output.append(replacement)
-            }
-            
-            input = String(input[match.range.upperBound..<input.endIndex])
-         } else {
-            output.append(input)
-            input.removeAll()
-         }
-      } while !input.isEmpty
-      
-      return output
-   }
-   
    private func startRecognize() {
       withAnimation(.easeInOut(duration: 0.5)) {
          self.isRecording = true
@@ -2465,7 +2964,7 @@ struct Chat: View {
             return true
          }.value) {
             let audioEngine = AVAudioEngine()
-            let inputNode = await Task.detached { audioEngine.inputNode }.value
+            let inputNode = audioEngine.inputNode
             
             if let recognizer = self.speechRecognizer, recognizer.isAvailable {
                let request = SFSpeechAudioBufferRecognitionRequest()
@@ -2530,19 +3029,7 @@ struct Chat: View {
                         }
                         
                         if !text.isEmpty {
-                           Task {
-                              await self.talk(word: Word(name: text, attributes: [String](Script.shared.words.reduce(into: Set<String>(), { x, y in
-                                 if y.name == text, let attributes = y.attributes {
-                                    for attribute in attributes {
-                                       if !x.contains(attribute) {
-                                          x.insert(attribute)
-                                       }
-                                    }
-                                 }
-                              }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
-                           }
-                           
-                           self.choices.removeAll()
+                           self.message.append(text)
                         }
                      }
                   } else if audioEngine.isRunning {
@@ -2793,13 +3280,15 @@ struct Stage: UIViewRepresentable {
                      
                      self.discoveries.removeAll()
                      
-                     Task.detached {
+                     let storedWords = Script.shared.words
+
+                     Task.detached { @Sendable [storedWords] in
                         let encoder = JSONEncoder()
                         let image = UIImage(systemName: "book", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
                         var codes = [Int]()
                         var attempted = [Word]()
                         
-                        if let data = try? encoder.encode(Script.shared.words) {
+                        if let data = try? encoder.encode(storedWords) {
                            if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                               let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
                               
@@ -3217,7 +3706,7 @@ struct Stage: UIViewRepresentable {
                   
                   if characterView.name != self.snapshot.name || !types.elementsEqual(self.snapshot.types) {
                      if characterView.fades.contains(where: { $0.value > 0.0 && $0.value < 1.0 }) {
-                        let (i, _) = characterView.preview(animations: characterView.cachedAnimations, images: &characterView.cachedImages)
+                        let (i, _) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
                         
                         if let i {
                            self.snapshot.name = characterView.name
@@ -3240,8 +3729,8 @@ struct Stage: UIViewRepresentable {
                   }
                }
                
-               for animation in characterView.cachedAnimations {
-                  if let type = animation.type, !typeSet.contains(type) {
+               for timeline in characterView.cachedTimelines {
+                  if let type = timeline.animation.type, !typeSet.contains(type) {
                      typeSet.insert(type)
                   }
                }
@@ -3266,14 +3755,16 @@ struct Stage: UIViewRepresentable {
             let language = characterView.language
             
             Task {
-               let words = await Task.detached {
+               let scores = Script.shared.scores
+               let knownWords = Script.shared.words
+               let words = await Task.detached { @Sendable [scores, knownWords, language] in
                   let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
                   let epsilon: Double = 1e-6
                   var mean = 0.0
                   var data = [String: Double]()
                   var words = [Word]()
                   
-                  for (key, value) in Script.shared.scores {
+                  for (key, value) in scores {
                      if value.3 > yesterday && value.1 > epsilon {
                         mean += value.1
                         data[key] = value.1
@@ -3295,8 +3786,8 @@ struct Stage: UIViewRepresentable {
                         if let language {
                            let locale = Locale(identifier: "en_US_POSIX")
                            
-                           for (key, value) in Script.shared.scores {
-                              if let x = data[key], (x - mean) / variance >= 2.0 && !Script.shared.words.contains(where: { $0.name.folding(options: [.caseInsensitive], locale: locale) == key }) {
+                           for (key, value) in scores {
+                              if let x = data[key], (x - mean) / variance >= 2.0 && !knownWords.contains(where: { $0.name.folding(options: [.caseInsensitive], locale: locale) == key }) {
                                  if let languages = value.2 {
                                     if languages.contains(language) {
                                        words.append(Word(name: value.0, attributes: nil))
@@ -3309,8 +3800,8 @@ struct Stage: UIViewRepresentable {
                         } else {
                            let locale = Locale(identifier: "en_US_POSIX")
                            
-                           for (key, value) in Script.shared.scores {
-                              if let x = data[key], (x - mean) / variance >= 2.0 && !Script.shared.words.contains(where: { $0.name.folding(options: [.caseInsensitive], locale: locale) == key }) {
+                           for (key, value) in scores {
+                              if let x = data[key], (x - mean) / variance >= 2.0 && !knownWords.contains(where: { $0.name.folding(options: [.caseInsensitive], locale: locale) == key }) {
                                  words.append(Word(name: value.0, attributes: nil))
                               }
                            }
@@ -3465,6 +3956,8 @@ struct Stage: UIViewRepresentable {
             if !candidates.isEmpty {
                let choice = candidates[Int.random(in: 0..<candidates.count)]
                
+               self.parent.choices.removeAll()
+               
                if let modifier = choice.modifier {
                   let word: Word
                   
@@ -3488,8 +3981,6 @@ struct Stage: UIViewRepresentable {
                   
                   self.parent.prompt = (choice.name, word, self.parent.prompt.2, letterSet, self.parent.prompt.4, self.parent.prompt.5, CACurrentMediaTime())
                }
-               
-               self.parent.choices.removeAll()
             }
          }
       }
@@ -3629,40 +4120,22 @@ struct Stage: UIViewRepresentable {
                   }
                }
                
-               if let prompt = first.prompt, generateRequired {
+               if var prompt = first.prompt, generateRequired {
                   withAnimation(.easeOut(duration: 0.5)) {
                      self.parent.loading = true
                   }
                   
-                  let memory = await Task.detached {
+                  if let memory = (await Task.detached {
                      if let data = self.load() {
                         return String(data: data, encoding: .utf8)
                      }
                      
                      return nil
-                  }.value
+                  }.value) {
+                     prompt.append("\n\(memory)")
+                  }
                   
-                  var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                     var text = self.replacePlaceholders(text: prompt, resolver: { format in
-                        
-                        if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                           let dateFormatter = DateFormatter()
-                           
-                           dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                           dateFormatter.dateFormat = format
-                           
-                           return dateFormatter.string(from: Date())
-                        }
-                        
-                        return nil
-                     })
-                     
-                     if let memory {
-                        text += "\n\(memory)"
-                     }
-                     
-                     return text
-                  }.value]]
+                  var messages: [[String: Any]] = [["role": "system", "content": prompt]]
                   var i = logs.count - 1
                   
                   while i > 0 {
@@ -3754,7 +4227,7 @@ struct Stage: UIViewRepresentable {
                   }
                   
                   if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
-                     let sequence = Sequence(name: "Activate", state: nil)
+                     var sequence = Sequence(name: "Activate", state: nil)
                      let id = UUID()
                      var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
                         let term = value.filter { !$0.isEmpty }
@@ -3818,13 +4291,13 @@ struct Stage: UIViewRepresentable {
                         }
                      }
                      
-                     sequence.append(Message(id: id, inlines: inlines))
+                     sequence.append(.message(Message(id: id, inlines: inlines)))
                      
                      if let voice {
-                        sequence.append(voice)
+                        sequence.append(.audio(voice))
                      }
                      
-                     sequence.append(Sequence(name: "Emote", state: state ?? String()))
+                     sequence.append(.sequence(Sequence(name: "Emote", state: state ?? String())))
                      sequences.append((first.name, id, output, sequence, likability, choices))
                      
                      if !words.isEmpty {
@@ -3842,36 +4315,18 @@ struct Stage: UIViewRepresentable {
                      while !queue.isEmpty {
                         let character = queue.removeFirst()
                         
-                        if let prompt = character.prompt {
-                           let memory = await Task.detached {
+                        if var prompt = character.prompt {
+                           if let memory = (await Task.detached {
                               if let data = self.load() {
                                  return String(data: data, encoding: .utf8)
                               }
                               
                               return nil
-                           }.value
+                           }.value) {
+                              prompt.append("\n\(memory)")
+                           }
                            
-                           var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                              var text = self.replacePlaceholders(text: prompt, resolver: { format in
-                                 
-                                 if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                                    let dateFormatter = DateFormatter()
-                                    
-                                    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                                    dateFormatter.dateFormat = format
-                                    
-                                    return dateFormatter.string(from: Date())
-                                 }
-                                 
-                                 return nil
-                              })
-                              
-                              if let memory {
-                                 text += "\n\(memory)"
-                              }
-                              
-                              return text
-                           }.value], ["role": "user", "content": [["type": "text", "text": content]]]]
+                           var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
                            var i = logs.count - 1
                            
                            while i > 0 {
@@ -3913,7 +4368,7 @@ struct Stage: UIViewRepresentable {
                            }
                            
                            if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
-                              let sequence = Sequence(name: "Activate", state: nil)
+                              var sequence = Sequence(name: "Activate", state: nil)
                               let id = UUID()
                               var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
                                  let term = value.filter { !$0.isEmpty }
@@ -3977,13 +4432,13 @@ struct Stage: UIViewRepresentable {
                                  }
                               }
                               
-                              sequence.append(Message(id: id, inlines: inlines))
+                              sequence.append(.message(Message(id: id, inlines: inlines)))
                               
                               if let voice {
-                                 sequence.append(voice)
+                                 sequence.append(.audio(voice))
                               }
                               
-                              sequence.append(Sequence(name: "Emote", state: state ?? String()))
+                              sequence.append(.sequence(Sequence(name: "Emote", state: state ?? String())))
                               sequences.append((character.name, id, output, sequence, nil, nil))
                               
                               if !words.isEmpty {
@@ -4058,10 +4513,10 @@ struct Stage: UIViewRepresentable {
                         
                         if modifier.isEmpty {
                            for sequence in oldSequences {
-                              let tempSequence = Sequence(name: sequence.name)
+                              var tempSequence = Sequence(name: sequence.name)
                               
-                              for (i, obj) in sequence.enumerated() {
-                                 if let message = obj as? Message {
+                              for (i, step) in sequence.enumerated() {
+                                 if case .message(let message) = step {
                                     let s = message.reduce(into: String()) { content, inline in
                                        if inline.attributes == nil {
                                           content.append(inline.text)
@@ -4070,16 +4525,16 @@ struct Stage: UIViewRepresentable {
                                        }
                                     }
                                     
-                                    if i + 1 < sequence.count && sequence[i + 1] is Sound {
-                                       tempSequence.append(message)
+                                    if i + 1 < sequence.count, case .sound = sequence[i + 1] {
+                                       tempSequence.append(.message(message))
                                     } else {
-                                       tempSequence.append((message, s))
+                                       tempSequence.append(.synthesis(message, s))
                                        generateRequired = true
                                     }
                                     
                                     content.append(s)
                                  } else {
-                                    tempSequence.append(obj)
+                                    tempSequence.append(step)
                                  }
                               }
                               
@@ -4087,10 +4542,10 @@ struct Stage: UIViewRepresentable {
                            }
                         } else {
                            for sequence in oldSequences {
-                              let tempSequence = Sequence(name: sequence.name)
+                              var tempSequence = Sequence(name: sequence.name)
                               
-                              for (i, obj) in sequence.enumerated() {
-                                 if let message = obj as? Message {
+                              for (i, step) in sequence.enumerated() {
+                                 if case .message(let message) = step {
                                     var m = Message()
                                     var s = String()
                                     
@@ -4118,16 +4573,16 @@ struct Stage: UIViewRepresentable {
                                        }
                                     }
                                     
-                                    if i + 1 < sequence.count && sequence[i + 1] is Sound {
-                                       tempSequence.append(m)
+                                    if i + 1 < sequence.count, case .sound = sequence[i + 1] {
+                                       tempSequence.append(.message(m))
                                     } else {
-                                       tempSequence.append((m, s))
+                                       tempSequence.append(.synthesis(m, s))
                                        generateRequired = true
                                     }
                                     
                                     content.append(s)
                                  } else {
-                                    tempSequence.append(obj)
+                                    tempSequence.append(step)
                                  }
                               }
                               
@@ -4141,17 +4596,17 @@ struct Stage: UIViewRepresentable {
                            }
                            
                            for i in 0..<newSequences.count {
-                              let tempSequence = Sequence(name: newSequences[i].name)
+                              var tempSequence = Sequence(name: newSequences[i].name)
                               
-                              for obj in newSequences[i] {
-                                 if let (message, input) = obj as? (Message, String) {
-                                    tempSequence.append(message)
+                              for step in newSequences[i] {
+                                 if case .synthesis(let message, let input) = step {
+                                    tempSequence.append(.message(message))
                                     
                                     if let wave = await self.generate(prompt: prompt, input: input, language: language, temperature: temperature) {
-                                       tempSequence.append(wave)
+                                       tempSequence.append(.audio(wave))
                                     }
                                  } else {
-                                    tempSequence.append(obj)
+                                    tempSequence.append(step)
                                  }
                               }
                               
@@ -4164,11 +4619,11 @@ struct Stage: UIViewRepresentable {
                         }
                      } else if modifier.isEmpty {
                         for sequence in oldSequences {
-                           let tempSequence = Sequence(name: sequence.name)
+                           var tempSequence = Sequence(name: sequence.name)
                            
-                           for obj in sequence {
-                              if let message = obj as? Message {
-                                 tempSequence.append(message)
+                           for step in sequence {
+                              if case .message(let message) = step {
+                                 tempSequence.append(.message(message))
                                  content.append(message.reduce(into: String(), { content, inline in
                                     if inline.attributes == nil {
                                        content.append(inline.text)
@@ -4177,7 +4632,7 @@ struct Stage: UIViewRepresentable {
                                     }
                                  }))
                               } else {
-                                 tempSequence.append(obj)
+                                 tempSequence.append(step)
                               }
                            }
                            
@@ -4185,10 +4640,10 @@ struct Stage: UIViewRepresentable {
                         }
                      } else {
                         for sequence in oldSequences {
-                           let tempSequence = Sequence(name: sequence.name)
+                           var tempSequence = Sequence(name: sequence.name)
                            
-                           for obj in sequence {
-                              if let message = obj as? Message {
+                           for step in sequence {
+                              if case .message(let message) = step {
                                  var m = Message()
                                  var s = String()
                                  
@@ -4216,10 +4671,10 @@ struct Stage: UIViewRepresentable {
                                     }
                                  }
                                  
-                                 tempSequence.append(m)
+                                 tempSequence.append(.message(m))
                                  content.append(s)
                               } else {
-                                 tempSequence.append(obj)
+                                 tempSequence.append(step)
                               }
                            }
                            
@@ -4231,8 +4686,8 @@ struct Stage: UIViewRepresentable {
                      self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
                      self.parent.choices.removeAll()
                      
-                     for sequence in newSequences {
-                        sequence.append(nil)
+                     for var sequence in newSequences {
+                        sequence.append(.completion)
                         
                         Script.shared.queue.append((first.name, sequence))
                      }
@@ -4247,8 +4702,8 @@ struct Stage: UIViewRepresentable {
                         let choices: [String]?
                         
                         for sequence in x {
-                           for obj in sequence {
-                              if let message = obj as? Message {
+                           for step in sequence {
+                              if case .message(let message) = step {
                                  content.append(message.reduce(into: String(), { content, inline in
                                     if inline.attributes == nil {
                                        content.append(inline.text)
@@ -4289,7 +4744,7 @@ struct Stage: UIViewRepresentable {
                      }
                   }
                }
-            } else if let prompt = first.prompt {
+            } else if var prompt = first.prompt {
                if multiple {
                   queue.removeFirst()
                   
@@ -4314,35 +4769,17 @@ struct Stage: UIViewRepresentable {
                   self.parent.loading = true
                }
                
-               let memory = await Task.detached {
+               if let memory = (await Task.detached {
                   if let data = self.load() {
                      return String(data: data, encoding: .utf8)
                   }
                   
                   return nil
-               }.value
+               }.value) {
+                  prompt.append("\n\(memory)")
+               }
                
-               var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                  var text = self.replacePlaceholders(text: prompt, resolver: { format in
-                     
-                     if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                        let dateFormatter = DateFormatter()
-                        
-                        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                        dateFormatter.dateFormat = format
-                        
-                        return dateFormatter.string(from: Date())
-                     }
-                     
-                     return nil
-                  })
-                  
-                  if let memory {
-                     text += "\n\(memory)"
-                  }
-                  
-                  return text
-               }.value]]
+               var messages: [[String: Any]] = [["role": "system", "content": prompt]]
                var i = logs.count - 1
                
                while i > 0 {
@@ -4432,7 +4869,7 @@ struct Stage: UIViewRepresentable {
                }
                
                if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
-                  let sequence = Sequence(name: "Activate", state: nil)
+                  var sequence = Sequence(name: "Activate", state: nil)
                   let id = UUID()
                   var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
                      let term = value.filter { !$0.isEmpty }
@@ -4496,13 +4933,13 @@ struct Stage: UIViewRepresentable {
                      }
                   }
                   
-                  sequence.append(Message(id: id, inlines: inlines))
+                  sequence.append(.message(Message(id: id, inlines: inlines)))
                   
                   if let voice {
-                     sequence.append(voice)
+                     sequence.append(.audio(voice))
                   }
                   
-                  sequence.append(Sequence(name: "Emote", state: state ?? String()))
+                  sequence.append(.sequence(Sequence(name: "Emote", state: state ?? String())))
                   sequences.append((first.name, id, output, sequence, likability, choices))
                   
                   if !words.isEmpty {
@@ -4520,36 +4957,18 @@ struct Stage: UIViewRepresentable {
                   while !queue.isEmpty {
                      let character = queue.removeFirst()
                      
-                     if let prompt = character.prompt {
-                        let memory = await Task.detached {
+                     if var prompt = character.prompt {
+                        if let memory = (await Task.detached {
                            if let data = self.load() {
                               return String(data: data, encoding: .utf8)
                            }
                            
                            return nil
-                        }.value
+                        }.value) {
+                           prompt.append("\n\(memory)")
+                        }
                         
-                        var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                           var text = self.replacePlaceholders(text: prompt, resolver: { format in
-                              
-                              if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                                 let dateFormatter = DateFormatter()
-                                 
-                                 dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                                 dateFormatter.dateFormat = format
-                                 
-                                 return dateFormatter.string(from: Date())
-                              }
-                              
-                              return nil
-                           })
-                           
-                           if let memory {
-                              text += "\n\(memory)"
-                           }
-                           
-                           return text
-                        }.value], ["role": "user", "content": [["type": "text", "text": content]]]]
+                        var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
                         var i = logs.count - 1
                         
                         while i > 0 {
@@ -4591,7 +5010,7 @@ struct Stage: UIViewRepresentable {
                         }
                         
                         if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
-                           let sequence = Sequence(name: "Activate", state: nil)
+                           var sequence = Sequence(name: "Activate", state: nil)
                            let id = UUID()
                            var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
                               let term = value.filter { !$0.isEmpty }
@@ -4655,13 +5074,13 @@ struct Stage: UIViewRepresentable {
                               }
                            }
                            
-                           sequence.append(Message(id: id, inlines: inlines))
+                           sequence.append(.message(Message(id: id, inlines: inlines)))
                            
                            if let voice {
-                              sequence.append(voice)
+                              sequence.append(.audio(voice))
                            }
                            
-                           sequence.append(Sequence(name: "Emote", state: state ?? String()))
+                           sequence.append(.sequence(Sequence(name: "Emote", state: state ?? String())))
                            sequences.append((character.name, id, output, sequence, nil, nil))
                            
                            if !words.isEmpty {
@@ -4703,8 +5122,8 @@ struct Stage: UIViewRepresentable {
                      let choices: [String]?
                      
                      for sequence in x {
-                        for obj in sequence {
-                           if let message = obj as? Message {
+                        for step in sequence {
+                           if case .message(let message) = step {
                               content.append(message.reduce(into: String(), { content, inline in
                                  if inline.attributes == nil {
                                     content.append(inline.text)
@@ -4804,12 +5223,12 @@ struct Stage: UIViewRepresentable {
                let sequence = sequenceQueue.removeFirst()
                var index: Int? = nil
                
-               for (i, obj) in sequence.enumerated() {
-                  if let s = obj as? Sequence {
+               for (i, step) in sequence.enumerated() {
+                  if case .sequence(let s) = step {
                      sequenceQueue.append(s)
-                  } else if obj is Message {
+                  } else if case .message = step {
                      index = i
-                  } else if let sound = obj as? Sound, i - 1 == index, let soundPath = sound.path {
+                  } else if case .sound(let sound) = step, i - 1 == index, let soundPath = sound.path {
                      let path = URL(filePath: path).deletingLastPathComponent().appending(path: soundPath, directoryHint: .inferFromPath).path(percentEncoded: false)
                      
                      if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
@@ -4960,36 +5379,6 @@ struct Stage: UIViewRepresentable {
          }
          
          return nil
-      }
-      
-      private nonisolated func replacePlaceholders(text: String, resolver: (String) -> String?) -> String {
-         var input = String(text)
-         var output = String()
-         
-         repeat {
-            if let match = input.firstMatch(of: /({{1,2})([^{}\r\n]+)(}{1,2})/), let replacement = resolver(String(match.output.2)) {
-               output.append(String(input[input.startIndex..<match.range.lowerBound]))
-               
-               if match.output.1.count == 2 {
-                  if match.output.3.count == 2 {
-                     output.append("{\(match.output.2)}")
-                  } else {
-                     output.append("{\(replacement)")
-                  }
-               } else if match.output.3.count == 2 {
-                  output.append("\(replacement)}")
-               } else {
-                  output.append(replacement)
-               }
-               
-               input = String(input[match.range.upperBound..<input.endIndex])
-            } else {
-               output.append(input)
-               input.removeAll()
-            }
-         } while !input.isEmpty
-         
-         return output
       }
       
       private nonisolated func resize(image: CGImage, maximum: Double = 768, quality: CGInterpolationQuality = .high) -> CGImage? {
@@ -5133,25 +5522,13 @@ struct Peek: UIViewControllerRepresentable {
    @Binding private var peekable: Bool
    private var ready: Bool
    private var pause: Bool
-   @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
-   @Binding private var likability: Double?
-   @Binding private var choices: [(String, URL?)]
-   @Binding private var loading: Bool
-   @Binding private var discoveries: [Word]
-   private var temperature: Double
-   private var mute: Bool
+   private let onChange: @MainActor (CGImage) -> Void
    
-   init(peekable: Binding<Bool>, ready: Bool, pause: Bool, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, loading: Binding<Bool>, discoveries: Binding<[Word]>, temperature: Double, mute: Bool) {
+   init(peekable: Binding<Bool>, ready: Bool, pause: Bool, onChange: @escaping @MainActor (CGImage) -> Void) {
       self._peekable = peekable
       self.ready = ready
       self.pause = pause
-      self._logs = logs
-      self._likability = likability
-      self._choices = choices
-      self._loading = loading
-      self._discoveries = discoveries
-      self.temperature = temperature
-      self.mute = mute
+      self.onChange = onChange
    }
    
    func makeUIViewController(context: Context) -> PeekViewController {
@@ -5171,819 +5548,243 @@ struct Peek: UIViewControllerRepresentable {
          uiViewController.isPaused = self.pause
       }
       
-      if self.temperature != context.coordinator.temperature {
-         context.coordinator.temperature = self.temperature
-      }
-      
-      if self.mute != context.coordinator.mute {
-         context.coordinator.mute = self.mute
-      }
+      context.coordinator.peekable = self.$peekable
+      context.coordinator.onChange = self.onChange
    }
    
    func makeCoordinator() -> Coordinator {
-      return Coordinator(self)
+      return Coordinator(peekable: self.$peekable, onChange: self.onChange)
    }
    
    protocol PeekDelegate: AnyObject {
+      @MainActor
       func peekDidUpdate(_ peek: PeekViewController)
+      @MainActor
       func peekDidFail(_ peek: PeekViewController)
    }
    
    class Coordinator: NSObject, PeekDelegate {
-      var temperature = 1.0
-      var mute = false
-      private var parent: Peek
+      var peekable: Binding<Bool>
+      var onChange: @MainActor (_ image: CGImage) -> Void
       
-      init(_ parent: Peek) {
-         self.parent = parent
-      }
-      
-      func peekDidUpdate(_ peek: Peek.PeekViewController) {
-         if let image = peek.peekedImage {
-            peek.flash()
-            
-            Task {
-               await self.talk(image: image, temperature: self.parent.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
-            }
-         }
-      }
-      
-      func peekDidFail(_ peek: Peek.PeekViewController) {
-         Task {
-            await MainActor.run { [weak self] in
-               self?.parent.peekable = peek.isPeekable
-            }
-         }
+      init(peekable: Binding<Bool>, onChange: @escaping @MainActor (_ image: CGImage) -> Void) {
+         self.peekable = peekable
+         self.onChange = onChange
       }
       
       @MainActor
-      private func talk(image: CGImage, temperature: Double, multiple: Bool, mute: Bool) {
-         Task {
-            var queue = Script.shared.characters
-            
-            if let first = queue.first {
-               let time = CACurrentMediaTime()
-               var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
-               
-               if multiple {
-                  queue.removeFirst()
-               } else {
-                  queue.removeAll()
-               }
-               
-               if let prompt = first.prompt {
-                  withAnimation(.easeOut(duration: 0.5)) {
-                     self.parent.loading = true
-                  }
-                  
-                  let memory = await Task.detached {
-                     if let data = self.load() {
-                        return String(data: data, encoding: .utf8)
-                     }
-                     
-                     return nil
-                  }.value
-                  
-                  var messages: [[String: Any]] = [["role": "system", "content": await Task.detached {
-                     var text = self.replacePlaceholders(text: prompt, resolver: { format in
-                        
-                        if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                           let dateFormatter = DateFormatter()
-                           
-                           dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                           dateFormatter.dateFormat = format
-                           
-                           return dateFormatter.string(from: Date())
-                        }
-                        
-                        return nil
-                     })
-                     
-                     if let memory {
-                        text += "\n\(memory)"
-                     }
-                     
-                     return text
-                  }.value]]
-                  var i = self.parent.logs.count - 1
-                  
-                  while i > 0 {
-                     if self.parent.logs[i].from == first.name && self.parent.logs[i].to == nil && self.parent.logs[i - 1].from == nil && self.parent.logs[i - 1].to == first.name {
-                        var parts = [[String: Any]]()
-                        
-                        if let text = self.parent.logs[i - 1].content.text {
-                           parts.append(["type": "text", "text": text])
-                        }
-                        
-                        if let image = self.parent.logs[i - 1].content.image {
-                           if let dataURL = (await Task.detached {
-                              var dataURL: String? = nil
-                              
-                              if let resizedImage = self.resize(image: image) {
-                                 dataURL = self.convert(image: resizedImage)
-                              }
-                              
-                              return dataURL
-                           }.value) {
-                              parts.append(["type": "image", "image": dataURL])
-                           }
-                        }
-                        
-                        if !parts.isEmpty {
-                           if let raw = self.parent.logs[i].raw {
-                              messages.insert(["role": "assistant", "content": raw], at: 1)
-                              messages.insert(["role": "user", "content": parts], at: 1)
-                           } else if let text = self.parent.logs[i].content.text {
-                              messages.insert(["role": "assistant", "content": text], at: 1)
-                              messages.insert(["role": "user", "content": parts], at: 1)
-                           }
-                        }
-                        
-                        i -= 2
-                     } else {
-                        i -= 1
-                     }
-                  }
-                  
-                  if let dataURL = (await Task.detached {
-                     var dataURL: String? = nil
-                     
-                     if let resizedImage = self.resize(image: image) {
-                        dataURL = self.convert(image: resizedImage)
-                     }
-                     
-                     return dataURL
-                  }.value) {
-                     messages.append(["role": "user", "content": [["type": "image", "image": dataURL]]])
-                  } else {
-                     return
-                  }
-                  
-                  if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
-                     let sequence = Sequence(name: "Activate", state: nil)
-                     let id = UUID()
-                     var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
-                        let term = value.filter { !$0.isEmpty }
-
-                        guard let word = term.last else {
-                           return
-                        }
-
-                        if term.count == 1 {
-                           output.append((target: word, words: [Word(name: word, attributes: nil)]))
-                        } else {
-                           for index in 0..<term.count - 1 {
-                              let parts = Array(term[index...])
-                              let separator = parts.allSatisfy { $0.allSatisfy { $0.isASCII } } ? String("\u{0020}") : String()
-                              
-                              output.append((target: parts.joined(separator: separator), words: parts.enumerated().map { Word(name: $0.element, attributes: $0.offset < parts.count - 1 ? [] : nil) }))
-                           }
-                        }
-                     }
-                     
-                     candidates.sort { $0.target.count > $1.target.count }
-                     
-                     var inlines: [(text: String, attributes: [String]?)] = content.isEmpty ? [] : [(content, nil)]
-                     var words = [Word]()
-                     
-                     for candidate in candidates {
-                        inlines = inlines.reduce(into: []) { output, inline in
-                           guard inline.attributes == nil else {
-                              output.append(inline)
-                              
-                              return
-                           }
-
-                           var text = inline.text
-
-                           while let range = text.range(of: candidate.target, options: .caseInsensitive) {
-                              if range.lowerBound != text.startIndex {
-                                 output.append((text: String(text[..<range.lowerBound]), attributes: nil))
-                              }
-                              
-                              var inline = String(text[range])
-
-                              if candidate.words.count > 1, let lastWord = candidate.words.last?.name, let lastRange = inline.range(of: lastWord, options: [.caseInsensitive, .backwards]) {
-                                 inline.insert("\n", at: lastRange.lowerBound)
-                              }
-                              
-                              output.append((text: inline, attributes: []))
-                              
-                              for word in candidate.words {
-                                 if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !Script.shared.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
-                                    words.append(word)
-                                 }
-                              }
-
-                              text = String(text[range.upperBound...])
-                           }
-
-                           if !text.isEmpty {
-                              output.append((text: text, attributes: nil))
-                           }
-                        }
-                     }
-                     
-                     sequence.append(Message(id: id, inlines: inlines))
-                     
-                     if let voice {
-                        sequence.append(voice)
-                     }
-                     
-                     sequence.append(Sequence(name: "Emote", state: state ?? String()))
-                     sequences.append((first.name, id, output, sequence, likability, choices))
-                     
-                     if !words.isEmpty {
-                        self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
-                     }
-                     
-                     if let memory {
-                        await Task.detached {
-                           if let data = memory.data(using: .utf8) {
-                              self.save(data)
-                           }
-                        }.value
-                     }
-                     
-                     while !queue.isEmpty {
-                        let character = queue.removeFirst()
-                        
-                        if let prompt = character.prompt {
-                           let memory = await Task.detached {
-                              if let data = self.load() {
-                                 return String(data: data, encoding: .utf8)
-                              }
-                              
-                              return nil
-                           }.value
-                           
-                           if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: [["role": "system", "content": await Task.detached {
-                              var text = self.replacePlaceholders(text: prompt, resolver: { format in
-                                 
-                                 if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                                    let dateFormatter = DateFormatter()
-                                    
-                                    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                                    dateFormatter.dateFormat = format
-                                    
-                                    return dateFormatter.string(from: Date())
-                                 }
-                                 
-                                 return nil
-                              })
-                              
-                              if let memory {
-                                 text += "\n\(memory)"
-                              }
-                              
-                              return text
-                           }.value], ["role": "user", "content": [["type": "text", "text": content]]]], voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
-                              let sequence = Sequence(name: "Activate", state: nil)
-                              let id = UUID()
-                              var candidates = terms.reduce(into: [(target: String, words: [Word])]()) { output, value in
-                                 let term = value.filter { !$0.isEmpty }
-
-                                 guard let word = term.last else {
-                                    return
-                                 }
-
-                                 if term.count == 1 {
-                                    output.append((target: word, words: [Word(name: word, attributes: nil)]))
-                                 } else {
-                                    for index in 0..<term.count - 1 {
-                                       let parts = Array(term[index...])
-                                       let separator = parts.allSatisfy { $0.allSatisfy { $0.isASCII } } ? String("\u{0020}") : String()
-                                       
-                                       output.append((target: parts.joined(separator: separator), words: parts.enumerated().map { Word(name: $0.element, attributes: $0.offset < parts.count - 1 ? [] : nil) }))
-                                    }
-                                 }
-                              }
-                              
-                              candidates.sort { $0.target.count > $1.target.count }
-                              
-                              var inlines: [(text: String, attributes: [String]?)] = content.isEmpty ? [] : [(content, nil)]
-                              var words = [Word]()
-                              
-                              for candidate in candidates {
-                                 inlines = inlines.reduce(into: []) { output, inline in
-                                    guard inline.attributes == nil else {
-                                       output.append(inline)
-                                       
-                                       return
-                                    }
-
-                                    var text = inline.text
-
-                                    while let range = text.range(of: candidate.target, options: .caseInsensitive) {
-                                       if range.lowerBound != text.startIndex {
-                                          output.append((text: String(text[..<range.lowerBound]), attributes: nil))
-                                       }
-                                       
-                                       var inline = String(text[range])
-
-                                       if candidate.words.count > 1, let lastWord = candidate.words.last?.name, let lastRange = inline.range(of: lastWord, options: [.caseInsensitive, .backwards]) {
-                                          inline.insert("\n", at: lastRange.lowerBound)
-                                       }
-                                       
-                                       output.append((text: inline, attributes: []))
-                                       
-                                       for word in candidate.words {
-                                          if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !Script.shared.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
-                                             words.append(word)
-                                          }
-                                       }
-
-                                       text = String(text[range.upperBound...])
-                                    }
-
-                                    if !text.isEmpty {
-                                       output.append((text: text, attributes: nil))
-                                    }
-                                 }
-                              }
-                              
-                              sequence.append(Message(id: id, inlines: inlines))
-                              
-                              if let voice {
-                                 sequence.append(voice)
-                              }
-                              
-                              sequence.append(Sequence(name: "Emote", state: state ?? String()))
-                              sequences.append((character.name, id, output, sequence, nil, nil))
-                              
-                              if !words.isEmpty {
-                                 self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
-                              }
-                              
-                              if let memory {
-                                 await Task.detached {
-                                    if let data = memory.data(using: .utf8) {
-                                       self.save(data)
-                                    }
-                                 }.value
-                              }
-                           } else {
-                              break
-                           }
-                        } else {
-                           break
-                        }
-                     }
-                  }
-                  
-                  withAnimation(.easeIn(duration: 0.5)) {
-                     self.parent.loading = false
-                  }
-               }
-               
-               for i in 0..<sequences.count {
-                  await Script.shared.run(name: sequences[i].0, sequences: [sequences[i].3], words: []) { x in
-                     var y = x
-                     var content = [String]()
-                     let choices: [String]?
-                     
-                     for sequence in x {
-                        for obj in sequence {
-                           if let message = obj as? Message {
-                              content.append(message.reduce(into: String(), { content, inline in
-                                 if inline.attributes == nil {
-                                    content.append(inline.text)
-                                 } else {
-                                    content.append(inline.text.filter { !$0.isNewline })
-                                 }
-                              }))
-                           }
-                        }
-                     }
-                     
-                     y.append(Sequence(name: String()))
-                     
-                     if let c = sequences[i].5 {
-                        choices = c.reduce(into: [String](), { x, y in
-                           x.append(y.0)
-                        })
-                        self.parent.choices.removeAll()
-                        self.parent.choices.append(contentsOf: c)
-                     } else {
-                        choices = nil
-                     }
-                     
-                     if i > 0 {
-                        self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
-                     } else {
-                        var index = self.parent.logs.count - 1
-                        
-                        while index >= 0 {
-                           if self.parent.logs[index].content.image != nil {
-                              let group = self.parent.logs[index].group
-                              
-                              for j in stride(from: self.parent.logs.count - 1, through: 0, by: -1) {
-                                 if self.parent.logs[j].group == group {
-                                    self.parent.logs.remove(at: j)
-                                 }
-                              }
-                              
-                              index = self.parent.logs.count - 1
-                              
-                              continue
-                           }
-                           
-                           index -= 1
-                        }
-                        
-                        self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: nil, image: image), choices: choices))
-                        self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
-                     }
-                     
-                     if let likability = sequences[i].4 {
-                        withAnimation {
-                           self.parent.likability = likability
-                        }
-                     }
-                     
-                     return y
-                  }
-               }
-               
-               while self.parent.logs.count > 10 {
-                  let group = self.parent.logs[0].group
-                  
-                  for i in stride(from: self.parent.logs.count - 1, through: 0, by: -1) {
-                     if self.parent.logs[i].group == group {
-                        self.parent.logs.remove(at: i)
-                     }
-                  }
-               }
-            }
+      func peekDidUpdate(_ peek: Peek.PeekViewController) {
+         guard let peekedImage = peek.peekedImage else {
+            return
          }
+         
+         peek.flash()
+         self.onChange(peekedImage)
       }
       
-      private nonisolated func load(from filename: String = "MEMORY.md") -> Data? {
-         if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
-            let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
-            
-            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-               defer {
-                  try? file.close()
-               }
-               
-               return try? file.readToEnd()
-            }
-         }
-         
-         return nil
-      }
-      
-      private nonisolated func save(_ data: Data, to filename: String = "MEMORY.md") {
-         if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
-            let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
-            
-            if FileManager.default.fileExists(atPath: path) {
-               if let file = FileHandle(forWritingAtPath: path) {
-                  defer {
-                     try? file.close()
-                  }
-                  
-                  try? file.truncate(atOffset: 0)
-                  try? file.write(contentsOf: data)
-               }
-            } else {
-               FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-            }
-         }
-      }
-      
-      private func sample(path: String, sequences: [Sequence]) async -> Data? {
-         return await Task.detached {
-            var sequenceQueue = sequences
-            
-            while !sequenceQueue.isEmpty {
-               let sequence = sequenceQueue.removeFirst()
-               var index: Int? = nil
-               
-               for (i, obj) in sequence.enumerated() {
-                  if let s = obj as? Sequence {
-                     sequenceQueue.append(s)
-                  } else if obj is Message {
-                     index = i
-                  } else if let sound = obj as? Sound, i - 1 == index, let soundPath = sound.path {
-                     let path = URL(filePath: path).deletingLastPathComponent().appending(path: soundPath, directoryHint: .inferFromPath).path(percentEncoded: false)
-                     
-                     if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                        defer {
-                           try? file.close()
-                        }
-                        
-                        if let data = try? file.readToEnd(), data.count > 44, let riff = String(data: data[0..<4], encoding: .ascii), riff == "RIFF", let wave = String(data: data[8..<12], encoding: .ascii), wave == "WAVE" && String(data: data[12..<16], encoding: .ascii) == "fmt " {
-                           let sampleRate = data.subdata(in: 24..<28).withUnsafeBytes { $0.load(as: UInt32.self) }
-                           let channels = data.subdata(in: 22..<24).withUnsafeBytes { $0.load(as: UInt16.self) }
-                           let bitsPerSample = data.subdata(in: 34..<36).withUnsafeBytes { $0.load(as: UInt16.self) }
-                           var dataChunkOffset = 36
-                           
-                           while dataChunkOffset + 8 < data.count {
-                              let chunkID = String(data: data[dataChunkOffset..<dataChunkOffset + 4], encoding: .ascii)
-                              let chunkSize = data.subdata(in: dataChunkOffset + 4..<dataChunkOffset + 8).withUnsafeBytes { $0.load(as: UInt32.self) }
-                              
-                              if chunkID == "data" {
-                                 let duration = Double(Int(chunkSize) / Int(bitsPerSample / 8 * channels)) / Double(sampleRate)
-                                 
-                                 if duration > 3.0 && duration <= 10.0 {
-                                    return data
-                                 }
-                                 
-                                 break
-                              }
-                              
-                              dataChunkOffset += 8 + Int(chunkSize)
-                           }
-                        }
-                     }
-                  }
-               }
-            }
-            
-            return nil
-         }.value
-      }
-      
-      private func generate(messages: [[String: Any]], voice: Data?, language: String?, temperature: Double) async -> (String, String, Double?, [[String]], String?, [(String, URL?)], String?, Data?)? {
-         if let data = try? JSONSerialization.data(withJSONObject: ["messages": messages, "temperature": round(temperature * 10.0) / 10.0]) {
-            var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
-            
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = data
-            request.timeoutInterval = 60.0
-            
-            if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json", let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let content = jsonRoot["content"] as? String {
-               var likability: Double? = nil
-               var terms = [[String]]()
-               var state: String? = nil
-               var choices = [(String, URL?)]()
-               var memory: String? = nil
-               var wave: Data? = nil
-               
-               if let value = jsonRoot["likability"] as? Double {
-                  likability = value
-               }
-               
-               if let value = jsonRoot["terms"] as? [Any] {
-                  for item in value {
-                     if let s = item as? String {
-                        terms.append([s])
-                     } else if let a = item as? [String] {
-                        terms.append(a)
-                     }
-                  }
-               }
-               
-               if let states = jsonRoot["states"] as? [String: Any] {
-                  var max = 0.0
-                  
-                  for (key, object) in states {
-                     if let value = object as? Double, value > max {
-                        state = key
-                        max = value
-                     }
-                  }
-               }
-               
-               if let objects = jsonRoot["choices"] as? [Any] {
-                  for object in objects {
-                     if let value = object as? String {
-                        choices.append((value, nil))
-                     } else if let dictionary = object as? [String: Any?] {
-                        if let text = dictionary["text"] as? String {
-                           if let value = dictionary["url"] as? String {
-                              if value.lowercased().hasPrefix("https://"), let url = URL(string: value) {
-                                 choices.append((text, url))
-                              }
-                           } else {
-                              choices.append((text, nil))
-                           }
-                        }
-                     }
-                  }
-               }
-               
-               if let value = jsonRoot["memory"] as? String {
-                  memory = value
-               }
-               
-               if let voice, let language {
-                  wave = await self.generate(prompt: voice, input: content, language: language, temperature: temperature)
-               }
-               
-               if let data = try? JSONSerialization.data(withJSONObject: jsonRoot, options: .prettyPrinted), let output = String(data: data, encoding: .utf8) {
-                  return (output, content, likability, terms, state, choices, memory, wave)
-               }
-            }
-         }
-         
-         return nil
-      }
-      
-      private func generate(prompt: Data, input: String, language: String, temperature: Double) async -> Data? {
-         if let data = try? JSONSerialization.data(withJSONObject: ["input": input, "language": language, "temperature": round(temperature * 10.0) / 10.0]) {
-            let request = await Task.detached {
-               var request = URLRequest(url: URL(string: "https://milchchan.com/api/generate")!)
-               let boundary = UUID().uuidString
-               var body = Data()
-               
-               body.append("--\(boundary)\r\n".data(using: .utf8)!)
-               body.append("Content-Disposition: form-data; name=\"file\"; filename=\"prompt.wav\"\r\n".data(using: .utf8)!)
-               body.append("Content-Type: audio/wav\r\n".data(using: .utf8)!)
-               body.append("Content-Transfer-Encoding: binary\r\n\r\n".data(using: .utf8)!)
-               body.append(prompt)
-               body.append("\r\n".data(using: .utf8)!)
-               body.append("--\(boundary)\r\n".data(using: .utf8)!)
-               body.append("Content-Disposition: form-data; name=\"data\"\r\n".data(using: .utf8)!)
-               body.append("Content-Type: application/json\r\n\r\n".data(using: .utf8)!)
-               body.append(data)
-               body.append("\r\n".data(using: .utf8)!)
-               body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-               
-               request.httpMethod = "POST"
-               request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-               request.httpBody = body
-               request.timeoutInterval = 60.0
-               
-               return request
-            }.value
-            
-            if let (data, response) = try? await URLSession.shared.data(for: request), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "audio/wav" {
-               return data
-            }
-         }
-         
-         return nil
-      }
-      
-      private nonisolated func replacePlaceholders(text: String, resolver: (String) -> String?) -> String {
-         var input = String(text)
-         var output = String()
-         
-         repeat {
-            if let match = input.firstMatch(of: /({{1,2})([^{}\r\n]+)(}{1,2})/), let replacement = resolver(String(match.output.2)) {
-               output.append(String(input[input.startIndex..<match.range.lowerBound]))
-               
-               if match.output.1.count == 2 {
-                  if match.output.3.count == 2 {
-                     output.append("{\(match.output.2)}")
-                  } else {
-                     output.append("{\(replacement)")
-                  }
-               } else if match.output.3.count == 2 {
-                  output.append("\(replacement)}")
-               } else {
-                  output.append(replacement)
-               }
-               
-               input = String(input[match.range.upperBound..<input.endIndex])
-            } else {
-               output.append(input)
-               input.removeAll()
-            }
-         } while !input.isEmpty
-         
-         return output
-      }
-      
-      private nonisolated func resize(image: CGImage, maximum: Double = 768) -> CGImage? {
-         let imageWidth = Double(image.width)
-         let imageHeight = Double(image.height)
-         let width: Double
-         let height: Double
-         var resizedImage: CGImage? = nil
-         
-         if imageWidth < imageHeight {
-            if imageHeight > maximum {
-               width = floor(maximum / imageHeight * imageWidth)
-               height = maximum
-            } else {
-               width = imageWidth
-               height = imageHeight
-            }
-         } else if imageWidth > maximum {
-            width = maximum
-            height = floor(maximum / imageWidth * imageHeight)
-         } else {
-            width = imageWidth
-            height = imageHeight
-         }
-         
-         UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
-         
-         if let context = UIGraphicsGetCurrentContext() {
-            context.interpolationQuality = .high
-            context.setAllowsAntialiasing(true)
-            context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
-            context.translateBy(x: 0.0, y: height)
-            context.scaleBy(x: 1.0, y: -1.0)
-            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-            resizedImage = context.makeImage()
-         }
-         
-         UIGraphicsEndImageContext()
-         
-         return resizedImage
-      }
-      
-      private nonisolated func convert(image: CGImage) -> String? {
-         let mutableData = NSMutableData()
-         
-         guard let destination = CGImageDestinationCreateWithData(mutableData, UTType.jpeg.identifier as CFString, 1, nil) else {
-            return nil
-         }
-         
-         CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.75] as CFDictionary)
-         
-         guard CGImageDestinationFinalize(destination) else {
-            return nil
-         }
-         
-         return "data:image/jpeg;base64,\(mutableData.base64EncodedString(options: []))"
+      @MainActor
+      func peekDidFail(_ peek: Peek.PeekViewController) {
+         self.peekable.wrappedValue = peek.isPeekable
       }
    }
    
    class PeekViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
       var delegate: PeekDelegate? = nil
       var isPeekable = true
-      var isPaused = false
-      var isReady = false
+      var isPaused = false {
+         didSet {
+            if self.isPaused != oldValue {
+               self.frameState.withLock { state in
+                  state.generation &+= 1
+               }
+            }
+         }
+      }
+      var isReady = false {
+         didSet {
+            if self.isReady != oldValue {
+               self.frameState.withLock { state in
+                  state.generation &+= 1
+               }
+            }
+         }
+      }
       var peekedImage: CGImage? = nil
       private let sessionQueue = DispatchQueue(label: String(describing: Peek.PeekViewController.self))
-      private let captureSession = AVCaptureSession()
+      private let captureSession = Mutex(AVCaptureSession())
+      private let frameState = Mutex((isProcessing: false, generation: UInt64(0)))
       private var captureVideoPreviewLayer: AVCaptureVideoPreviewLayer? = nil
+      private var isCaptureSessionConfigured = false
+      private var isConfiguringCaptureSession = false
+      private var isViewVisible = false
       private var elapsedTime = CACurrentMediaTime()
       private let threshold = 8
       private var peekedImageHash: UInt64 = 0
-      
+
       override func viewDidLoad() {
          super.viewDidLoad()
          
          switch AVCaptureDevice.authorizationStatus(for: .video) {
          case .authorized:
-            break
+            self.prepareCaptureSession()
             
          case .notDetermined:
-            self.sessionQueue.suspend()
-            
-            AVCaptureDevice.requestAccess(for: .video, completionHandler: { granted in
-               if !granted {
-                  self.isPeekable = false
-                  self.delegate?.peekDidFail(self)
+            AVCaptureDevice.requestAccess(for: .video, completionHandler: { [weak self] granted in
+               Task { @MainActor [weak self] in
+                  guard let self else {
+                     return
+                  }
+                  if granted {
+                     self.prepareCaptureSession()
+                  } else {
+                     self.isPeekable = false
+                     self.delegate?.peekDidFail(self)
+                  }
                }
-               
-               self.sessionQueue.resume()
             })
             
          default:
             self.isPeekable = false
             self.delegate?.peekDidFail(self)
          }
-         
-         if self.isPeekable {
-            self.captureVideoPreviewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
+      }
+
+      private func prepareCaptureSession() {
+         guard self.isPeekable && !self.isCaptureSessionConfigured && !self.isConfiguringCaptureSession else {
+            return
+         }
+
+         self.isConfiguringCaptureSession = true
+
+         if self.captureVideoPreviewLayer == nil {
+            self.captureVideoPreviewLayer = self.captureSession.withLock { session in
+               AVCaptureVideoPreviewLayer(session: session)
+            }
             self.captureVideoPreviewLayer!.videoGravity = AVLayerVideoGravity.resizeAspectFill
             self.captureVideoPreviewLayer!.frame = CGRect(origin: CGPoint.zero, size: self.view.frame.size)
             
             self.view.layer.addSublayer(self.captureVideoPreviewLayer!)
-            
-            if let captureDevice = AVCaptureDevice.default(for: AVMediaType.video), let input = try? AVCaptureDeviceInput(device: captureDevice), self.captureSession.canAddInput(input) {
-               
-               let output = AVCaptureVideoDataOutput()
-               
-               self.captureSession.beginConfiguration()
-               self.captureSession.addInput(input)
-               
-               output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-               output.setSampleBufferDelegate(self, queue: self.sessionQueue)
-               output.alwaysDiscardsLateVideoFrames = true
-               
-               if self.captureSession.canAddOutput(output) {
-                  self.captureSession.addOutput(output)
-                  
-                  if let connection = output.connection(with: .video), connection.isVideoStabilizationSupported {
-                     connection.preferredVideoStabilizationMode = .auto
-                  }
-               } else {
-                  self.captureSession.commitConfiguration()
-                  self.isPeekable = false
-                  self.delegate?.peekDidFail(self)
-                  
+         }
+
+         self.sessionQueue.async { [weak self] in
+            guard let self else {
+               return
+            }
+
+            let configured = self.configureCaptureSession()
+
+            Task { @MainActor [weak self] in
+               guard let self else {
                   return
                }
-               
-               if self.captureSession.canSetSessionPreset(.photo) {
-                  self.captureSession.sessionPreset = .photo
+
+               self.isConfiguringCaptureSession = false
+
+               if configured {
+                  self.isCaptureSessionConfigured = true
+
+                  if self.isViewVisible {
+                     self.startCaptureSession()
+                  }
+               } else {
+                  self.isCaptureSessionConfigured = false
+                  self.isPeekable = false
+                  self.delegate?.peekDidFail(self)
                }
-               
-               self.captureSession.commitConfiguration()
-            } else {
-               self.isPeekable = false
-               self.delegate?.peekDidFail(self)
             }
+         }
+      }
+
+      private func startCaptureSession() {
+         guard self.isPeekable && self.isCaptureSessionConfigured && self.isViewVisible else {
+            return
+         }
+
+         self.sessionQueue.async { [weak self] in
+            guard let self else {
+               return
+            }
+
+            self.captureSession.withLock { session in
+               if !session.isRunning {
+                  session.startRunning()
+               }
+            }
+
+            Task {
+               await MainActor.run { [weak self] in
+                  if let captureVideoPreviewLayer = self?.captureVideoPreviewLayer {
+                     switch UIDevice.current.orientation {
+                     case UIDeviceOrientation.portraitUpsideDown:
+                        captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+                     case UIDeviceOrientation.landscapeLeft:
+                        captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+                     case UIDeviceOrientation.landscapeRight:
+                        captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+                     default:
+                        captureVideoPreviewLayer.connection?.videoRotationAngle = 90
+                     }
+                  }
+               }
+            }
+         }
+      }
+
+      private func stopCaptureSession() {
+         guard self.isCaptureSessionConfigured else {
+            return
+         }
+
+         self.sessionQueue.async { [weak self] in
+            self?.captureSession.withLock { session in
+               if session.isRunning {
+                  session.stopRunning()
+               }
+            }
+         }
+      }
+
+      nonisolated private func configureCaptureSession() -> Bool {
+         return self.captureSession.withLock { session in
+            guard let captureDevice = AVCaptureDevice.default(for: .video), let input = try? AVCaptureDeviceInput(device: captureDevice) else {
+               return false
+            }
+
+            let output = AVCaptureVideoDataOutput()
+
+            output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+            output.setSampleBufferDelegate(self, queue: self.sessionQueue)
+            output.alwaysDiscardsLateVideoFrames = true
+
+            guard session.canAddInput(input) else {
+               return false
+            }
+
+            session.beginConfiguration()
+            
+            defer {
+               session.commitConfiguration()
+            }
+
+            session.addInput(input)
+
+            guard session.canAddOutput(output) else {
+               session.removeInput(input)
+
+               return false
+            }
+
+            session.addOutput(output)
+
+            if let connection = output.connection(with: .video), connection.isVideoStabilizationSupported {
+               connection.preferredVideoStabilizationMode = .auto
+            }
+
+            if session.canSetSessionPreset(.photo) {
+               session.sessionPreset = .photo
+            }
+
+            return true
          }
       }
       
@@ -5994,6 +5795,10 @@ struct Peek: UIViewControllerRepresentable {
       }
       
       override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+         self.frameState.withLock { state in
+            state.generation &+= 1
+         }
+
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
             captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: size)
             
@@ -6013,44 +5818,65 @@ struct Peek: UIViewControllerRepresentable {
       override func viewWillAppear(_ animated: Bool) {
          super.viewWillAppear(animated)
          
-         if self.isPeekable {
-            self.sessionQueue.async {
-               self.captureSession.startRunning()
-               
-               Task {
-                  await MainActor.run { [weak self] in
-                     if let captureVideoPreviewLayer = self?.captureVideoPreviewLayer {
-                        switch UIDevice.current.orientation {
-                        case UIDeviceOrientation.portraitUpsideDown:
-                           captureVideoPreviewLayer.connection?.videoRotationAngle = 270
-                        case UIDeviceOrientation.landscapeLeft:
-                           captureVideoPreviewLayer.connection?.videoRotationAngle = 0
-                        case UIDeviceOrientation.landscapeRight:
-                           captureVideoPreviewLayer.connection?.videoRotationAngle = 180
-                        default:
-                           captureVideoPreviewLayer.connection?.videoRotationAngle = 90
-                        }
-                     }
-                  }
-               }
-            }
+         self.frameState.withLock { state in
+            state.generation &+= 1
          }
+         self.isViewVisible = true
+         self.startCaptureSession()
       }
       
       override func viewWillDisappear(_ animated: Bool) {
-         if self.isPeekable {
-            self.sessionQueue.async {
-               self.captureSession.stopRunning()
-            }
+         self.isViewVisible = false
+         self.frameState.withLock { state in
+            state.generation &+= 1
          }
+         self.stopCaptureSession()
          
          super.viewWillDisappear(animated)
       }
       
-      func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-         if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+      nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+            return
+         }
+
+         let generation = self.frameState.withLock { state -> UInt64? in
+            guard !state.isProcessing else {
+               return nil
+            }
+
+            state.isProcessing = true
+
+            return state.generation
+         }
+
+         guard let generation else {
+            return
+         }
+
+         let sourceImage = CIImage(cvImageBuffer: pixelBuffer)
+
+         Task { @MainActor [weak self] in
+            guard let self else {
+               return
+            }
+
+            defer {
+               self.frameState.withLock { state in
+                  state.isProcessing = false
+               }
+            }
+
+            let isCurrent = self.frameState.withLock { state in
+               state.generation == generation
+            }
+
+            guard isCurrent else {
+               return
+            }
+
             let orientation: CGImagePropertyOrientation
-            
+
             switch UIDevice.current.orientation {
             case UIDeviceOrientation.landscapeLeft:
                orientation = .up
@@ -6059,36 +5885,41 @@ struct Peek: UIViewControllerRepresentable {
             default:
                orientation = .right
             }
-            
-            let image = CIImage(cvImageBuffer: pixelBuffer).oriented(orientation)
-            
-            Task {
-               let currentMediaTime = CACurrentMediaTime()
+
+            let image = sourceImage.oriented(orientation)
+            let currentMediaTime = CACurrentMediaTime()
+
+            if self.isViewVisible && !self.isPaused && self.isReady && currentMediaTime - self.elapsedTime >= 1.0 {
+               let scale = min(image.extent.width / self.view.frame.width, image.extent.height / self.view.frame.height)
+               let offsetX = (image.extent.width - self.view.frame.width * scale) / 2.0
+               let offsetY = (image.extent.height - self.view.frame.height * scale) / 2.0
+               let length = min(image.extent.width, image.extent.height)
                
-               if !self.isPaused && self.isReady && currentMediaTime - self.elapsedTime >= 1.0 {
-                  let scale = min(image.extent.width / self.view.frame.width, image.extent.height / self.view.frame.height)
-                  let offsetX = (image.extent.width - self.view.frame.width * scale) / 2.0
-                  let offsetY = (image.extent.height - self.view.frame.height * scale) / 2.0
-                  let length = min(image.extent.width, image.extent.height)
+               self.elapsedTime = currentMediaTime
+               
+               let (peekedImage, peekedImageHash) = await Task.detached {
+                  let context = CIContext()
+                  var tuple: (CGImage?, UInt64) = (nil, 0)
                   
-                  self.elapsedTime = currentMediaTime
-                  
-                  let (peekedImage, peekedImageHash) = await Task.detached {
-                     let context = CIContext()
-                     var tuple: (CGImage?, UInt64) = (nil, 0)
-                     
-                     if let i = context.createCGImage(image, from: image.extent), let croppedImage = i.cropping(to: CGRect(x: Int(offsetX), y: Int(offsetY), width: Int(length), height: Int(length))), let hash = self.computeHash(image: i) {
-                        tuple = (croppedImage, hash)
-                     }
-                     
-                     return tuple
-                  }.value
-                  
-                  if self.hammingDistance(self.peekedImageHash, peekedImageHash) > self.threshold {
-                     self.peekedImage = peekedImage
-                     self.peekedImageHash = peekedImageHash
-                     self.delegate?.peekDidUpdate(self)
+                  if let i = context.createCGImage(image, from: image.extent), let croppedImage = i.cropping(to: CGRect(x: Int(offsetX), y: Int(offsetY), width: Int(length), height: Int(length))), let hash = self.computeHash(image: i) {
+                     tuple = (croppedImage, hash)
                   }
+
+                  return tuple
+               }.value
+
+               let isCurrent = self.frameState.withLock { state in
+                  state.generation == generation
+               }
+
+               guard isCurrent && self.isViewVisible && !self.isPaused && self.isReady else {
+                  return
+               }
+
+               if self.hammingDistance(self.peekedImageHash, peekedImageHash) > self.threshold {
+                  self.peekedImage = peekedImage
+                  self.peekedImageHash = peekedImageHash
+                  self.delegate?.peekDidUpdate(self)
                }
             }
          }
@@ -6296,185 +6127,6 @@ struct Activity: View {
       self.scores = scores
       self.characters = characters
       self._logs = logs
-   }
-   
-   private func load() async -> ([Int], Double, Double, [String], [Int?], [(String, Double)], [Int], [(name: String?, text: String?, image: CGImage?)]) {
-      let words = self.words
-      let characters = self.characters
-      let logs = self.logs
-      
-      return await Task.detached {
-         let maxDays = 6
-         let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date())
-         var stats = [Int]()
-         var mean = 0.0
-         var variance = 0.0
-         let stars = words.count
-         var achievements = [String]()
-         var remains = [Int?]()
-         let epsilon: Double = 1e-6
-         var trendings = [(String, Double)]()
-         var indexes = [Int]()
-         var contents = [(name: String?, text: String?, image: CGImage?)]()
-         
-         for i in stride(from: -maxDays, through: 0, by: 1) {
-            let dateComponents = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day! + i, hour: 0, minute: 0, second: 0, nanosecond: 0)
-            var count = 0
-            
-            for word in words {
-               let dc = Calendar.current.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: Double(word.timestamp)))
-               
-               if dateComponents.year == dc.year && dateComponents.month == dc.month && dateComponents.day == dc.day {
-                  count += 1
-               }
-            }
-            
-            stats.append(count)
-         }
-         
-         mean = self.mean(data: stats)
-         variance = self.variance(data: stats, mean: mean)
-         
-         for character in characters {
-            var available = 0
-            var max = 0
-            var lockedAchievements = [String: Int]()
-            var unlockableAchievementSet = Set<String>()
-            var tempAchievements = [(name: String, count: Int?)]()
-            
-            for sequence in character.sequences {
-               var isLocked = true
-               var requiredStars = 0
-               
-               if let pattern = sequence.state, let regex = try? Regex(pattern) {
-                  for i in 0...stars + 10 {
-                     if let match = "\(i)".firstMatch(of: regex), !match.output.isEmpty {
-                        if i <= stars {
-                           available += 1
-                           isLocked = false
-                        } else {
-                           requiredStars = i - stars
-                        }
-                        
-                        break
-                     }
-                  }
-               }
-               
-               for i in 0..<sequence.count {
-                  if let s1 = sequence[i] as? Sequence {
-                     if let name = s1.name, s1.state == nil && !s1.isEmpty {
-                        for j in stride(from: i + 1, to: sequence.count, by: 1) {
-                           if let s2 = sequence[j] as? Sequence {
-                              var isAvailable = false
-                              
-                              if s2.isEmpty {
-                                 if s1.name == s2.name && s2.state == nil {
-                                    isAvailable = true
-                                 }
-                              } else {
-                                 var queue = [Sequence]()
-                                 
-                                 for obj in s2 {
-                                    if let s3 = obj as? Sequence {
-                                       queue.append(s3)
-                                    }
-                                 }
-                                 
-                                 while !queue.isEmpty {
-                                    let s = queue.removeFirst()
-                                    
-                                    if s.isEmpty {
-                                       if s1.name == s.name && s.state == nil {
-                                          isAvailable = true
-                                       }
-                                    } else {
-                                       for obj in s {
-                                          if let s3 = obj as? Sequence {
-                                             queue.append(s3)
-                                          }
-                                       }
-                                    }
-                                 }
-                              }
-                              
-                              if isAvailable {
-                                 if isLocked {
-                                    if let count = lockedAchievements[name] {
-                                       if requiredStars > count {
-                                          lockedAchievements[name] = requiredStars
-                                       }
-                                    } else {
-                                       lockedAchievements[name] = requiredStars
-                                    }
-                                 }
-                                 
-                                 if !unlockableAchievementSet.contains(name) {
-                                    unlockableAchievementSet.insert(name)
-                                 }
-                                 
-                                 break
-                              }
-                           }
-                        }
-                     }
-                  }
-               }
-               
-               max += 1
-            }
-            
-            for name in unlockableAchievementSet {
-               if let count = lockedAchievements[name] {
-                  tempAchievements.append((name: name, count: count))
-               } else {
-                  tempAchievements.append((name: name, count: nil))
-               }
-            }
-            
-            tempAchievements.sort { $0.name < $1.name }
-            
-            for (name, count) in tempAchievements {
-               achievements.append(name)
-               remains.append(count)
-            }
-         }
-         
-         if characters.contains(where: { $0.language == nil }) {
-            for (_, value) in self.scores {
-               if value.1 > epsilon {
-                  trendings.append((value.0, value.1))
-               }
-            }
-         } else {
-            for (_, value) in self.scores {
-               if value.1 > epsilon {
-                  if let languages = value.2 {
-                     if languages.contains(where: { language in
-                        return characters.contains(where: { $0.language == language })
-                     }) {
-                        trendings.append((value.0, value.1))
-                     }
-                  } else {
-                     trendings.append((value.0, value.1))
-                  }
-               }
-            }
-         }
-         
-         trendings.sort { $0.1 > $1.1 }
-         
-         if trendings.count > 10 {
-            trendings.removeSubrange(10...)
-         }
-         
-         for (index, log) in logs.enumerated() {
-            indexes.append(index)
-            contents.append((name: log.from, text: log.content.text, image: log.content.image))
-         }
-         
-         return (stats, mean, variance, achievements, remains, trendings, indexes, contents)
-      }.value
    }
    
    private func makeStats() -> some View {
@@ -6734,6 +6386,8 @@ struct Activity: View {
                               withAnimation {
                                  self.words.append(Word(name: word, attributes: nil))
                               }
+                              
+                              self.save(words: self.words)
                            }) {
                               HStack(alignment: .center, spacing: 16.0) {
                                  Text(String(format: "%ld", index + 1))
@@ -7003,6 +6657,246 @@ struct Activity: View {
                   }
                }
             }
+   }
+   
+   private func load() async -> ([Int], Double, Double, [String], [Int?], [(String, Double)], [Int], [(name: String?, text: String?, image: CGImage?)]) {
+      let words = self.words
+      let characters = self.characters
+      let logs = self.logs
+      
+      return await Task.detached {
+         let maxDays = 6
+         let nowDateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day], from: Date())
+         var stats = [Int]()
+         var mean = 0.0
+         var variance = 0.0
+         let stars = words.count
+         var achievements = [String]()
+         var remains = [Int?]()
+         let epsilon: Double = 1e-6
+         var trendings = [(String, Double)]()
+         var indexes = [Int]()
+         var contents = [(name: String?, text: String?, image: CGImage?)]()
+         
+         for i in stride(from: -maxDays, through: 0, by: 1) {
+            let dateComponents = DateComponents(calendar: nowDateComponents.calendar, timeZone: nowDateComponents.timeZone, era: nowDateComponents.era, year: nowDateComponents.year, month: nowDateComponents.month, day: nowDateComponents.day! + i, hour: 0, minute: 0, second: 0, nanosecond: 0)
+            var count = 0
+            
+            for word in words {
+               let dc = Calendar.current.dateComponents([.year, .month, .day], from: Date(timeIntervalSince1970: Double(word.timestamp)))
+               
+               if dateComponents.year == dc.year && dateComponents.month == dc.month && dateComponents.day == dc.day {
+                  count += 1
+               }
+            }
+            
+            stats.append(count)
+         }
+         
+         mean = self.mean(data: stats)
+         variance = self.variance(data: stats, mean: mean)
+         
+         for character in characters {
+            var available = 0
+            var max = 0
+            var lockedAchievements = [String: Int]()
+            var unlockableAchievementSet = Set<String>()
+            var tempAchievements = [(name: String, count: Int?)]()
+            
+            for sequence in character.sequences {
+               var isLocked = true
+               var requiredStars = 0
+               
+               if let pattern = sequence.state, let regex = try? Regex(pattern) {
+                  for i in 0...stars + 10 {
+                     if let match = "\(i)".firstMatch(of: regex), !match.output.isEmpty {
+                        if i <= stars {
+                           available += 1
+                           isLocked = false
+                        } else {
+                           requiredStars = i - stars
+                        }
+                        
+                        break
+                     }
+                  }
+               }
+               
+               for i in 0..<sequence.count {
+                  if case .sequence(let s1) = sequence[i] {
+                     if let name = s1.name, s1.state == nil && !s1.isEmpty {
+                        for j in stride(from: i + 1, to: sequence.count, by: 1) {
+                           if case .sequence(let s2) = sequence[j] {
+                              var isAvailable = false
+                              
+                              if s2.isEmpty {
+                                 if s1.name == s2.name && s2.state == nil {
+                                    isAvailable = true
+                                 }
+                              } else {
+                                 var queue = [Sequence]()
+                                 
+                                 for step in s2 {
+                                    if case .sequence(let s3) = step {
+                                       queue.append(s3)
+                                    }
+                                 }
+                                 
+                                 while !queue.isEmpty {
+                                    let s = queue.removeFirst()
+                                    
+                                    if s.isEmpty {
+                                       if s1.name == s.name && s.state == nil {
+                                          isAvailable = true
+                                       }
+                                    } else {
+                                       for step in s {
+                                          if case .sequence(let s3) = step {
+                                             queue.append(s3)
+                                          }
+                                       }
+                                    }
+                                 }
+                              }
+                              
+                              if isAvailable {
+                                 if isLocked {
+                                    if let count = lockedAchievements[name] {
+                                       if requiredStars > count {
+                                          lockedAchievements[name] = requiredStars
+                                       }
+                                    } else {
+                                       lockedAchievements[name] = requiredStars
+                                    }
+                                 }
+                                 
+                                 if !unlockableAchievementSet.contains(name) {
+                                    unlockableAchievementSet.insert(name)
+                                 }
+                                 
+                                 break
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+               
+               max += 1
+            }
+            
+            for name in unlockableAchievementSet {
+               if let count = lockedAchievements[name] {
+                  tempAchievements.append((name: name, count: count))
+               } else {
+                  tempAchievements.append((name: name, count: nil))
+               }
+            }
+            
+            tempAchievements.sort { $0.name < $1.name }
+            
+            for (name, count) in tempAchievements {
+               achievements.append(name)
+               remains.append(count)
+            }
+         }
+         
+         if characters.contains(where: { $0.language == nil }) {
+            for (_, value) in self.scores {
+               if value.1 > epsilon {
+                  trendings.append((value.0, value.1))
+               }
+            }
+         } else {
+            for (_, value) in self.scores {
+               if value.1 > epsilon {
+                  if let languages = value.2 {
+                     if languages.contains(where: { language in
+                        return characters.contains(where: { $0.language == language })
+                     }) {
+                        trendings.append((value.0, value.1))
+                     }
+                  } else {
+                     trendings.append((value.0, value.1))
+                  }
+               }
+            }
+         }
+         
+         trendings.sort { $0.1 > $1.1 }
+         
+         if trendings.count > 10 {
+            trendings.removeSubrange(10...)
+         }
+         
+         for (index, log) in logs.enumerated() {
+            indexes.append(index)
+            contents.append((name: log.from, text: log.content.text, image: log.content.image))
+         }
+         
+         return (stats, mean, variance, achievements, remains, trendings, indexes, contents)
+      }.value
+   }
+   
+   private func save(words: [Word]) {
+      Task {
+         await Task.detached {
+            let encoder = JSONEncoder()
+            
+            if let data = try? encoder.encode(words) {
+               if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                  let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
+                  
+                  if FileManager.default.fileExists(atPath: path) {
+                     if let file = FileHandle(forWritingAtPath: path) {
+                        defer {
+                           try? file.close()
+                        }
+                        
+                        try? file.truncate(atOffset: 0)
+                        try? file.write(contentsOf: data)
+                     }
+                  } else {
+                     FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+                  }
+               }
+               
+               if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+                  let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
+                  let documentsPath = documentsUrl.path(percentEncoded: false)
+                  let url = documentsUrl.appending(path: ".words.json", directoryHint: .inferFromPath)
+                  let path = url.path(percentEncoded: false)
+                  
+                  if !FileManager.default.fileExists(atPath: documentsPath) {
+                     try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
+                  }
+                  
+                  if FileManager.default.fileExists(atPath: path) {
+                     if let file = FileHandle(forWritingAtPath: path) {
+                        defer {
+                           try? file.close()
+                        }
+                        
+                        try? file.truncate(atOffset: 0)
+                        try? file.write(contentsOf: data)
+                     }
+                  } else {
+                     FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+                  }
+                  
+                  if let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
+                     try? NSFileVersion.removeOtherVersionsOfItem(at: url)
+                     
+                     if let conflictVersions = NSFileVersion.unresolvedConflictVersionsOfItem(at: url) {
+                        for fileVersion in conflictVersions {
+                           fileVersion.isResolved = true
+                        }
+                     }
+                  }
+               }
+            }
+         }.value
+      }
    }
    
    private nonisolated func mean(data: [Int]) -> Double {
@@ -7816,7 +7710,7 @@ struct Dictionary: View {
             return true
          }.value) {
             let audioEngine = AVAudioEngine()
-            let inputNode = await Task.detached { audioEngine.inputNode }.value
+            let inputNode = audioEngine.inputNode
             
             if let recognizer = self.speechRecognizer, recognizer.isAvailable {
                let request = SFSpeechAudioBufferRecognitionRequest()
@@ -8102,81 +7996,74 @@ struct Capture: UIViewControllerRepresentable {
       if self.pause != uiViewController.isPaused {
          uiViewController.isPaused = self.pause
       }
+      
+      context.coordinator.recognizable = self.$recognizable
+      context.coordinator.region = self.$region
+      context.coordinator.text = self.$text
    }
    
    func makeCoordinator() -> Coordinator {
-      return Coordinator(self)
+      return Coordinator(recognizable: self.$recognizable, region: self.$region, text: self.$text)
    }
    
    protocol CaptureDelegate: AnyObject {
+      @MainActor
       func captureDidUpdate(_ capture: CaptureViewController)
+      @MainActor
       func captureDidFail(_ capture: CaptureViewController)
    }
    
    class Coordinator: NSObject, CaptureDelegate {
-      private var parent: Capture
+      var recognizable: Binding<Bool>
+      var region: Binding<CGRect>
+      var text: Binding<String>
       
-      init(_ parent: Capture) {
-         self.parent = parent
+      init(recognizable: Binding<Bool>, region: Binding<CGRect>, text: Binding<String>) {
+         self.recognizable = recognizable
+         self.region = region
+         self.text = text
       }
       
+      @MainActor
       func captureDidUpdate(_ capture: Capture.CaptureViewController) {
-         if !self.parent.region.equalTo(capture.recognizeRegion) {
-            self.parent.region = capture.recognizeRegion
-         }
-         
-         if self.parent.text != capture.recognizedText {
-            self.parent.text = capture.recognizedText
-         }
+         self.region.wrappedValue = capture.recognizeRegion
+         self.text.wrappedValue = capture.recognizedText
       }
       
+      @MainActor
       func captureDidFail(_ capture: Capture.CaptureViewController) {
-         Task {
-            await MainActor.run { [weak self] in
-               self?.parent.recognizable = capture.isRecognizable
-            }
-         }
+         self.recognizable.wrappedValue = capture.isRecognizable
       }
    }
    
    class CaptureViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
       var delegate: CaptureDelegate? = nil
       var isRecognizable = true
-      var isPaused = false
+      var isPaused = false {
+         didSet {
+            if self.isPaused != oldValue {
+               self.frameState.withLock { state in
+                  state.generation &+= 1
+               }
+            }
+         }
+      }
       var recognizedText = String()
       var recognizeRegion = CGRect.zero
       private let sessionQueue = DispatchQueue(label: String(describing: Capture.CaptureViewController.self))
-      private let captureSession = AVCaptureSession()
+      private let captureSession = Mutex(AVCaptureSession())
+      private let frameState = Mutex((isProcessing: false, generation: UInt64(0)))
       private var captureVideoPreviewLayer: AVCaptureVideoPreviewLayer? = nil
-      private var recognizeTextRequest: VNRecognizeTextRequest? = nil
+      private var recognitionLanguage: String? = nil
+      private var isCaptureSessionConfigured = false
+      private var isConfiguringCaptureSession = false
+      private var isViewVisible = false
       private var elapsedTime = 0.0
-      
+
       override func viewDidLoad() {
          super.viewDidLoad()
          
-         let recognizeTextRequest = VNRecognizeTextRequest { (request, error) in
-            if let results = request.results as? [VNRecognizedTextObservation] {
-               var maxConfidence: VNConfidence = 0.0
-               var text: String? = nil
-               
-               for recognizedTextObservation in results {
-                  if let first = recognizedTextObservation.topCandidates(1).first, first.confidence > maxConfidence {
-                     text = first.string
-                     maxConfidence = first.confidence
-                  }
-               }
-               
-               if let text, maxConfidence >= 0.5 {
-                  self.recognizedText = text.replacingOccurrences(of: "\n", with: String()).trimmingCharacters(in: .whitespaces)
-                  self.delegate?.captureDidUpdate(self)
-                  
-                  return
-               }
-            }
-            
-            self.recognizedText = String()
-            self.delegate?.captureDidUpdate(self)
-         }
+         let recognizeTextRequest = VNRecognizeTextRequest()
          
          recognizeTextRequest.preferBackgroundProcessing = true
          recognizeTextRequest.usesLanguageCorrection = true
@@ -8185,77 +8072,175 @@ struct Capture: UIViewControllerRepresentable {
          self.recognizeRegion = self.createRecognizeRegion(size: self.view.frame.size)
          
          if let preferredLanguage = Locale.preferredLanguages.first, let languageCode = Locale(identifier: preferredLanguage).language.languageCode, let languages = try? recognizeTextRequest.supportedRecognitionLanguages(), let language = languages.first(where: { Locale(identifier: $0).language.languageCode == languageCode }) {
-            recognizeTextRequest.recognitionLanguages = [language]
-            self.recognizeTextRequest = recognizeTextRequest
+            self.recognitionLanguage = language
          } else {
             self.isRecognizable = false
             self.delegate?.captureDidFail(self)
             
             return
          }
-         
+
          switch AVCaptureDevice.authorizationStatus(for: .video) {
          case .authorized:
-            break
+            self.prepareCaptureSession()
             
          case .notDetermined:
-            self.sessionQueue.suspend()
-            
-            AVCaptureDevice.requestAccess(for: .video, completionHandler: { granted in
-               if !granted {
-                  self.isRecognizable = false
-                  self.delegate?.captureDidFail(self)
+            AVCaptureDevice.requestAccess(for: .video, completionHandler: { [weak self] granted in
+               Task { @MainActor [weak self] in
+                  guard let self else {
+                     return
+                  }
+                  if granted {
+                     self.prepareCaptureSession()
+                  } else {
+                     self.isRecognizable = false
+                     self.delegate?.captureDidFail(self)
+                  }
                }
-               
-               self.sessionQueue.resume()
             })
             
          default:
             self.isRecognizable = false
             self.delegate?.captureDidFail(self)
          }
-         
-         if self.isRecognizable {
-            self.captureVideoPreviewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
+      }
+
+      private func prepareCaptureSession() {
+         guard self.isRecognizable && !self.isCaptureSessionConfigured && !self.isConfiguringCaptureSession else {
+            return
+         }
+
+         self.isConfiguringCaptureSession = true
+
+         if self.captureVideoPreviewLayer == nil {
+            self.captureVideoPreviewLayer = self.captureSession.withLock { session in
+               AVCaptureVideoPreviewLayer(session: session)
+            }
             self.captureVideoPreviewLayer!.videoGravity = AVLayerVideoGravity.resizeAspectFill
             self.captureVideoPreviewLayer!.frame = CGRect(origin: CGPoint.zero, size: self.view.frame.size)
             
             self.view.layer.addSublayer(self.captureVideoPreviewLayer!)
-            
-            if let captureDevice = AVCaptureDevice.default(for: AVMediaType.video), let input = try? AVCaptureDeviceInput(device: captureDevice), self.captureSession.canAddInput(input) {
-               
-               let output = AVCaptureVideoDataOutput()
-               
-               self.captureSession.beginConfiguration()
-               self.captureSession.addInput(input)
-               
-               output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-               output.setSampleBufferDelegate(self, queue: self.sessionQueue)
-               output.alwaysDiscardsLateVideoFrames = true
-               
-               if self.captureSession.canAddOutput(output) {
-                  self.captureSession.addOutput(output)
-                  
-                  if let connection = output.connection(with: .video), connection.isVideoStabilizationSupported {
-                     connection.preferredVideoStabilizationMode = .auto
-                  }
-               } else {
-                  self.captureSession.commitConfiguration()
-                  self.isRecognizable = false
-                  self.delegate?.captureDidFail(self)
-                  
+         }
+
+         self.sessionQueue.async { [weak self] in
+            guard let self else {
+               return
+            }
+
+            let configured = self.configureCaptureSession()
+
+            Task { @MainActor [weak self] in
+               guard let self else {
                   return
                }
-               
-               if self.captureSession.canSetSessionPreset(.photo) {
-                  self.captureSession.sessionPreset = .photo
+
+               self.isConfiguringCaptureSession = false
+
+               if configured {
+                  self.isCaptureSessionConfigured = true
+
+                  if self.isViewVisible {
+                     self.startCaptureSession()
+                  }
+               } else {
+                  self.isCaptureSessionConfigured = false
+                  self.isRecognizable = false
+                  self.delegate?.captureDidFail(self)
                }
-               
-               self.captureSession.commitConfiguration()
-            } else {
-               self.isRecognizable = false
-               self.delegate?.captureDidFail(self)
             }
+         }
+      }
+
+      private func startCaptureSession() {
+         guard self.isRecognizable && self.isCaptureSessionConfigured && self.isViewVisible else {
+            return
+         }
+
+         self.sessionQueue.async { [weak self] in
+            guard let self else {
+               return
+            }
+
+            self.captureSession.withLock { session in
+               if !session.isRunning {
+                  session.startRunning()
+               }
+            }
+
+            Task {
+               await MainActor.run { [weak self] in
+                  if let captureVideoPreviewLayer = self?.captureVideoPreviewLayer {
+                     switch UIDevice.current.orientation {
+                     case UIDeviceOrientation.portraitUpsideDown:
+                        captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+                     case UIDeviceOrientation.landscapeLeft:
+                        captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+                     case UIDeviceOrientation.landscapeRight:
+                        captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+                     default:
+                        captureVideoPreviewLayer.connection?.videoRotationAngle = 90
+                     }
+                  }
+               }
+            }
+         }
+      }
+
+      private func stopCaptureSession() {
+         guard self.isCaptureSessionConfigured else {
+            return
+         }
+
+         self.sessionQueue.async { [weak self] in
+            self?.captureSession.withLock { session in
+               if session.isRunning {
+                  session.stopRunning()
+               }
+            }
+         }
+      }
+
+      nonisolated private func configureCaptureSession() -> Bool {
+         return self.captureSession.withLock { session in
+            guard let captureDevice = AVCaptureDevice.default(for: .video), let input = try? AVCaptureDeviceInput(device: captureDevice) else {
+               return false
+            }
+
+            let output = AVCaptureVideoDataOutput()
+
+            output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+            output.setSampleBufferDelegate(self, queue: self.sessionQueue)
+            output.alwaysDiscardsLateVideoFrames = true
+
+            guard session.canAddInput(input) else {
+               return false
+            }
+
+            session.beginConfiguration()
+            
+            defer {
+               session.commitConfiguration()
+            }
+
+            session.addInput(input)
+
+            guard session.canAddOutput(output) else {
+               session.removeInput(input)
+
+               return false
+            }
+
+            session.addOutput(output)
+
+            if let connection = output.connection(with: .video), connection.isVideoStabilizationSupported {
+               connection.preferredVideoStabilizationMode = .auto
+            }
+
+            if session.canSetSessionPreset(.photo) {
+               session.sessionPreset = .photo
+            }
+
+            return true
          }
       }
       
@@ -8269,6 +8254,10 @@ struct Capture: UIViewControllerRepresentable {
       }
       
       override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+         self.frameState.withLock { state in
+            state.generation &+= 1
+         }
+
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
             captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: size)
             
@@ -8291,64 +8280,117 @@ struct Capture: UIViewControllerRepresentable {
       override func viewWillAppear(_ animated: Bool) {
          super.viewWillAppear(animated)
          
-         if self.isRecognizable {
-            self.sessionQueue.async {
-               self.captureSession.startRunning()
-               
-               Task {
-                  await MainActor.run { [weak self] in
-                     if let captureVideoPreviewLayer = self?.captureVideoPreviewLayer {
-                        switch UIDevice.current.orientation {
-                        case UIDeviceOrientation.portraitUpsideDown:
-                           captureVideoPreviewLayer.connection?.videoRotationAngle = 270
-                        case UIDeviceOrientation.landscapeLeft:
-                           captureVideoPreviewLayer.connection?.videoRotationAngle = 0
-                        case UIDeviceOrientation.landscapeRight:
-                           captureVideoPreviewLayer.connection?.videoRotationAngle = 180
-                        default:
-                           captureVideoPreviewLayer.connection?.videoRotationAngle = 90
-                        }
-                     }
-                  }
-               }
-            }
+         self.frameState.withLock { state in
+            state.generation &+= 1
          }
+         self.isViewVisible = true
+         self.startCaptureSession()
       }
       
       override func viewWillDisappear(_ animated: Bool) {
-         if self.isRecognizable {
-            self.sessionQueue.async {
-               self.captureSession.stopRunning()
-            }
+         self.isViewVisible = false
+         self.frameState.withLock { state in
+            state.generation &+= 1
          }
+         self.stopCaptureSession()
          
          super.viewWillDisappear(animated)
       }
       
-      func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-         if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-            let image = CIImage(cvImageBuffer: pixelBuffer)
-            
-            Task {
-               let currentMediaTime = CACurrentMediaTime()
-               
-               if !self.isPaused && currentMediaTime - self.elapsedTime >= 1.0, let window = self.view.window, let windowScene = window.windowScene, let recognizeTextRequest = self.recognizeTextRequest {
-                  let outputWidth = Double(CVPixelBufferGetWidth(pixelBuffer)) / windowScene.screen.scale
-                  let outputHeight = Double(CVPixelBufferGetHeight(pixelBuffer)) / windowScene.screen.scale
-                  let scale = max(self.view.frame.width / outputWidth, self.view.frame.height / outputHeight)
-                  let width = outputWidth * scale
-                  let height = outputHeight * scale
-                  let offsetX = (width - self.view.frame.width) / 2.0
-                  let offsetY = (height - self.view.frame.height) / 2.0
-                  
-                  recognizeTextRequest.regionOfInterest = CGRect(origin: CGPoint(x: (offsetX + self.recognizeRegion.origin.x) / width, y: (height - offsetY - self.recognizeRegion.origin.y - self.recognizeRegion.height) / height), size: CGSize(width: self.recognizeRegion.width / width, height: self.recognizeRegion.height / height))
-                  
-                  self.elapsedTime = currentMediaTime
-                  
-                  await Task.detached {
-                     try? VNImageRequestHandler(ciImage: image, orientation: CGImagePropertyOrientation.up, options: [:]).perform([recognizeTextRequest])
-                  }.value
+      nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+            return
+         }
+
+         let generation = self.frameState.withLock { state -> UInt64? in
+            guard !state.isProcessing else {
+               return nil
+            }
+
+            state.isProcessing = true
+
+            return state.generation
+         }
+
+         guard let generation else {
+            return
+         }
+
+         let image = CIImage(cvImageBuffer: pixelBuffer)
+         let pixelWidth = CVPixelBufferGetWidth(pixelBuffer)
+         let pixelHeight = CVPixelBufferGetHeight(pixelBuffer)
+
+         Task { @MainActor [weak self] in
+            guard let self else {
+               return
+            }
+
+            defer {
+               self.frameState.withLock { state in
+                  state.isProcessing = false
                }
+            }
+
+            let isCurrent = self.frameState.withLock { state in
+               state.generation == generation
+            }
+
+            guard isCurrent else {
+               return
+            }
+
+            let currentMediaTime = CACurrentMediaTime()
+
+            if self.isViewVisible && !self.isPaused && currentMediaTime - self.elapsedTime >= 1.0, let window = self.view.window, let windowScene = window.windowScene, let recognitionLanguage = self.recognitionLanguage {
+               let outputWidth = Double(pixelWidth) / windowScene.screen.scale
+               let outputHeight = Double(pixelHeight) / windowScene.screen.scale
+               let scale = max(self.view.frame.width / outputWidth, self.view.frame.height / outputHeight)
+               let width = outputWidth * scale
+               let height = outputHeight * scale
+               let offsetX = (width - self.view.frame.width) / 2.0
+               let offsetY = (height - self.view.frame.height) / 2.0
+               let recognizeRegion = CGRect(origin: CGPoint(x: (offsetX + self.recognizeRegion.origin.x) / width, y: (height - offsetY - self.recognizeRegion.origin.y - self.recognizeRegion.height) / height), size: CGSize(width: self.recognizeRegion.width / width, height: self.recognizeRegion.height / height))
+
+               self.elapsedTime = currentMediaTime
+
+               let recognizedText = await Task.detached { @Sendable [image, recognitionLanguage, recognizeRegion] in
+                  let recognizeTextRequest = VNRecognizeTextRequest()
+
+                  recognizeTextRequest.preferBackgroundProcessing = true
+                  recognizeTextRequest.usesLanguageCorrection = true
+                  recognizeTextRequest.recognitionLevel = .accurate
+                  recognizeTextRequest.recognitionLanguages = [recognitionLanguage]
+                  recognizeTextRequest.regionOfInterest = recognizeRegion
+
+                  try? VNImageRequestHandler(ciImage: image, orientation: CGImagePropertyOrientation.up, options: [:]).perform([recognizeTextRequest])
+
+                  var maxConfidence: VNConfidence = 0.0
+                  var text: String? = nil
+
+                  for observation in recognizeTextRequest.results ?? [] {
+                     if let first = observation.topCandidates(1).first, first.confidence > maxConfidence {
+                        text = first.string
+                        maxConfidence = first.confidence
+                     }
+                  }
+
+                  guard let text, maxConfidence >= 0.5 else {
+                     return String()
+                  }
+
+                  return text.replacingOccurrences(of: "\n", with: String()).trimmingCharacters(in: .whitespaces)
+               }.value
+
+               let isCurrent = self.frameState.withLock { state in
+                  state.generation == generation
+               }
+
+               guard isCurrent && self.isViewVisible && !self.isPaused else {
+                  return
+               }
+
+               self.recognizedText = recognizedText
+               self.delegate?.captureDidUpdate(self)
             }
          }
       }
@@ -9924,7 +9966,7 @@ struct Settings: View {
 
 struct AskIntent: AppIntent {
    static let title: LocalizedStringResource = "Ask"
-   static var openAppWhenRun: Bool = false
+   static let supportedModes: IntentModes = .background
    
    @Parameter(title: "Prompt")
    var prompt: String
@@ -9968,21 +10010,7 @@ struct AskIntent: AppIntent {
                   parts.append(["type": "text", "text": self.prompt])
                }
                
-               content = await self.generate(messages: [["role": "system", "content": await Task.detached {
-                  return self.replacePlaceholders(text: prompt, resolver: { format in
-                     
-                     if let match = format.firstMatch(of: /y{2,4}|M{1,4}|d{1,2}|h{1,2}|H{1,2}|m{1,2}|s{1,2}/), !match.output.isEmpty {
-                        let dateFormatter = DateFormatter()
-                        
-                        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-                        dateFormatter.dateFormat = format
-                        
-                        return dateFormatter.string(from: Date())
-                     }
-                     
-                     return nil
-                  })
-               }.value], ["role": "user", "content": parts]], temperature: AppStorage(wrappedValue: 1.0, "temperature").wrappedValue)
+               content = await self.generate(messages: [["role": "system", "content": prompt], ["role": "user", "content": parts]], temperature: AppStorage(wrappedValue: 1.0, "temperature").wrappedValue)
             }
             
             break
@@ -10009,36 +10037,6 @@ struct AskIntent: AppIntent {
       }
       
       return nil
-   }
-   
-   private nonisolated func replacePlaceholders(text: String, resolver: (String) -> String?) -> String {
-      var input = String(text)
-      var output = String()
-      
-      repeat {
-         if let match = input.firstMatch(of: /({{1,2})([^{}\r\n]+)(}{1,2})/), let replacement = resolver(String(match.output.2)) {
-            output.append(String(input[input.startIndex..<match.range.lowerBound]))
-            
-            if match.output.1.count == 2 {
-               if match.output.3.count == 2 {
-                  output.append("{\(match.output.2)}")
-               } else {
-                  output.append("{\(replacement)")
-               }
-            } else if match.output.3.count == 2 {
-               output.append("\(replacement)}")
-            } else {
-               output.append(replacement)
-            }
-            
-            input = String(input[match.range.upperBound..<input.endIndex])
-         } else {
-            output.append(input)
-            input.removeAll()
-         }
-      } while !input.isEmpty
-      
-      return output
    }
    
    private nonisolated func resize(image: CGImage, maximum: Double = 768) -> CGImage? {
@@ -10100,7 +10098,7 @@ struct AskIntent: AppIntent {
 
 struct LearnIntent: AppIntent {
    static let title: LocalizedStringResource = "Learn"
-   static var openAppWhenRun: Bool = true
+   static let supportedModes: IntentModes = .foreground(.dynamic)
    
    @Parameter(title: "Word")
    var word: String?
@@ -10119,7 +10117,7 @@ struct LearnIntent: AppIntent {
 
 struct TalkIntent: AppIntent {
    static let title: LocalizedStringResource = "Talk"
-   static var openAppWhenRun: Bool = true
+   static let supportedModes: IntentModes = .foreground(.dynamic)
    
    @Parameter(title: "Prompt")
    var prompt: String
