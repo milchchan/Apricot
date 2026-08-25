@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import CryptoKit
 
+@MainActor
 final public class Script: NSObject, ObservableObject {
     public static let shared = Script()
     @Published public var words = [Word]()
@@ -135,7 +136,7 @@ final public class Script: NSObject, ObservableObject {
                         let scores = self.computeBM25(documents: documents)
                         let yesterday = Date(timeIntervalSinceNow: -60 * 60 * 24)
                         var recents = [([String: Double], Date)]()
-                        
+
                         for i in 0..<documents.count {
                             if timestamps[i] > yesterday {
                                 var temp = [String: Double]()
@@ -225,7 +226,7 @@ final public class Script: NSObject, ObservableObject {
         }
     }
     
-    public static func resolve(directory: String) -> [String] {
+    public nonisolated static func resolve(directory: String) -> [String] {
         var paths = [String: [(String, String?)]]()
         var languages = [String?]()
         let parser = Parser()
@@ -280,7 +281,7 @@ final public class Script: NSObject, ObservableObject {
                 if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?)$/) {
                     let key = String(match.output.1)
                     var code = String(match.output.2)
-                    
+
                     for character in parser.parse(path: path).0 {
                         if let language = character.language {
                             code = language
@@ -329,10 +330,8 @@ final public class Script: NSObject, ObservableObject {
     
     public func update() async -> Bool {
         let url = URL(string: "https://milchchan.com/api/words")!
-        var json: [Any] = []
-        
-        json.append(contentsOf: await Task.detached {
-            var json: [Any] = []
+        var words = await Task.detached {
+            var words = [(id: Int, name: String, language: String?, date: Date)]()
             
             if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
                 let hash = SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined()
@@ -348,7 +347,34 @@ final public class Script: NSObject, ObservableObject {
                                 }
                                 
                                 if let data = try? file.readToEnd(), let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [Any] {
-                                    json.append(contentsOf: jsonRoot)
+                                    for obj in jsonRoot {
+                                        if let wordObject = obj as? [String: Any?] {
+                                            var id: Int? = nil
+                                            var name: String? = nil
+                                            var language: String? = nil
+                                            var date: Date? = nil
+                                            
+                                            if let value = wordObject["id"] as? Int {
+                                                id = value
+                                            }
+                                            
+                                            if let value = wordObject["name"] as? String {
+                                                name = value
+                                            }
+                                            
+                                            if let value = wordObject["language"] as? String {
+                                                language = value
+                                            }
+                                            
+                                            if let value = wordObject["timestamp"] as? Double {
+                                                date = Date(timeIntervalSince1970: value)
+                                            }
+                                            
+                                            if let id, let name, let date {
+                                                words.append((id: id, name: name, language: language, date: date))
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             
@@ -358,12 +384,12 @@ final public class Script: NSObject, ObservableObject {
                 }
             }
             
-            return json
-        }.value)
+            return words
+        }.value
         
         if let (data, response) = try? await URLSession.shared.data(for: URLRequest(url: url)), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json" {
-            json.append(contentsOf: await Task.detached {
-                var json: [Any] = []
+            words.append(contentsOf: await Task.detached {
+                var words = [(id: Int, name: String, language: String?, date: Date)]()
                 
                 if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
                     let path = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath).path(percentEncoded: false)
@@ -383,70 +409,73 @@ final public class Script: NSObject, ObservableObject {
                 }
                 
                 if let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [Any] {
-                    json.append(contentsOf: jsonRoot)
+                    for obj in jsonRoot {
+                        if let wordObject = obj as? [String: Any?] {
+                            var id: Int? = nil
+                            var name: String? = nil
+                            var language: String? = nil
+                            var date: Date? = nil
+                            
+                            if let value = wordObject["id"] as? Int {
+                                id = value
+                            }
+                            
+                            if let value = wordObject["name"] as? String {
+                                name = value
+                            }
+                            
+                            if let value = wordObject["language"] as? String {
+                                language = value
+                            }
+                            
+                            if let value = wordObject["timestamp"] as? Double {
+                                date = Date(timeIntervalSince1970: value)
+                            }
+                            
+                            if let id, let name, let date {
+                                words.append((id: id, name: name, language: language, date: date))
+                            }
+                        }
+                    }
                 }
                 
-                return json
+                return words
             }.value)
         }
         
-        let tempJson = json
-        let data = await Task.detached {
+        let tempWords = words
+        let tempScores = self.scores
+        let data = await Task.detached { @Sendable [tempWords, tempScores] in
             var isUpdated = false
-            var words = [(id: Int, name: String, language: String?, date: Date)]()
+            var latest = Date.distantPast
+            var cache = [Int: (name: String, language: String?, date: Date)]()
             let locale = Locale(identifier: "en_US_POSIX")
             var documents = [[String]]()
             var timestamps = [Date]()
             var data = [String: (String, Double, [String]?, Date)]()
             
-            for obj in tempJson {
-                if let wordObject = obj as? [String: Any?] {
-                    var id: Int? = nil
-                    var name: String? = nil
-                    var language: String? = nil
-                    var date: Date? = nil
-                    
-                    if let value = wordObject["id"] as? Int {
-                        id = value
-                    }
-                    
-                    if let value = wordObject["name"] as? String {
-                        name = value
-                    }
-                    
-                    if let value = wordObject["language"] as? String {
-                        language = value
-                    }
-                    
-                    if let value = wordObject["timestamp"] as? Double {
-                        date = Date(timeIntervalSince1970: value)
-                    }
-                    
-                    if let id, let name, let date {
-                        var latest = Date.distantPast
-                        
-                        if !words.contains(where: { $0.id == id }) {
-                            words.append((id: id, name: name, language: language, date: date))
-                        }
-                        
-                        for value in Script.shared.scores.values {
-                            if value.3 > latest {
-                                latest = value.3
-                            }
-                        }
-                        
-                        for word in words {
-                            if word.date > latest {
-                                isUpdated = true
-                                
-                                break
-                            }
-                        }
-                    }
+            for value in tempScores.values {
+                if value.3 > latest {
+                    latest = value.3
                 }
             }
             
-            for (_, value) in words.reduce(into: [Int64: (words: [String], latest: Date)](), { dictionary, word in
+            for word in tempWords {
+                if let value = cache[word.id] {
+                    if value.date < word.date {
+                        cache[word.id] = (word.name, word.language, word.date)
+                    }
+                } else {
+                    cache[word.id] = (word.name, word.language, word.date)
+                }
+                
+                
+                if word.date > latest {
+                    isUpdated = true
+                }
+            }
+            
+            for (_, value) in cache.values.reduce(into: [Int64: (words: [String], latest: Date)](), { dictionary, word in
                 let hour = Int64(floor(word.date.timeIntervalSince1970 / 3600.0))
 
                 if var value = dictionary[hour] {
@@ -515,7 +544,7 @@ final public class Script: NSObject, ObservableObject {
                             var isNeutral = false
                             var latest = Date.distantPast
                             
-                            for word in words {
+                            for word in tempWords {
                                 if word.name.folding(options: [.caseInsensitive], locale: locale) == key {
                                     if let (count, date) = names[word.name] {
                                         if word.date > date {
@@ -558,19 +587,13 @@ final public class Script: NSObject, ObservableObject {
             return (isUpdated, data)
         }.value
         
-        await MainActor.run { [weak self] in
-            guard let scores = self?.scores else {
-                return
-            }
+        for (key, value) in data.1 {
+            self.scores[key] = value
+        }
             
-            for (key, value) in data.1 {
-                self?.scores[key] = value
-            }
-            
-            for (key, _) in scores {
-                if data.1[key] == nil {
-                    self?.scores.removeValue(forKey: key)
-                }
+        for (key, _) in scores {
+            if data.1[key] == nil {
+                self.scores.removeValue(forKey: key)
             }
         }
         
@@ -585,7 +608,7 @@ final public class Script: NSObject, ObservableObject {
         await self.runtime.run(characters: self.characters, name: name, sequences: sequences, state: state, scores: self.scores, words: words, temperature: temperature, completion: completion)
     }
     
-    private func computeBM25(documents: [[String]], k1: Double = 1.2, b: Double = 0.75) -> [[String: Double]] {
+    private nonisolated func computeBM25(documents: [[String]], k1: Double = 1.2, b: Double = 0.75) -> [[String: Double]] {
         // Okapi BM25
         // Stephen E. Robertson, Steve Walker, Susan Jones, Micheline Hancock-Beaulieu, and Mike Gatford. Okapi at TREC-3. In Proceedings of the Third Text REtrieval Conference (TREC 1994). Gaithersburg, USA, November 1994.
         var bags = [[String: Int]]()
@@ -663,12 +686,13 @@ final public class Script: NSObject, ObservableObject {
         return bm25
     }
     
-    public class Runtime: NSObject {
-        public var states = [String: String]()
-        public var queue = [(String, Sequence)]()
+    public final class Runtime: Sendable {
+        @MainActor public var states = [String: String]()
+        @MainActor public var queue = [(String, Sequence)]()
         private let innerSemaphore = Semaphore(value: 1)
         private let outerSemaphore = Semaphore(value: 1)
         
+        @MainActor
         public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, completion: (([Sequence]) -> [Sequence])? = nil) {
             var preparedSequences = self.prepare(characters: characters, name: name, sequences: sequences, state: state, transform: { (s) -> [Sequence] in
                 return s.isEmpty ? s : [s[Int.random(in: 0..<s.count)]]
@@ -678,12 +702,13 @@ final public class Script: NSObject, ObservableObject {
                 preparedSequences = completion(preparedSequences)
             }
             
-            for sequence in preparedSequences {
-                sequence.append(nil)
+            for var sequence in preparedSequences {
+                sequence.append(.completion)
                 self.queue.append((name, sequence))
             }
         }
         
+        @MainActor
         public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (String, Double, [String]?, Date)], words: [Word], temperature: Double = 1.0, completion: (([Sequence]) -> [Sequence])? = nil) async {
             var preparedSequences = await self.prepareAsync(characters: characters, name: name, sequences: sequences, state: state, scores: scores, words: words, temperature: temperature)
             
@@ -691,14 +716,15 @@ final public class Script: NSObject, ObservableObject {
                 preparedSequences = completion(preparedSequences)
             }
             
-            for sequence in preparedSequences {
-                sequence.append(nil)
+            for var sequence in preparedSequences {
+                sequence.append(.completion)
                 self.queue.append((name, sequence))
             }
         }
         
+        @MainActor
         private func prepare(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, transform: (([Sequence]) -> [Sequence])? = nil) -> [Sequence] {
-            var executionQueue: [(sequences: [Sequence], state: String?, next: (sequence: Sequence, objects: [Any?], sequences: [Sequence])?)] = [(sequences: sequences, state: state, next: nil)]
+            var executionQueue: [(sequences: [Sequence], state: String?, next: (sequence: Sequence, steps: [Sequence.Step], sequences: [Sequence])?)] = [(sequences: sequences, state: state, next: nil)]
             var preparedSequences = [Sequence]()
             
             repeat {
@@ -742,20 +768,20 @@ final public class Script: NSObject, ObservableObject {
                     for i in 0..<selectedSequences.count {
                         let selectedSequence = selectedSequences[i]
                         var isAborted = false
-                        let flattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
+                        var flattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
                         
                         if let name = selectedSequence.name, let currentState {
                             self.states[name] = currentState
                         }
                         
                         for j in 0..<selectedSequence.count {
-                            let obj = selectedSequence[j]
+                            let step = selectedSequence[j]
                             
-                            if let nestedSequence = obj as? Sequence {
+                            if case .sequence(let nestedSequence) = step {
                                 if nestedSequence.isEmpty {
                                     var callableSequences = [Sequence]()
                                     var nextSequence: Sequence
-                                    var nextObjects: [Any?]
+                                    var nextSteps: [Sequence.Step]
                                     var nextSequences: [Sequence]
                                     
                                     for character in characters {
@@ -775,12 +801,12 @@ final public class Script: NSObject, ObservableObject {
                                                             var tempStack = [Sequence]()
                                                             
                                                             for sequence in sequenceStack.last! {
-                                                                if let s = sequence as? Sequence {
-                                                                    if !s.isEmpty && !stack.contains(where: { $0 === s }) {
+                                                                if case .sequence(let s) = sequence {
+                                                                    if !s.isEmpty && !stack.contains(where: { $0.id == s.id }) {
                                                                         tempStack.append(s)
                                                                     }
                                                                     
-                                                                    if s === poppedSequence {
+                                                                    if s.id == poppedSequence.id {
                                                                         break
                                                                     }
                                                                 }
@@ -791,7 +817,7 @@ final public class Script: NSObject, ObservableObject {
                                                             }
                                                         }
                                                         
-                                                        if !poppedSequence.isEmpty && !stack.contains(where: { $0 === poppedSequence }) {
+                                                        if !poppedSequence.isEmpty && !stack.contains(where: { $0.id == poppedSequence.id }) {
                                                             stack.append(poppedSequence)
                                                         }
                                                     } while !sequenceStack.isEmpty
@@ -804,36 +830,36 @@ final public class Script: NSObject, ObservableObject {
                                         }
                                     }
                                     
-                                    if let (sequence, objects, sequences) = next {
+                                    if let (sequence, steps, sequences) = next {
                                         nextSequence = sequence
                                         
-                                        for o in flattenedSequence {
-                                            nextSequence.append(o)
+                                        for step in flattenedSequence {
+                                            nextSequence.append(step)
                                         }
                                         
-                                        nextObjects = objects
+                                        nextSteps = steps
                                         nextSequences = sequences
                                     } else {
                                         nextSequence = flattenedSequence
-                                        nextObjects = []
+                                        nextSteps = []
                                         nextSequences = []
                                     }
                                     
                                     for k in j + 1..<selectedSequence.count {
-                                        nextObjects.append(selectedSequence[k])
+                                        nextSteps.append(selectedSequence[k])
                                     }
                                     
                                     for k in i + 1..<selectedSequences.count {
                                         nextSequences.append(selectedSequences[k])
                                     }
                                     
-                                    executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: nextSequence, objects: nextObjects, sequences: nextSequences)))
+                                    executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: nextSequence, steps: nextSteps, sequences: nextSequences)))
                                     isAborted = true
                                     
                                     break
                                 }
                             } else {
-                                flattenedSequence.append(obj)
+                                flattenedSequence.append(step)
                             }
                         }
                         
@@ -850,22 +876,25 @@ final public class Script: NSObject, ObservableObject {
                     }
                 }
                 
-                if let (flattenedSequence, objects, sequences) = next {
+                if let next {
+                    var flattenedSequence = next.sequence
+                    let steps = next.steps
+                    let sequences = next.sequences
                     var isAborted = false
                     
                     for s in tempPreparedSequences {
-                        for o in s {
-                            flattenedSequence.append(o)
+                        for step in s {
+                            flattenedSequence.append(step)
                         }
                     }
                     
-                    for i in 0..<objects.count {
-                        let obj = objects[i]
+                    for i in 0..<steps.count {
+                        let step = steps[i]
                         
-                        if let nestedSequence = obj as? Sequence {
+                        if case .sequence(let nestedSequence) = step {
                             if nestedSequence.isEmpty {
                                 var callableSequences = [Sequence]()
-                                var nextObjects = [Any?]()
+                                var nextSteps = [Sequence.Step]()
                                 
                                 for character in characters {
                                     if name == character.name {
@@ -884,12 +913,12 @@ final public class Script: NSObject, ObservableObject {
                                                         var tempStack = [Sequence]()
                                                         
                                                         for sequence in sequenceStack.last! {
-                                                            if let s = sequence as? Sequence {
-                                                                if !s.isEmpty && !stack.contains(where: { $0 === s }) {
+                                                            if case .sequence(let s) = sequence {
+                                                                if !s.isEmpty && !stack.contains(where: { $0.id == s.id }) {
                                                                     tempStack.append(s)
                                                                 }
                                                                 
-                                                                if s === poppedSequence {
+                                                                if s.id == poppedSequence.id {
                                                                     break
                                                                 }
                                                             }
@@ -900,7 +929,7 @@ final public class Script: NSObject, ObservableObject {
                                                         }
                                                     }
                                                     
-                                                    if !poppedSequence.isEmpty && !stack.contains(where: { $0 === poppedSequence }) {
+                                                    if !poppedSequence.isEmpty && !stack.contains(where: { $0.id == poppedSequence.id }) {
                                                         stack.append(poppedSequence)
                                                     }
                                                 } while !sequenceStack.isEmpty
@@ -913,17 +942,17 @@ final public class Script: NSObject, ObservableObject {
                                     }
                                 }
                                 
-                                for j in i + 1..<objects.count {
-                                    nextObjects.append(objects[j])
+                                for j in i + 1..<steps.count {
+                                    nextSteps.append(steps[j])
                                 }
                                 
-                                executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: flattenedSequence, objects: nextObjects, sequences: sequences)))
+                                executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: flattenedSequence, steps: nextSteps, sequences: sequences)))
                                 isAborted = true
                                 
                                 break
                             }
                         } else {
-                            flattenedSequence.append(obj)
+                            flattenedSequence.append(step)
                         }
                     }
                     
@@ -937,19 +966,19 @@ final public class Script: NSObject, ObservableObject {
                     
                     for i in 0..<sequences.count {
                         let selectedSequence = sequences[i]
-                        let tempFlattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
+                        var tempFlattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
                         
                         if let name = selectedSequence.name, let s = currentState {
                             self.states[name] = s
                         }
                         
                         for j in 0..<selectedSequence.count {
-                            let obj = selectedSequence[j]
+                            let step = selectedSequence[j]
                             
-                            if let nestedSequence = obj as? Sequence {
+                            if case .sequence(let nestedSequence) = step {
                                 if nestedSequence.isEmpty {
                                     var callableSequences = [Sequence]()
-                                    var nextObjects = [Any?]()
+                                    var nextSteps = [Sequence.Step]()
                                     var nextSequences = [Sequence]()
                                     
                                     for character in characters {
@@ -969,12 +998,12 @@ final public class Script: NSObject, ObservableObject {
                                                             var tempStack = [Sequence]()
                                                             
                                                             for sequence in sequenceStack.last! {
-                                                                if let s = sequence as? Sequence {
-                                                                    if !s.isEmpty && !stack.contains(where: { $0 === s }) {
+                                                                if case .sequence(let s) = sequence {
+                                                                    if !s.isEmpty && !stack.contains(where: { $0.id == s.id }) {
                                                                         tempStack.append(s)
                                                                     }
                                                                     
-                                                                    if s === poppedSequence {
+                                                                    if s.id == poppedSequence.id {
                                                                         break
                                                                     }
                                                                 }
@@ -985,7 +1014,7 @@ final public class Script: NSObject, ObservableObject {
                                                             }
                                                         }
                                                         
-                                                        if !poppedSequence.isEmpty && !stack.contains(where: { $0 === poppedSequence }) {
+                                                        if !poppedSequence.isEmpty && !stack.contains(where: { $0.id == poppedSequence.id }) {
                                                             stack.append(poppedSequence)
                                                         }
                                                     } while !sequenceStack.isEmpty
@@ -999,20 +1028,20 @@ final public class Script: NSObject, ObservableObject {
                                     }
                                     
                                     for k in j + 1..<selectedSequence.count {
-                                        nextObjects.append(selectedSequence[k])
+                                        nextSteps.append(selectedSequence[k])
                                     }
                                     
                                     for k in i + 1..<sequences.count {
                                         nextSequences.append(sequences[k])
                                     }
                                     
-                                    executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: tempFlattenedSequence, objects: nextObjects, sequences: nextSequences)))
+                                    executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: tempFlattenedSequence, steps: nextSteps, sequences: nextSequences)))
                                     isAborted = true
                                     
                                     break
                                 }
                             } else {
-                                tempFlattenedSequence.append(obj)
+                                tempFlattenedSequence.append(step)
                             }
                         }
                         
@@ -1035,9 +1064,8 @@ final public class Script: NSObject, ObservableObject {
         }
         
         private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, transform: (([Sequence]) -> [Sequence])? = nil) async -> [Sequence] {
-            return await Task.detached {
-                var executionQueue: [(sequences: [Sequence], state: String?, next: (sequence: Sequence, objects: [Any?], sequences: [Sequence])?)] = [(sequences: sequences, state: state, next: nil)]
-                var preparedSequences = [Sequence]()
+            var executionQueue: [(sequences: [Sequence], state: String?, next: (sequence: Sequence, steps: [Sequence.Step], sequences: [Sequence])?)] = [(sequences: sequences, state: state, next: nil)]
+            var preparedSequences = [Sequence]()
                 
                 await self.innerSemaphore.wait()
                 
@@ -1058,8 +1086,12 @@ final public class Script: NSObject, ObservableObject {
                                 } else if let regex = try? Regex(pattern), let match = currentState.firstMatch(of: regex), !match.output.isEmpty {
                                     selectedSequences.append(sequence)
                                 }
-                            } else if let name = sequence.name, let input = self.states[name], let regex = try? Regex(pattern), let match = input.firstMatch(of: regex), !match.output.isEmpty {
-                                selectedSequences.append(sequence)
+                            } else if let name = sequence.name {
+                                let input = await MainActor.run { self.states[name] }
+
+                                if let input, let regex = try? Regex(pattern), let match = input.firstMatch(of: regex), !match.output.isEmpty {
+                                    selectedSequences.append(sequence)
+                                }
                             }
                         }
                     }
@@ -1084,7 +1116,7 @@ final public class Script: NSObject, ObservableObject {
                         for i in 0..<selectedSequences.count {
                             let selectedSequence = selectedSequences[i]
                             var isAborted = false
-                            let flattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
+                            var flattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
                             
                             if let name = selectedSequence.name, let currentState {
                                 await MainActor.run { [weak self] in
@@ -1093,13 +1125,13 @@ final public class Script: NSObject, ObservableObject {
                             }
                             
                             for j in 0..<selectedSequence.count {
-                                let obj = selectedSequence[j]
+                                let step = selectedSequence[j]
                                 
-                                if let nestedSequence = obj as? Sequence {
+                                if case .sequence(let nestedSequence) = step {
                                     if nestedSequence.isEmpty {
                                         var callableSequences = [Sequence]()
                                         var nextSequence: Sequence
-                                        var nextObjects: [Any?]
+                                        var nextSteps: [Sequence.Step]
                                         var nextSequences: [Sequence]
                                         
                                         for character in characters {
@@ -1119,12 +1151,12 @@ final public class Script: NSObject, ObservableObject {
                                                                 var tempStack = [Sequence]()
                                                                 
                                                                 for sequence in sequenceStack.last! {
-                                                                    if let s = sequence as? Sequence {
-                                                                        if !s.isEmpty && !stack.contains(where: { $0 === s }) {
+                                                                    if case .sequence(let s) = sequence {
+                                                                        if !s.isEmpty && !stack.contains(where: { $0.id == s.id }) {
                                                                             tempStack.append(s)
                                                                         }
                                                                         
-                                                                        if s === poppedSequence {
+                                                                        if s.id == poppedSequence.id {
                                                                             break
                                                                         }
                                                                     }
@@ -1135,7 +1167,7 @@ final public class Script: NSObject, ObservableObject {
                                                                 }
                                                             }
                                                             
-                                                            if !poppedSequence.isEmpty && !stack.contains(where: { $0 === poppedSequence }) {
+                                                            if !poppedSequence.isEmpty && !stack.contains(where: { $0.id == poppedSequence.id }) {
                                                                 stack.append(poppedSequence)
                                                             }
                                                         } while !sequenceStack.isEmpty
@@ -1148,36 +1180,36 @@ final public class Script: NSObject, ObservableObject {
                                             }
                                         }
                                         
-                                        if let (sequence, objects, sequences) = next {
+                                        if let (sequence, steps, sequences) = next {
                                             nextSequence = sequence
                                             
                                             for o in flattenedSequence {
                                                 nextSequence.append(o)
                                             }
                                             
-                                            nextObjects = objects
+                                            nextSteps = steps
                                             nextSequences = sequences
                                         } else {
                                             nextSequence = flattenedSequence
-                                            nextObjects = []
+                                            nextSteps = []
                                             nextSequences = []
                                         }
                                         
                                         for k in j + 1..<selectedSequence.count {
-                                            nextObjects.append(selectedSequence[k])
+                                            nextSteps.append(selectedSequence[k])
                                         }
                                         
                                         for k in i + 1..<selectedSequences.count {
                                             nextSequences.append(selectedSequences[k])
                                         }
                                         
-                                        executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: nextSequence, objects: nextObjects, sequences: nextSequences)))
+                                        executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: nextSequence, steps: nextSteps, sequences: nextSequences)))
                                         isAborted = true
                                         
                                         break
                                     }
                                 } else {
-                                    flattenedSequence.append(obj)
+                                    flattenedSequence.append(step)
                                 }
                             }
                             
@@ -1194,7 +1226,10 @@ final public class Script: NSObject, ObservableObject {
                         }
                     }
                     
-                    if let (flattenedSequence, objects, sequences) = next {
+                    if let next {
+                        var flattenedSequence = next.sequence
+                        let steps = next.steps
+                        let sequences = next.sequences
                         var isAborted = false
                         
                         for s in tempPreparedSequences {
@@ -1203,13 +1238,13 @@ final public class Script: NSObject, ObservableObject {
                             }
                         }
                         
-                        for i in 0..<objects.count {
-                            let obj = objects[i]
+                        for i in 0..<steps.count {
+                            let step = steps[i]
                             
-                            if let nestedSequence = obj as? Sequence {
+                            if case .sequence(let nestedSequence) = step {
                                 if nestedSequence.isEmpty {
                                     var callableSequences = [Sequence]()
-                                    var nextObjects = [Any?]()
+                                    var nextSteps = [Sequence.Step]()
                                     
                                     for character in characters {
                                         if name == character.name {
@@ -1228,12 +1263,12 @@ final public class Script: NSObject, ObservableObject {
                                                             var tempStack = [Sequence]()
                                                             
                                                             for sequence in sequenceStack.last! {
-                                                                if let s = sequence as? Sequence {
-                                                                    if !s.isEmpty && !stack.contains(where: { $0 === s }) {
+                                                                if case .sequence(let s) = sequence {
+                                                                    if !s.isEmpty && !stack.contains(where: { $0.id == s.id }) {
                                                                         tempStack.append(s)
                                                                     }
                                                                     
-                                                                    if s === poppedSequence {
+                                                                    if s.id == poppedSequence.id {
                                                                         break
                                                                     }
                                                                 }
@@ -1244,7 +1279,7 @@ final public class Script: NSObject, ObservableObject {
                                                             }
                                                         }
                                                         
-                                                        if !poppedSequence.isEmpty && !stack.contains(where: { $0 === poppedSequence }) {
+                                                        if !poppedSequence.isEmpty && !stack.contains(where: { $0.id == poppedSequence.id }) {
                                                             stack.append(poppedSequence)
                                                         }
                                                     } while !sequenceStack.isEmpty
@@ -1257,17 +1292,17 @@ final public class Script: NSObject, ObservableObject {
                                         }
                                     }
                                     
-                                    for j in i + 1..<objects.count {
-                                        nextObjects.append(objects[j])
+                                    for j in i + 1..<steps.count {
+                                        nextSteps.append(steps[j])
                                     }
                                     
-                                    executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: flattenedSequence, objects: nextObjects, sequences: sequences)))
+                                    executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: flattenedSequence, steps: nextSteps, sequences: sequences)))
                                     isAborted = true
                                     
                                     break
                                 }
                             } else {
-                                flattenedSequence.append(obj)
+                                flattenedSequence.append(step)
                             }
                         }
                         
@@ -1281,7 +1316,7 @@ final public class Script: NSObject, ObservableObject {
                         
                         for i in 0..<sequences.count {
                             let selectedSequence = sequences[i]
-                            let tempFlattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
+                            var tempFlattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
                             
                             if let name = selectedSequence.name, let s = currentState {
                                 await MainActor.run { [weak self] in
@@ -1290,12 +1325,12 @@ final public class Script: NSObject, ObservableObject {
                             }
                             
                             for j in 0..<selectedSequence.count {
-                                let obj = selectedSequence[j]
+                                let step = selectedSequence[j]
                                 
-                                if let nestedSequence = obj as? Sequence {
+                                if case .sequence(let nestedSequence) = step {
                                     if nestedSequence.isEmpty {
                                         var callableSequences = [Sequence]()
-                                        var nextObjects = [Any?]()
+                                        var nextSteps = [Sequence.Step]()
                                         var nextSequences = [Sequence]()
                                         
                                         for character in characters {
@@ -1315,12 +1350,12 @@ final public class Script: NSObject, ObservableObject {
                                                                 var tempStack = [Sequence]()
                                                                 
                                                                 for sequence in sequenceStack.last! {
-                                                                    if let s = sequence as? Sequence {
-                                                                        if !s.isEmpty && !stack.contains(where: { $0 === s }) {
+                                                                    if case .sequence(let s) = sequence {
+                                                                        if !s.isEmpty && !stack.contains(where: { $0.id == s.id }) {
                                                                             tempStack.append(s)
                                                                         }
                                                                         
-                                                                        if s === poppedSequence {
+                                                                        if s.id == poppedSequence.id {
                                                                             break
                                                                         }
                                                                     }
@@ -1331,7 +1366,7 @@ final public class Script: NSObject, ObservableObject {
                                                                 }
                                                             }
                                                             
-                                                            if !poppedSequence.isEmpty && !stack.contains(where: { $0 === poppedSequence }) {
+                                                            if !poppedSequence.isEmpty && !stack.contains(where: { $0.id == poppedSequence.id }) {
                                                                 stack.append(poppedSequence)
                                                             }
                                                         } while !sequenceStack.isEmpty
@@ -1345,20 +1380,20 @@ final public class Script: NSObject, ObservableObject {
                                         }
                                         
                                         for k in j + 1..<selectedSequence.count {
-                                            nextObjects.append(selectedSequence[k])
+                                            nextSteps.append(selectedSequence[k])
                                         }
                                         
                                         for k in i + 1..<sequences.count {
                                             nextSequences.append(sequences[k])
                                         }
                                         
-                                        executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: tempFlattenedSequence, objects: nextObjects, sequences: nextSequences)))
+                                        executionQueue.append((sequences: callableSequences.filter { $0.name == nestedSequence.name }, state: nestedSequence.state, next: (sequence: tempFlattenedSequence, steps: nextSteps, sequences: nextSequences)))
                                         isAborted = true
                                         
                                         break
                                     }
                                 } else {
-                                    tempFlattenedSequence.append(obj)
+                                    tempFlattenedSequence.append(step)
                                 }
                             }
                             
@@ -1379,8 +1414,7 @@ final public class Script: NSObject, ObservableObject {
                 
                 await self.innerSemaphore.signal()
                 
-                return preparedSequences
-            }.value
+            return preparedSequences
         }
         
         private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (String, Double, [String]?, Date)], words: [Word], temperature: Double = 1.0, beamWidth: Int = 3) async -> [Sequence] {
@@ -1397,7 +1431,7 @@ final public class Script: NSObject, ObservableObject {
                     
                     await self.outerSemaphore.wait()
                     
-                    let states = Swift.Dictionary<String, String>(uniqueKeysWithValues: zip(self.states.keys, self.states.values))
+                    let states = await MainActor.run { self.states }
                     
                     preparedSequences.append(contentsOf: await self.prepareAsync(characters: characters, name: name, sequences: sequences, state: state, transform: { sourceSequences -> [Sequence] in
                         var targetSequences = [Sequence]()
@@ -1421,8 +1455,8 @@ final public class Script: NSObject, ObservableObject {
                                 var tempAttributeSet = Set<String>(attributeSet)
                                 var appendRequired = true
                                 
-                                for obj in sequence {
-                                    if let message = obj as? Message {
+                                for step in sequence {
+                                    if case .message(let message) = step {
                                         var input = String(message.content)
                                         
                                         repeat {
@@ -1490,8 +1524,8 @@ final public class Script: NSObject, ObservableObject {
                     }))
                     
                     if isAvailable && !words.isEmpty == preparedSequences.contains(where: { sequence in
-                        for obj in sequence {
-                            if let message = obj as? Message {
+                        for step in sequence {
+                            if case .message(let message) = step {
                                 if let match = message.content.firstMatch(of: /({{1,2})[^{}]+(}{1,2})/), match.output.1.count < 2 || match.output.2.count < 2 {
                                     return true
                                 }
@@ -1516,11 +1550,12 @@ final public class Script: NSObject, ObservableObject {
                         var tempAttributeSet = Set<String>()
                         var outputs = [([(text: String, attributes: [String]?)], [String: (text: String, attributes: [String])], Double)]()
                         
-                        for sequence in preparedSequences {
-                            var segments = [Any?]()
+                        for index in preparedSequences.indices {
+                            var sequence = preparedSequences[index]
+                            var steps = [Sequence.Step]()
                             
-                            for obj in sequence {
-                                if let message = obj as? Message, message.allSatisfy({ $0.attributes == nil }) {
+                            for step in sequence {
+                                if case .message(let message) = step, message.allSatisfy({ $0.attributes == nil }) {
                                     var input = String(message.content)
                                     var output = String()
                                     
@@ -1639,17 +1674,19 @@ final public class Script: NSObject, ObservableObject {
                                         replacementCache[key] = value
                                     }
                                     
-                                    segments.append(m)
+                                    steps.append(.message(m))
                                 } else {
-                                    segments.append(obj)
+                                    steps.append(step)
                                 }
                             }
                             
                             sequence.removeAll()
                             
-                            for obj in segments {
-                                sequence.append(obj)
+                            for step in steps {
+                                sequence.append(step)
                             }
+
+                            preparedSequences[index] = sequence
                         }
                         
                         await self.outerSemaphore.signal()
@@ -1699,10 +1736,10 @@ final public class Script: NSObject, ObservableObject {
                 
                 tracks.append((parent: parentIndex, next: nextSourceSequence))
                 
-                if nextSourceSequence !== targetSequence {
+                if nextSourceSequence.id != targetSequence.id {
                     for o in nextSourceSequence {
-                        if let sequence = o as? Sequence {
-                            if sequence === targetSequence {
+                        if case .sequence(let sequence) = o {
+                            if sequence.id == targetSequence.id {
                                 var nextIndex = index
                                 
                                 sequenceStack.insert(sequence, at: 0)
@@ -1814,7 +1851,7 @@ final public class Script: NSObject, ObservableObject {
                             
                             if !self.excludeSequences, let animations = jsonRoot["animations"] as? [[String: Any]] {
                                 for animation in animations {
-                                    let sequence = Sequence(name: animation["name"] as? String, state: animation["state"] as? String)
+                                    var sequence = Sequence(name: animation["name"] as? String, state: animation["state"] as? String)
                                     let repeats: UInt
                                     var caches = [String: (Int, String?, [Sprite])]()
                                     var animations = [Animation]()
@@ -1886,7 +1923,7 @@ final public class Script: NSObject, ObservableObject {
                                     }
                                     
                                     for (_, value) in caches {
-                                        let a = Animation(frames: value.2)
+                                        var a = Animation(frames: value.2)
                                         
                                         a.repeats = repeats
                                         a.z = value.0
@@ -1895,7 +1932,7 @@ final public class Script: NSObject, ObservableObject {
                                         animations.append(a)
                                     }
                                     
-                                    sequence.append(animations)
+                                    sequence.append(.animations(animations))
                                     sequences.append(sequence)
                                 }
                             }
@@ -1913,10 +1950,10 @@ final public class Script: NSObject, ObservableObject {
                 while !sequenceQueue.isEmpty {
                     let sequence = sequenceQueue.removeFirst()
                     
-                    for obj in sequence {
-                        if let s = obj as? Sequence {
+                    for step in sequence {
+                        if case .sequence(let s) = step {
                             sequenceQueue.append(s)
-                        } else if let animations = obj as? [Animation] {
+                        } else if case .animations(let animations) = step {
                             for animation in animations {
                                 if let type = animation.type {
                                     if var tuple = self.characters[i].types[type] {
@@ -2021,7 +2058,7 @@ final public class Script: NSObject, ObservableObject {
                 }
             } else if elementName == "sequence" {
                 if let name = attributeDict["name"], var workingStack = self.workingStack {
-                    let sequence = Sequence(name: name)
+                    var sequence = Sequence(name: name)
                     
                     if let state = attributeDict["state"] {
                         sequence.state = state
@@ -2056,7 +2093,7 @@ final public class Script: NSObject, ObservableObject {
                 }
             } else if elementName == "animation" || elementName == "motion" {
                 if var workingStack = self.workingStack {
-                    let animation = Animation()
+                    var animation = Animation()
                     var iterations: UInt = 1
                     
                     if let repeats = attributeDict["repeats"] {
@@ -2148,26 +2185,22 @@ final public class Script: NSObject, ObservableObject {
                                     var tempStack = [Any]()
                                     
                                     while !stack.isEmpty {
-                                        let o = stack.popLast()!
-                                        
-                                        if o is Animation || o is Message || o is Sound {
-                                            childSequence.append(o)
+                                        if let step = self.step(from: stack.popLast()!) {
+                                            childSequence.append(step)
                                         }
                                     }
                                     
                                     while !workingStack.isEmpty {
-                                        if let parentSequence = workingStack.last! as? Sequence {
+                                        if var parentSequence = workingStack.last! as? Sequence {
                                             workingStack.removeLast()
                                             
                                             while !tempStack.isEmpty {
-                                                let o = tempStack.popLast()!
-                                                
-                                                if o is Animation || o is Message || o is Sound {
-                                                    parentSequence.append(o)
+                                                if let step = self.step(from: tempStack.popLast()!) {
+                                                    parentSequence.append(step)
                                                 }
                                             }
                                             
-                                            parentSequence.append(self.format(sequence: &childSequence))
+                                            parentSequence.append(.sequence(self.format(sequence: &childSequence)))
                                             workingStack.append(parentSequence)
                                             isChildSequence = false
                                             
@@ -2251,7 +2284,9 @@ final public class Script: NSObject, ObservableObject {
                     var stack = [Any]()
                     
                     while !workingStack.isEmpty {
-                        if let (animation, iterations) = workingStack.last! as? (Animation, UInt) {
+                        if let tuple = workingStack.last! as? (Animation, UInt) {
+                            var animation = tuple.0
+                            let iterations = tuple.1
                             var sprites = [Sprite]()
                             
                             while !stack.isEmpty {
@@ -2351,36 +2386,47 @@ final public class Script: NSObject, ObservableObject {
         public func parserDidEndDocument(_ parser: XMLParser) {
             self.workingStack = nil
         }
+
+        private func step(from value: Any) -> Sequence.Step? {
+            switch value {
+            case let animation as Animation:
+                return .animations([animation])
+            case let message as Message:
+                return .message(message)
+            case let sound as Sound:
+                return .sound(sound)
+            default:
+                return nil
+            }
+        }
         
         private func format(sequence: inout Sequence) -> Sequence {
-            var queue = [Any?]()
-            var array = [Any?]()
-            
-            for obj in sequence {
-                queue.append(obj)
-            }
+            var queue = Array(sequence)
+            var steps = [Sequence.Step]()
             
             while !queue.isEmpty {
-                let obj = queue.removeFirst()
+                let step = queue.removeFirst()
                 
-                if let animation = obj as? Animation {
+                if case .animations(let firstAnimations) = step {
                     var cachedAnimations = [Int: [Animation]]()
                     var animations1 = [Animation]()
-                    
-                    cachedAnimations[animation.z] = [animation]
+                    var sourceAnimations = firstAnimations
                     
                     while !queue.isEmpty {
-                        if let a = queue[0] as? Animation {
-                            queue.removeFirst()
-                            
-                            if var animations2 = cachedAnimations[a.z] {
-                                animations2.append(a)
-                                cachedAnimations[a.z] = animations2
-                            } else {
-                                cachedAnimations[a.z] = [a]
-                            }
-                        } else {
+                        guard case .animations(let animations) = queue.first! else {
                             break
+                        }
+
+                        queue.removeFirst()
+                        sourceAnimations.append(contentsOf: animations)
+                    }
+
+                    for animation in sourceAnimations {
+                        if var animations = cachedAnimations[animation.z] {
+                            animations.append(animation)
+                            cachedAnimations[animation.z] = animations
+                        } else {
+                            cachedAnimations[animation.z] = [animation]
                         }
                     }
                     
@@ -2409,7 +2455,7 @@ final public class Script: NSObject, ObservableObject {
                             }
                             
                             repeat {
-                                let dequeuedAnimation = animationQueue.removeFirst()
+                                var dequeuedAnimation = animationQueue.removeFirst()
                                 var animations2 = [Animation]()
                                 
                                 while !animationQueue.isEmpty {
@@ -2431,16 +2477,16 @@ final public class Script: NSObject, ObservableObject {
                         } while !cachedAnimations[key]!.isEmpty
                     }
                     
-                    array.append(animations1)
+                    steps.append(.animations(animations1))
                 } else {
-                    array.append(obj)
+                    steps.append(step)
                 }
             }
             
             sequence.removeAll()
             
-            for obj in array {
-                sequence.append(obj)
+            for step in steps {
+                sequence.append(step)
             }
             
             return sequence
