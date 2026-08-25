@@ -10,6 +10,7 @@ import CryptoKit
 import CoreText
 import UIKit
 
+@MainActor
 protocol WallDelegate: AnyObject {
     func wallCanSelect(_ wall: WallView, at index: Int) -> Bool
     func wallDidSelect(_ wall: WallView, at index: Int)
