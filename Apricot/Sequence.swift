@@ -9,12 +9,12 @@ import Foundation
 
 public struct Sequence: Collection, Identifiable, Sendable {
     public indirect enum Step: Sendable {
+        case sequence(Sequence)
         case message(Message)
         case synthesis(Message, String)
         case animations([Animation])
         case sound(Sound)
         case audio(Data)
-        case sequence(Sequence)
         case completion
     }
 
