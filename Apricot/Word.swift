@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Word: Identifiable, Hashable, Codable {
+public struct Word: Identifiable, Hashable, Codable, Sendable {
     public var id: UUID? = UUID()
     public var name: String
     public var attributes: [String]?
