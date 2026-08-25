@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Sprite: Equatable {
+public struct Sprite: Equatable, Sendable {
     public var path: String? = nil
     public var location: CGPoint = CGPoint.zero
     public var size: CGSize = CGSize.zero
