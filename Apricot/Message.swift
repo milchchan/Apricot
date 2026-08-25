@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Message: Identifiable, Collection {
+public struct Message: Identifiable, Collection, Sendable {
     public var id: UUID?
     public var speed: Double = 50.0
     public var duration: CFTimeInterval = 5.0
