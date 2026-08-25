@@ -701,11 +701,26 @@ struct Chat: View {
                      HStack(spacing: 8.0) {
                         ZStack {
                            Circle()
-                              .stroke(Color(self.convert(from: self.accent.wrappedValue)).opacity(0.25), lineWidth: 2.0)
+                              .fill(Color(self.convert(from: self.accent.wrappedValue)).opacity(0.25))
                            Circle()
-                              .trim(from: 0.0, to: CGFloat(min(max(self.energy / self.maxEnergy, 0.0), 1.0)))
-                              .stroke(Color(self.convert(from: self.accent.wrappedValue)), style: StrokeStyle(lineWidth: 2.0, lineCap: .round))
-                              .rotationEffect(.degrees(-90.0))
+                              .fill(Color(self.convert(from: self.accent.wrappedValue)))
+                              .mask {
+                                 Circle()
+                                    .trim(from: 0.0, to: CGFloat(min(max(self.energy / self.maxEnergy, 0.0), 1.0)))
+                                    .stroke(.white, style: StrokeStyle(lineWidth: 16.0, lineCap: .butt))
+                                    .rotationEffect(.degrees(-90.0))
+                              }
+                        }
+                        .mask {
+                           ZStack {
+                              Circle()
+                                 .fill(.white)
+                              Circle()
+                                 .inset(by: 2.0)
+                                 .fill(.white)
+                                 .blendMode(.destinationOut)
+                           }
+                           .compositingGroup()
                         }
                         .frame(
                            width: 16.0,
@@ -1152,9 +1167,9 @@ struct Chat: View {
                         .contentTransition(.numericText(value: self.energy / self.maxEnergy * 100.0))
                      GeometryReader { geometry in
                         ZStack(alignment: .leading) {
-                           Capsule()
+                           Rectangle()
                               .fill(Color(self.convert(from: self.accent.wrappedValue)).opacity(0.25))
-                           Capsule()
+                           Rectangle()
                               .fill(Color(self.convert(from: self.accent.wrappedValue)))
                               .frame(width: geometry.size.width * CGFloat(self.energy / self.maxEnergy))
                         }
