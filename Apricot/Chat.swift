@@ -1925,7 +1925,7 @@ struct Chat: View {
                sequences.append((first.name, id, output, sequence, likability, choices))
                
                if !words.isEmpty {
-                  self.discoveries.append(words[Int.random(in: 0..<words.count)])
+                  self.discoveries.append(contentsOf: words)
                }
                
                if let memory {
@@ -2066,7 +2066,7 @@ struct Chat: View {
                         sequences.append((character.name, id, output, sequence, nil, nil))
                         
                         if !words.isEmpty {
-                           self.discoveries.append(words[Int.random(in: 0..<words.count)])
+                           self.discoveries.append(contentsOf: words)
                         }
                         
                         if let memory {
@@ -2546,7 +2546,7 @@ struct Chat: View {
                sequences.append((first.name, id, output, sequence, likability, choices))
                
                if !words.isEmpty {
-                  self.discoveries.append(words[Int.random(in: 0..<words.count)])
+                  self.discoveries.append(contentsOf: words)
                }
                
                if let memory {
@@ -2646,7 +2646,7 @@ struct Chat: View {
                         sequences.append((character.name, id, output, sequence, nil, nil))
                         
                         if !words.isEmpty {
-                           self.discoveries.append(words[Int.random(in: 0..<words.count)])
+                           self.discoveries.append(contentsOf: words)
                         }
                         
                         if let memory {
@@ -3216,7 +3216,7 @@ struct Stage: UIViewRepresentable {
    
    func makeUIView(context: Context) -> WallView {
       let wallView = WallView(frame: .zero)
-      let agentView = AgentView(path: self.resource.old.isEmpty ? Double.random(in: 0..<1) < 0.5 ? "Milch" : "Merku" : self.resource.old, types: self.types, scale: self.scale, stars: Script.shared.words.count)
+      let agentView = AgentView(path: self.resource.old.isEmpty ? Double.random(in: 0..<1) < 0.5 ? "Milch" : "Merku" : self.resource.old, types: self.types, scale: self.scale, stars: self.words.count)
       
       agentView.accent = self.accent
       agentView.mute = self.mute
@@ -3287,78 +3287,79 @@ struct Stage: UIViewRepresentable {
                   if !self.discoveries.isEmpty {
                      let words = self.discoveries
                      
-                     for word in words {
-                        withAnimation {
-                           Script.shared.words.append(word)
-                        }
-                     }
-                     
                      self.discoveries.removeAll()
                      
-                     let storedWords = Script.shared.words
-
-                     Task.detached { @Sendable [storedWords] in
-                        let encoder = JSONEncoder()
-                        let image = UIImage(systemName: "book", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
+                     Task.detached {
+                        let image = UIImage(systemName: "plus", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
                         var codes = [Int]()
                         var attempted = [Word]()
                         
-                        if let data = try? encoder.encode(storedWords) {
-                           if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                              let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
-                              
-                              if FileManager.default.fileExists(atPath: path) {
-                                 if let file = FileHandle(forWritingAtPath: path) {
-                                    defer {
-                                       try? file.close()
-                                    }
-                                    
-                                    try? file.truncate(atOffset: 0)
-                                    try? file.write(contentsOf: data)
-                                 }
-                              } else {
-                                 FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                              }
-                           }
-                           
-                           if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
-                              let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
-                              let documentsPath = documentsUrl.path(percentEncoded: false)
-                              let url = documentsUrl.appending(path: ".words.json", directoryHint: .inferFromPath)
-                              let path = url.path(percentEncoded: false)
-                              
-                              if !FileManager.default.fileExists(atPath: documentsPath) {
-                                 try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
-                              }
-                              
-                              if FileManager.default.fileExists(atPath: path) {
-                                 if let file = FileHandle(forWritingAtPath: path) {
-                                    defer {
-                                       try? file.close()
-                                    }
-                                    
-                                    try? file.truncate(atOffset: 0)
-                                    try? file.write(contentsOf: data)
-                                 }
-                              } else {
-                                 FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                              }
-                              
-                              if let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
-                                 try? NSFileVersion.removeOtherVersionsOfItem(at: url)
-                                 
-                                 if let conflictVersions = NSFileVersion.unresolvedConflictVersionsOfItem(at: url) {
-                                    for fileVersion in conflictVersions {
-                                       fileVersion.isResolved = true
-                                    }
-                                 }
-                              }
-                           }
-                        }
-                        
                         await MainActor.run {
-                           for word in words {
-                              agentView.notify(characterView: first, image: image, text: word.name, duration: 5.0)
+                           let word = words[Int.random(in: 0..<words.count)]
+                           
+                           agentView.notify(characterView: first, image: image, text: word.name, duration: 3.0) {
+                              withAnimation {
+                                 self.words.append(word)
+                              }
+                              
+                              let storedWords = self.words
+                              
+                              Task.detached { @Sendable [storedWords] in
+                                 let encoder = JSONEncoder()
+                                 
+                                 if let data = try? encoder.encode(storedWords) {
+                                    if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                                       let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
+                                       
+                                       if FileManager.default.fileExists(atPath: path) {
+                                          if let file = FileHandle(forWritingAtPath: path) {
+                                             defer {
+                                                try? file.close()
+                                             }
+                                             
+                                             try? file.truncate(atOffset: 0)
+                                             try? file.write(contentsOf: data)
+                                          }
+                                       } else {
+                                          FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+                                       }
+                                    }
+                                    
+                                    if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+                                       let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
+                                       let documentsPath = documentsUrl.path(percentEncoded: false)
+                                       let url = documentsUrl.appending(path: ".words.json", directoryHint: .inferFromPath)
+                                       let path = url.path(percentEncoded: false)
+                                       
+                                       if !FileManager.default.fileExists(atPath: documentsPath) {
+                                          try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
+                                       }
+                                       
+                                       if FileManager.default.fileExists(atPath: path) {
+                                          if let file = FileHandle(forWritingAtPath: path) {
+                                             defer {
+                                                try? file.close()
+                                             }
+                                             
+                                             try? file.truncate(atOffset: 0)
+                                             try? file.write(contentsOf: data)
+                                          }
+                                       } else {
+                                          FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+                                       }
+                                       
+                                       if let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
+                                          try? NSFileVersion.removeOtherVersionsOfItem(at: url)
+                                          
+                                          if let conflictVersions = NSFileVersion.unresolvedConflictVersionsOfItem(at: url) {
+                                             for fileVersion in conflictVersions {
+                                                fileVersion.isResolved = true
+                                             }
+                                          }
+                                       }
+                                    }
+                                 }
+                              }
                            }
                         }
                         
@@ -3385,7 +3386,7 @@ struct Stage: UIViewRepresentable {
                               let image = UIImage(systemName: "exclamationmark.icloud", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
                               
                               await MainActor.run {
-                                 agentView.notify(characterView: first, image: image, text: nil, duration: 5.0)
+                                 agentView.notify(characterView: first, image: image, text: nil, duration: 3.0)
                               }
                            }
                         }
@@ -3560,14 +3561,14 @@ struct Stage: UIViewRepresentable {
             Task {
                var fallback = false
                
-               if self.words.isEmpty {
+               if self.parent.words.isEmpty {
                   fallback = true
                } else {
                   let samples = 10
                   var words = [Word]()
                   
                   for _ in 0..<samples {
-                     let word = self.words[Int.random(in: 0..<self.words.count)]
+                     let word = self.parent.words[Int.random(in: 0..<self.parent.words.count)]
                      
                      if let attributes = word.attributes {
                         if !attributes.isEmpty {
@@ -3828,8 +3829,76 @@ struct Stage: UIViewRepresentable {
                }.value
                
                if !words.isEmpty {
-                  Task { @MainActor in
-                     self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
+                  let image = await Task.detached { UIImage(systemName: "plus", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))! }.value
+                  let word = words[Int.random(in: 0..<words.count)]
+                  
+                  agent.notify(characterView: characterView, image: image, text: word.name, duration: 3.0) { [weak self] in
+                     guard let self else {
+                        return
+                     }
+                     
+                     withAnimation {
+                        self.parent.words.append(word)
+                     }
+                     
+                     let storedWords = self.parent.words
+                     
+                     Task.detached { @Sendable [storedWords] in
+                        let encoder = JSONEncoder()
+                        
+                        if let data = try? encoder.encode(storedWords) {
+                           if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                              let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
+                              
+                              if FileManager.default.fileExists(atPath: path) {
+                                 if let file = FileHandle(forWritingAtPath: path) {
+                                    defer {
+                                       try? file.close()
+                                    }
+                                    
+                                    try? file.truncate(atOffset: 0)
+                                    try? file.write(contentsOf: data)
+                                 }
+                              } else {
+                                 FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+                              }
+                           }
+                           
+                           if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+                              let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
+                              let documentsPath = documentsUrl.path(percentEncoded: false)
+                              let url = documentsUrl.appending(path: ".words.json", directoryHint: .inferFromPath)
+                              let path = url.path(percentEncoded: false)
+                              
+                              if !FileManager.default.fileExists(atPath: documentsPath) {
+                                 try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
+                              }
+                              
+                              if FileManager.default.fileExists(atPath: path) {
+                                 if let file = FileHandle(forWritingAtPath: path) {
+                                    defer {
+                                       try? file.close()
+                                    }
+                                    
+                                    try? file.truncate(atOffset: 0)
+                                    try? file.write(contentsOf: data)
+                                 }
+                              } else {
+                                 FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+                              }
+                              
+                              if let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
+                                 try? NSFileVersion.removeOtherVersionsOfItem(at: url)
+                                 
+                                 if let conflictVersions = NSFileVersion.unresolvedConflictVersionsOfItem(at: url) {
+                                    for fileVersion in conflictVersions {
+                                       fileVersion.isResolved = true
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                     }
                   }
                }
             }
@@ -3881,7 +3950,7 @@ struct Stage: UIViewRepresentable {
             }
             
             Task {
-               await uiView.reload(frames: background, particles: min(Script.shared.words.count, 100))
+               await uiView.reload(frames: background, particles: min(self.parent.words.count, 100))
             }
          }
       }
@@ -4001,11 +4070,11 @@ struct Stage: UIViewRepresentable {
       }
       
       func wallDidLoad(_ wall: WallView, frames: [(image: CGImage, delay: Double)]) {
-         Task.detached {
+         Task.detached { [weak self] in
             var hasher = SHA256()
             
             for frame in frames {
-               if let resizedImage = self.resize(image: frame.image, maximum: 256, quality: .none) {
+               if let resizedImage = self?.resize(image: frame.image, maximum: 256, quality: .none) {
                   let meta = [UInt32(resizedImage.width), UInt32(resizedImage.height), UInt32(resizedImage.bitsPerPixel), UInt32(resizedImage.bytesPerRow)]
                   
                   meta.withUnsafeBytes { hasher.update(data: $0) }
@@ -4020,9 +4089,7 @@ struct Stage: UIViewRepresentable {
                }
             }
             
-            let encodedFrames = self.encode(hasher.finalize())
-            
-            if let documentUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            if let encodedFrames = self?.encode(hasher.finalize()), let documentUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                let payload = encodedFrames.suffix(16)
                var isNew = true
                
@@ -4056,16 +4123,18 @@ struct Stage: UIViewRepresentable {
                      
                      let image = UIImage(systemName: "arrow.down.doc", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
                      
-                     await MainActor.run { [weak self] in
-                        if let uiView = self?.uiView {
-                           for view in uiView.subviews {
-                              if let agentView = view as? AgentView {
-                                 if let characterView = agentView.characterViews.first {
-                                    agentView.notify(characterView: characterView, image: image, text: nil, duration: 5.0)
-                                 }
-                                 
-                                 break
+                     await MainActor.run {
+                        guard let uiView = self?.uiView else {
+                           return
+                        }
+                        
+                        for view in uiView.subviews {
+                           if let agentView = view as? AgentView {
+                              if let characterView = agentView.characterViews.first {
+                                 agentView.notify(characterView: characterView, image: image, text: nil, duration: 3.0)
                               }
+                              
+                              break
                            }
                         }
                      }
@@ -4292,7 +4361,7 @@ struct Stage: UIViewRepresentable {
                               output.append((text: inline, attributes: []))
                               
                               for word in candidate.words {
-                                 if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !Script.shared.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
+                                 if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !self.parent.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
                                     words.append(word)
                                  }
                               }
@@ -4316,7 +4385,7 @@ struct Stage: UIViewRepresentable {
                      sequences.append((first.name, id, output, sequence, likability, choices))
                      
                      if !words.isEmpty {
-                        self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
+                        self.parent.discoveries.append(contentsOf: words)
                      }
                      
                      if let memory {
@@ -4433,7 +4502,7 @@ struct Stage: UIViewRepresentable {
                                        output.append((text: inline, attributes: []))
                                        
                                        for word in candidate.words {
-                                          if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !Script.shared.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
+                                          if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !self.parent.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
                                              words.append(word)
                                           }
                                        }
@@ -4457,7 +4526,7 @@ struct Stage: UIViewRepresentable {
                               sequences.append((character.name, id, output, sequence, nil, nil))
                               
                               if !words.isEmpty {
-                                 self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
+                                 self.parent.discoveries.append(contentsOf: words)
                               }
                               
                               if let memory {
@@ -4934,7 +5003,7 @@ struct Stage: UIViewRepresentable {
                            output.append((text: inline, attributes: []))
                            
                            for word in candidate.words {
-                              if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !Script.shared.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
+                              if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !self.parent.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
                                  words.append(word)
                               }
                            }
@@ -4958,7 +5027,7 @@ struct Stage: UIViewRepresentable {
                   sequences.append((first.name, id, output, sequence, likability, choices))
                   
                   if !words.isEmpty {
-                     self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
+                     self.parent.discoveries.append(contentsOf: words)
                   }
                   
                   if let memory {
@@ -5075,7 +5144,7 @@ struct Stage: UIViewRepresentable {
                                     output.append((text: inline, attributes: []))
                                     
                                     for word in candidate.words {
-                                       if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !Script.shared.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
+                                       if !words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) && !self.parent.words.contains(where: { $0.name.compare(word.name, options: [.caseInsensitive]) == .orderedSame }) {
                                           words.append(word)
                                        }
                                     }
@@ -5099,7 +5168,7 @@ struct Stage: UIViewRepresentable {
                            sequences.append((character.name, id, output, sequence, nil, nil))
                            
                            if !words.isEmpty {
-                              self.parent.discoveries.append(words[Int.random(in: 0..<words.count)])
+                              self.parent.discoveries.append(contentsOf: words)
                            }
                            
                            if let memory {
@@ -5645,10 +5714,11 @@ struct Peek: UIViewControllerRepresentable {
             
          case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video, completionHandler: { [weak self] granted in
-               Task { @MainActor [weak self] in
+               Task { @MainActor in
                   guard let self else {
                      return
                   }
+                  
                   if granted {
                      self.prepareCaptureSession()
                   } else {
@@ -5719,27 +5789,27 @@ struct Peek: UIViewControllerRepresentable {
             guard let self else {
                return
             }
-
+            
             self.captureSession.withLock { session in
                if !session.isRunning {
                   session.startRunning()
                }
             }
-
-            Task {
-               await MainActor.run { [weak self] in
-                  if let captureVideoPreviewLayer = self?.captureVideoPreviewLayer {
-                     switch UIDevice.current.orientation {
-                     case UIDeviceOrientation.portraitUpsideDown:
-                        captureVideoPreviewLayer.connection?.videoRotationAngle = 270
-                     case UIDeviceOrientation.landscapeLeft:
-                        captureVideoPreviewLayer.connection?.videoRotationAngle = 0
-                     case UIDeviceOrientation.landscapeRight:
-                        captureVideoPreviewLayer.connection?.videoRotationAngle = 180
-                     default:
-                        captureVideoPreviewLayer.connection?.videoRotationAngle = 90
-                     }
-                  }
+            
+            Task { @MainActor [weak self] in
+               guard let self, let captureVideoPreviewLayer = self.captureVideoPreviewLayer else {
+                  return
+               }
+               
+               switch UIDevice.current.orientation {
+               case UIDeviceOrientation.portraitUpsideDown:
+                  captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+               case UIDeviceOrientation.landscapeLeft:
+                  captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+               case UIDeviceOrientation.landscapeRight:
+                  captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+               default:
+                  captureVideoPreviewLayer.connection?.videoRotationAngle = 90
                }
             }
          }
@@ -6436,29 +6506,16 @@ struct Activity: View {
                                  }
                                  
                                  Spacer()
-                                 HStack(alignment: .center, spacing: 8.0) {
-                                    Image(systemName: "arrow.right")
-                                       .frame(
-                                          alignment: .center
-                                       )
-                                       .background(.clear)
-                                       .foregroundStyle(Color(uiColor: self.accent))
-                                       .font(
-                                          .system(size: 16.0)
-                                       )
-                                       .bold()
-                                       .transition(.opacity)
-                                    Image(systemName: "book")
-                                       .frame(
-                                          alignment: .center
-                                       )
-                                       .background(.clear)
-                                       .foregroundStyle(Color(uiColor: self.accent))
-                                       .font(
-                                          .system(size: 16.0)
-                                       )
-                                       .bold()
-                                 }
+                                 Image(systemName: "plus")
+                                    .frame(
+                                       alignment: .center
+                                    )
+                                    .background(.clear)
+                                    .foregroundStyle(Color(uiColor: self.accent))
+                                    .font(
+                                       .system(size: 16.0)
+                                    )
+                                    .bold()
                               }
                               .frame(
                                  maxWidth: .infinity
@@ -8101,10 +8158,11 @@ struct Capture: UIViewControllerRepresentable {
             
          case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video, completionHandler: { [weak self] granted in
-               Task { @MainActor [weak self] in
+               Task { @MainActor in
                   guard let self else {
                      return
                   }
+                  
                   if granted {
                      self.prepareCaptureSession()
                   } else {
@@ -8182,20 +8240,20 @@ struct Capture: UIViewControllerRepresentable {
                }
             }
 
-            Task {
-               await MainActor.run { [weak self] in
-                  if let captureVideoPreviewLayer = self?.captureVideoPreviewLayer {
-                     switch UIDevice.current.orientation {
-                     case UIDeviceOrientation.portraitUpsideDown:
-                        captureVideoPreviewLayer.connection?.videoRotationAngle = 270
-                     case UIDeviceOrientation.landscapeLeft:
-                        captureVideoPreviewLayer.connection?.videoRotationAngle = 0
-                     case UIDeviceOrientation.landscapeRight:
-                        captureVideoPreviewLayer.connection?.videoRotationAngle = 180
-                     default:
-                        captureVideoPreviewLayer.connection?.videoRotationAngle = 90
-                     }
-                  }
+            Task { @MainActor [weak self] in
+               guard let self, let captureVideoPreviewLayer = self.captureVideoPreviewLayer else {
+                  return
+               }
+               
+               switch UIDevice.current.orientation {
+               case UIDeviceOrientation.portraitUpsideDown:
+                  captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+               case UIDeviceOrientation.landscapeLeft:
+                  captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+               case UIDeviceOrientation.landscapeRight:
+                  captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+               default:
+                  captureVideoPreviewLayer.connection?.videoRotationAngle = 90
                }
             }
          }
@@ -8664,6 +8722,7 @@ struct Player: UIViewRepresentable {
    }
    
    class PlayerView: UIView {
+      private var displayLink: CADisplayLink? = nil
       private var isReloading = false
       private var isLoading = false
       private var isFetched = false
@@ -8724,10 +8783,6 @@ struct Player: UIViewRepresentable {
          self.blindLayer = blindLayer
          self.layer.contentsGravity = .resizeAspect
          self.layer.addSublayer(self.blindLayer!)
-         
-         let displayLink = CADisplayLink(target: self, selector: #selector(self.update))
-         
-         displayLink.add(to: .current, forMode: .common)
       }
       
       required init?(coder aDecoder: NSCoder) {
@@ -8841,7 +8896,21 @@ struct Player: UIViewRepresentable {
          }
       }
       
-      @objc private func update(displayLink: CADisplayLink) {
+      override func didMoveToWindow() {
+          super.didMoveToWindow()
+          
+          if self.window == nil {
+              self.displayLink?.invalidate()
+              self.displayLink = nil
+          } else if self.displayLink == nil {
+              let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
+              
+              self.displayLink = displayLink
+              displayLink.add(to: .current, forMode: .common)
+          }
+      }
+      
+      @objc private func step(displayLink: CADisplayLink) {
          if self.frame.size.width > 0 && self.frame.size.height > 0 {
             let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
             
