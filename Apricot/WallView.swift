@@ -19,6 +19,7 @@ protocol WallDelegate: AnyObject {
 
 class WallView: UIView {
     weak var delegate: (any WallDelegate)? = nil
+    private var displayLink: CADisplayLink? = nil
     private var tracker: (active: Bool, edge: Bool, movement: (x: Double, y: Double), velocity: (x: Double, y: Double)) = (active: false, edge: true, movement: (x: 0.0, y: 0.0), velocity: (x: 0.0, y: 0.0))
     private var pinches = [(touches: [UITouch], center: (x: Double, y: Double), movement: (x: Double, y: Double), radius: Double, velocity: Double, current:(x: Double, y: Double, radius: Double))]()
     private var touches = [(touch: UITouch, location: (x: Double, y: Double), movement: (x: Double, y: Double), velocity: (x: Double, y: Double), timestamp: CFTimeInterval)]()
@@ -143,30 +144,10 @@ class WallView: UIView {
         self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .top, relatedBy: .equal, toItem: self, attribute: .top, multiplier: 1.0, constant: 0.0))
         self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .trailing, relatedBy: .equal, toItem: self, attribute: .trailing, multiplier: 1.0, constant: 0.0))
         self.addConstraint(NSLayoutConstraint(item: blindView, attribute: .bottom, relatedBy: .equal, toItem: self, attribute: .bottom, multiplier: 1.0, constant: 0.0))
-        
-        let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
-        
-        displayLink.add(to: .current, forMode: .common)
     }
     
     required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        if self.isLoading, let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
-            let length = max(self.bounds.width, self.bounds.height)
-            
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            
-            blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
-            loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
-            
-            CATransaction.commit()
-        }
     }
     
     func reload(lines: [(text: String, attributes: [(start: Int, end: Int)])]) {
@@ -763,6 +744,36 @@ class WallView: UIView {
     private func emit(particles: Int) {
         for _ in 0..<particles {
             self.particles.append((layer: nil, time: 0.0, delay: Double.random(in: 0.0...1.0), duration: Double.random(in: 1.0...2.0)))
+        }
+    }
+    
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        
+        if self.window == nil {
+            self.displayLink?.invalidate()
+            self.displayLink = nil
+        } else if self.displayLink == nil {
+            let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
+            
+            self.displayLink = displayLink
+            displayLink.add(to: .current, forMode: .common)
+        }
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        if self.isLoading, let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+            let length = max(self.bounds.width, self.bounds.height)
+            
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            
+            blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
+            loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
+            
+            CATransaction.commit()
         }
     }
     
