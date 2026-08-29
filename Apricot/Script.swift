@@ -443,9 +443,9 @@ final public class Script: NSObject, ObservableObject {
             }.value)
         }
         
-        let tempWords = words
-        let tempScores = self.scores
-        let data = await Task.detached { @Sendable [tempWords, tempScores] in
+        let storedWords = words
+        let storedScores = self.scores
+        let data = await Task.detached { @Sendable [storedWords, storedScores] in
             var isUpdated = false
             var latest = Date.distantPast
             var cache = [Int: (name: String, language: String?, date: Date)]()
@@ -454,13 +454,13 @@ final public class Script: NSObject, ObservableObject {
             var timestamps = [Date]()
             var data = [String: (String, Double, [String]?, Date)]()
             
-            for value in tempScores.values {
+            for value in storedScores.values {
                 if value.3 > latest {
                     latest = value.3
                 }
             }
             
-            for word in tempWords {
+            for word in storedWords {
                 if let value = cache[word.id] {
                     if value.date < word.date {
                         cache[word.id] = (word.name, word.language, word.date)
@@ -544,7 +544,7 @@ final public class Script: NSObject, ObservableObject {
                             var isNeutral = false
                             var latest = Date.distantPast
                             
-                            for word in tempWords {
+                            for word in storedWords {
                                 if word.name.folding(options: [.caseInsensitive], locale: locale) == key {
                                     if let (count, date) = names[word.name] {
                                         if word.date > date {
@@ -1078,9 +1078,9 @@ final public class Script: NSObject, ObservableObject {
                         if let pattern = sequence.state {
                             if let currentState {
                                 if currentState.isEmpty {
-                                    await MainActor.run { [weak self] in
-                                        if let name = sequence.name, let states = self?.states, states.keys.contains(name) {
-                                            self?.states.removeValue(forKey: name)
+                                    await MainActor.run {
+                                        if let name = sequence.name, self.states.keys.contains(name) {
+                                            self.states.removeValue(forKey: name)
                                         }
                                     }
                                 } else if let regex = try? Regex(pattern), let match = currentState.firstMatch(of: regex), !match.output.isEmpty {
@@ -1119,8 +1119,8 @@ final public class Script: NSObject, ObservableObject {
                             var flattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
                             
                             if let name = selectedSequence.name, let currentState {
-                                await MainActor.run { [weak self] in
-                                    self?.states[name] = currentState
+                                await MainActor.run {
+                                    self.states[name] = currentState
                                 }
                             }
                             
@@ -1319,8 +1319,8 @@ final public class Script: NSObject, ObservableObject {
                             var tempFlattenedSequence = Sequence(name: selectedSequence.name, state: selectedSequence.state)
                             
                             if let name = selectedSequence.name, let s = currentState {
-                                await MainActor.run { [weak self] in
-                                    self?.states[name] = s
+                                await MainActor.run {
+                                    self.states[name] = s
                                 }
                             }
                             
@@ -1696,11 +1696,11 @@ final public class Script: NSObject, ObservableObject {
                     
                     preparedSequences.removeAll()
                     
-                    await MainActor.run { [weak self] in
-                        self?.states.removeAll()
+                    await MainActor.run {
+                        self.states.removeAll()
                         
                         for (key, value) in states {
-                            self?.states[key] = value
+                            self.states[key] = value
                         }
                     }
                     
@@ -1845,170 +1845,286 @@ final public class Script: NSObject, ObservableObject {
                         
                         parser.delegate = self
                         parser.parse()
-                    } else if let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any] {
-                        if let name = jsonRoot["name"] as? String, let width = jsonRoot["width"] as? Double, let height = jsonRoot["height"] as? Double {
-                            var sequences = [Sequence]()
+                        
+                        for i in 0..<self.characters.count {
+                            var sequenceQueue = self.characters[i].sequences
+                            var order = 0
                             
-                            if !self.excludeSequences, let animations = jsonRoot["animations"] as? [[String: Any]] {
-                                for animation in animations {
-                                    var sequence = Sequence(name: animation["name"] as? String, state: animation["state"] as? String)
-                                    let repeats: UInt
-                                    var caches = [String: (Int, String?, [Sprite])]()
-                                    var animations = [Animation]()
-                                    
-                                    if let value = animation["repeats"] as? Double {
-                                        repeats = UInt(value)
-                                    } else {
-                                        repeats = 1
-                                    }
-                                    
-                                    if let frames = animation["frames"] as? [[String: Any]] {
-                                        for frame in frames {
-                                            var sprite = Sprite()
-                                            let z: Int
-                                            let type: String?
-                                            let key: String
-                                            
-                                            if let x = frame["x"] as? Double {
-                                                sprite.location.x = x
+                            while !sequenceQueue.isEmpty {
+                                let sequence = sequenceQueue.removeFirst()
+                                
+                                for step in sequence {
+                                    if case .sequence(let s) = step {
+                                        sequenceQueue.append(s)
+                                    } else if case .animations(let animations) = step {
+                                        for animation in animations {
+                                            if let type = animation.type {
+                                                if var tuple = self.characters[i].types[type] {
+                                                    if !tuple.1.contains(animation.z) {
+                                                        tuple.1.insert(animation.z)
+                                                        self.characters[i].types[type] = tuple
+                                                    }
+                                                } else {
+                                                    self.characters[i].types[type] = (order, [animation.z])
+                                                    order += 1
+                                                }
                                             }
                                             
-                                            if let y = frame["y"] as? Double {
-                                                sprite.location.y = y
-                                            }
-                                            
-                                            if let width = frame["width"] as? Double {
-                                                sprite.size.width = width
-                                            }
-                                            
-                                            if let height = frame["height"] as? Double {
-                                                sprite.size.height = height
-                                            }
-                                            
-                                            if let opacity = frame["opacity"] as? Double {
-                                                sprite.opacity = opacity
-                                            }
-                                            
-                                            if let delay = frame["delay"] as? Double {
-                                                sprite.delay = delay
-                                            }
-                                            
-                                            if let url = frame["url"] as? String {
-                                                sprite.path = url
-                                            }
-                                            
-                                            if let value = frame["z"] as? Double {
-                                                z = Int(value)
-                                            } else {
-                                                z = 0
-                                            }
-                                            
-                                            if let value = frame["type"] as? String {
-                                                type = value
-                                                key = "\(z)&\(value)"
-                                            } else {
-                                                type = nil
-                                                key = "\(z)"
-                                            }
-                                            
-                                            if let tuple = caches[key] {
-                                                var sprites = tuple.2
-                                                
-                                                sprites.append(sprite)
-                                                caches[key] = (tuple.0, tuple.1, sprites)
-                                            } else {
-                                                caches[key] = (z, type, [sprite])
+                                            if animation.z >= 0 {
+                                                for sprite in animation {
+                                                    let right = sprite.location.x + sprite.size.width
+                                                    let bottom = sprite.location.y + sprite.size.height
+                                                    
+                                                    if sprite.location.x < self.characters[i].insets.left {
+                                                        self.characters[i].insets.left = sprite.location.x
+                                                    }
+                                                    
+                                                    if right > self.characters[i].insets.right {
+                                                        self.characters[i].insets.right = right
+                                                    }
+                                                    
+                                                    if sprite.location.y < self.characters[i].insets.top {
+                                                        self.characters[i].insets.top = sprite.location.y
+                                                    }
+                                                    
+                                                    if bottom > self.characters[i].insets.bottom {
+                                                        self.characters[i].insets.bottom = bottom
+                                                    }
+                                                }
                                             }
                                         }
                                     }
-                                    
-                                    for (_, value) in caches {
-                                        var a = Animation(frames: value.2)
-                                        
-                                        a.repeats = repeats
-                                        a.z = value.0
-                                        a.type = value.1
-                                        
-                                        animations.append(a)
-                                    }
-                                    
-                                    sequence.append(.animations(animations))
-                                    sequences.append(sequence)
                                 }
                             }
                             
-                            self.characters.append((id: nil, name: name, location: CGPoint(x: jsonRoot["x"] as? Double ?? 0.0, y: jsonRoot["y"] as? Double ?? 0.0), size: CGSize(width: width, height: height), scale: jsonRoot["scale"] as? Double ?? 1.0, language: jsonRoot["language"] as? String, preview: jsonRoot["preview"] as? String, prompt: jsonRoot["prompt"] as? String, sequences: sequences, types: [:], insets: (top: Double.greatestFiniteMagnitude, left: Double.greatestFiniteMagnitude, bottom: -Double.greatestFiniteMagnitude, right: -Double.greatestFiniteMagnitude)))
+                            self.characters[i].insets.left += self.characters[i].location.x
+                            self.characters[i].insets.right += self.characters[i].location.x
+                            self.characters[i].insets.top += self.characters[i].location.y
+                            self.characters[i].insets.bottom += self.characters[i].location.y
+                            
+                            if let prompt = self.characters[i].prompt {
+                                let p = URL(filePath: path).deletingLastPathComponent().appending(path: prompt, directoryHint: .inferFromPath).path(percentEncoded: false)
+                                
+                                if FileManager.default.fileExists(atPath: p), let file = FileHandle(forReadingAtPath: p) {
+                                    defer {
+                                        try? file.close()
+                                    }
+                                    
+                                    if let data = try? file.readToEnd(), let s = String(data: data, encoding: .utf8) {
+                                        self.characters[i].prompt = s
+                                    }
+                                }
+                            }
                         }
-                    }
-                }
-            }
-            
-            for i in 0..<self.characters.count {
-                var sequenceQueue = self.characters[i].sequences
-                var order = 0
-                
-                while !sequenceQueue.isEmpty {
-                    let sequence = sequenceQueue.removeFirst()
-                    
-                    for step in sequence {
-                        if case .sequence(let s) = step {
-                            sequenceQueue.append(s)
-                        } else if case .animations(let animations) = step {
-                            for animation in animations {
-                                if let type = animation.type {
-                                    if var tuple = self.characters[i].types[type] {
-                                        if !tuple.1.contains(animation.z) {
-                                            tuple.1.insert(animation.z)
-                                            self.characters[i].types[type] = tuple
+                    } else if let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any] {
+                        if let name = jsonRoot["name"] as? String, let width = jsonRoot["width"] as? Double, let height = jsonRoot["height"] as? Double {
+                            var prompt: String? = nil
+                            var sequences = [Sequence]()
+                            var types = [String: (Int, Set<Int>)]()
+                            var top = Double.greatestFiniteMagnitude
+                            var left = Double.greatestFiniteMagnitude
+                            var bottom = -Double.greatestFiniteMagnitude
+                            var right = -Double.greatestFiniteMagnitude
+                            
+                            if self.excludeSequences {
+                                if let value = jsonRoot["prompt"] as? String {
+                                    prompt = value
+                                } else if let jsonArray = jsonRoot["prompt"] as? [Any] {
+                                    var array = [String]()
+                                    
+                                    for obj in jsonArray {
+                                        if let value = obj as? String, ["txt", "md"].contains(URL(filePath: value).pathExtension.lowercased()) {
+                                            let p = URL(filePath: path).deletingLastPathComponent().appending(path: value, directoryHint: .inferFromPath).path(percentEncoded: false)
+                                            
+                                            if FileManager.default.fileExists(atPath: p), let file = FileHandle(forReadingAtPath: p) {
+                                                defer {
+                                                    try? file.close()
+                                                }
+                                                
+                                                if let data = try? file.readToEnd(), let s = String(data: data, encoding: .utf8) {
+                                                    array.append(s)
+                                                }
+                                            }
                                         }
-                                    } else {
-                                        self.characters[i].types[type] = (order, [animation.z])
-                                        order += 1
+                                    }
+                                    
+                                    if !array.isEmpty {
+                                        prompt = array.joined(separator: "\n")
+                                    }
+                                }
+                            } else {
+                                var order = 0
+                                
+                                if let value = jsonRoot["prompt"] as? String {
+                                    let p = URL(filePath: path).deletingLastPathComponent().appending(path: value, directoryHint: .inferFromPath).path(percentEncoded: false)
+                                    
+                                    if FileManager.default.fileExists(atPath: p), let file = FileHandle(forReadingAtPath: p) {
+                                        defer {
+                                            try? file.close()
+                                        }
+                                        
+                                        if let data = try? file.readToEnd(), let s = String(data: data, encoding: .utf8) {
+                                            prompt = s
+                                        }
+                                    }
+                                } else if let jsonArray = jsonRoot["prompt"] as? [Any] {
+                                    var array = [String]()
+                                    
+                                    for obj in jsonArray {
+                                        if let value = obj as? String {
+                                            let pathExtension = URL(filePath: value).pathExtension.lowercased()
+                                            
+                                            if ["txt", "md"].contains(pathExtension) {
+                                                let p = URL(filePath: path).deletingLastPathComponent().appending(path: value, directoryHint: .inferFromPath).path(percentEncoded: false)
+                                                
+                                                if FileManager.default.fileExists(atPath: p), let file = FileHandle(forReadingAtPath: p) {
+                                                    defer {
+                                                        try? file.close()
+                                                    }
+                                                    
+                                                    if let data = try? file.readToEnd(), let s = String(data: data, encoding: .utf8) {
+                                                        array.append(s)
+                                                    }
+                                                }
+                                            } else if pathExtension == "wav" {
+                                                var sequence = Sequence(name: SHA256.hash(data: Data(value.utf8)).compactMap { String(format: "%02x", $0) }.joined())
+                                                
+                                                sequence.append(.sound(Sound(path: value)))
+                                                sequences.append(sequence)
+                                            }
+                                        }
+                                    }
+                                    
+                                    if !array.isEmpty {
+                                        prompt = array.joined(separator: "\n")
                                     }
                                 }
                                 
-                                if animation.z >= 0 {
-                                    for sprite in animation {
-                                        let right = sprite.location.x + sprite.size.width
-                                        let bottom = sprite.location.y + sprite.size.height
+                                if let animations = jsonRoot["animations"] as? [[String: Any]] {
+                                    for animation in animations {
+                                        var sequence = Sequence(name: animation["name"] as? String, state: animation["state"] as? String)
+                                        let repeats: UInt
+                                        var caches = [String: (Int, String?, [Sprite])]()
+                                        var animations = [Animation]()
                                         
-                                        if sprite.location.x < self.characters[i].insets.left {
-                                            self.characters[i].insets.left = sprite.location.x
+                                        if let value = animation["repeats"] as? Double {
+                                            repeats = UInt(value)
+                                        } else {
+                                            repeats = 1
                                         }
                                         
-                                        if right > self.characters[i].insets.right {
-                                            self.characters[i].insets.right = right
+                                        if let frames = animation["frames"] as? [[String: Any]] {
+                                            for frame in frames {
+                                                var sprite = Sprite()
+                                                let z: Int
+                                                let type: String?
+                                                let key: String
+                                                
+                                                if let x = frame["x"] as? Double {
+                                                    sprite.location.x = x
+                                                }
+                                                
+                                                if let y = frame["y"] as? Double {
+                                                    sprite.location.y = y
+                                                }
+                                                
+                                                if let width = frame["width"] as? Double {
+                                                    sprite.size.width = width
+                                                }
+                                                
+                                                if let height = frame["height"] as? Double {
+                                                    sprite.size.height = height
+                                                }
+                                                
+                                                if let opacity = frame["opacity"] as? Double {
+                                                    sprite.opacity = opacity
+                                                }
+                                                
+                                                if let delay = frame["delay"] as? Double {
+                                                    sprite.delay = delay
+                                                }
+                                                
+                                                if let url = frame["url"] as? String {
+                                                    sprite.path = url
+                                                }
+                                                
+                                                if let value = frame["z"] as? Double {
+                                                    z = Int(value)
+                                                } else {
+                                                    z = 0
+                                                }
+                                                
+                                                if let value = frame["type"] as? String {
+                                                    type = value
+                                                    key = "\(z)&\(value)"
+                                                } else {
+                                                    type = nil
+                                                    key = "\(z)"
+                                                }
+                                                
+                                                if let tuple = caches[key] {
+                                                    var sprites = tuple.2
+                                                    
+                                                    sprites.append(sprite)
+                                                    caches[key] = (tuple.0, tuple.1, sprites)
+                                                } else {
+                                                    caches[key] = (z, type, [sprite])
+                                                }
+                                            }
                                         }
                                         
-                                        if sprite.location.y < self.characters[i].insets.top {
-                                            self.characters[i].insets.top = sprite.location.y
+                                        for (_, value) in caches {
+                                            var a = Animation(frames: value.2)
+                                            
+                                            a.repeats = repeats
+                                            a.z = value.0
+                                            a.type = value.1
+                                            
+                                            animations.append(a)
+                                            
+                                            if let type = value.1 {
+                                                if var tuple = types[type] {
+                                                    if !tuple.1.contains(value.0) {
+                                                        tuple.1.insert(value.0)
+                                                        types[type] = tuple
+                                                    }
+                                                } else {
+                                                    types[type] = (order, [value.0])
+                                                    order += 1
+                                                }
+                                            }
+                                            
+                                            if value.0 >= 0 {
+                                                for sprite in value.2 {
+                                                    let r = sprite.location.x + sprite.size.width
+                                                    let b = sprite.location.y + sprite.size.height
+                                                    
+                                                    if sprite.location.x < left {
+                                                        left = sprite.location.x
+                                                    }
+                                                    
+                                                    if r > right {
+                                                        right = r
+                                                    }
+                                                    
+                                                    if sprite.location.y < top {
+                                                        top = sprite.location.y
+                                                    }
+                                                    
+                                                    if b > bottom {
+                                                        bottom = b
+                                                    }
+                                                }
+                                            }
                                         }
                                         
-                                        if bottom > self.characters[i].insets.bottom {
-                                            self.characters[i].insets.bottom = bottom
-                                        }
+                                        sequence.append(.animations(animations))
+                                        sequences.append(sequence)
                                     }
                                 }
                             }
-                        }
-                    }
-                }
-                
-                self.characters[i].insets.left += self.characters[i].location.x
-                self.characters[i].insets.right += self.characters[i].location.x
-                self.characters[i].insets.top += self.characters[i].location.y
-                self.characters[i].insets.bottom += self.characters[i].location.y
-                
-                if let prompt = self.characters[i].prompt {
-                    let p = URL(filePath: path).deletingLastPathComponent().appending(path: prompt, directoryHint: .inferFromPath).path(percentEncoded: false)
-                    
-                    if FileManager.default.fileExists(atPath: p), let file = FileHandle(forReadingAtPath: p) {
-                        defer {
-                            try? file.close()
-                        }
-                        
-                        if let data = try? file.readToEnd(), let s = String(data: data, encoding: .utf8) {
-                            self.characters[i].prompt = s
+                            
+                            self.characters.append((id: nil, name: name, location: CGPoint(x: jsonRoot["x"] as? Double ?? 0.0, y: jsonRoot["y"] as? Double ?? 0.0), size: CGSize(width: width, height: height), scale: jsonRoot["scale"] as? Double ?? 1.0, language: jsonRoot["language"] as? String, preview: jsonRoot["preview"] as? String, prompt: prompt, sequences: sequences, types: types, insets: (top: top, left: left, bottom: bottom, right: right)))
                         }
                     }
                 }
