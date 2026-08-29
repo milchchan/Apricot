@@ -14,6 +14,7 @@ class PromptView: UIView {
     var font: UIFont? = nil
     var isScrambled = false
     var scrambleLetters: Set<Character>? = nil
+    private var displayLink: CADisplayLink? = nil
     private var block: (running: Bool, time: Double, duration: Double, type: (elapsed: Double, speed: Double, reverse: Bool, buffer: String, count: Int), text: String, attributes: [(start: Int, end: Int)], current: String, color: (CGColor?, CGColor?), x: Double, width: Double, elapsed: Double) = (running: false, time: 0.0, duration: -1.0, type: (elapsed: -1.0, speed: 50.0, reverse: false, buffer: String(), count: 0), text: String(), attributes: [], current: String(), color: (nil, nil), x: 0.0, width: 0.0, elapsed: 0.0)
     private var line: String? = nil
     private var isRunning = false
@@ -57,10 +58,6 @@ class PromptView: UIView {
                 self.isInvalidated = true
             }
         })
-        
-        let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
-        
-        displayLink.add(to: .current, forMode: .common)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -71,6 +68,20 @@ class PromptView: UIView {
         self.isReloading = true
         self.isInvalidated = true
         self.line = text?.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "")
+    }
+    
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        
+        if self.window == nil {
+            self.displayLink?.invalidate()
+            self.displayLink = nil
+        } else if self.displayLink == nil {
+            let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
+            
+            self.displayLink = displayLink
+            displayLink.add(to: .current, forMode: .common)
+        }
     }
     
     @objc private func step(displayLink: CADisplayLink) {
