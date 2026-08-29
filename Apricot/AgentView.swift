@@ -89,9 +89,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
     }
     var idle: Bool {
-        get {
-            return self.characterViews.allSatisfy({ $0.lastIdleDate != nil })
-        }
+        return self.characterViews.allSatisfy({ $0.lastIdleDate != nil })
     }
     
     private override init(frame: CGRect) {
@@ -947,7 +945,12 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             }
                         }
                         
-                        Script.shared.states.removeAll()
+                        _ = await Script.shared.update { states in
+                            states.removeAll()
+                            
+                            return true
+                        }
+                        
                         Script.shared.queue.removeAll()
                         
                         self.snapshot = ([], nil)
@@ -1759,6 +1762,59 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             }
                         }
                     }
+                }
+            } else if prior > stars {
+                let characters = Script.shared.characters
+                let priorRuntime = Script.Runtime()
+                let currentRuntime = Script.Runtime()
+                var nameSet = Set<String>()
+                
+                for characterView in self.characterViews {
+                    guard let name = characterView.name, nameSet.insert(name).inserted else {
+                        continue
+                    }
+                    
+                    let starSequences = characters.reduce(into: [Sequence]()) { result, character in
+                        if character.name == name {
+                            result.append(contentsOf: character.sequences.filter { $0.name == "Star" })
+                        }
+                    }
+                    let startSequences = characters.reduce(into: [Sequence]()) { result, character in
+                        if character.name == name {
+                            result.append(contentsOf: character.sequences.filter { $0.name == "Start" })
+                        }
+                    }
+                    
+                    await priorRuntime.run(characters: characters, name: name, sequences: starSequences, state: String(prior), scores: [:], words: []) { _ in
+                        []
+                    }
+                    await priorRuntime.run(characters: characters, name: name, sequences: startSequences, scores: [:], words: []) { _ in
+                        []
+                    }
+                    await currentRuntime.run(characters: characters, name: name, sequences: starSequences, state: state, scores: [:], words: []) { _ in
+                        []
+                    }
+                    await currentRuntime.run(characters: characters, name: name, sequences: startSequences, scores: [:], words: []) { _ in
+                        []
+                    }
+                }
+                
+                let priorStates = priorRuntime.states
+                let currentStates = currentRuntime.states
+                let keys = Set(priorStates.keys).union(currentStates.keys)
+                
+                if !(await Script.shared.update { states in
+                    guard self.stars == stars else {
+                        return false
+                    }
+
+                    for key in keys where priorStates[key] != currentStates[key] && states[key] == priorStates[key] {
+                        states[key] = currentStates[key]
+                    }
+
+                    return true
+                }) {
+                    return
                 }
             }
             
