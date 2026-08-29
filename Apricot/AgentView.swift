@@ -28,6 +28,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     weak var delegate: (any AgentDelegate)? = nil
     var characterViews = [CharacterView]()
     var attributes = [String]()
+    private var displayLink: CADisplayLink? = nil
     private var audioPlayer: AVAudioPlayer? = nil
     private var accentColor: UIColor? = nil
     private var userScale = 1.0
@@ -574,10 +575,6 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 self.characterViews.append(characterView)
             }
         }
-        
-        let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
-        
-        displayLink.add(to: .current, forMode: .common)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -1299,122 +1296,95 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
     }
     
-    func notify(characterView: CharacterView, image: UIImage, text: String?, duration: Double) {
-        let view1 = UIView()
-        let view2 = UIView()
-        let imageView = UIImageView(image: image)
-        
-        view1.translatesAutoresizingMaskIntoConstraints = false
-        view1.backgroundColor = .clear
-        view1.isUserInteractionEnabled = false
-        view1.transform = CGAffineTransformMakeScale(1.0, -1.0)
-        
-        if let text {
-            let label = UILabel()
-            let attributedString = NSAttributedString(string: text, attributes: {
-                if let language = characterView.language {
-                    return [.font: UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize, weight: .bold), .foregroundColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)}, .languageIdentifier: language]
-                }
-                
-                return [.font: UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize, weight: .bold), .foregroundColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)}]
-            }())
-            let rect = attributedString.boundingRect(with: CGSize(width: Double.greatestFiniteMagnitude, height: Double.greatestFiniteMagnitude), options: .usesLineFragmentOrigin, context: nil)
-            let width = image.size.width + 8.0 + ceil(rect.width)
-            
-            view2.translatesAutoresizingMaskIntoConstraints = false
-            view2.backgroundColor = UIColor {
-                $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-            }
-            view2.isUserInteractionEnabled = false
-            view2.clipsToBounds = true
-            view2.alpha = 0.0
-            view2.layer.cornerRadius = (ceil(rect.size.height) + 16.0) / 2.0
-            view2.layer.transform = CATransform3DMakeScale(1.5, 1.5, 1.0)
-            
-            view1.addSubview(view2)
-            
-            imageView.translatesAutoresizingMaskIntoConstraints = false
-            imageView.backgroundColor = .clear
-            imageView.tintColor = UIColor {
-                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-            }
-            
-            view2.addSubview(imageView)
-            
-            label.translatesAutoresizingMaskIntoConstraints = false
-            label.backgroundColor = .clear
-            label.attributedText = attributedString
-            label.lineBreakMode = .byClipping
-            label.numberOfLines = 1
-            
-            view2.addSubview(label)
-            
-            view2.addConstraint(NSLayoutConstraint(item: imageView, attribute: .centerX, relatedBy: .equal, toItem: view2, attribute: .centerX, multiplier: 1.0, constant: -width / 2.0 + image.size.width / 2.0))
-            view2.addConstraint(NSLayoutConstraint(item: imageView, attribute: .centerY, relatedBy: .equal, toItem: view2, attribute: .centerY, multiplier: 1.0, constant: 0.0))
-            view2.addConstraint(NSLayoutConstraint(item: imageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(image.size.width)))
-            view2.addConstraint(NSLayoutConstraint(item: imageView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(image.size.height)))
-            
-            view2.addConstraint(NSLayoutConstraint(item: label, attribute: .left, relatedBy: .equal, toItem: imageView, attribute: .right, multiplier: 1.0, constant: 8.0))
-            view2.addConstraint(NSLayoutConstraint(item: label, attribute: .centerY, relatedBy: .equal, toItem: view2, attribute: .centerY, multiplier: 1.0, constant: 0.0))
-            view2.addConstraint(NSLayoutConstraint(item: label, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(rect.size.width)))
-            view2.addConstraint(NSLayoutConstraint(item: label, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(rect.size.height)))
-            
-            view1.addConstraint(NSLayoutConstraint(item: view2, attribute: .centerX, relatedBy: .equal, toItem: view1, attribute: .centerX, multiplier: 1.0, constant: 0.0))
-            view1.addConstraint(NSLayoutConstraint(item: view2, attribute: .centerY, relatedBy: .equal, toItem: view1, attribute: .centerY, multiplier: 1.0, constant: 0.0))
-            view1.addConstraint(NSLayoutConstraint(item: view2, attribute: .width, relatedBy: .equal, toItem: label, attribute: .width, multiplier: 1.0, constant: image.size.width + 8.0 + 32.0))
-            view1.addConstraint(NSLayoutConstraint(item: view2, attribute: .height, relatedBy: .equal, toItem: label, attribute: .height, multiplier: 1.0, constant: 16.0))
-        } else {
-            let length = max(image.size.width, image.size.height)
-            
-            view2.translatesAutoresizingMaskIntoConstraints = false
-            view2.backgroundColor = UIColor {
-                $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-            }
-            view2.isUserInteractionEnabled = false
-            view2.clipsToBounds = true
-            view2.alpha = 0.0
-            view2.layer.cornerRadius = (ceil(length) + 16.0) / 2.0
-            view2.layer.transform = CATransform3DMakeScale(1.5, 1.5, 1.0)
-            
-            view1.addSubview(view2)
-            
-            imageView.translatesAutoresizingMaskIntoConstraints = false
-            imageView.backgroundColor = .clear
-            imageView.tintColor = UIColor {
-                $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-            }
-            
-            view2.addSubview(imageView)
-            
-            view2.addConstraint(NSLayoutConstraint(item: imageView, attribute: .centerX, relatedBy: .equal, toItem: view2, attribute: .centerX, multiplier: 1.0, constant: 0.0))
-            view2.addConstraint(NSLayoutConstraint(item: imageView, attribute: .centerY, relatedBy: .equal, toItem: view2, attribute: .centerY, multiplier: 1.0, constant: 0.0))
-            view2.addConstraint(NSLayoutConstraint(item: imageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(image.size.width)))
-            view2.addConstraint(NSLayoutConstraint(item: imageView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(image.size.height)))
-            
-            view1.addConstraint(NSLayoutConstraint(item: view2, attribute: .centerX, relatedBy: .equal, toItem: view1, attribute: .centerX, multiplier: 1.0, constant: 0.0))
-            view1.addConstraint(NSLayoutConstraint(item: view2, attribute: .centerY, relatedBy: .equal, toItem: view1, attribute: .centerY, multiplier: 1.0, constant: 0.0))
-            view1.addConstraint(NSLayoutConstraint(item: view2, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(length) + 16.0))
-            view1.addConstraint(NSLayoutConstraint(item: view2, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(length) + 16.0))
-        }
-        
-        characterView.insertSubview(view1, belowSubview: characterView.balloonView!)
-        
-        characterView.addConstraint(NSLayoutConstraint(item: view1, attribute: .bottom, relatedBy: .equal, toItem: characterView.balloonView!, attribute: .centerY, multiplier: 1.0, constant: 0.0))
-        characterView.addConstraint(NSLayoutConstraint(item: view1, attribute: .top, relatedBy: .equal, toItem: characterView, attribute: .top, multiplier: 1.0, constant: 0.0))
-        characterView.addConstraint(NSLayoutConstraint(item: view1, attribute: .centerX, relatedBy: .equal, toItem: characterView, attribute: .centerX, multiplier: 1.0, constant: 0.0))
-        characterView.addConstraint(NSLayoutConstraint(item: view1, attribute: .width, relatedBy: .equal, toItem: characterView, attribute: .width, multiplier: 1.0, constant: 0.0))
-        
-        let time = characterView.subviews.reduce(CACurrentMediaTime(), { x, y in
-            var time = x
-            
-            for subview in y.subviews {
-                if let animation = subview.layer.animation(forKey: "notify") {
-                    time = max(time, animation.beginTime + animation.duration)
-                }
+    func notify(characterView: CharacterView, image: UIImage, text: String?, duration: Double, action: (() -> Void)? = nil) {
+        let backgroundColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0) }
+        let time = characterView.subviews.reduce(CACurrentMediaTime()) { time, subview in
+            if let animation = subview.layer.animation(forKey: "notify") {
+                return max(time, animation.beginTime + animation.duration)
             }
             
             return time
-        })
+        }
+        let button = UIButton(type: .system)
+        var configuration = UIButton.Configuration.plain()
+        let font = UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize, weight: .bold)
+        let length = font.lineHeight + 16.0
+        
+        configuration.image = image.withRenderingMode(.alwaysTemplate)
+        configuration.background.backgroundColor = backgroundColor
+        configuration.cornerStyle = .capsule
+        
+        if let text {
+            configuration.imagePadding = 8.0
+            configuration.contentInsets = NSDirectionalEdgeInsets(top: (length - max(font.lineHeight, image.size.height)) / 2.0, leading: (length + 16.0 - image.size.width) / 2.0, bottom: (length - max(font.lineHeight, image.size.height)) / 2.0, trailing: (length + 16.0 - image.size.width) / 2.0)
+            configuration.attributedTitle = AttributedString(NSAttributedString(string: text, attributes: [.font: font]))
+        } else {
+            configuration.imagePadding = 0.0
+            configuration.contentInsets = NSDirectionalEdgeInsets(top: (length - image.size.height) / 2.0, leading: (length - image.size.width) / 2.0, bottom: (length - image.size.height) / 2.0, trailing: (length - image.size.width) / 2.0)
+        }
+        
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isUserInteractionEnabled = false
+        
+        if let action {
+            configuration.baseForegroundColor = self.accentColor ?? UIColor(named: "AccentColor")!
+            
+            button.isExclusiveTouch = true
+            button.configuration = configuration
+            button.addAction(UIAction { [weak self, weak button, weak characterView] _ in
+                guard let self, let button, let characterView, button.superview === characterView else {
+                    return
+                }
+                
+                action()
+                
+                let opacity = button.layer.presentation()?.opacity ?? button.layer.opacity
+                let transform = button.layer.presentation()?.transform ?? button.layer.transform
+                let animationGroup = CAAnimationGroup()
+                let opacityAnimation = CABasicAnimation(keyPath: "opacity")
+                let transformAnimation = CABasicAnimation(keyPath: "transform")
+                
+                button.isUserInteractionEnabled = false
+                
+                opacityAnimation.fromValue = opacity
+                opacityAnimation.toValue = 0.0
+                opacityAnimation.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                
+                transformAnimation.fromValue = transform
+                transformAnimation.toValue = CATransform3DMakeScale(1.5, -1.5, 1.0)
+                transformAnimation.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                
+                animationGroup.beginTime = CACurrentMediaTime()
+                animationGroup.duration = 1.0
+                animationGroup.isRemovedOnCompletion = false
+                animationGroup.fillMode = .forwards
+                animationGroup.delegate = self
+                animationGroup.animations = [opacityAnimation, transformAnimation]
+                
+                button.layer.add(animationGroup, forKey: "notify")
+            }, for: .touchUpInside)
+            
+            let delay = max(0.0, time - CACurrentMediaTime())
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak button, weak characterView] in
+                guard let button, let characterView, button.superview === characterView else {
+                    return
+                }
+                
+                button.layer.opacity = 1.0
+                button.isUserInteractionEnabled = true
+            }
+        } else {
+            configuration.baseForegroundColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) }
+            
+            button.configuration = configuration
+        }
+        
+        button.layer.opacity = 0.0
+        button.layer.transform = CATransform3DMakeScale(1.5, -1.5, 1.0)
+        characterView.insertSubview(button, belowSubview: characterView.balloonView!)
+        characterView.addConstraint(NSLayoutConstraint(item: button, attribute: .centerX, relatedBy: .equal, toItem: characterView, attribute: .centerX, multiplier: 1.0, constant: 0.0))
+        characterView.addConstraint(NSLayoutConstraint(item: button, attribute: .bottom, relatedBy: .equal, toItem: characterView, attribute: .bottom, multiplier: 1.0, constant: button.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height))
         
         CATransaction.begin()
         
@@ -1422,22 +1392,22 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         let keyframeAnimation1 = CAKeyframeAnimation(keyPath: "opacity")
         let keyframeAnimation2 = CAKeyframeAnimation(keyPath: "transform")
         
-        keyframeAnimation1.keyTimes = [0.0, 0.2, 0.8, 1.0]
+        keyframeAnimation1.keyTimes = [0.0, NSNumber(floatLiteral: 1.0 / (duration + 2.0)), NSNumber(floatLiteral: 1.0 - 1.0 / (duration + 2.0)), 1.0]
         keyframeAnimation1.values = [0.0, 1.0, 1.0, 0.0]
         keyframeAnimation1.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .linear), CAMediaTimingFunction(name: .easeIn)]
         
-        keyframeAnimation2.keyTimes = [0.0, 0.2, 0.8, 1.0]
-        keyframeAnimation2.values = [CATransform3DMakeScale(1.5, 1.5, 1.0), CATransform3DMakeScale(1.0, 1.0, 1.0), CATransform3DMakeScale(1.0, 1.0, 1.0), CATransform3DMakeScale(1.5, 1.5, 1.0)]
+        keyframeAnimation2.keyTimes = [0.0, NSNumber(floatLiteral: 1.0 / (duration + 2.0)), NSNumber(floatLiteral: 1.0 - 1.0 / (duration + 2.0)), 1.0]
+        keyframeAnimation2.values = [CATransform3DMakeScale(1.5, -1.5, 1.0), CATransform3DMakeScale(1.0, -1.0, 1.0), CATransform3DMakeScale(1.0, -1.0, 1.0), CATransform3DMakeScale(1.5, -1.5, 1.0)]
         keyframeAnimation2.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .linear), CAMediaTimingFunction(name: .easeIn)]
         
         animationGroup.beginTime = time
-        animationGroup.duration = duration
+        animationGroup.duration = duration + 2.0
         animationGroup.isRemovedOnCompletion = false
         animationGroup.fillMode = .forwards
         animationGroup.delegate = self
         animationGroup.animations = [keyframeAnimation1, keyframeAnimation2]
         
-        view2.layer.add(animationGroup, forKey: "notify")
+        button.layer.add(animationGroup, forKey: "notify")
         
         CATransaction.commit()
     }
@@ -1739,10 +1709,10 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         }
                         
                         if !unlockedAchievements.isEmpty {
-                            Task.detached {
+                            Task.detached { [weak self] in
                                 let image = UIImage(systemName: "lock.open", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
                                 
-                                await MainActor.run { [weak self] in
+                                await MainActor.run {
                                     for unlockedAchievement in unlockedAchievements {
                                         self?.notify(characterView: characterView, image: image, text: unlockedAchievement, duration: 5.0)
                                     }
@@ -1755,7 +1725,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 }
                 
                 if let path = Bundle.main.path(forResource: "Star", ofType: "wav") {
-                    Task.detached {
+                    Task.detached { [weak self] in
                         if let file = FileHandle(forReadingAtPath: path) {
                             defer {
                                 try? file.close()
@@ -1775,11 +1745,15 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 }
                                 
                                 if isActivated {
-                                    await MainActor.run { [weak self] in
-                                        self?.audioPlayer = audioPlayer
-                                        self?.audioPlayer!.delegate = self
-                                        self?.audioPlayer!.volume = self?.isMute == true ? 0.0 : 1.0
-                                        self?.audioPlayer!.play()
+                                    await MainActor.run {
+                                        guard let self else {
+                                            return
+                                        }
+                                        
+                                        self.audioPlayer = audioPlayer
+                                        self.audioPlayer!.delegate = self
+                                        self.audioPlayer!.volume = self.isMute == true ? 0.0 : 1.0
+                                        self.audioPlayer!.play()
                                     }
                                 }
                             }
@@ -1795,6 +1769,20 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
             
             self.delegate?.agentDidUpdate(self, background: background)
+        }
+    }
+    
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        
+        if self.window == nil {
+            self.displayLink?.invalidate()
+            self.displayLink = nil
+        } else if self.displayLink == nil {
+            let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
+            
+            self.displayLink = displayLink
+            displayLink.add(to: .current, forMode: .common)
         }
     }
     
@@ -1871,6 +1859,10 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let view = super.hitTest(point, with: event)
+        
+        if let button = view as? UIButton {
+            return button
+        }
         
         for characterView in self.characterViews {
             if view === characterView.contentView {
@@ -3625,21 +3617,19 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         for characterView in self.characterViews {
-            for view1 in characterView.subviews {
-                for view2 in view1.subviews {
-                    if anim === view2.layer.animation(forKey: "notify") {
-                        for constraint in characterView.constraints {
-                            if constraint.firstItem === view1 {
-                                characterView.removeConstraint(constraint)
-                            }
+            for view in characterView.subviews {
+                if anim === view.layer.animation(forKey: "notify") {
+                    for constraint in characterView.constraints {
+                        if constraint.firstItem === view || constraint.secondItem === view {
+                            characterView.removeConstraint(constraint)
                         }
-                        
-                        view2.alpha = 0.0
-                        view2.layer.removeAllAnimations()
-                        view1.removeFromSuperview()
-                        
-                        return
                     }
+                    
+                    view.layer.opacity = 0.0
+                    view.removeFromSuperview()
+                    view.layer.removeAllAnimations()
+                    
+                    return
                 }
             }
         }
@@ -3655,7 +3645,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     
     class CharacterView: UIScrollView, UIScrollViewDelegate, @MainActor AVAudioPlayerDelegate, @MainActor CLLocationManagerDelegate {
         private var feedbackGenerator: UIImpactFeedbackGenerator? = nil
-        var parentView: AgentView? = nil
+        weak var parentView: AgentView? = nil
         var contentView: UIView = UIView()
         var balloonView: UIView? = nil
         var name: String? = nil
