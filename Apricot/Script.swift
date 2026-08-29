@@ -18,12 +18,7 @@ final public class Script: NSObject, ObservableObject {
     public var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])]()
     private let runtime = Script.Runtime()
     public var states: [String: String] {
-        get {
-            return self.runtime.states
-        }
-        set {
-            self.runtime.states = newValue
-        }
+        return self.runtime.states
     }
     public var queue: [(String, Sequence)] {
         get {
@@ -326,6 +321,10 @@ final public class Script: NSObject, ObservableObject {
 
             return nil
         }
+    }
+    
+    public func update(_ body: (inout [String: String]) -> Bool) async -> Bool {
+        return await self.runtime.update(body)
     }
     
     public func update() async -> Bool {
@@ -691,6 +690,17 @@ final public class Script: NSObject, ObservableObject {
         @MainActor public var queue = [(String, Sequence)]()
         private let innerSemaphore = Semaphore(value: 1)
         private let outerSemaphore = Semaphore(value: 1)
+        
+        @MainActor
+        public func update(_ body: (inout [String: String]) -> Bool) async -> Bool {
+            await self.outerSemaphore.wait()
+            
+            let succeeded = body(&self.states)
+            
+            await self.outerSemaphore.signal()
+            
+            return succeeded
+        }
         
         @MainActor
         public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, completion: (([Sequence]) -> [Sequence])? = nil) {
@@ -1921,10 +1931,7 @@ final public class Script: NSObject, ObservableObject {
                             var prompt: String? = nil
                             var sequences = [Sequence]()
                             var types = [String: (Int, Set<Int>)]()
-                            var top = Double.greatestFiniteMagnitude
-                            var left = Double.greatestFiniteMagnitude
-                            var bottom = -Double.greatestFiniteMagnitude
-                            var right = -Double.greatestFiniteMagnitude
+                            var insets = (top: Double.greatestFiniteMagnitude, left: Double.greatestFiniteMagnitude, bottom: -Double.greatestFiniteMagnitude, right: -Double.greatestFiniteMagnitude)
                             
                             if self.excludeSequences {
                                 if let value = jsonRoot["prompt"] as? String {
@@ -2000,87 +2007,86 @@ final public class Script: NSObject, ObservableObject {
                                     }
                                 }
                                 
-                                if let animations = jsonRoot["animations"] as? [[String: Any]] {
-                                    for animation in animations {
-                                        var sequence = Sequence(name: animation["name"] as? String, state: animation["state"] as? String)
-                                        let repeats: UInt
+                                func makeSequence(from jsonAnimation: [String: Any]) -> Sequence {
+                                    var sequence = Sequence(name: jsonAnimation["name"] as? String, state: jsonAnimation["state"] as? String)
+                                    let repeats: UInt
+                                    
+                                    if let value = jsonAnimation["repeats"] as? Double {
+                                        repeats = UInt(value)
+                                    } else {
+                                        repeats = 1
+                                    }
+                                    
+                                    if let frames = jsonAnimation["frames"] as? [[String: Any]] {
                                         var caches = [String: (Int, String?, [Sprite])]()
                                         var animations = [Animation]()
                                         
-                                        if let value = animation["repeats"] as? Double {
-                                            repeats = UInt(value)
-                                        } else {
-                                            repeats = 1
-                                        }
-                                        
-                                        if let frames = animation["frames"] as? [[String: Any]] {
-                                            for frame in frames {
-                                                var sprite = Sprite()
-                                                let z: Int
-                                                let type: String?
-                                                let key: String
+                                        for frame in frames {
+                                            var sprite = Sprite()
+                                            let z: Int
+                                            let type: String?
+                                            let key: String
+                                            
+                                            if let x = frame["x"] as? Double {
+                                                sprite.location.x = x
+                                            }
+                                            
+                                            if let y = frame["y"] as? Double {
+                                                sprite.location.y = y
+                                            }
+                                            
+                                            if let width = frame["width"] as? Double {
+                                                sprite.size.width = width
+                                            }
+                                            
+                                            if let height = frame["height"] as? Double {
+                                                sprite.size.height = height
+                                            }
+                                            
+                                            if let opacity = frame["opacity"] as? Double {
+                                                sprite.opacity = opacity
+                                            }
+                                            
+                                            if let delay = frame["delay"] as? Double {
+                                                sprite.delay = delay
+                                            }
+                                            
+                                            if let url = frame["url"] as? String {
+                                                sprite.path = url
+                                            }
+                                            
+                                            if let value = frame["z"] as? Double {
+                                                z = Int(value)
+                                            } else {
+                                                z = 0
+                                            }
+                                            
+                                            if let value = frame["type"] as? String {
+                                                type = value
+                                                key = "\(z)&\(value)"
+                                            } else {
+                                                type = nil
+                                                key = "\(z)"
+                                            }
+                                            
+                                            if let tuple = caches[key] {
+                                                var sprites = tuple.2
                                                 
-                                                if let x = frame["x"] as? Double {
-                                                    sprite.location.x = x
-                                                }
-                                                
-                                                if let y = frame["y"] as? Double {
-                                                    sprite.location.y = y
-                                                }
-                                                
-                                                if let width = frame["width"] as? Double {
-                                                    sprite.size.width = width
-                                                }
-                                                
-                                                if let height = frame["height"] as? Double {
-                                                    sprite.size.height = height
-                                                }
-                                                
-                                                if let opacity = frame["opacity"] as? Double {
-                                                    sprite.opacity = opacity
-                                                }
-                                                
-                                                if let delay = frame["delay"] as? Double {
-                                                    sprite.delay = delay
-                                                }
-                                                
-                                                if let url = frame["url"] as? String {
-                                                    sprite.path = url
-                                                }
-                                                
-                                                if let value = frame["z"] as? Double {
-                                                    z = Int(value)
-                                                } else {
-                                                    z = 0
-                                                }
-                                                
-                                                if let value = frame["type"] as? String {
-                                                    type = value
-                                                    key = "\(z)&\(value)"
-                                                } else {
-                                                    type = nil
-                                                    key = "\(z)"
-                                                }
-                                                
-                                                if let tuple = caches[key] {
-                                                    var sprites = tuple.2
-                                                    
-                                                    sprites.append(sprite)
-                                                    caches[key] = (tuple.0, tuple.1, sprites)
-                                                } else {
-                                                    caches[key] = (z, type, [sprite])
-                                                }
+                                                sprites.append(sprite)
+                                                caches[key] = (tuple.0, tuple.1, sprites)
+                                            } else {
+                                                caches[key] = (z, type, [sprite])
                                             }
                                         }
                                         
                                         for (_, value) in caches {
-                                            var a = Animation(frames: value.2)
+                                            var animation = Animation(frames: value.2)
                                             
-                                            a.repeats = repeats
-                                            a.z = value.0
-                                            a.type = value.1
+                                            animation.repeats = repeats
+                                            animation.z = value.0
+                                            animation.type = value.1
                                             
-                                            animations.append(a)
+                                            animations.append(animation)
                                             
                                             if let type = value.1 {
                                                 if var tuple = types[type] {
@@ -2096,35 +2102,64 @@ final public class Script: NSObject, ObservableObject {
                                             
                                             if value.0 >= 0 {
                                                 for sprite in value.2 {
-                                                    let r = sprite.location.x + sprite.size.width
-                                                    let b = sprite.location.y + sprite.size.height
+                                                    let right = sprite.location.x + sprite.size.width
+                                                    let bottom = sprite.location.y + sprite.size.height
                                                     
-                                                    if sprite.location.x < left {
-                                                        left = sprite.location.x
+                                                    if sprite.location.x < insets.left {
+                                                        insets.left = sprite.location.x
                                                     }
                                                     
-                                                    if r > right {
-                                                        right = r
+                                                    if right > insets.right {
+                                                        insets.right = right
                                                     }
                                                     
-                                                    if sprite.location.y < top {
-                                                        top = sprite.location.y
+                                                    if sprite.location.y < insets.top {
+                                                        insets.top = sprite.location.y
                                                     }
                                                     
-                                                    if b > bottom {
-                                                        bottom = b
+                                                    if bottom > insets.bottom {
+                                                        insets.bottom = bottom
                                                     }
                                                 }
                                             }
                                         }
                                         
                                         sequence.append(.animations(animations))
-                                        sequences.append(sequence)
+                                    }
+                                    
+                                    return sequence
+                                }
+                                
+                                if let jsonAnimations = jsonRoot["animations"] as? [[String: Any]] {
+                                    for jsonAnimation in jsonAnimations {
+                                        var output = makeSequence(from: jsonAnimation)
+                                        var stack: [(sequence: Sequence, childAnimations: [[String: Any]], childIndex: Int)] = [(sequence: output, childAnimations: jsonAnimation["animations"] as? [[String: Any]] ?? [], childIndex: 0)]
+                                        
+                                        repeat {
+                                            let index = stack.count - 1
+                                            
+                                            if stack[index].childIndex < stack[index].childAnimations.count {
+                                                let childAnimation = stack[index].childAnimations[stack[index].childIndex]
+                                                
+                                                stack[index].childIndex += 1
+                                                stack.append((sequence: makeSequence(from: childAnimation), childAnimations: childAnimation["animations"] as? [[String: Any]] ?? [], childIndex: 0))
+                                            } else {
+                                                let completedSequence = stack.removeLast().sequence
+                                                
+                                                if stack.isEmpty {
+                                                    output = completedSequence
+                                                } else {
+                                                    stack[stack.count - 1].sequence.append(.sequence(completedSequence))
+                                                }
+                                            }
+                                        } while !stack.isEmpty
+                                        
+                                        sequences.append(output)
                                     }
                                 }
                             }
                             
-                            self.characters.append((id: nil, name: name, location: CGPoint(x: jsonRoot["x"] as? Double ?? 0.0, y: jsonRoot["y"] as? Double ?? 0.0), size: CGSize(width: width, height: height), scale: jsonRoot["scale"] as? Double ?? 1.0, language: jsonRoot["language"] as? String, preview: jsonRoot["preview"] as? String, prompt: prompt, sequences: sequences, types: types, insets: (top: top, left: left, bottom: bottom, right: right)))
+                            self.characters.append((id: nil, name: name, location: CGPoint(x: jsonRoot["x"] as? Double ?? 0.0, y: jsonRoot["y"] as? Double ?? 0.0), size: CGSize(width: width, height: height), scale: jsonRoot["scale"] as? Double ?? 1.0, language: jsonRoot["language"] as? String, preview: jsonRoot["preview"] as? String, prompt: prompt, sequences: sequences, types: types, insets: insets))
                         }
                     }
                 }
