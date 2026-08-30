@@ -528,10 +528,16 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         let actualScale = scale * self.systemScale
                         let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
                         let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
+                        let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                         
-                        UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
+                        format.opaque = false
+                        format.preferredRange = .standard
+                        format.scale = self.traitCollection.displayScale
                         
-                        if let context = UIGraphicsGetCurrentContext() {
+                        let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                        let renderedImage = renderer.image { rendererContext in
+                            let context = rendererContext.cgContext
+                            
                             if actualScale == floor(actualScale) {
                                 context.interpolationQuality = .none
                                 context.setAllowsAntialiasing(false)
@@ -551,18 +557,16 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             }
                             
                             context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
-                            
-                            if let i = context.makeImage() {
-                                CATransaction.begin()
-                                CATransaction.setDisableActions(true)
-                                
-                                characterView.contentView.layer.contents = i
-                                
-                                CATransaction.commit()
-                            }
                         }
                         
-                        UIGraphicsEndImageContext()
+                        if let image = renderedImage.cgImage {
+                            CATransaction.begin()
+                            CATransaction.setDisableActions(true)
+                            
+                            characterView.contentView.layer.contents = image
+                            
+                            CATransaction.commit()
+                        }
                         
                         for (key, value) in fades {
                             characterView.fades[key] = value
@@ -1127,10 +1131,16 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     let actualScale = self.userScale * self.systemScale
                                     let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
                                     let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
+                                    let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                                     
-                                    UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
+                                    format.opaque = false
+                                    format.preferredRange = .standard
+                                    format.scale = self.traitCollection.displayScale
                                     
-                                    if let context = UIGraphicsGetCurrentContext() {
+                                    let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                                    let renderedImage = renderer.image { rendererContext in
+                                        let context = rendererContext.cgContext
+                                        
                                         if actualScale == floor(actualScale) {
                                             context.interpolationQuality = .none
                                             context.setAllowsAntialiasing(false)
@@ -1150,18 +1160,16 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                         }
                                         
                                         context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
-                                        
-                                        if let i = context.makeImage() {
-                                            CATransaction.begin()
-                                            CATransaction.setDisableActions(true)
-                                            
-                                            characterView.contentView.layer.contents = i
-                                            
-                                            CATransaction.commit()
-                                        }
                                     }
                                     
-                                    UIGraphicsEndImageContext()
+                                    if let image = renderedImage.cgImage {
+                                        CATransaction.begin()
+                                        CATransaction.setDisableActions(true)
+                                        
+                                        characterView.contentView.layer.contents = image
+                                        
+                                        CATransaction.commit()
+                                    }
                                     
                                     for (key, value) in fades {
                                         characterView.fades[key] = value
@@ -1252,10 +1260,16 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 let actualScale = scale * self.systemScale
                                 let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
                                 let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
+                                let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                                 
-                                UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
+                                format.opaque = false
+                                format.preferredRange = .standard
+                                format.scale = self.traitCollection.displayScale
                                 
-                                if let context = UIGraphicsGetCurrentContext() {
+                                let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                                let renderedImage = renderer.image { rendererContext in
+                                    let context = rendererContext.cgContext
+                                    
                                     if actualScale == floor(actualScale) {
                                         context.interpolationQuality = .none
                                         context.setAllowsAntialiasing(false)
@@ -1275,18 +1289,16 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     }
                                     
                                     context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
-                                    
-                                    if let i = context.makeImage() {
-                                        CATransaction.begin()
-                                        CATransaction.setDisableActions(true)
-                                        
-                                        characterView.contentView.layer.contents = i
-                                        
-                                        CATransaction.commit()
-                                    }
                                 }
                                 
-                                UIGraphicsEndImageContext()
+                                if let image = renderedImage.cgImage {
+                                    CATransaction.begin()
+                                    CATransaction.setDisableActions(true)
+                                    
+                                    characterView.contentView.layer.contents = image
+                                    
+                                    CATransaction.commit()
+                                }
                             }
                         }
                     }
@@ -1923,17 +1935,16 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         for characterView in self.characterViews {
             if view === characterView.contentView {
-                var image: CGImage? = nil
+                let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                 
-                UIGraphicsBeginImageContextWithOptions(view!.frame.size, false, 0)
+                format.opaque = false
+                format.preferredRange = .standard
+                format.scale = self.traitCollection.displayScale
                 
-                view!.drawHierarchy(in: view!.bounds, afterScreenUpdates: false)
-                
-                if let context = UIGraphicsGetCurrentContext() {
-                    image = context.makeImage()
-                }
-                
-                UIGraphicsEndImageContext()
+                let renderer = UIGraphicsImageRenderer(size: view!.frame.size, format: format)
+                let image = renderer.image { _ in
+                    view!.drawHierarchy(in: view!.bounds, afterScreenUpdates: false)
+                }.cgImage
                 
                 if let image, self.getColor(image: image, scale: self.traitCollection.displayScale, x: Int(floor(point.x - characterView.frame.origin.x - characterView.contentView.superview!.frame.origin.x)), y: Int(floor(point.y - characterView.frame.origin.y - characterView.frame.size.height + characterView.contentView.frame.size.height))).alpha > 0.0 {
                     return view
@@ -4386,155 +4397,167 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             var image: CGImage? = nil
             var completed = true
             
-            UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
-            
-            if let context = UIGraphicsGetCurrentContext(), let parentView = self.parentView {
-                let actualScale = parentView.userScale * parentView.systemScale
-                let types = self.types.compactMap({ $0.value.1 ? $0.key : nil })
+            if let parentView = self.parentView {
+                let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                 
-                if actualScale == floor(actualScale) {
-                    context.interpolationQuality = .none
-                    context.setAllowsAntialiasing(false)
-                } else {
-                    context.interpolationQuality = .high
-                    context.setAllowsAntialiasing(true)
-                }
+                format.opaque = false
+                format.preferredRange = .standard
+                format.scale = self.scale == 0.0 ? self.traitCollection.displayScale : self.scale
                 
-                context.clear(CGRect(origin: CGPoint.zero, size: self.size))
-                context.translateBy(x: 0.0, y: self.size.height)
-                context.scaleBy(x: 1.0, y: -1.0)
-                
-                for timeline in timelines {
-                    if !timeline.animation.isEmpty {
-                        let current = timeline.current
-                        
-                        if current.opacity > 0.0, let path = current.path {
-                            let key: String
-                            var tempTypes: [String?]? = nil
-                            let isVisible: Bool
-                            let alpha: Double
+                let renderer = UIGraphicsImageRenderer(size: self.size, format: format)
+                let renderedImage = renderer.image { rendererContext in
+                    let context = rendererContext.cgContext
+                    let actualScale = parentView.userScale * parentView.systemScale
+                    let types = self.types.compactMap({ $0.value.1 ? $0.key : nil })
+                    
+                    if actualScale == floor(actualScale) {
+                        context.interpolationQuality = .none
+                        context.setAllowsAntialiasing(false)
+                    } else {
+                        context.interpolationQuality = .high
+                        context.setAllowsAntialiasing(true)
+                    }
+                    
+                    context.clear(CGRect(origin: CGPoint.zero, size: self.size))
+                    context.translateBy(x: 0.0, y: self.size.height)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    
+                    for timeline in timelines {
+                        if !timeline.animation.isEmpty {
+                            let current = timeline.current
                             
-                            if timeline.animation.type == nil {
-                                key = String(timeline.animation.z)
-                                tempTypes = []
+                            if current.opacity > 0.0, let path = current.path {
+                                let key: String
+                                var tempTypes: [String?]? = nil
+                                let isVisible: Bool
+                                let alpha: Double
                                 
-                                for cachedTimeline in timelines {
-                                    if cachedTimeline.animation.z == timeline.animation.z {
-                                        tempTypes!.append(cachedTimeline.animation.type)
-                                    }
-                                }
-                            } else {
-                                key = "\(timeline.animation.z)&\(timeline.animation.type!)"
-                            }
-                            
-                            let fade = self.fades[key]
-                            
-                            if let tempTypes {
-                                if types.isEmpty {
-                                    isVisible = true
-                                } else {
-                                    isVisible = !tempTypes.contains { type in
-                                        if let type {
-                                            return types.contains(type)
-                                        }
-                                        
-                                        return false
-                                    }
-                                }
-                            } else if types.isEmpty {
-                                isVisible = false
-                            } else {
-                                tempTypes = []
-                                
-                                for cachedTimeline in timelines {
-                                    if let type = cachedTimeline.animation.type, cachedTimeline.animation.z == timeline.animation.z && types.contains(type) {
-                                        tempTypes!.append(type)
-                                    }
-                                }
-                                
-                                isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: timeline.animation.type!) == tempTypes!.count - 1
-                            }
-                            
-                            if isVisible {
-                                if fade != nil && timeline.animation.type == nil || timeline.animation.type != nil {
-                                    let step = fade == nil ? deltaTime : fade! + deltaTime
+                                if timeline.animation.type == nil {
+                                    key = String(timeline.animation.z)
+                                    tempTypes = []
                                     
-                                    if step >= 1.0 {
-                                        if timeline.animation.type == nil {
-                                            self.fades.removeValue(forKey: key)
+                                    for cachedTimeline in timelines {
+                                        if cachedTimeline.animation.z == timeline.animation.z {
+                                            tempTypes!.append(cachedTimeline.animation.type)
+                                        }
+                                    }
+                                } else {
+                                    key = "\(timeline.animation.z)&\(timeline.animation.type!)"
+                                }
+                                
+                                let fade = self.fades[key]
+                                
+                                if let tempTypes {
+                                    if types.isEmpty {
+                                        isVisible = true
+                                    } else {
+                                        isVisible = !tempTypes.contains { type in
+                                            if let type {
+                                                return types.contains(type)
+                                            }
+                                            
+                                            return false
+                                        }
+                                    }
+                                } else if types.isEmpty {
+                                    isVisible = false
+                                } else {
+                                    tempTypes = []
+                                    
+                                    for cachedTimeline in timelines {
+                                        if let type = cachedTimeline.animation.type, cachedTimeline.animation.z == timeline.animation.z && types.contains(type) {
+                                            tempTypes!.append(type)
+                                        }
+                                    }
+                                    
+                                    isVisible = !tempTypes!.isEmpty && tempTypes!.lastIndex(of: timeline.animation.type!) == tempTypes!.count - 1
+                                }
+                                
+                                if isVisible {
+                                    if fade != nil && timeline.animation.type == nil || timeline.animation.type != nil {
+                                        let step = fade == nil ? deltaTime : fade! + deltaTime
+                                        
+                                        if step >= 1.0 {
+                                            if timeline.animation.type == nil {
+                                                self.fades.removeValue(forKey: key)
+                                            } else {
+                                                self.fades[key] = 1.0
+                                            }
+                                            
+                                            alpha = 1.0
                                         } else {
-                                            self.fades[key] = 1.0
+                                            self.fades[key] = step
+                                            alpha = sin(step / 2.0 * .pi)
+                                            completed = false
+                                        }
+                                    } else {
+                                        alpha = 1.0
+                                    }
+                                } else if (fade != nil || timeline.animation.type != nil) && fade == nil {
+                                    alpha = 0.0
+                                } else {
+                                    let step = fade == nil && timeline.animation.type == nil ? 1.0 - deltaTime : fade! - deltaTime
+                                    
+                                    if step <= 0.0 {
+                                        if timeline.animation.type == nil {
+                                            self.fades[key] = 0.0
+                                        } else {
+                                            self.fades.removeValue(forKey: key)
                                         }
                                         
-                                        alpha = 1.0
+                                        alpha = 0.0
                                     } else {
                                         self.fades[key] = step
                                         alpha = sin(step / 2.0 * .pi)
                                         completed = false
                                     }
-                                } else {
-                                    alpha = 1.0
                                 }
-                            } else if (fade != nil || timeline.animation.type != nil) && fade == nil {
-                                alpha = 0.0
-                            } else {
-                                let step = fade == nil && timeline.animation.type == nil ? 1.0 - deltaTime : fade! - deltaTime
                                 
-                                if step <= 0.0 {
-                                    if timeline.animation.type == nil {
-                                        self.fades[key] = 0.0
+                                if alpha > 0.0, let i = images[path] {
+                                    let width: Double
+                                    let height: Double
+                                    
+                                    if current.size.width == 0.0 && current.size.height == 0.0 {
+                                        width = Double(i.width)
+                                        height = Double(i.height)
+                                    } else if current.size.width == 0.0 {
+                                        width = floor(current.size.height * Double(i.width) / Double(i.height))
+                                        height = floor(current.size.height)
+                                    } else if current.size.height == 0.0 {
+                                        width = floor(current.size.width)
+                                        height = floor(current.size.width * Double(i.height) / Double(i.width))
                                     } else {
-                                        self.fades.removeValue(forKey: key)
+                                        width = floor(current.size.width)
+                                        height = floor(current.size.height)
                                     }
                                     
-                                    alpha = 0.0
-                                } else {
-                                    self.fades[key] = step
-                                    alpha = sin(step / 2.0 * .pi)
-                                    completed = false
+                                    context.saveGState()
+                                    context.concatenate(CGAffineTransformMakeTranslation(round(self.origin.x + current.location.x), round(self.size.height - self.origin.y - current.location.y - height)))
+                                    context.setAlpha(current.opacity * alpha)
+                                    context.draw(i, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                                    context.restoreGState()
                                 }
-                            }
-                            
-                            if alpha > 0.0, let i = images[path] {
-                                let width: Double
-                                let height: Double
-                                
-                                if current.size.width == 0.0 && current.size.height == 0.0 {
-                                    width = Double(i.width)
-                                    height = Double(i.height)
-                                } else if current.size.width == 0.0 {
-                                    width = floor(current.size.height * Double(i.width) / Double(i.height))
-                                    height = floor(current.size.height)
-                                } else if current.size.height == 0.0 {
-                                    width = floor(current.size.width)
-                                    height = floor(current.size.width * Double(i.height) / Double(i.width))
-                                } else {
-                                    width = floor(current.size.width)
-                                    height = floor(current.size.height)
-                                }
-                                
-                                context.saveGState()
-                                context.concatenate(CGAffineTransformMakeTranslation(round(self.origin.x + current.location.x), round(self.size.height - self.origin.y - current.location.y - height)))
-                                context.setAlpha(current.opacity * alpha)
-                                context.draw(i, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                                context.restoreGState()
                             }
                         }
                     }
                 }
                 
-                image = context.makeImage()
+                image = renderedImage.cgImage
             }
-            
-            UIGraphicsEndImageContext()
             
             if let image, let parentView = self.parentView {
                 let scale = (self.scale == 0.0 ? 1.0 : self.scale / self.traitCollection.displayScale) * parentView.userScale * parentView.systemScale
                 let size = CGSize(width: ceil(self.size.width * scale), height: ceil(self.size.height * scale))
+                let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                 
-                UIGraphicsBeginImageContextWithOptions(size, false, 0)
+                format.opaque = false
+                format.preferredRange = .standard
+                format.scale = self.traitCollection.displayScale
                 
-                if let context = UIGraphicsGetCurrentContext() {
+                let renderer = UIGraphicsImageRenderer(size: size, format: format)
+                let renderedImage = renderer.image { rendererContext in
+                    let context = rendererContext.cgContext
+                    
                     context.interpolationQuality = .high
                     context.setAllowsAntialiasing(true)
                     context.clear(CGRect(origin: CGPoint.zero, size: size))
@@ -4548,18 +4571,16 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                     
                     context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-                    
-                    if let i = context.makeImage() {
-                        CATransaction.begin()
-                        CATransaction.setDisableActions(true)
-                        
-                        self.contentView.layer.contents = i
-                        
-                        CATransaction.commit()
-                    }
                 }
                 
-                UIGraphicsEndImageContext()
+                if let image = renderedImage.cgImage {
+                    CATransaction.begin()
+                    CATransaction.setDisableActions(true)
+                    
+                    self.contentView.layer.contents = image
+                    
+                    CATransaction.commit()
+                }
             }
             
             return (image, completed)
@@ -4582,9 +4603,15 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 }
             }
             
-            UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
+            let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
             
-            if let context = UIGraphicsGetCurrentContext() {
+            format.opaque = false
+            format.preferredRange = .standard
+            format.scale = self.scale == 0.0 ? self.traitCollection.displayScale : self.scale
+            
+            let renderer = UIGraphicsImageRenderer(size: self.size, format: format)
+            let renderedImage = renderer.image { rendererContext in
+                let context = rendererContext.cgContext
                 let types = self.types.compactMap({ $0.value.1 ? $0.key : nil })
                 
                 context.interpolationQuality = .high
@@ -4682,11 +4709,9 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         }
                     }
                 }
-                
-                image = context.makeImage()
             }
             
-            UIGraphicsEndImageContext()
+            image = renderedImage.cgImage
             
             return (image, fades)
         }
