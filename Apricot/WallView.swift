@@ -397,11 +397,13 @@ class WallView: UIView {
                                     duration += frame.delay
                                 }
                                 
-                                if duration > maxDuration {
-                                    maxDuration = duration
+                                if !tempFrames.isEmpty {
+                                    if duration > maxDuration {
+                                        maxDuration = duration
+                                    }
+                                    
+                                    animations.append(tempFrames)
                                 }
-                                
-                                animations.append(tempFrames)
                             }
                         }
                         
