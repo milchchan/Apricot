@@ -64,21 +64,23 @@ struct Provider: TimelineProvider {
                                         }
                                         
                                         if let resizeSize {
-                                            var resizedImage: CGImage? = nil
+                                            let format = UIGraphicsImageRendererFormat()
                                             
-                                            UIGraphicsBeginImageContextWithOptions(CGSize(width: resizeSize.width, height: resizeSize.height), false, 1)
+                                            format.opaque = false
+                                            format.scale = 1
+                                            format.preferredRange = .standard
                                             
-                                            if let context = UIGraphicsGetCurrentContext() {
+                                            let renderer = UIGraphicsImageRenderer(size: resizeSize, format: format)
+                                            let resizedImage = renderer.image { rendererContext in
+                                                let context = rendererContext.cgContext
+                                                
                                                 context.interpolationQuality = .high
                                                 context.setAllowsAntialiasing(true)
                                                 context.clear(CGRect(x: 0.0, y: 0.0, width: resizeSize.width, height: resizeSize.height))
                                                 context.translateBy(x: 0.0, y: resizeSize.height)
                                                 context.scaleBy(x: 1.0, y: -1.0)
                                                 context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: resizeSize.width, height: resizeSize.height))
-                                                resizedImage = context.makeImage()
-                                            }
-                                            
-                                            UIGraphicsEndImageContext()
+                                            }.cgImage
                                             
                                             return resizedImage
                                         } else {
@@ -239,39 +241,47 @@ struct CharmEntryView : View {
         let length = (maximum + padding * 2.0) * image.scale
         let scale = 0.75
         let size = CGSize(width: ceil(length * scale), height: ceil(length * scale))
+        let format = UIGraphicsImageRendererFormat()
         
-        UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
+        format.opaque = false
+        format.scale = 1.0
+        format.preferredRange = .standard
         
-        if let context = UIGraphicsGetCurrentContext(), let starImage = image.cgImage {
-            context.interpolationQuality = .high
-            context.setAllowsAntialiasing(true)
-            context.saveGState()
-            context.clear(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-            context.translateBy(x: 0.0, y: size.height)
-            context.scaleBy(x: scale, y: -scale)
-            context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 1.0, 1.0])!)
-            context.fill(CGRect(origin: CGPoint.zero, size: CGSize(width: length, height: length)))
-            context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])!)
-            context.addArc(center: CGPoint(x: (padding + maximum / 2.0) * image.scale, y: (padding + maximum / 2.0) * image.scale), radius: (maximum + padding * 2.0) / 2.0 * image.scale, startAngle: 0.0, endAngle: Double.pi * 2.0, clockwise: true)
-            context.fillPath()
-            context.clip(to: CGRect(origin: CGPoint(x: (length - CGFloat(starImage.width)) / 2.0, y: (length - CGFloat(starImage.height)) / 2.0), size: CGSize(width: starImage.width, height: starImage.height)), mask: starImage)
-            context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 1.0, 1.0])!)
-            context.fill(CGRect(origin: CGPoint(x: padding * image.scale, y: padding * image.scale), size: CGSize(width: starImage.width, height: starImage.height)))
-            context.restoreGState()
-            
-            if let cgImage = context.makeImage(), let dataProvider = cgImage.dataProvider, let maskImage = CGImage(maskWidth: cgImage.width, height: cgImage.height, bitsPerComponent: cgImage.bitsPerComponent, bitsPerPixel: cgImage.bitsPerPixel, bytesPerRow: cgImage.bytesPerRow, provider: dataProvider, decode: nil, shouldInterpolate: false), let maskedImage = cgImage.masking(maskImage) {
+        if let starImage = image.cgImage {
+            let renderer = UIGraphicsImageRenderer(size: size, format: format)
+            var didRenderMaskedImage = false
+            let renderedImage = renderer.image { rendererContext in
+                let context = rendererContext.cgContext
+                
+                context.interpolationQuality = .high
+                context.setAllowsAntialiasing(true)
+                context.saveGState()
                 context.clear(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
                 context.translateBy(x: 0.0, y: size.height)
-                context.scaleBy(x: 1.0, y: -1.0)
-                context.draw(maskedImage, in: CGRect(x: 0, y: 0, width: size.width, height: size.height), byTiling: false)
+                context.scaleBy(x: scale, y: -scale)
+                context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 1.0, 1.0])!)
+                context.fill(CGRect(origin: CGPoint.zero, size: CGSize(width: length, height: length)))
+                context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])!)
+                context.addArc(center: CGPoint(x: (padding + maximum / 2.0) * image.scale, y: (padding + maximum / 2.0) * image.scale), radius: (maximum + padding * 2.0) / 2.0 * image.scale, startAngle: 0.0, endAngle: Double.pi * 2.0, clockwise: true)
+                context.fillPath()
+                context.clip(to: CGRect(origin: CGPoint(x: (length - CGFloat(starImage.width)) / 2.0, y: (length - CGFloat(starImage.height)) / 2.0), size: CGSize(width: starImage.width, height: starImage.height)), mask: starImage)
+                context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 1.0, 1.0])!)
+                context.fill(CGRect(origin: CGPoint(x: padding * image.scale, y: padding * image.scale), size: CGSize(width: starImage.width, height: starImage.height)))
+                context.restoreGState()
                 
-                if let i = context.makeImage() {
-                    image = UIImage(cgImage: i, scale: image.scale, orientation: image.imageOrientation)
+                if let cgImage = context.makeImage(), let dataProvider = cgImage.dataProvider, let maskImage = CGImage(maskWidth: cgImage.width, height: cgImage.height, bitsPerComponent: cgImage.bitsPerComponent, bitsPerPixel: cgImage.bitsPerPixel, bytesPerRow: cgImage.bytesPerRow, provider: dataProvider, decode: nil, shouldInterpolate: false), let maskedImage = cgImage.masking(maskImage) {
+                    context.clear(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+                    context.translateBy(x: 0.0, y: size.height)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.draw(maskedImage, in: CGRect(x: 0, y: 0, width: size.width, height: size.height), byTiling: false)
+                    didRenderMaskedImage = true
                 }
             }
+            
+            if didRenderMaskedImage, let cgImage = renderedImage.cgImage {
+                image = UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+            }
         }
-        
-        UIGraphicsEndImageContext()
         
         self.entry = entry
         self.starImage = image
