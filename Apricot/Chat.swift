@@ -118,9 +118,7 @@ struct Chat: View {
                               alignment: .top
                            )
                            .background(.clear)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
+                           .foregroundStyle(.primary)
                            .clipped()
                            .offset(y: -round(self.starImage.size.height * (self.likability ?? 0.0)))
                         Image(uiImage: self.starImage.withRenderingMode(.alwaysTemplate))
@@ -145,9 +143,7 @@ struct Chat: View {
                         )
                         .offset(y: -floor(UIFont(name: "DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 5.0))!.ascender - UIFont(name: "DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 5.0))!.capHeight))
                         .background(.clear)
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 5.0)))
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -301,9 +297,7 @@ struct Chat: View {
                            ForEach(0..<3) { index in
                               Circle()
                                  .frame(width: 8, height: 8)
-                                 .foregroundStyle(Color(UIColor {
-                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                 }))
+                                 .foregroundStyle(.primary)
                                  .scaleEffect(0.5 + self.loadingAmount * 0.5)
                                  .opacity(0.5 + self.loadingAmount * 0.5)
                                  .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true).delay(Double(index) * 0.5), value: self.loadingAmount)
@@ -690,6 +684,16 @@ struct Chat: View {
                               
                               return .handled
                            }
+                           .onChange(of: self.composerFocused) {
+                              if self.composerFocused && self.isRecording {
+                                 self.stopRecognize()
+                              }
+                           }
+                           .onDisappear {
+                              if self.isRecording {
+                                 self.stopRecognize()
+                              }
+                           }
                      }
                      .background(.clear)
                      .padding(EdgeInsets(
@@ -895,7 +899,7 @@ struct Chat: View {
                   .compositingGroup()
                   .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
                   .geometryGroup()
-                  .animation(.easeInOut(duration: 0.5),value: self.message)
+                  .animation(.linear(duration: 0.5),value: self.message)
                   .onTapGesture {
                      self.composerFocused = false
                   }
@@ -919,9 +923,7 @@ struct Chat: View {
             maxHeight: .infinity,
             alignment: .topLeading
          )
-         .background(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-         }))
+         .background(Color(uiColor: .systemBackground))
          .onChange(of: self.scenePhase) {
             if self.scenePhase == .active {
                let now = Int(Date().timeIntervalSince1970)
@@ -935,6 +937,16 @@ struct Chat: View {
                }
             } else {
                self.isActive = false
+               
+               if self.scenePhase == .background {
+                  if self.isRecording {
+                     self.stopRecognize()
+                  }
+                  
+                  withAnimation {
+                     self.isPeeking = false
+                  }
+               }
             }
          }
          .onChange(of: self.shortcut.type) {
@@ -2951,150 +2963,235 @@ struct Chat: View {
       
       return nil
    }
-   
+      
    private func startRecognize() {
-      withAnimation(.easeInOut(duration: 0.5)) {
+      guard let recognizer = SFSpeechRecognizer() else {
+         return
+      }
+      
+      withAnimation(.linear(duration: 0.5)) {
          self.isRecording = true
       }
       
-      self.speechRecognizer = SFSpeechRecognizer()
+      let message = self.message
+      
+      self.speechRecognizer = recognizer
       
       Task {
-         if await withCheckedContinuation({ continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
-               continuation.resume(returning: status == .authorized)
+         let speechAllowed: Bool
+         
+         let authorizationStatus = SFSpeechRecognizer.authorizationStatus()
+         
+         if authorizationStatus == .notDetermined {
+            speechAllowed = await withCheckedContinuation(isolation: nil) { @Sendable (continuation: CheckedContinuation<Bool, Never>) in
+               SFSpeechRecognizer.requestAuthorization { status in
+                  continuation.resume(returning: status == .authorized)
+               }
             }
-         }), await AVAudioApplication.requestRecordPermission(), await (Task.detached {
+         } else {
+            speechAllowed = authorizationStatus == .authorized
+         }
+         
+         guard self.isRecording, self.speechRecognizer === recognizer else {
+            return
+         }
+         
+         guard speechAllowed else {
+            self.speechRecognizer = nil
+            self.isRecording = false
+            
+            return
+         }
+         
+         let microphoneAllowed = await AVAudioApplication.requestRecordPermission()
+         
+         guard self.isRecording, self.speechRecognizer === recognizer else {
+            return
+         }
+         
+         guard microphoneAllowed else {
+            self.speechRecognizer = nil
+            self.isRecording = false
+            
+            return
+         }
+         
+         let audioSessionActivated: Bool
+         do {
             let audioSession = AVAudioSession.sharedInstance()
             
-            if audioSession.category != .playAndRecord {
-               do {
-                  try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
-                  try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-               } catch {
-                  return false
-               }
+            if audioSession.category != .playAndRecord || audioSession.mode != .measurement {
+               try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
             }
             
-            return true
-         }.value) {
-            let audioEngine = AVAudioEngine()
-            let inputNode = audioEngine.inputNode
-            
-            if let recognizer = self.speechRecognizer, recognizer.isAvailable {
-               let request = SFSpeechAudioBufferRecognitionRequest()
-               
-               request.shouldReportPartialResults = false
-               
-               inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputNode.outputFormat(forBus: 0)) { (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
-                  request.append(buffer)
-                  
-                  if let floatChannelData = buffer.floatChannelData {
-                     let pointee = floatChannelData.pointee
-                     var sum: Float = 0.0
-                     
-                     for i in stride(from: 0, to: Int(buffer.frameLength), by: buffer.stride) {
-                        sum += pointee[i] * pointee[i]
-                     }
-                     
-                     let rms = sqrt(sum / Float(buffer.frameLength))
-                     let dB = rms == 0.0 ? 0.0 : 20.0 * log10(rms)
-                     let minimum: Float = -50.0
-                     let maximum: Float = -25.0
-                     let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
-                     
-                     Task {
-                        await MainActor.run {
-                           withAnimation(.easeInOut(duration: 0.5)) {
-                              self.volumeLevel = level
-                           }
-                        }
-                     }
-                  }
-               }
-               
-               audioEngine.prepare()
-               
-               do {
-                  try audioEngine.start()
-               } catch {
-                  self.speechRecognizer = nil
-                  
-                  withAnimation(.easeInOut(duration: 0.5)) {
-                     self.isRecording = false
-                  }
-                  
-                  return
-               }
-               
-               self.audioEngine = audioEngine
-               self.speechAudioBufferRecognitionRequest = request
-               self.speechRecognitionTask = recognizer.recognitionTask(with: request, resultHandler: { result, error in
-                  if error == nil {
-                     if let result {
-                        let text = result.bestTranscription.formattedString
-                        
-                        if result.isFinal && audioEngine.isRunning {
-                           audioEngine.stop()
-                           audioEngine.inputNode.removeTap(onBus: 0)
-                           
-                           withAnimation(.easeInOut(duration: 0.5)) {
-                              self.volumeLevel = 0.0
-                           }
-                        }
-                        
-                        if !text.isEmpty {
-                           self.message.append(text)
-                        }
-                     }
-                  } else if audioEngine.isRunning {
-                     audioEngine.stop()
-                     audioEngine.inputNode.removeTap(onBus: 0)
-                     
-                     withAnimation(.easeInOut(duration: 0.5)) {
-                        self.volumeLevel = 0.0
-                     }
-                  }
-               })
-               
-               return
-            }
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            audioSessionActivated = true
+         } catch {
+            audioSessionActivated = false
          }
          
-         self.speechRecognizer = nil
+         guard self.isRecording, self.speechRecognizer === recognizer else {
+            return
+         }
          
-         withAnimation(.easeInOut(duration: 0.5)) {
+         guard audioSessionActivated && recognizer.isAvailable else {
+            self.speechRecognizer = nil
             self.isRecording = false
-         }
-      }
-   }
-   
-   private func stopRecognize() {
-      if self.speechRecognizer != nil {
-         if let speechRecognitionTask = self.speechRecognitionTask {
-            speechRecognitionTask.finish()
-            self.speechRecognitionTask = nil
+            
+            return
          }
          
-         if let audioEngine = self.audioEngine {
-            if audioEngine.isRunning {
-               audioEngine.stop()
-               audioEngine.inputNode.removeTap(onBus: 0)
+         if let previousAudioEngine = self.audioEngine {
+            if previousAudioEngine.isRunning {
+               previousAudioEngine.stop()
             }
             
+            previousAudioEngine.inputNode.removeTap(onBus: 0)
             self.audioEngine = nil
          }
          
-         if let speechAudioBufferRecognitionRequest = self.speechAudioBufferRecognitionRequest {
-            speechAudioBufferRecognitionRequest.endAudio()
-            self.speechAudioBufferRecognitionRequest = nil
+         let audioEngine = AVAudioEngine()
+         let inputNode = audioEngine.inputNode
+         let inputFormat = inputNode.outputFormat(forBus: 0)
+         
+         guard inputFormat.sampleRate > 0.0, inputFormat.channelCount > 0 else {
+            self.speechRecognizer = nil
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
+            
+            return
          }
          
-         self.speechRecognizer = nil
+         let request = SFSpeechAudioBufferRecognitionRequest()
          
-         withAnimation(.easeInOut(duration: 0.5)) {
-            self.isRecording = false
-            self.volumeLevel = 0.0
+         request.shouldReportPartialResults = true
+         
+         self.installTap(on: inputNode, format: inputFormat, request: request) { level, duration in
+            let multiplier = level > self.volumeLevel ? 5.0 : 10.0
+            
+            withAnimation(.linear(duration: duration * multiplier)) {
+               self.volumeLevel = level
+            }
+         }
+         
+         audioEngine.prepare()
+         
+         do {
+            try audioEngine.start()
+         } catch {
+            self.speechRecognizer = nil
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
+            
+            return
+         }
+         
+         self.audioEngine = audioEngine
+         self.speechAudioBufferRecognitionRequest = request
+         self.speechRecognitionTask = recognizer.recognitionTask(with: request, resultHandler: { result, error in
+            if error == nil {
+               if let result {
+                  let text = result.bestTranscription.formattedString
+                  
+                  if result.isFinal, self.audioEngine === audioEngine {
+                     if audioEngine.isRunning {
+                        audioEngine.stop()
+                     }
+                     
+                     audioEngine.inputNode.removeTap(onBus: 0)
+                     self.audioEngine = nil
+                     
+                     withAnimation(.linear(duration: 0.5)) {
+                        self.isRecording = false
+                        self.volumeLevel = 0.0
+                     }
+                  }
+                  
+                  if !text.isEmpty {
+                     self.message = message + text
+                  }
+               }
+            } else if self.audioEngine === audioEngine {
+               if audioEngine.isRunning {
+                  audioEngine.stop()
+               }
+               
+               audioEngine.inputNode.removeTap(onBus: 0)
+               self.audioEngine = nil
+               
+               withAnimation(.linear(duration: 0.5)) {
+                  self.isRecording = false
+                  self.volumeLevel = 0.0
+               }
+            }
+         })
+      }
+   }
+      
+   private func stopRecognize() {
+      self.speechRecognizer = nil
+      
+      if let speechRecognitionTask = self.speechRecognitionTask {
+         speechRecognitionTask.cancel()
+         self.speechRecognitionTask = nil
+      }
+      
+      if let audioEngine = self.audioEngine {
+         if audioEngine.isRunning {
+            audioEngine.stop()
+         }
+         
+         audioEngine.inputNode.removeTap(onBus: 0)
+         
+         self.audioEngine = nil
+      }
+      
+      if let speechAudioBufferRecognitionRequest = self.speechAudioBufferRecognitionRequest {
+         speechAudioBufferRecognitionRequest.endAudio()
+         self.speechAudioBufferRecognitionRequest = nil
+      }
+      
+      withAnimation(.linear(duration: 0.5)) {
+         self.isRecording = false
+         self.volumeLevel = 0.0
+      }
+   }
+   
+   private nonisolated func installTap(on inputNode: AVAudioInputNode, format: AVAudioFormat, request: SFSpeechAudioBufferRecognitionRequest, onChange: @escaping @MainActor (Double, Double) -> Void
+   ) {
+      inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+         guard buffer.frameLength > 0, buffer.stride > 0, buffer.format.sampleRate > 0.0 else {
+            return
+         }
+         
+         request.append(buffer)
+         
+         guard let floatChannelData = buffer.floatChannelData else {
+            return
+         }
+         
+         let pointee = floatChannelData.pointee
+         var sum: Float = 0.0
+         
+         for i in stride(from: 0, to: Int(buffer.frameLength), by: buffer.stride) {
+            sum += pointee[i] * pointee[i]
+         }
+         
+         let rms = sqrt(sum / Float(buffer.frameLength))
+         let dB = rms == 0.0 ? 0.0 : 20.0 * log10(rms)
+         let minimum: Float = -50.0
+         let maximum: Float = -25.0
+         let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
+         let duration = Double(buffer.frameLength) / buffer.format.sampleRate
+         
+         Task { @MainActor in
+            onChange(level, duration)
          }
       }
    }
@@ -5801,15 +5898,21 @@ struct Peek: UIViewControllerRepresentable {
                   return
                }
                
+               let angle: CGFloat
+               
                switch UIDevice.current.orientation {
                case UIDeviceOrientation.portraitUpsideDown:
-                  captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+                  angle = 270
                case UIDeviceOrientation.landscapeLeft:
-                  captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+                  angle = 0
                case UIDeviceOrientation.landscapeRight:
-                  captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+                  angle = 180
                default:
-                  captureVideoPreviewLayer.connection?.videoRotationAngle = 90
+                  angle = 90
+               }
+               
+               if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
+                  connection.videoRotationAngle = angle
                }
             }
          }
@@ -5885,17 +5988,23 @@ struct Peek: UIViewControllerRepresentable {
          }
 
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
+            let angle: CGFloat
+
             captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: size)
             
             switch UIDevice.current.orientation {
             case UIDeviceOrientation.portraitUpsideDown:
-               captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+               angle = 270
             case UIDeviceOrientation.landscapeLeft:
-               captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+               angle = 0
             case UIDeviceOrientation.landscapeRight:
-               captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+               angle = 180
             default:
-               captureVideoPreviewLayer.connection?.videoRotationAngle = 90
+               angle = 90
+            }
+            
+            if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
+               connection.videoRotationAngle = angle
             }
          }
       }
@@ -6139,9 +6248,7 @@ struct Activity: View {
             .toolbar {
                ToolbarItem(placement: .principal) {
                   Text("Activity")
-                     .foregroundStyle(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                     }))
+                     .foregroundStyle(.primary)
                      .font(.headline)
                      .fontWeight(.semibold)
                      .lineLimit(1)
@@ -6216,9 +6323,7 @@ struct Activity: View {
    
    private func makeStats() -> some View {
       return Section(header: Text("Stats")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
+         .foregroundStyle(.primary)
             .fontWeight(.semibold)
             .lineLimit(1)
             .textCase(.uppercase)) {
@@ -6256,18 +6361,14 @@ struct Activity: View {
                      }
                   }
                   .aspectRatio(UIDevice.current.userInterfaceIdiom == .phone ? 1.0 : 2.0, contentMode: .fit)
-                  .listRowBackground(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                  }))
+                  .listRowBackground(Color(uiColor: .systemBackground))
                   .transition(.opacity.animation(.linear))
                }
                
                if let mean = self.mean {
                   HStack(alignment: .center, spacing: 16.0) {
                      Text("Mean")
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                      Spacer()
@@ -6277,18 +6378,14 @@ struct Activity: View {
                         .fontWeight(.semibold)
                         .lineLimit(1)
                   }
-                  .listRowBackground(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                  }))
+                  .listRowBackground(Color(uiColor: .systemBackground))
                   .transition(.opacity.animation(.linear))
                }
                
                if let variance = self.variance {
                   HStack(alignment: .center, spacing: 16.0) {
                      Text("Variance")
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                      Spacer()
@@ -6298,9 +6395,7 @@ struct Activity: View {
                         .fontWeight(.semibold)
                         .lineLimit(1)
                   }
-                  .listRowBackground(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                  }))
+                  .listRowBackground(Color(uiColor: .systemBackground))
                   .transition(.opacity.animation(.linear))
                }
             }
@@ -6308,18 +6403,14 @@ struct Activity: View {
    
    private func makeAchievements() -> some View {
       return Section(header: Text("Achievements")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
+         .foregroundStyle(.primary)
             .fontWeight(.semibold)
             .lineLimit(1)
             .textCase(.uppercase)) {
                if let achievements = self.achievements, let remains = self.remains {
                   HStack(alignment: .center, spacing: 16.0) {
                      Text("Overall")
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                      Spacer()
@@ -6329,16 +6420,12 @@ struct Activity: View {
                         .fontWeight(.semibold)
                         .lineLimit(1)
                   }
-                  .listRowBackground(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                  }))
+                  .listRowBackground(Color(uiColor: .systemBackground))
                   .transition(.opacity.animation(.linear))
                   ForEach(Array(achievements.enumerated()), id: \.element) { (index, item) in
                      HStack(alignment: .center, spacing: 16.0) {
                         Text(item)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
+                           .foregroundStyle(.primary)
                            .font(.subheadline)
                            .fontWeight(.semibold)
                         Spacer()
@@ -6395,9 +6482,7 @@ struct Activity: View {
                               .bold()
                         }
                      }
-                     .listRowBackground(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                     }))
+                     .listRowBackground(Color(uiColor: .systemBackground))
                   }
                   .transition(.opacity.animation(.linear))
                }
@@ -6406,43 +6491,33 @@ struct Activity: View {
    
    private func makeTrendings() -> some View {
       return Section(header: Text("Trending")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
+         .foregroundStyle(.primary)
             .fontWeight(.semibold)
             .lineLimit(1)
             .textCase(.uppercase)) {
                if let trendings = self.trendings {
                   if trendings.isEmpty {
                      Text("None")
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .frame(
                            maxWidth: .infinity,
                            alignment: .center
                         )
-                        .listRowBackground(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                        }))
+                        .listRowBackground(Color(uiColor: .systemBackground))
                         .transition(.opacity.animation(.linear))
                   } else {
                      ForEach(Array(trendings.enumerated()), id: \.element) { (index, word) in
                         if self.words.contains(where: { $0.name.compare(word, options: [.caseInsensitive]) == .orderedSame }) {
                            HStack(alignment: .center, spacing: 16.0) {
                               Text(String(format: "%ld", index + 1))
-                                 .foregroundStyle(Color(UIColor {
-                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                 }))
+                                 .foregroundStyle(.primary)
                                  .font(.subheadline)
                                  .fontWeight(.semibold)
                                  .lineLimit(1)
                               Text(word)
-                                 .foregroundStyle(Color(UIColor {
-                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                 }))
+                                 .foregroundStyle(.primary)
                                  .font(.subheadline)
                                  .fontWeight(.semibold)
                                  .lineLimit(1)
@@ -6462,9 +6537,7 @@ struct Activity: View {
                                     .bold()
                               }
                            }
-                           .listRowBackground(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                           }))
+                           .listRowBackground(Color(uiColor: .systemBackground))
                            .transition(.opacity.animation(.linear))
                         } else {
                            Button(action: {
@@ -6476,16 +6549,12 @@ struct Activity: View {
                            }) {
                               HStack(alignment: .center, spacing: 16.0) {
                                  Text(String(format: "%ld", index + 1))
-                                    .foregroundStyle(Color(UIColor {
-                                       $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                    }))
+                                    .foregroundStyle(.primary)
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .lineLimit(1)
                                  Text(word)
-                                    .foregroundStyle(Color(UIColor {
-                                       $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                    }))
+                                    .foregroundStyle(.primary)
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .lineLimit(1)
@@ -6524,9 +6593,7 @@ struct Activity: View {
                            }
                            .buttonStyle(PlainButtonStyle())
                            .disabled(self.words.contains(where: { $0.name.compare(word, options: [.caseInsensitive]) == .orderedSame }))
-                           .listRowBackground(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                           }))
+                           .listRowBackground(Color(uiColor: .systemBackground))
                            .transition(.opacity.animation(.linear))
                         }
                      }
@@ -6537,27 +6604,21 @@ struct Activity: View {
    
    private func makeLogs() -> some View {
       return Section(header: Text("Logs")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
+         .foregroundStyle(.primary)
             .fontWeight(.semibold)
             .lineLimit(1)
             .textCase(.uppercase)) {
                if var indexes = self.indexes, var contents = self.contents {
                   if contents.isEmpty {
                      Text("None")
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .frame(
                            maxWidth: .infinity,
                            alignment: .center
                         )
-                        .listRowBackground(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                        }))
+                        .listRowBackground(Color(uiColor: .systemBackground))
                         .transition(.opacity.animation(.linear))
                   } else {
                      ForEach(Array(indexes.reversed().enumerated()), id: \.element) { (_, index) in
@@ -6585,9 +6646,7 @@ struct Activity: View {
                               
                               if let text = contents[index].text {
                                  Text(text)
-                                    .foregroundStyle(Color(UIColor {
-                                       $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                    }))
+                                    .foregroundStyle(.primary)
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .frame(
@@ -6608,9 +6667,7 @@ struct Activity: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 16.0))
                               }
                            }
-                           .listRowBackground(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                           }))
+                           .listRowBackground(Color(uiColor: .systemBackground))
                         } else {
                            VStack(alignment: .leading, spacing: 8.0) {
                               if let text = contents[index].text, let image = contents[index].image {
@@ -6692,9 +6749,7 @@ struct Activity: View {
                                  .background(.clear)
                               }
                            }
-                           .listRowBackground(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                           }))
+                           .listRowBackground(Color(uiColor: .systemBackground))
                         }
                      }
                      .transition(.opacity.animation(.linear))
@@ -6710,9 +6765,7 @@ struct Activity: View {
                         self.logs.removeAll()
                      }) {
                         Text("Reset")
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
+                           .foregroundStyle(.primary)
                            .font(.subheadline)
                            .fontWeight(.semibold)
                            .frame(
@@ -6722,9 +6775,7 @@ struct Activity: View {
                            .contentShape(Rectangle())
                      }
                      .buttonStyle(PlainButtonStyle())
-                     .listRowBackground(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                     }))
+                     .listRowBackground(Color(uiColor: .systemBackground))
                      .transition(.opacity.animation(.linear))
                   }
                }
@@ -6998,8 +7049,9 @@ struct Dictionary: View {
    @Binding var type: String?
    @Binding var words: [Word]
    let attributes: [String]
+   @Environment(\.scenePhase) private var scenePhase
    @Environment(\.dismiss) private var dismiss
-   @FocusState private var inputFocus: Bool
+   @FocusState private var inputFocused: Bool
    @Namespace private var topID
    @State private var isEditing = false
    @State private var isSubmittable = false
@@ -7043,9 +7095,7 @@ struct Dictionary: View {
                ToolbarItem(placement: .principal) {
                   ZStack {
                      Text("Dictionary")
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.headline)
                         .fontWeight(.semibold)
                         .lineLimit(1)
@@ -7054,9 +7104,7 @@ struct Dictionary: View {
                      
                      if !self.path.isEmpty {
                         Text(self.path[0].name)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
+                           .foregroundStyle(.primary)
                            .font(.headline)
                            .fontWeight(.semibold)
                            .lineLimit(1)
@@ -7104,16 +7152,16 @@ struct Dictionary: View {
                ToolbarItem(placement: .navigationBarTrailing) {
                   Button(action: {
                      if self.path.isEmpty {
-                        if self.inputFocus {
-                           self.inputFocus = false
+                        if self.inputFocused {
+                           self.inputFocused = false
                            
                            if self.isEditing {
-                              withAnimation(.easeInOut(duration: 0.5)) {
+                              withAnimation(.linear(duration: 0.5)) {
                                  self.isEditing = false
                               }
                            }
                         } else {
-                           withAnimation(.easeInOut(duration: 0.5)) {
+                           withAnimation(.linear(duration: 0.5)) {
                               self.isEditing.toggle()
                            }
                         }
@@ -7132,7 +7180,7 @@ struct Dictionary: View {
                      }
                   }) {
                      if self.path.isEmpty {
-                        if self.isEditing || self.inputFocus {
+                        if self.isEditing || self.inputFocused {
                            Image(systemName: "checkmark")
                               .frame(
                                  alignment: .center
@@ -7172,6 +7220,17 @@ struct Dictionary: View {
                Camera(active: self.active, text: self.$input)
                   .presentationDetents([.medium, .large])
             })
+            .onChange(of: self.scenePhase) {
+               guard self.scenePhase == .background else {
+                  return
+               }
+               
+               if self.isRecording {
+                  self.stopRecognize()
+               }
+               
+               self.isCapturing = false
+            }
             .onChange(of: self.type) {
                if let type = self.type {
                   self.input = type
@@ -7212,459 +7271,417 @@ struct Dictionary: View {
    
    private func makeNew() -> some View {
       Section(header: Text("New")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
-            .fontWeight(.semibold)
-            .lineLimit(1)
-            .textCase(.uppercase)) {
-               HStack(alignment: .center, spacing: 16.0) {
-                  TextField("Word", text: self.$input)
-                     .foregroundStyle(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                     }))
-                     .font(.subheadline)
-                     .fontWeight(.semibold)
-                     .submitLabel(.done)
-                     .focused(self.$inputFocus)
-                     .textInputAutocapitalization(.never)
-                     .disableAutocorrection(true)
-                     .background(.clear)
-                     .tint(Color(uiColor: self.accent))
-                     .onChange(of: self.input) {
-                        if self.input.isEmpty {
-                           withAnimation(.easeIn(duration: 0.5)) {
-                              self.isSubmittable = false
-                           }
-                        } else {
-                           withAnimation(.easeOut(duration: 0.5)) {
-                              self.isSubmittable = true
-                           }
+         .foregroundStyle(.primary)
+         .fontWeight(.semibold)
+         .lineLimit(1)
+         .textCase(.uppercase)) {
+            HStack(alignment: .center, spacing: 16.0) {
+               TextField("Word", text: self.$input)
+                  .foregroundStyle(.primary)
+                  .font(.subheadline)
+                  .fontWeight(.semibold)
+                  .submitLabel(.done)
+                  .focused(self.$inputFocused)
+                  .textInputAutocapitalization(.never)
+                  .disableAutocorrection(true)
+                  .background(.clear)
+                  .tint(Color(uiColor: self.accent))
+                  .onChange(of: self.input) {
+                     if self.input.isEmpty {
+                        withAnimation(.linear(duration: 0.5)) {
+                           self.isSubmittable = false
+                        }
+                     } else {
+                        withAnimation(.linear(duration: 0.5)) {
+                           self.isSubmittable = true
                         }
                      }
-                     .onChange(of: self.inputFocus) {
-                        if self.inputFocus && self.isRecording {
-                           self.stopRecognize()
-                        }
+                  }
+                  .onChange(of: self.inputFocused) {
+                     if self.inputFocused && self.isRecording {
+                        self.stopRecognize()
                      }
-                     .onChange(of: self.isRecording) {
-                        if self.isRecording && self.inputFocus {
-                           self.inputFocus = false
-                        }
+                  }
+                  .onChange(of: self.isRecording) {
+                     if self.isRecording && self.inputFocused {
+                        self.inputFocused = false
                      }
-                     .onChange(of: self.isCapturing) {
-                        if self.isCapturing && self.isRecording {
-                           self.stopRecognize()
-                        }
+                  }
+                  .onChange(of: self.isCapturing) {
+                     if self.isCapturing && self.isRecording {
+                        self.stopRecognize()
                      }
-                     .onSubmit {
-                        if self.input.isEmpty {
-                           self.inputFocus = false
-                        } else {
-                           Task {
-                              let input = self.input
-                              
-                              await Task.detached {
-                                 await MainActor.run {
-                                    self.inputFocus = false
-                                    self.input = String()
+                  }
+                  .onSubmit {
+                     if self.input.isEmpty {
+                        self.inputFocused = false
+                     } else {
+                        Task {
+                           let input = self.input
+                           
+                           await Task.detached {
+                              await MainActor.run {
+                                 self.inputFocused = false
+                                 self.input = String()
+                              }
+                           }.value
+                           
+                           await Task.detached {
+                              await MainActor.run {
+                                 withAnimation {
+                                    self.words.append(Word(name: input, attributes: nil))
                                  }
-                              }.value
-                              
-                              await Task.detached {
-                                 await MainActor.run {
-                                    withAnimation {
-                                       self.words.append(Word(name: input, attributes: nil))
-                                    }
-                                    
-                                    self.save(words: self.words)
-                                 }
-                              }.value
-                           }
+                                 
+                                 self.save(words: self.words)
+                              }
+                           }.value
                         }
                      }
-                     .onDisappear {
-                        if self.isRecording {
-                           self.stopRecognize()
-                        }
-                     }
-                  Button(action: {
+                  }
+                  .onDisappear {
                      if self.isRecording {
                         self.stopRecognize()
-                     } else {
-                        self.startRecognize()
                      }
-                  }) {
-                     ZStack {
-                        Image(systemName: "mic")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(Color(uiColor: self.accent))
-                           .font(
-                              .system(size: 16.0)
-                           )
-                           .bold()
-                           .opacity(self.isRecording ? 0.5 + 0.5 * (1.0 - self.volumeLevel) : 0.0)
-                           .transition(.opacity)
-                        Image(systemName: "mic")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
-                           .font(
-                              .system(size: 16.0)
-                           )
-                           .bold()
-                           .opacity(self.isRecording ? 0.0 : 1.0)
-                           .transition(.opacity)
-                     }
-                     .background(.clear)
                   }
-                  .buttonStyle(PlainButtonStyle())
-                  .frame(
-                     width: 24.0,
-                     height: 24.0,
-                     alignment: .center
-                  )
-                  .background(.clear)
-                  Button(action: {
-                     self.isCapturing = true
-                  }) {
-                     ZStack {
-                        Image(systemName: "camera")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(Color(uiColor: self.accent))
-                           .font(
-                              .system(size: 16.0)
-                           )
-                           .bold()
-                           .opacity(self.isCapturing ? 1.0 : 0.0)
-                           .transition(.opacity)
-                        Image(systemName: "camera")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
-                           .font(
-                              .system(size: 16.0)
-                           )
-                           .bold()
-                           .opacity(self.isCapturing ? 0.0 : 1.0)
-                           .transition(.opacity)
-                     }
-                     .background(.clear)
+               Button(action: {
+                  if self.isRecording {
+                     self.stopRecognize()
+                  } else {
+                     self.startRecognize()
                   }
-                  .buttonStyle(PlainButtonStyle())
-                  .frame(
-                     width: 24.0,
-                     height: 24.0,
-                     alignment: .center
-                  )
-                  .background(.clear)
-                  Button(action: {
-                     Task {
-                        let input = self.input
-                        
-                        await Task.detached {
-                           await MainActor.run {
-                              if self.isRecording {
-                                 self.stopRecognize()
-                              }
-                              
-                              self.inputFocus = false
-                              self.input = String()
-                           }
-                        }.value
-                        
-                        await Task.detached {
-                           await MainActor.run {
-                              withAnimation {
-                                 self.words.append(Word(name: input, attributes: nil))
-                              }
-                              
-                              self.save(words: self.words)
-                           }
-                        }.value
-                     }
-                  }) {
-                     Image(systemName: "plus")
+               }) {
+                  ZStack {
+                     Image(systemName: "mic")
                         .frame(
                            alignment: .center
                         )
                         .background(.clear)
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(Color(uiColor: self.accent))
                         .font(
                            .system(size: 16.0)
                         )
                         .bold()
+                        .opacity(self.isRecording ? 0.5 + 0.5 * (1.0 - self.volumeLevel) : 0.0)
+                        .transition(.opacity)
+                     Image(systemName: "mic")
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(
+                           .system(size: 16.0)
+                        )
+                        .bold()
+                        .opacity(self.isRecording ? 0.0 : 1.0)
+                        .transition(.opacity)
                   }
-                  .buttonStyle(PlainButtonStyle())
-                  .disabled(!self.isSubmittable)
-                  .frame(
-                     width: 24.0,
-                     height: 24.0,
-                     alignment: .center
-                  )
                   .background(.clear)
                }
-               .listRowBackground(Color(UIColor {
-                  $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-               }))
-               .transition(.opacity.animation(.linear))
+               .buttonStyle(PlainButtonStyle())
+               .frame(
+                  width: 24.0,
+                  height: 24.0,
+                  alignment: .center
+               )
+               .background(.clear)
+               Button(action: {
+                  self.isCapturing = true
+               }) {
+                  ZStack {
+                     Image(systemName: "camera")
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .foregroundStyle(Color(uiColor: self.accent))
+                        .font(
+                           .system(size: 16.0)
+                        )
+                        .bold()
+                        .opacity(self.isCapturing ? 1.0 : 0.0)
+                        .transition(.opacity)
+                     Image(systemName: "camera")
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(
+                           .system(size: 16.0)
+                        )
+                        .bold()
+                        .opacity(self.isCapturing ? 0.0 : 1.0)
+                        .transition(.opacity)
+                  }
+                  .background(.clear)
+               }
+               .buttonStyle(PlainButtonStyle())
+               .frame(
+                  width: 24.0,
+                  height: 24.0,
+                  alignment: .center
+               )
+               .background(.clear)
+               Button(action: {
+                  Task {
+                     let input = self.input
+                     
+                     await Task.detached {
+                        await MainActor.run {
+                           self.inputFocused = false
+                           self.input = String()
+                        }
+                     }.value
+                     
+                     await Task.detached {
+                        await MainActor.run {
+                           withAnimation {
+                              self.words.append(Word(name: input, attributes: nil))
+                           }
+                           
+                           self.save(words: self.words)
+                        }
+                     }.value
+                  }
+               }) {
+                  Image(systemName: "plus")
+                     .frame(
+                        alignment: .center
+                     )
+                     .background(.clear)
+                     .foregroundStyle(.primary)
+                     .font(
+                        .system(size: 16.0)
+                     )
+                     .bold()
+               }
+               .buttonStyle(PlainButtonStyle())
+               .disabled(!self.isSubmittable)
+               .frame(
+                  width: 24.0,
+                  height: 24.0,
+                  alignment: .center
+               )
+               .background(.clear)
             }
+            .listRowBackground(Color(uiColor: .systemBackground))
+            .transition(.opacity.animation(.linear))
+         }
    }
    
    private func makeWords(proxy: ScrollViewProxy) -> some View {
       return Section(header: Text("Words")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
-            .fontWeight(.semibold)
-            .lineLimit(1)
-            .textCase(.uppercase)) {
-               if self.words.isEmpty {
-                  Text("None")
-                     .foregroundStyle(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                     }))
-                     .font(.subheadline)
-                     .fontWeight(.semibold)
-                     .frame(
-                        maxWidth: .infinity,
-                        alignment: .center
-                     )
-                     .listRowBackground(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                     }))
-                     .transition(.opacity.animation(.linear))
-               } else {
-                  ForEach(Array(self.words.reversed().enumerated()), id: \.element) { (index, word) in
-                     if self.attributes.isEmpty {
-                        Text(word.name)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
-                           .font(.subheadline)
-                           .fontWeight(.semibold)
-                           .listRowBackground(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                           }))
-                     } else {
-                        Button(action: {
-                           withAnimation {
-                              proxy.scrollTo(self.topID, anchor: .bottom)
-                              self.path.append(word)
-                           }
-                        }) {
-                           HStack(alignment: .center, spacing: 16.0) {
-                              Text(word.name)
-                                 .foregroundStyle(Color(UIColor {
-                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                 }))
-                                 .font(.subheadline)
-                                 .fontWeight(.semibold)
-                              Spacer()
-                              
-                              if let attributes = word.attributes {
-                                 if attributes.isEmpty {
-                                    Text("Modifier")
-                                       .foregroundStyle(Color(uiColor: self.accent))
-                                       .font(.caption)
-                                       .fontWeight(.semibold)
-                                       .lineLimit(1)
-                                       .textCase(.uppercase)
-                                       .padding(EdgeInsets(
-                                          top: 4.0,
-                                          leading: 8.0,
-                                          bottom: 4.0,
-                                          trailing: 8.0
-                                       ))
-                                       .overlay(
-                                          Capsule(style: .continuous)
-                                             .stroke(Color(uiColor: self.accent), style: StrokeStyle(lineWidth: 1.0))
-                                       )
-                                 } else {
-                                    Text(String(format: "%ld", attributes.count))
-                                       .foregroundStyle(Color(uiColor: self.accent))
-                                       .font(.caption)
-                                       .fontWeight(.semibold)
-                                       .lineLimit(1)
-                                       .padding(EdgeInsets(
-                                          top: 4.0,
-                                          leading: 8.0,
-                                          bottom: 4.0,
-                                          trailing: 8.0
-                                       ))
-                                       .overlay(
-                                          Capsule(style: .continuous)
-                                             .stroke(Color(uiColor: self.accent), style: StrokeStyle(lineWidth: 1.0))
-                                       )
-                                 }
-                              }
-                              
-                              Image(systemName: "chevron.right")
-                                 .frame(
-                                    alignment: .center
-                                 )
-                                 .background(.clear)
-                                 .foregroundStyle(Color(uiColor: self.accent))
-                                 .font(
-                                    .system(size: 16.0)
-                                 )
-                                 .bold()
-                           }
-                           .frame(
-                              maxWidth: .infinity
-                           )
-                           .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .listRowBackground(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                        }))
-                     }
-                  }.onDelete(perform: { indexSet in
-                     var offsets = IndexSet()
-                     
-                     for index in indexSet {
-                        offsets.insert(self.words.count - 1 - index)
-                     }
-                     
-                     withAnimation {
-                        self.words.remove(atOffsets: offsets)
-                     }
-                     
-                     self.save(words: self.words)
-                  }).onMove(perform: { indices, newOffset in
-                     var offsets = IndexSet()
-                     
-                     for index in indices {
-                        offsets.insert(self.words.count - 1 - index)
-                     }
-                     
-                     self.words.move(fromOffsets: offsets, toOffset: self.words.count - newOffset)
-                     self.save(words: self.words)
-                  })
+         .foregroundStyle(.primary)
+         .fontWeight(.semibold)
+         .lineLimit(1)
+         .textCase(.uppercase)) {
+            if self.words.isEmpty {
+               Text("None")
+                  .foregroundStyle(.primary)
+                  .font(.subheadline)
+                  .fontWeight(.semibold)
+                  .frame(
+                     maxWidth: .infinity,
+                     alignment: .center
+                  )
+                  .listRowBackground(Color(uiColor: .systemBackground))
                   .transition(.opacity.animation(.linear))
-               }
+            } else {
+               ForEach(Array(self.words.reversed().enumerated()), id: \.element) { (index, word) in
+                  if self.attributes.isEmpty {
+                     Text(word.name)
+                        .foregroundStyle(.primary)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .listRowBackground(Color(uiColor: .systemBackground))
+                  } else {
+                     Button(action: {
+                        withAnimation {
+                           proxy.scrollTo(self.topID, anchor: .bottom)
+                           self.path.append(word)
+                        }
+                     }) {
+                        HStack(alignment: .center, spacing: 16.0) {
+                           Text(word.name)
+                              .foregroundStyle(.primary)
+                              .font(.subheadline)
+                              .fontWeight(.semibold)
+                           Spacer()
+                           
+                           if let attributes = word.attributes {
+                              if attributes.isEmpty {
+                                 Text("Modifier")
+                                    .foregroundStyle(Color(uiColor: self.accent))
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(1)
+                                    .textCase(.uppercase)
+                                    .padding(EdgeInsets(
+                                       top: 4.0,
+                                       leading: 8.0,
+                                       bottom: 4.0,
+                                       trailing: 8.0
+                                    ))
+                                    .overlay(
+                                       Capsule(style: .continuous)
+                                          .stroke(Color(uiColor: self.accent), style: StrokeStyle(lineWidth: 1.0))
+                                    )
+                              } else {
+                                 Text(String(format: "%ld", attributes.count))
+                                    .foregroundStyle(Color(uiColor: self.accent))
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(1)
+                                    .padding(EdgeInsets(
+                                       top: 4.0,
+                                       leading: 8.0,
+                                       bottom: 4.0,
+                                       trailing: 8.0
+                                    ))
+                                    .overlay(
+                                       Capsule(style: .continuous)
+                                          .stroke(Color(uiColor: self.accent), style: StrokeStyle(lineWidth: 1.0))
+                                    )
+                              }
+                           }
+                           
+                           Image(systemName: "chevron.right")
+                              .frame(
+                                 alignment: .center
+                              )
+                              .background(.clear)
+                              .foregroundStyle(Color(uiColor: self.accent))
+                              .font(
+                                 .system(size: 16.0)
+                              )
+                              .bold()
+                        }
+                        .frame(
+                           maxWidth: .infinity
+                        )
+                        .contentShape(Rectangle())
+                     }
+                     .buttonStyle(PlainButtonStyle())
+                     .listRowBackground(Color(uiColor: .systemBackground))
+                  }
+               }.onDelete(perform: { indexSet in
+                  var offsets = IndexSet()
+                  
+                  for index in indexSet {
+                     offsets.insert(self.words.count - 1 - index)
+                  }
+                  
+                  withAnimation {
+                     self.words.remove(atOffsets: offsets)
+                  }
+                  
+                  self.save(words: self.words)
+               }).onMove(perform: { indices, newOffset in
+                  var offsets = IndexSet()
+                  
+                  for index in indices {
+                     offsets.insert(self.words.count - 1 - index)
+                  }
+                  
+                  self.words.move(fromOffsets: offsets, toOffset: self.words.count - newOffset)
+                  self.save(words: self.words)
+               })
+               .transition(.opacity.animation(.linear))
             }
+         }
    }
    
    @ViewBuilder
    private func makeAttributes(word: Word) -> some View {
       if self.attributes.isEmpty {
          Section(header: Text("Attributes")
-            .foregroundStyle(Color(UIColor {
-               $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-            }))
-               .fontWeight(.semibold)
-               .lineLimit(1)
-               .textCase(.uppercase)) {
-                  Toggle("Modifier", isOn: Binding<Bool>(get: { self.isModifier }, set: { _ in
-                     if let index = self.words.firstIndex(where: { $0.id == word.id }) {
-                        if self.words[index].attributes == nil {
-                           withAnimation {
-                              self.words[index].attributes = []
-                           }
-                        } else {
-                           withAnimation {
-                              self.words[index].attributes = nil
-                           }
+            .foregroundStyle(.primary)
+            .fontWeight(.semibold)
+            .lineLimit(1)
+            .textCase(.uppercase)) {
+               Toggle("Modifier", isOn: Binding<Bool>(get: { self.isModifier }, set: { _ in
+                  if let index = self.words.firstIndex(where: { $0.id == word.id }) {
+                     if self.words[index].attributes == nil {
+                        withAnimation {
+                           self.words[index].attributes = []
                         }
-                        
-                        self.save(words: self.words)
+                     } else {
+                        withAnimation {
+                           self.words[index].attributes = nil
+                        }
                      }
-                  }))
-                  .foregroundStyle(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                  }))
-                  .font(.subheadline)
-                  .fontWeight(.semibold)
-                  .tint(Color(self.accent))
-                  .listRowBackground(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                  }))
-               }
+                     
+                     self.save(words: self.words)
+                  }
+               }))
+               .foregroundStyle(.primary)
+               .font(.subheadline)
+               .fontWeight(.semibold)
+               .tint(Color(self.accent))
+               .listRowBackground(Color(uiColor: .systemBackground))
+            }
       } else {
          Section(header: Text("Attributes")
-            .foregroundStyle(Color(UIColor {
-               $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-            }))
-               .fontWeight(.semibold)
-               .lineLimit(1)
-               .textCase(.uppercase)) {
-                  ForEach(self.attributes, id: \.self) { attribute in
-                     if let index = self.words.firstIndex(where: { $0.id == word.id }) {
-                        Button(action: {
-                           if var attributes = self.words[index].attributes {
-                              if let i = attributes.firstIndex(where: { $0 == attribute }) {
-                                 attributes.remove(at: i)
-                              } else {
-                                 attributes.append(attribute)
-                              }
-                              
-                              withAnimation {
-                                 self.words[index].attributes = attributes
-                              }
-                              
-                              self.save(words: self.words)
+            .foregroundStyle(.primary)
+            .fontWeight(.semibold)
+            .lineLimit(1)
+            .textCase(.uppercase)) {
+               ForEach(self.attributes, id: \.self) { attribute in
+                  if let index = self.words.firstIndex(where: { $0.id == word.id }) {
+                     Button(action: {
+                        if var attributes = self.words[index].attributes {
+                           if let i = attributes.firstIndex(where: { $0 == attribute }) {
+                              attributes.remove(at: i)
                            } else {
-                              withAnimation {
-                                 self.words[index].attributes = [attribute]
-                              }
-                              
-                              self.save(words: self.words)
+                              attributes.append(attribute)
                            }
-                        }) {
-                           HStack(alignment: .center, spacing: 16.0) {
-                              Text(attribute)
-                                 .foregroundStyle(Color(UIColor {
-                                    $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                                 }))
-                                 .font(.subheadline)
-                                 .fontWeight(.semibold)
-                              Spacer()
-                              Image(systemName: "checkmark")
-                                 .frame(
-                                    width: 16.0,
-                                    height: 16.0,
-                                    alignment: .center
-                                 )
-                                 .background(.clear)
-                                 .foregroundStyle(Color(self.accent))
-                                 .font(
-                                    .system(size: 16.0)
-                                 )
-                                 .bold()
-                                 .opacity((self.words[index].attributes ?? []).contains(attribute) ? 1.0 : 0.0)
-                                 .animation(.linear(duration: 0.5), value: (self.words[index].attributes ?? []).contains(attribute))
+                           
+                           withAnimation {
+                              self.words[index].attributes = attributes
                            }
-                           .frame(
-                              maxWidth: .infinity
-                           )
-                           .contentShape(Rectangle())
+                           
+                           self.save(words: self.words)
+                        } else {
+                           withAnimation {
+                              self.words[index].attributes = [attribute]
+                           }
+                           
+                           self.save(words: self.words)
                         }
-                        .buttonStyle(PlainButtonStyle())
-                        .listRowBackground(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                        }))
+                     }) {
+                        HStack(alignment: .center, spacing: 16.0) {
+                           Text(attribute)
+                              .foregroundStyle(.primary)
+                              .font(.subheadline)
+                              .fontWeight(.semibold)
+                           Spacer()
+                           Image(systemName: "checkmark")
+                              .frame(
+                                 width: 16.0,
+                                 height: 16.0,
+                                 alignment: .center
+                              )
+                              .background(.clear)
+                              .foregroundStyle(Color(self.accent))
+                              .font(
+                                 .system(size: 16.0)
+                              )
+                              .bold()
+                              .opacity((self.words[index].attributes ?? []).contains(attribute) ? 1.0 : 0.0)
+                              .animation(.linear(duration: 0.5), value: (self.words[index].attributes ?? []).contains(attribute))
+                        }
+                        .frame(
+                           maxWidth: .infinity
+                        )
+                        .contentShape(Rectangle())
                      }
+                     .buttonStyle(PlainButtonStyle())
+                     .listRowBackground(Color(uiColor: .systemBackground))
                   }
-                  .transition(.opacity.animation(.linear))
                }
+               .transition(.opacity.animation(.linear))
+            }
          Section {
             Toggle("Modifier", isOn: Binding<Bool>(get: { self.isModifier }, set: { _ in
                if let index = self.words.firstIndex(where: { $0.id == word.id }) {
@@ -7681,15 +7698,11 @@ struct Dictionary: View {
                   self.save(words: self.words)
                }
             }))
-            .foregroundStyle(Color(UIColor {
-               $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-            }))
+            .foregroundStyle(.primary)
             .font(.subheadline)
             .fontWeight(.semibold)
             .tint(Color(self.accent))
-            .listRowBackground(Color(UIColor {
-               $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-            }))
+            .listRowBackground(Color(uiColor: .systemBackground))
          }
       }
    }
@@ -7756,148 +7769,233 @@ struct Dictionary: View {
    }
    
    private func startRecognize() {
-      withAnimation(.easeInOut(duration: 0.5)) {
+      guard let recognizer = SFSpeechRecognizer() else {
+         return
+      }
+      
+      withAnimation(.linear(duration: 0.5)) {
          self.isRecording = true
       }
       
-      self.speechRecognizer = SFSpeechRecognizer()
+      let input = self.input
+      
+      self.speechRecognizer = recognizer
       
       Task {
-         if await withCheckedContinuation({ continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
-               continuation.resume(returning: status == .authorized)
+         let speechAllowed: Bool
+         let authorizationStatus = SFSpeechRecognizer.authorizationStatus()
+         
+         if authorizationStatus == .notDetermined {
+            speechAllowed = await withCheckedContinuation(isolation: nil) { @Sendable (continuation: CheckedContinuation<Bool, Never>) in
+               SFSpeechRecognizer.requestAuthorization { status in
+                  continuation.resume(returning: status == .authorized)
+               }
             }
-         }), await AVAudioApplication.requestRecordPermission(), await (Task.detached {
+         } else {
+            speechAllowed = authorizationStatus == .authorized
+         }
+         
+         guard self.isRecording, self.speechRecognizer === recognizer else {
+            return
+         }
+         
+         guard speechAllowed else {
+            self.speechRecognizer = nil
+            self.isRecording = false
+            
+            return
+         }
+         
+         let microphoneAllowed = await AVAudioApplication.requestRecordPermission()
+         
+         guard self.isRecording, self.speechRecognizer === recognizer else {
+            return
+         }
+         
+         guard microphoneAllowed else {
+            self.speechRecognizer = nil
+            self.isRecording = false
+            
+            return
+         }
+         
+         let audioSessionActivated: Bool
+         
+         do {
             let audioSession = AVAudioSession.sharedInstance()
             
-            if audioSession.category != .playAndRecord {
-               do {
-                  try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
-                  try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-               } catch {
-                  return false
-               }
+            if audioSession.category != .playAndRecord || audioSession.mode != .measurement {
+               try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
             }
             
-            return true
-         }.value) {
-            let audioEngine = AVAudioEngine()
-            let inputNode = audioEngine.inputNode
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            audioSessionActivated = true
+         } catch {
+            audioSessionActivated = false
+         }
+         
+         guard self.isRecording, self.speechRecognizer === recognizer else {
+            return
+         }
+         
+         guard audioSessionActivated && recognizer.isAvailable else {
+            self.speechRecognizer = nil
+            self.isRecording = false
             
-            if let recognizer = self.speechRecognizer, recognizer.isAvailable {
-               let request = SFSpeechAudioBufferRecognitionRequest()
-               
-               request.shouldReportPartialResults = true
-               
-               inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputNode.outputFormat(forBus: 0)) { (buffer: AVAudioPCMBuffer, when: AVAudioTime) in
-                  request.append(buffer)
+            return
+         }
+         
+         if let previousAudioEngine = self.audioEngine {
+            if previousAudioEngine.isRunning {
+               previousAudioEngine.stop()
+            }
+            
+            previousAudioEngine.inputNode.removeTap(onBus: 0)
+            self.audioEngine = nil
+         }
+         
+         let audioEngine = AVAudioEngine()
+         let inputNode = audioEngine.inputNode
+         let inputFormat = inputNode.outputFormat(forBus: 0)
+         
+         guard inputFormat.sampleRate > 0.0, inputFormat.channelCount > 0 else {
+            self.speechRecognizer = nil
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
+            
+            return
+         }
+         
+         let request = SFSpeechAudioBufferRecognitionRequest()
+         
+         request.shouldReportPartialResults = true
+         
+         self.installTap(on: inputNode, format: inputFormat, request: request) { level, duration in
+            let multiplier = level > self.volumeLevel ? 5.0 : 10.0
+            
+            withAnimation(.linear(duration: duration * multiplier)) {
+               self.volumeLevel = level
+            }
+         }
+         
+         audioEngine.prepare()
+         
+         do {
+            try audioEngine.start()
+         } catch {
+            self.speechRecognizer = nil
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
+            
+            return
+         }
+         
+         self.audioEngine = audioEngine
+         self.speechAudioBufferRecognitionRequest = request
+         self.speechRecognitionTask = recognizer.recognitionTask(with: request, resultHandler: { result, error in
+            if error == nil {
+               if let result {
+                  let text = result.bestTranscription.formattedString
                   
-                  if let floatChannelData = buffer.floatChannelData {
-                     let pointee = floatChannelData.pointee
-                     var sum: Float = 0.0
-                     
-                     for i in stride(from: 0, to: Int(buffer.frameLength), by: buffer.stride) {
-                        sum += pointee[i] * pointee[i]
+                  if result.isFinal, self.audioEngine === audioEngine {
+                     if audioEngine.isRunning {
+                        audioEngine.stop()
                      }
                      
-                     let rms = sqrt(sum / Float(buffer.frameLength))
-                     let dB = rms == 0.0 ? 0.0 : 20.0 * log10(rms)
-                     let minimum: Float = -50.0
-                     let maximum: Float = -25.0
-                     let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
-                     
-                     Task {
-                        await MainActor.run {
-                           withAnimation(.easeInOut(duration: 0.5)) {
-                              self.volumeLevel = level
-                           }
-                        }
-                     }
-                  }
-               }
-               
-               audioEngine.prepare()
-               
-               do {
-                  try audioEngine.start()
-               } catch {
-                  self.speechRecognizer = nil
-                  
-                  withAnimation(.easeInOut(duration: 0.5)) {
-                     self.isRecording = false
-                  }
-                  
-                  return
-               }
-               
-               self.audioEngine = audioEngine
-               self.speechAudioBufferRecognitionRequest = request
-               self.speechRecognitionTask = recognizer.recognitionTask(with: request, resultHandler: { result, error in
-                  if error == nil {
-                     if let result {
-                        let text = result.bestTranscription.formattedString
-                        
-                        if result.isFinal && audioEngine.isRunning {
-                           audioEngine.stop()
-                           audioEngine.inputNode.removeTap(onBus: 0)
-                           
-                           withAnimation(.easeInOut(duration: 0.5)) {
-                              self.volumeLevel = 0.0
-                           }
-                        }
-                        
-                        if !text.isEmpty {
-                           self.input = text
-                        }
-                     }
-                  } else if audioEngine.isRunning {
-                     audioEngine.stop()
                      audioEngine.inputNode.removeTap(onBus: 0)
+                     self.audioEngine = nil
                      
-                     withAnimation(.easeInOut(duration: 0.5)) {
+                     withAnimation(.linear(duration: 0.5)) {
+                        self.isRecording = false
                         self.volumeLevel = 0.0
                      }
                   }
-               })
+                  
+                  if !text.isEmpty {
+                     self.input = input + text
+                  }
+               }
+            } else if self.audioEngine === audioEngine {
+               if audioEngine.isRunning {
+                  audioEngine.stop()
+               }
                
-               return
+               audioEngine.inputNode.removeTap(onBus: 0)
+               self.audioEngine = nil
+               
+               withAnimation(.linear(duration: 0.5)) {
+                  self.isRecording = false
+                  self.volumeLevel = 0.0
+               }
             }
-         }
-         
-         self.speechRecognizer = nil
-         
-         withAnimation(.easeInOut(duration: 0.5)) {
-            self.isRecording = false
-         }
+         })
       }
    }
    
    private func stopRecognize() {
-      if self.speechRecognizer != nil {
-         if let speechRecognitionTask = self.speechRecognitionTask {
-            speechRecognitionTask.cancel()
-            self.speechRecognitionTask = nil
+      self.speechRecognizer = nil
+      
+      if let speechRecognitionTask = self.speechRecognitionTask {
+         speechRecognitionTask.cancel()
+         self.speechRecognitionTask = nil
+      }
+      
+      if let audioEngine = self.audioEngine {
+         if audioEngine.isRunning {
+            audioEngine.stop()
          }
          
-         if let audioEngine = self.audioEngine {
-            if audioEngine.isRunning {
-               audioEngine.stop()
-               audioEngine.inputNode.removeTap(onBus: 0)
-            }
-            
-            self.audioEngine = nil
+         audioEngine.inputNode.removeTap(onBus: 0)
+         
+         self.audioEngine = nil
+      }
+      
+      if let speechAudioBufferRecognitionRequest = self.speechAudioBufferRecognitionRequest {
+         speechAudioBufferRecognitionRequest.endAudio()
+         self.speechAudioBufferRecognitionRequest = nil
+      }
+      
+      withAnimation(.linear(duration: 0.5)) {
+         self.isRecording = false
+         self.volumeLevel = 0.0
+      }
+   }
+   
+   private nonisolated func installTap(on inputNode: AVAudioInputNode, format: AVAudioFormat, request: SFSpeechAudioBufferRecognitionRequest, onChange: @escaping @MainActor (Double, Double) -> Void
+   ) {
+      inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+         guard buffer.frameLength > 0, buffer.stride > 0, buffer.format.sampleRate > 0.0 else {
+            return
          }
          
-         if let speechAudioBufferRecognitionRequest = self.speechAudioBufferRecognitionRequest {
-            speechAudioBufferRecognitionRequest.endAudio()
-            self.speechAudioBufferRecognitionRequest = nil
+         request.append(buffer)
+         
+         guard let floatChannelData = buffer.floatChannelData else {
+            return
          }
          
-         self.speechRecognizer = nil
+         let pointee = floatChannelData.pointee
+         var sum: Float = 0.0
          
-         withAnimation(.easeInOut(duration: 0.5)) {
-            self.isRecording = false
-            self.volumeLevel = 0.0
+         for i in stride(from: 0, to: Int(buffer.frameLength), by: buffer.stride) {
+            sum += pointee[i] * pointee[i]
+         }
+         
+         let rms = sqrt(sum / Float(buffer.frameLength))
+         let dB = rms == 0.0 ? 0.0 : 20.0 * log10(rms)
+         let minimum: Float = -50.0
+         let maximum: Float = -25.0
+         let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
+         let duration = Double(buffer.frameLength) / buffer.format.sampleRate
+         
+         Task { @MainActor in
+            onChange(level, duration)
          }
       }
    }
@@ -8245,15 +8343,21 @@ struct Capture: UIViewControllerRepresentable {
                   return
                }
                
+               let angle: CGFloat
+               
                switch UIDevice.current.orientation {
                case UIDeviceOrientation.portraitUpsideDown:
-                  captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+                  angle = 270
                case UIDeviceOrientation.landscapeLeft:
-                  captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+                  angle = 0
                case UIDeviceOrientation.landscapeRight:
-                  captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+                  angle = 180
                default:
-                  captureVideoPreviewLayer.connection?.videoRotationAngle = 90
+                  angle = 90
+               }
+               
+               if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
+                  connection.videoRotationAngle = angle
                }
             }
          }
@@ -8332,17 +8436,23 @@ struct Capture: UIViewControllerRepresentable {
          }
 
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
+            let angle: CGFloat
+            
             captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: size)
             
             switch UIDevice.current.orientation {
             case UIDeviceOrientation.portraitUpsideDown:
-               captureVideoPreviewLayer.connection?.videoRotationAngle = 270
+               angle = 270
             case UIDeviceOrientation.landscapeLeft:
-               captureVideoPreviewLayer.connection?.videoRotationAngle = 0
+               angle = 0
             case UIDeviceOrientation.landscapeRight:
-               captureVideoPreviewLayer.connection?.videoRotationAngle = 180
+               angle = 180
             default:
-               captureVideoPreviewLayer.connection?.videoRotationAngle = 90
+               angle = 90
+            }
+            
+            if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
+               connection.videoRotationAngle = angle
             }
          }
          
@@ -8501,9 +8611,7 @@ struct Gallery: View {
                         }
                      }
                      .frame(maxWidth: .infinity, maxHeight: .infinity)
-                     .background(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                     }))
+                     .background(Color(uiColor: .systemBackground))
                      .clipShape(RoundedRectangle(cornerRadius: 16.0))
                      .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
                      .opacity(self.playables[index].0 ? 1.0 : 0.0)
@@ -8543,27 +8651,21 @@ struct Gallery: View {
                HStack(alignment: .center, spacing: 16.0) {
                   Text(String(format: "%ld", self.position))
                      .background(.clear)
-                     .foregroundStyle(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                     }))
+                     .foregroundStyle(.primary)
                      .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize)))
                      .lineLimit(1)
                      .truncationMode(.tail)
                      .contentTransition(.numericText(value: Double(self.position)))
                   Text(String(format: "%ld", max(self.paths.count, 1)))
                      .background(.clear)
-                     .foregroundStyle(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                     }))
+                     .foregroundStyle(.primary)
                      .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize)))
                      .lineLimit(1)
                      .truncationMode(.tail)
                      .contentTransition(.numericText(value: Double(max(self.paths.count, 1))))
                }
                Rectangle()
-                  .fill(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                  }))
+                  .fill(.primary)
                   .frame(
                      width: 1.0,
                      height: 16.0
@@ -8584,9 +8686,7 @@ struct Gallery: View {
          .toolbar {
             ToolbarItem(placement: .principal) {
                Text("Gallery")
-                  .foregroundStyle(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                  }))
+                  .foregroundStyle(.primary)
                   .font(.headline)
                   .fontWeight(.semibold)
                   .lineLimit(1)
@@ -9205,9 +9305,7 @@ struct Settings: View {
          .toolbar {
             ToolbarItem(placement: .principal) {
                Text("Settings")
-                  .foregroundStyle(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                  }))
+                  .foregroundStyle(.primary)
                   .font(.headline)
                   .fontWeight(.semibold)
                   .lineLimit(1)
@@ -9279,9 +9377,7 @@ struct Settings: View {
    @ViewBuilder
    private func makeCharacters() -> some View {
       Section(header: Text("Characters")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
+         .foregroundStyle(.primary)
             .fontWeight(.semibold)
             .lineLimit(1)
             .textCase(.uppercase)) {
@@ -9372,9 +9468,7 @@ struct Settings: View {
                         }
                         
                         Text(self.characters[index].1)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
+                           .foregroundStyle(.primary)
                            .font(.subheadline)
                            .fontWeight(.semibold)
                            .opacity(self.changing ? 0.5 : 1.0)
@@ -9436,9 +9530,7 @@ struct Settings: View {
                   }
                   .buttonStyle(PlainButtonStyle())
                   .disabled(self.characters[index].4)
-                  .listRowBackground(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                  }))
+                  .listRowBackground(Color(uiColor: .systemBackground))
                }
                Button(action: {
                   withAnimation {
@@ -9478,9 +9570,7 @@ struct Settings: View {
                         .opacity(self.isRestoring ? 1.0 : 0.0)
                         .transition(.opacity.animation(.linear))
                      Text("Restore")
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .opacity(self.isRestoring ? 0.5 : 1.0)
@@ -9494,18 +9584,14 @@ struct Settings: View {
                }
                .buttonStyle(PlainButtonStyle())
                .disabled(self.isRestoring)
-               .listRowBackground(Color(UIColor {
-                  $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-               }))
+               .listRowBackground(Color(uiColor: .systemBackground))
                .transition(.opacity.animation(.linear))
             }
       Section {
          VStack(spacing: 8.0) {
             HStack(alignment: .center, spacing: 16.0) {
                Text("Scale")
-                  .foregroundStyle(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                  }))
+                  .foregroundStyle(.primary)
                   .font(.subheadline)
                   .fontWeight(.semibold)
                Spacer()
@@ -9521,18 +9607,14 @@ struct Settings: View {
                } minimumValueLabel: {
                   Image(systemName: "minus.magnifyingglass")
                      .background(.clear)
-                     .foregroundStyle(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                     }))
+                     .foregroundStyle(.primary)
                      .font(
                         .system(size: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize)
                      )
                } maximumValueLabel: {
                   Image(systemName: "plus.magnifyingglass")
                      .background(.clear)
-                     .foregroundStyle(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                     }))
+                     .foregroundStyle(.primary)
                      .font(
                         .system(size: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize)
                      )
@@ -9544,42 +9626,30 @@ struct Settings: View {
             maxWidth: .infinity,
             alignment: .center
          )
-         .listRowBackground(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-         }))
+         .listRowBackground(Color(uiColor: .systemBackground))
          .contentShape(Rectangle())
       }
       Section {
          Toggle("Sounds", isOn: Binding<Bool>(get: { !self.mute }, set: { self.mute = !$0 }))
-            .foregroundStyle(Color(UIColor {
-               $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-            }))
+            .foregroundStyle(.primary)
             .font(.subheadline)
             .fontWeight(.semibold)
             .tint(Color(self.accent))
-            .listRowBackground(Color(UIColor {
-               $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-            }))
+            .listRowBackground(Color(uiColor: .systemBackground))
       }
    }
    
    private func makeAppearance() -> some View {
       return Section(header: Text("Appearance")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
+         .foregroundStyle(.primary)
             .fontWeight(.semibold)
             .lineLimit(1)
             .textCase(.uppercase)) {
                ColorPicker("Accent", selection: self.$color, supportsOpacity: false)
-                  .foregroundStyle(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                  }))
+                  .foregroundStyle(.primary)
                   .font(.subheadline)
                   .fontWeight(.semibold)
-                  .listRowBackground(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-                  }))
+                  .listRowBackground(Color(uiColor: .systemBackground))
                   .contentShape(Rectangle())
                   .onChange(of: self.color) {
                      Task {
@@ -9596,9 +9666,7 @@ struct Settings: View {
                   self.color = Color(uiColor: UIColor(named: "AccentColor")!)
                }) {
                   Text("Reset")
-                     .foregroundStyle(Color(UIColor {
-                        $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                     }))
+                     .foregroundStyle(.primary)
                      .font(.subheadline)
                      .fontWeight(.semibold)
                      .frame(
@@ -9608,26 +9676,20 @@ struct Settings: View {
                      .contentShape(Rectangle())
                }
                .buttonStyle(PlainButtonStyle())
-               .listRowBackground(Color(UIColor {
-                  $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-               }))
+               .listRowBackground(Color(uiColor: .systemBackground))
             }
    }
    
    private func makeIntelligence() -> some View {
       return Section(header: Text("Intelligence")
-         .foregroundStyle(Color(UIColor {
-            $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-         }))
+         .foregroundStyle(.primary)
             .fontWeight(.semibold)
             .lineLimit(1)
             .textCase(.uppercase), footer: Button(action: {
                openURL(URL(string: "https://milchchan.com/privacy")!)
             }) {
                Text("Privacy")
-                  .foregroundStyle(Color(UIColor {
-                     $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                  }))
+                  .foregroundStyle(Color(self.accent))
                   .font(.footnote)
                   .fontWeight(.semibold)
                   .lineLimit(1)
@@ -9647,9 +9709,7 @@ struct Settings: View {
                VStack(spacing: 8.0) {
                   HStack(alignment: .center, spacing: 16.0) {
                      Text("Temperature")
-                        .foregroundStyle(Color(UIColor {
-                           $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                        }))
+                        .foregroundStyle(.primary)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                      Spacer()
@@ -9665,18 +9725,14 @@ struct Settings: View {
                      } minimumValueLabel: {
                         Image(systemName: "thermometer.low")
                            .background(.clear)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
+                           .foregroundStyle(.primary)
                            .font(
                               .system(size: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize)
                            )
                      } maximumValueLabel: {
                         Image(systemName: "thermometer.high")
                            .background(.clear)
-                           .foregroundStyle(Color(UIColor {
-                              $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0)
-                           }))
+                           .foregroundStyle(.primary)
                            .font(
                               .system(size: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize)
                            )
@@ -9688,9 +9744,7 @@ struct Settings: View {
                   maxWidth: .infinity,
                   alignment: .center
                )
-               .listRowBackground(Color(UIColor {
-                  $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0)
-               }))
+               .listRowBackground(Color(uiColor: .systemBackground))
                .contentShape(Rectangle())
             }
    }
