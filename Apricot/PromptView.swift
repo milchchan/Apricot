@@ -416,9 +416,15 @@ class PromptView: UIView {
                     }
                     
                     if updateRequired {
-                        UIGraphicsBeginImageContextWithOptions(self.frame.size, false, 0)
+                        let format = UIGraphicsImageRendererFormat()
                         
-                        if let context = UIGraphicsGetCurrentContext() {
+                        format.opaque = false
+                        format.scale = self.traitCollection.displayScale
+                        format.preferredRange = .standard
+                        
+                        let renderer = UIGraphicsImageRenderer(size: self.frame.size, format: format)
+                        let renderedImage = renderer.image { rendererContext in
+                            let context = rendererContext.cgContext
                             var offset = 0.0
                             
                             context.interpolationQuality = .high
@@ -459,16 +465,14 @@ class PromptView: UIView {
                                 
                                 offset += margin
                             }
-                            
-                            CATransaction.begin()
-                            CATransaction.setDisableActions(true)
-                            
-                            self.layer.contents = context.makeImage()
-                            
-                            CATransaction.commit()
                         }
                         
-                        UIGraphicsEndImageContext()
+                        CATransaction.begin()
+                        CATransaction.setDisableActions(true)
+                        
+                        self.layer.contents = renderedImage.cgImage
+                        
+                        CATransaction.commit()
                     }
                 }
             }
