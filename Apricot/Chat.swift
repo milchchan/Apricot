@@ -1035,36 +1035,43 @@ struct Chat: View {
          blue = 0.0
       }
       
-      self._script = StateObject(wrappedValue: Script.shared)
-      self.path = AppStorage(wrappedValue: String(), "path")
-      self._selection = State(initialValue: self.path.wrappedValue)
-      self.accent = AppStorage(wrappedValue: String.init(format: "#%02lx%02lx%02lx", lroundf(Float(red * 255)), lroundf(Float(green * 255)), lroundf(Float(blue * 255))), "accent")
+      let rendererFormat = UIGraphicsImageRendererFormat()
       
-      UIGraphicsBeginImageContextWithOptions(size, false, 1)
+      rendererFormat.opaque = false
+      rendererFormat.scale = 1.0
+      rendererFormat.preferredRange = .standard
       
-      if let context = UIGraphicsGetCurrentContext(), let starImage = image.cgImage {
-         context.interpolationQuality = .high
-         context.setAllowsAntialiasing(true)
-         context.clear(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-         context.translateBy(x: 0.0, y: size.height)
-         context.scaleBy(x: scale, y: -scale)
-         context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 1.0, 1.0])!)
-         context.fill(CGRect(origin: CGPoint.zero, size: CGSize(width: length, height: length)))
-         context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])!)
-         context.addArc(center: CGPoint(x: (padding + maximum / 2.0) * image.scale, y: (padding + maximum / 2.0) * image.scale), radius: (maximum + padding * 2.0) / 2.0 * image.scale, startAngle: 0.0, endAngle: Double.pi * 2.0, clockwise: true)
-         context.fillPath()
-         context.clip(to: CGRect(origin: CGPoint(x: (length - CGFloat(starImage.width)) / 2.0, y: (length - CGFloat(starImage.height)) / 2.0), size: CGSize(width: starImage.width, height: starImage.height)), mask: starImage)
-         context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 1.0, 1.0])!)
-         context.fill(CGRect(origin: CGPoint(x: padding * image.scale, y: padding * image.scale), size: CGSize(width: starImage.width, height: starImage.height)))
+      let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
+      
+      _ = renderer.image { rendererContext in
+         let context = rendererContext.cgContext
          
-         if let cgImage = context.makeImage(), let dataProvider = cgImage.dataProvider, let maskImage = CGImage(maskWidth: cgImage.width, height: cgImage.height, bitsPerComponent: cgImage.bitsPerComponent, bitsPerPixel: cgImage.bitsPerPixel, bytesPerRow: cgImage.bytesPerRow, provider: dataProvider, decode: nil, shouldInterpolate: false), let maskedImage = cgImage.masking(maskImage) {
-            image = UIImage(cgImage: maskedImage, scale: image.scale, orientation: image.imageOrientation)
+         if let starImage = image.cgImage {
+            context.interpolationQuality = .high
+            context.setAllowsAntialiasing(true)
+            context.clear(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+            context.translateBy(x: 0.0, y: size.height)
+            context.scaleBy(x: scale, y: -scale)
+            context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 1.0, 1.0])!)
+            context.fill(CGRect(origin: CGPoint.zero, size: CGSize(width: length, height: length)))
+            context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])!)
+            context.addArc(center: CGPoint(x: (padding + maximum / 2.0) * image.scale, y: (padding + maximum / 2.0) * image.scale), radius: (maximum + padding * 2.0) / 2.0 * image.scale, startAngle: 0.0, endAngle: Double.pi * 2.0, clockwise: true)
+            context.fillPath()
+            context.clip(to: CGRect(origin: CGPoint(x: (length - CGFloat(starImage.width)) / 2.0, y: (length - CGFloat(starImage.height)) / 2.0), size: CGSize(width: starImage.width, height: starImage.height)), mask: starImage)
+            context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 1.0, 1.0])!)
+            context.fill(CGRect(origin: CGPoint(x: padding * image.scale, y: padding * image.scale), size: CGSize(width: starImage.width, height: starImage.height)))
+            
+            if let cgImage = context.makeImage(), let dataProvider = cgImage.dataProvider, let maskImage = CGImage(maskWidth: cgImage.width, height: cgImage.height, bitsPerComponent: cgImage.bitsPerComponent, bitsPerPixel: cgImage.bitsPerPixel, bytesPerRow: cgImage.bytesPerRow, provider: dataProvider, decode: nil, shouldInterpolate: false), let maskedImage = cgImage.masking(maskImage) {
+               image = UIImage(cgImage: maskedImage, scale: image.scale, orientation: image.imageOrientation)
+            }
          }
       }
       
-      UIGraphicsEndImageContext()
-      
       self.starImage = image
+      self._script = StateObject(wrappedValue: Script.shared)
+      self.path = AppStorage(wrappedValue: String(), "path")
+      self.accent = AppStorage(wrappedValue: String.init(format: "#%02lx%02lx%02lx", lroundf(Float(red * 255)), lroundf(Float(green * 255)), lroundf(Float(blue * 255))), "accent")
+      self._selection = State(initialValue: self.path.wrappedValue)
    }
    
    private func makeMenu(geometryProxy: GeometryProxy) -> some View {
@@ -3201,7 +3208,6 @@ struct Chat: View {
       let imageHeight = Double(image.height)
       let width: Double
       let height: Double
-      var resizedImage: CGImage? = nil
       
       if imageWidth < imageHeight {
          if imageHeight > maximum {
@@ -3219,19 +3225,24 @@ struct Chat: View {
          height = imageHeight
       }
       
-      UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+      let size = CGSize(width: width, height: height)
+      let rendererFormat = UIGraphicsImageRendererFormat()
       
-      if let context = UIGraphicsGetCurrentContext() {
+      rendererFormat.opaque = false
+      rendererFormat.scale = 1.0
+      rendererFormat.preferredRange = .standard
+      
+      let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
+      let resizedImage = renderer.image { rendererContext in
+         let context = rendererContext.cgContext
+         
          context.interpolationQuality = .high
          context.setAllowsAntialiasing(true)
          context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
          context.translateBy(x: 0.0, y: height)
          context.scaleBy(x: 1.0, y: -1.0)
          context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-         resizedImage = context.makeImage()
-      }
-      
-      UIGraphicsEndImageContext()
+      }.cgImage
       
       return resizedImage
    }
@@ -5567,7 +5578,6 @@ struct Stage: UIViewRepresentable {
          let imageHeight = Double(image.height)
          let width: Double
          let height: Double
-         var resizedImage: CGImage? = nil
          
          if imageWidth < imageHeight {
             if imageHeight > maximum {
@@ -5585,19 +5595,24 @@ struct Stage: UIViewRepresentable {
             height = imageHeight
          }
          
-         UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+         let size = CGSize(width: width, height: height)
+         let rendererFormat = UIGraphicsImageRendererFormat()
          
-         if let context = UIGraphicsGetCurrentContext() {
+         rendererFormat.opaque = false
+         rendererFormat.scale = 1.0
+         rendererFormat.preferredRange = .standard
+         
+         let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
+         let resizedImage = renderer.image { rendererContext in
+            let context = rendererContext.cgContext
+            
             context.interpolationQuality = quality
             context.setAllowsAntialiasing(true)
             context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
             context.translateBy(x: 0.0, y: height)
             context.scaleBy(x: 1.0, y: -1.0)
             context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-            resizedImage = context.makeImage()
-         }
-         
-         UIGraphicsEndImageContext()
+         }.cgImage
          
          return resizedImage
       }
@@ -6149,21 +6164,23 @@ struct Peek: UIViewControllerRepresentable {
       
       nonisolated func computeHash(image: CGImage) -> UInt64? {
          let size = CGSize(width: 8, height: 8)
-         var resizedImage: CGImage? = nil
+         let rendererFormat = UIGraphicsImageRendererFormat()
          
-         UIGraphicsBeginImageContextWithOptions(size, false, 1)
+         rendererFormat.opaque = false
+         rendererFormat.scale = 1.0
+         rendererFormat.preferredRange = .standard
          
-         if let context = UIGraphicsGetCurrentContext() {
+         let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
+         let resizedImage = renderer.image { rendererContext in
+            let context = rendererContext.cgContext
+            
             context.interpolationQuality = .high
             context.setAllowsAntialiasing(true)
             context.clear(CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
             context.translateBy(x: 0.0, y: size.height)
             context.scaleBy(x: 1.0, y: -1.0)
             context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-            resizedImage = context.makeImage()
-         }
-         
-         UIGraphicsEndImageContext()
+         }.cgImage
          
          if let resizedImage {
             var pixelData = [UInt8](repeating: 0, count: resizedImage.width * resizedImage.height)
@@ -8597,51 +8614,57 @@ struct Gallery: View {
    var body: some View {
       NavigationStack {
          VStack(spacing: 0.0) {
-            TabView(selection: self.$page) {
-               ForEach(Array(self.paths.enumerated()), id: \.offset) { (index, path) in
-                  ZStack {
-                     ZStack {
-                        if self.playables[index].1 {
-                           Player(path: path, accent: self.accent)
-                              .frame(
-                                 maxWidth: .infinity,
-                                 maxHeight: .infinity
-                              )
-                              .background(.clear)
-                        }
-                     }
-                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                     .background(Color(uiColor: .systemBackground))
-                     .clipShape(RoundedRectangle(cornerRadius: 16.0))
-                     .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
-                     .opacity(self.playables[index].0 ? 1.0 : 0.0)
-                     .transaction {
-                        $0.addAnimationCompletion(criteria: .logicallyComplete) {
-                           if self.playables.indices.contains(index) && !self.playables[index].0 && self.playables[index].1 {
-                              self.playables[index] = (false, false)
+            Group {
+               if self.paths.indices.contains(self.page) && self.paths.count == self.playables.count {
+                  TabView(selection: self.$page) {
+                     ForEach(Array(self.paths.enumerated()), id: \.offset) { (index, path) in
+                        ZStack {
+                           ZStack {
+                              if self.playables[index].1 {
+                                 Player(path: path, accent: self.accent)
+                                    .frame(
+                                       maxWidth: .infinity,
+                                       maxHeight: .infinity
+                                    )
+                                    .background(.clear)
+                              }
                            }
+                           .frame(maxWidth: .infinity, maxHeight: .infinity)
+                           .background(Color(uiColor: .systemBackground))
+                           .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                           .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
+                           .opacity(self.playables[index].0 ? 1.0 : 0.0)
+                           .transaction {
+                              $0.addAnimationCompletion(criteria: .logicallyComplete) {
+                                 if self.playables.indices.contains(index) && !self.playables[index].0 && self.playables[index].1 {
+                                    self.playables[index] = (false, false)
+                                 }
+                              }
+                           }
+                           .animation(.easeInOut(duration: 0.5), value: self.playables[index].0)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.clear)
+                        .padding(16.0)
+                        .tag(index)
+                        .transition(.opacity.animation(.linear))
+                        .onAppear {
+                           self.playables[index] = (true, true)
+                        }
+                        .onDisappear {
+                           guard self.paths.indices.contains(index) else {
+                              return
+                           }
+
+                           self.playables[index] = (false, false)
                         }
                      }
-                     .animation(.easeInOut(duration: 0.5), value: self.playables[index].0)
                   }
-                  .frame(maxWidth: .infinity, maxHeight: .infinity)
-                  .background(.clear)
-                  .padding(16.0)
-                  .tag(index)
-                  .transition(.opacity.animation(.linear))
-                  .onAppear {
-                     self.playables[index] = (true, true)
-                  }
-                  .onDisappear {
-                     guard self.paths.indices.contains(index) else {
-                        return
-                     }
-                     
-                     self.playables[index] = (false, false)
-                  }
+                  .tabViewStyle(.page(indexDisplayMode: .never))
+               } else {
+                  Color.clear
                }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(
                maxWidth: .infinity,
                maxHeight: .infinity
@@ -8711,21 +8734,25 @@ struct Gallery: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                Button(action: {
-                  let path = self.paths[self.page]
-                  
+                  guard self.paths.indices.contains(self.page), self.playables.indices.contains(self.page) else {
+                     return
+                  }
+
+                  let removedPage = self.page
+                  let path = self.paths[removedPage]
+                  let remainingCount = self.paths.count - 1
+                  let nextPage = remainingCount > 0 ? min(removedPage, remainingCount - 1) : 0
+
                   withAnimation {
-                     self.paths.remove(at: self.page)
-                     self.playables.remove(at: self.page)
-                     
-                     if self.page >= self.paths.count {
-                        self.page = max(self.paths.count - 1, 0)
-                     }
-                     
-                     if self.paths.count > 0 {
+                     self.page = nextPage
+                     self.paths.remove(at: removedPage)
+                     self.playables.remove(at: removedPage)
+
+                     if self.playables.indices.contains(self.page) {
                         self.playables[self.page] = (true, true)
                      }
                   }
-                  
+
                   Task.detached {
                      if FileManager.default.fileExists(atPath: path) {
                         try? FileManager.default.removeItem(atPath: path)
@@ -8935,20 +8962,25 @@ struct Player: UIViewRepresentable {
                                  height = Double(image.height)
                               }
                               
-                              UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+                              let size = CGSize(width: width, height: height)
+                              let rendererFormat = UIGraphicsImageRendererFormat()
                               
-                              if let context = UIGraphicsGetCurrentContext() {
+                              rendererFormat.opaque = false
+                              rendererFormat.scale = 1.0
+                              rendererFormat.preferredRange = .standard
+                              
+                              let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
+                              
+                              resizedImage = renderer.image { rendererContext in
+                                 let context = rendererContext.cgContext
+                                 
                                  context.interpolationQuality = .high
                                  context.setAllowsAntialiasing(true)
                                  context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
                                  context.translateBy(x: 0.0, y: height)
                                  context.scaleBy(x: 1.0, y: -1.0)
                                  context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                                 
-                                 resizedImage = context.makeImage()
-                              }
-                              
-                              UIGraphicsEndImageContext()
+                              }.cgImage
                               
                               for (key, value) in properties {
                                  if key == kCGImagePropertyPNGDictionary as String, let dictionary = value as? [String: Any] {
@@ -10182,7 +10214,6 @@ struct AskIntent: AppIntent {
       let imageHeight = Double(image.height)
       let width: Double
       let height: Double
-      var resizedImage: CGImage? = nil
       
       if imageWidth < imageHeight {
          if imageHeight > maximum {
@@ -10200,19 +10231,24 @@ struct AskIntent: AppIntent {
          height = imageHeight
       }
       
-      UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+      let size = CGSize(width: width, height: height)
+      let rendererFormat = UIGraphicsImageRendererFormat()
       
-      if let context = UIGraphicsGetCurrentContext() {
+      rendererFormat.opaque = false
+      rendererFormat.scale = 1.0
+      rendererFormat.preferredRange = .standard
+      
+      let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
+      let resizedImage = renderer.image { rendererContext in
+         let context = rendererContext.cgContext
+         
          context.interpolationQuality = .high
          context.setAllowsAntialiasing(true)
          context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
          context.translateBy(x: 0.0, y: height)
          context.scaleBy(x: 1.0, y: -1.0)
          context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-         resizedImage = context.makeImage()
-      }
-      
-      UIGraphicsEndImageContext()
+      }.cgImage
       
       return resizedImage
    }
