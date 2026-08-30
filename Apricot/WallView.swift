@@ -474,10 +474,17 @@ class WallView: UIView {
                             for animation in splittedAnimations {
                                 var unscaledCompositedImage: CGImage? = nil
                                 var scaledCompositedImage: CGImage? = nil
+                                let unscaledRendererFormat = UIGraphicsImageRendererFormat()
                                 
-                                UIGraphicsBeginImageContextWithOptions(CGSize(width: maxWidth, height: maxHeight), false, 1)
+                                unscaledRendererFormat.opaque = false
+                                unscaledRendererFormat.scale = 1.0
+                                unscaledRendererFormat.preferredRange = .standard
                                 
-                                if let context = UIGraphicsGetCurrentContext() {
+                                let unscaledRenderer = UIGraphicsImageRenderer(size: CGSize(width: maxWidth, height: maxHeight), format: unscaledRendererFormat)
+                                
+                                unscaledCompositedImage = unscaledRenderer.image { rendererContext in
+                                    let context = rendererContext.cgContext
+                                    
                                     context.interpolationQuality = .high
                                     context.setAllowsAntialiasing(true)
                                     context.clear(CGRect(x: 0.0, y: 0.0, width: maxWidth, height: maxHeight))
@@ -489,28 +496,29 @@ class WallView: UIView {
                                             context.draw(image, in: CGRect(x: round(layer.x - minX), y: round(maxHeight - layer.y + minY - layer.height), width: floor(layer.width), height: floor(layer.height)))
                                         }
                                     }
-                                    
-                                    unscaledCompositedImage = context.makeImage()
-                                }
-                                
-                                UIGraphicsEndImageContext()
+                                }.cgImage
                                 
                                 if let unscaledCompositedImage {
                                     unscaledCompositedFrames.append((image: unscaledCompositedImage, delay: animation.delay))
                                     
-                                    UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+                                    let scaledRendererFormat = UIGraphicsImageRendererFormat()
                                     
-                                    if let context = UIGraphicsGetCurrentContext() {
+                                    scaledRendererFormat.opaque = false
+                                    scaledRendererFormat.scale = 1.0
+                                    scaledRendererFormat.preferredRange = .standard
+                                    
+                                    let scaledRenderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: scaledRendererFormat)
+                                    
+                                    scaledCompositedImage = scaledRenderer.image { rendererContext in
+                                        let context = rendererContext.cgContext
+                                        
                                         context.interpolationQuality = .high
                                         context.setAllowsAntialiasing(true)
                                         context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
                                         context.translateBy(x: 0.0, y: height)
                                         context.scaleBy(x: 1.0, y: -1.0)
                                         context.draw(unscaledCompositedImage, in: CGRect(x: 0.0, y: 0.0, width: floor(Double(unscaledCompositedImage.width) * imageScale), height: floor(Double(unscaledCompositedImage.height) * imageScale)))
-                                        scaledCompositedImage = context.makeImage()
-                                    }
-                                    
-                                    UIGraphicsEndImageContext()
+                                    }.cgImage
                                 }
                                 
                                 scaledCompositedFrames.append((image: scaledCompositedImage, delay: animation.delay))
@@ -627,19 +635,24 @@ class WallView: UIView {
                             height = imageHeight
                         }
                         
-                        UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 1)
+                        let rendererFormat = UIGraphicsImageRendererFormat()
                         
-                        if let context = UIGraphicsGetCurrentContext() {
+                        rendererFormat.opaque = false
+                        rendererFormat.scale = 1.0
+                        rendererFormat.preferredRange = .standard
+                        
+                        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: rendererFormat)
+                        
+                        resizedImage = renderer.image { rendererContext in
+                            let context = rendererContext.cgContext
+                            
                             context.interpolationQuality = .high
                             context.setAllowsAntialiasing(true)
                             context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
                             context.translateBy(x: 0.0, y: height)
                             context.scaleBy(x: 1.0, y: -1.0)
                             context.draw(croppedImage, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                            resizedImage = context.makeImage()
-                        }
-                        
-                        UIGraphicsEndImageContext()
+                        }.cgImage
                         
                         if let resizedImage, let dataProvider = resizedImage.dataProvider {
                             let bytes: UnsafePointer = CFDataGetBytePtr(dataProvider.data)
@@ -1976,26 +1989,24 @@ class WallView: UIView {
                         let scaleY = self.frame.size.height * windowScene.screen.scale / rect.size.height
                         let size = CGSize(width: floor(Double(image.width) * scaleX / windowScene.screen.scale), height: floor(Double(image.height) * scaleY / windowScene.screen.scale))
                         var i: CGImage? = nil
+                        let rendererFormat = UIGraphicsImageRendererFormat.default()
                         
-                        UIGraphicsBeginImageContextWithOptions(size, false, 0)
+                        rendererFormat.opaque = false
+                        rendererFormat.scale = self.traitCollection.displayScale
+                        rendererFormat.preferredRange = .standard
                         
-                        if let context = UIGraphicsGetCurrentContext() {
+                        let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
+                        
+                        i = renderer.image { rendererContext in
+                            let context = rendererContext.cgContext
+                            
                             context.interpolationQuality = .high
                             context.setAllowsAntialiasing(true)
                             context.clear(CGRect(origin: CGPoint.zero, size: size))
                             context.translateBy(x: 0.0, y: size.height)
                             context.scaleBy(x: 1.0, y: -1.0)
                             context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-                            
-                            CATransaction.begin()
-                            CATransaction.setDisableActions(true)
-                            
-                            i = context.makeImage()
-                            
-                            CATransaction.commit()
-                        }
-                        
-                        UIGraphicsEndImageContext()
+                        }.cgImage
                         
                         if self.sourceRect.equalTo(rect) {
                             CATransaction.begin()
@@ -2097,25 +2108,31 @@ class WallView: UIView {
                                     let sourceImage = UIImage(named: "Sparkle\(index % 4 + 1)")!
                                     var maskImage: CGImage? = nil
                                     var generatedImage: CGImage? = nil
+                                    let rendererFormat = UIGraphicsImageRendererFormat()
                                     
-                                    UIGraphicsBeginImageContextWithOptions(CGSize(width: sourceImage.size.width, height: sourceImage.size.height), false, sourceImage.scale)
+                                    rendererFormat.opaque = false
+                                    rendererFormat.scale = sourceImage.scale
+                                    rendererFormat.preferredRange = .standard
                                     
-                                    if let context = UIGraphicsGetCurrentContext(), let cgImage = sourceImage.cgImage {
-                                        context.interpolationQuality = .high
-                                        context.setAllowsAntialiasing(true)
-                                        context.clear(CGRect(x: 0.0, y: 0.0, width: sourceImage.size.width, height: sourceImage.size.height))
-                                        context.translateBy(x: 0.0, y: sourceImage.size.height)
-                                        context.scaleBy(x: 1.0, y: -1.0)
-                                        context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: sourceImage.size.width, height: sourceImage.size.height))
-                                        maskImage = context.makeImage()
+                                    let renderer = UIGraphicsImageRenderer(size: CGSize(width: sourceImage.size.width, height: sourceImage.size.height), format: rendererFormat)
+                                    
+                                    if let cgImage = sourceImage.cgImage {
+                                        maskImage = renderer.image { rendererContext in
+                                            let context = rendererContext.cgContext
+                                            
+                                            context.interpolationQuality = .high
+                                            context.setAllowsAntialiasing(true)
+                                            context.clear(CGRect(x: 0.0, y: 0.0, width: sourceImage.size.width, height: sourceImage.size.height))
+                                            context.translateBy(x: 0.0, y: sourceImage.size.height)
+                                            context.scaleBy(x: 1.0, y: -1.0)
+                                            context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: sourceImage.size.width, height: sourceImage.size.height))
+                                        }.cgImage
                                     }
                                     
-                                    UIGraphicsEndImageContext()
-                                    
                                     if let maskImage {
-                                        UIGraphicsBeginImageContextWithOptions(CGSize(width: sourceImage.size.width, height: sourceImage.size.height), false, sourceImage.scale)
-                                        
-                                        if let context = UIGraphicsGetCurrentContext() {
+                                        generatedImage = renderer.image { rendererContext in
+                                            let context = rendererContext.cgContext
+                                            
                                             context.interpolationQuality = .high
                                             context.setAllowsAntialiasing(true)
                                             context.clear(CGRect(x: 0.0, y: 0.0, width: sourceImage.size.width, height: sourceImage.size.height))
@@ -2124,12 +2141,9 @@ class WallView: UIView {
                                             context.clip(to: CGRect(x: 0.0, y: 0.0, width: sourceImage.size.width, height: sourceImage.size.height), mask: maskImage)
                                             context.setFillColor(CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: index % 2 == 0 ? [0.0, 0.0, 0.0, 1.0] : [1.0, 1.0, 1.0, 1.0])!)
                                             context.fill([CGRect(x: 0.0, y: 0.0, width: sourceImage.size.width, height: sourceImage.size.height)])
-                                            
-                                            generatedImage = context.makeImage()
-                                            imageCache[index] = (generatedImage, sourceImage.size)
-                                        }
+                                        }.cgImage
                                         
-                                        UIGraphicsEndImageContext()
+                                        imageCache[index] = (generatedImage, sourceImage.size)
                                     }
                                     
                                     CATransaction.begin()
