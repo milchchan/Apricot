@@ -442,11 +442,14 @@ final public class Script: NSObject, ObservableObject {
             }.value)
         }
         
-        let storedWords = words
+        let storedWords = (words, self.words)
         let storedScores = self.scores
         let data = await Task.detached { @Sendable [storedWords, storedScores] in
             var isUpdated = false
             var latest = Date.distantPast
+            let words: [(id: Int, name: String, language: String?, date: Date)] = storedWords.0.isEmpty ? storedWords.1.reduce(into: [], { words, word in
+                words.append((id: words.count, name: word.name, language: nil, date: Date(timeIntervalSince1970: Double(word.timestamp))))
+            }) : storedWords.0
             var cache = [Int: (name: String, language: String?, date: Date)]()
             let locale = Locale(identifier: "en_US_POSIX")
             var documents = [[String]]()
@@ -459,7 +462,7 @@ final public class Script: NSObject, ObservableObject {
                 }
             }
             
-            for word in storedWords {
+            for word in words {
                 if let value = cache[word.id] {
                     if value.date < word.date {
                         cache[word.id] = (word.name, word.language, word.date)
@@ -543,7 +546,7 @@ final public class Script: NSObject, ObservableObject {
                             var isNeutral = false
                             var latest = Date.distantPast
                             
-                            for word in storedWords {
+                            for word in words {
                                 if word.name.folding(options: [.caseInsensitive], locale: locale) == key {
                                     if let (count, date) = names[word.name] {
                                         if word.date > date {
