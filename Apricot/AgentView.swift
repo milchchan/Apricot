@@ -1738,13 +1738,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 let audioSession = AVAudioSession.sharedInstance()
                                 var isActivated = true
                                 
-                                if audioSession.category != .ambient {
-                                    do {
+                                do {
+                                    if audioSession.category != .playAndRecord && audioSession.category != .ambient {
                                         try audioSession.setCategory(.ambient)
-                                        try audioSession.setActive(true)
-                                    } catch {
-                                        isActivated = false
                                     }
+                                    
+                                    try audioSession.setActive(true)
+                                } catch {
+                                    isActivated = false
                                 }
                                 
                                 if isActivated {
@@ -2742,13 +2743,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     let audioSession = AVAudioSession.sharedInstance()
                                     var isActivated = true
                                     
-                                    if audioSession.category != .ambient {
-                                        do {
+                                    do {
+                                        if audioSession.category != .playAndRecord && audioSession.category != .ambient {
                                             try audioSession.setCategory(.ambient)
-                                            try audioSession.setActive(true)
-                                        } catch {
-                                            isActivated = false
                                         }
+                                        
+                                        try audioSession.setActive(true)
+                                    } catch {
+                                        isActivated = false
                                     }
                                     
                                     if isActivated {
@@ -2772,13 +2774,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 let audioSession = AVAudioSession.sharedInstance()
                                 var isActivated = true
                                 
-                                if audioSession.category != .ambient {
-                                    do {
+                                do {
+                                    if audioSession.category != .playAndRecord && audioSession.category != .ambient {
                                         try audioSession.setCategory(.ambient)
-                                        try audioSession.setActive(true)
-                                    } catch {
-                                        isActivated = false
                                     }
+                                    
+                                    try audioSession.setActive(true)
+                                } catch {
+                                    isActivated = false
                                 }
                                 
                                 if isActivated {
