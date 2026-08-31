@@ -6271,40 +6271,44 @@ struct Activity: View {
                      .lineLimit(1)
                      .textCase(.uppercase)
                }
-               ToolbarItem(placement: .navigationBarLeading) {
+               ToolbarItem(placement: .cancellationAction) {
                   Button(action: {
                      dismiss()
                   }) {
-                     Image(systemName: "xmark")
-                        .frame(
-                           alignment: .center
-                        )
-                        .background(.clear)
-                        .foregroundStyle(.primary)
-                        .font(
-                           .system(size: 8.0)
-                        )
-                        .bold()
+                     ZStack {
+                        Image(systemName: "xmark")
+                           .frame(
+                              alignment: .center
+                           )
+                           .background(.clear)
+                           .foregroundStyle(.primary)
+                           .font(
+                              .system(size: 8.0)
+                           )
+                           .bold()
+                     }
                   }
                   .contentShape(Circle())
                }
-               ToolbarItem(placement: .navigationBarTrailing) {
+               ToolbarItem(placement: .primaryAction) {
                   Button(action: {
                      withAnimation {
                         proxy.scrollTo(self.topID, anchor: .bottom)
                         self.mode = (self.mode + 1) % 3
                      }
                   }) {
-                     Image(systemName: "arrow.left.arrow.right")
-                        .frame(
-                           alignment: .center
-                        )
-                        .background(.clear)
-                        .foregroundStyle(.primary)
-                        .font(
-                           .system(size: 8.0)
-                        )
-                        .bold()
+                     ZStack {
+                        Image(systemName: "arrow.left.arrow.right")
+                           .frame(
+                              alignment: .center
+                           )
+                           .background(.clear)
+                           .foregroundStyle(.primary)
+                           .font(
+                              .system(size: 8.0)
+                           )
+                           .bold()
+                     }
                   }
                   .contentShape(Circle())
                }
@@ -7131,7 +7135,7 @@ struct Dictionary: View {
                   }
                   .frame(maxWidth: .infinity)
                }
-               ToolbarItem(placement: .navigationBarLeading) {
+               ToolbarItem(placement: .cancellationAction) {
                   Button(action: {
                      if self.path.isEmpty {
                         dismiss()
@@ -7143,30 +7147,34 @@ struct Dictionary: View {
                      }
                   }) {
                      if self.path.isEmpty {
-                        Image(systemName: "xmark")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(.primary)
-                           .font(.system(size: 8.0))
-                           .bold()
-                           .transition(.opacity)
+                        ZStack {
+                           Image(systemName: "xmark")
+                              .frame(
+                                 alignment: .center
+                              )
+                              .background(.clear)
+                              .foregroundStyle(.primary)
+                              .font(.system(size: 8.0))
+                              .bold()
+                              .transition(.opacity)
+                        }
                      } else {
-                        Image(systemName: "arrow.backward")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(.primary)
-                           .font(.system(size: 8.0))
-                           .bold()
-                           .transition(.opacity)
+                        ZStack {
+                           Image(systemName: "arrow.backward")
+                              .frame(
+                                 alignment: .center
+                              )
+                              .background(.clear)
+                              .foregroundStyle(.primary)
+                              .font(.system(size: 8.0))
+                              .bold()
+                              .transition(.opacity)
+                        }
                      }
                   }
                   .contentShape(Circle())
                }
-               ToolbarItem(placement: .navigationBarTrailing) {
+               ToolbarItem(placement: .primaryAction) {
                   Button(action: {
                      if self.path.isEmpty {
                         if self.inputFocused {
@@ -7198,17 +7206,33 @@ struct Dictionary: View {
                   }) {
                      if self.path.isEmpty {
                         if self.isEditing || self.inputFocused {
-                           Image(systemName: "checkmark")
-                              .frame(
-                                 alignment: .center
-                              )
-                              .background(.clear)
-                              .foregroundStyle(.primary)
-                              .font(.system(size: 8.0))
-                              .bold()
-                              .transition(.opacity)
+                           ZStack {
+                              Image(systemName: "checkmark")
+                                 .frame(
+                                    alignment: .center
+                                 )
+                                 .background(.clear)
+                                 .foregroundStyle(.primary)
+                                 .font(.system(size: 8.0))
+                                 .bold()
+                                 .transition(.opacity)
+                           }
                         } else {
-                           Image(systemName: "pencil")
+                           ZStack {
+                              Image(systemName: "pencil")
+                                 .frame(
+                                    alignment: .center
+                                 )
+                                 .background(.clear)
+                                 .foregroundStyle(.primary)
+                                 .font(.system(size: 8.0))
+                                 .bold()
+                                 .transition(.opacity)
+                           }
+                        }
+                     } else {
+                        ZStack {
+                           Image(systemName: "gobackward")
                               .frame(
                                  alignment: .center
                               )
@@ -7218,16 +7242,6 @@ struct Dictionary: View {
                               .bold()
                               .transition(.opacity)
                         }
-                     } else {
-                        Image(systemName: "gobackward")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(.primary)
-                           .font(.system(size: 8.0))
-                           .bold()
-                           .transition(.opacity)
                      }
                   }
                   .contentShape(Circle())
@@ -8127,18 +8141,20 @@ struct Camera: View {
          .navigationBarTitleDisplayMode(.inline)
          .toolbarBackground(.hidden, for: .navigationBar)
          .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .cancellationAction) {
                Button(action: {
                   dismiss()
                }) {
-                  Image(systemName: "xmark")
-                     .frame(
-                        alignment: .center
-                     )
-                     .background(.clear)
-                     .foregroundStyle(.primary)
-                     .font(.system(size: 8.0))
-                     .bold()
+                  ZStack {
+                     Image(systemName: "xmark")
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(.system(size: 8.0))
+                        .bold()
+                  }
                }
                .contentShape(Circle())
             }
@@ -8715,24 +8731,26 @@ struct Gallery: View {
                   .lineLimit(1)
                   .textCase(.uppercase)
             }
-            ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .cancellationAction) {
                Button(action: {
                   dismiss()
                }) {
-                  Image(systemName: "xmark")
-                     .frame(
-                        alignment: .center
-                     )
-                     .background(.clear)
-                     .foregroundStyle(.primary)
-                     .font(
-                        .system(size: 8.0)
-                     )
-                     .bold()
+                  ZStack {
+                     Image(systemName: "xmark")
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(
+                           .system(size: 8.0)
+                        )
+                        .bold()
+                  }
                }
                .contentShape(Circle())
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .primaryAction) {
                Button(action: {
                   guard self.paths.indices.contains(self.page), self.playables.indices.contains(self.page) else {
                      return
@@ -8759,18 +8777,20 @@ struct Gallery: View {
                      }
                   }
                }) {
-                  Image(systemName: "trash")
-                     .frame(
-                        alignment: .center
-                     )
-                     .background(.clear)
-                     .foregroundStyle(.primary)
-                     .font(
-                        .system(size: 8.0)
-                     )
-                     .bold()
-                     .opacity(self.paths.indices.contains(self.page) ? 1.0 : 0.5)
-                     .animation(.linear, value: self.paths.indices.contains(self.page))
+                  ZStack {
+                     Image(systemName: "trash")
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(
+                           .system(size: 8.0)
+                        )
+                        .bold()
+                        .opacity(self.paths.indices.contains(self.page) ? 1.0 : 0.5)
+                        .animation(.linear, value: self.paths.indices.contains(self.page))
+                  }
                }
                .contentShape(Circle())
                .disabled(!self.paths.indices.contains(self.page))
@@ -9343,37 +9363,41 @@ struct Settings: View {
                   .lineLimit(1)
                   .textCase(.uppercase)
             }
-            ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .cancellationAction) {
                Button(action: {
                   dismiss()
                }) {
-                  Image(systemName: "xmark")
-                     .frame(
-                        alignment: .center
-                     )
-                     .background(.clear)
-                     .foregroundStyle(.primary)
-                     .font(
-                        .system(size: 8.0)
-                     )
-                     .bold()
+                  ZStack {
+                     Image(systemName: "xmark")
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(
+                           .system(size: 8.0)
+                        )
+                        .bold()
+                  }
                }
                .contentShape(Circle())
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .primaryAction) {
                Button(action: {
                   openURL(URL(string: "https://milchchan.com/")!)
                }) {
-                  Image(systemName: "globe")
-                     .frame(
-                        alignment: .center
-                     )
-                     .background(.clear)
-                     .foregroundStyle(.primary)
-                     .font(
-                        .system(size: 8.0)
-                     )
-                     .bold()
+                  ZStack {
+                     Image(systemName: "globe")
+                        .frame(
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(
+                           .system(size: 8.0)
+                        )
+                        .bold()
+                  }
                }
                .contentShape(Circle())
             }
