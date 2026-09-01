@@ -85,7 +85,7 @@ class PromptView: UIView {
     }
     
     @objc private func step(displayLink: CADisplayLink) {
-        if self.frame.size.width > 0 && self.frame.size.height > 0 && self.isRunning {
+        if self.bounds.size.width > 0 && self.bounds.size.height > 0 && self.isRunning {
             let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
             
             if self.isInvalidated {
@@ -234,7 +234,7 @@ class PromptView: UIView {
                 
                 if let f = self.font, let color1 = self.block.color.0, let color2 = self.block.color.1 {
                     typealias Segment = (text: String, highlight: Bool, framesetter: CTFramesetter?, size: CGSize)
-                    let lineHeight = self.frame.size.height
+                    let lineHeight = self.bounds.size.height
                     let font = CTFontCreateWithFontDescriptor(f.fontDescriptor as CTFontDescriptor, f.pointSize, nil)
                     let margin = ceil(f.pointSize / 2.0)
                     var current = [Segment]()
@@ -408,7 +408,7 @@ class PromptView: UIView {
                         }
                     }
                     
-                    if maxWidth > self.frame.size.width {
+                    if maxWidth > self.bounds.size.width {
                         translation = fmod(self.block.elapsed, 10.0) / 10.0 * -(maxWidth + margin)
                         updateRequired = true
                     } else {
@@ -422,17 +422,17 @@ class PromptView: UIView {
                         format.scale = self.traitCollection.displayScale
                         format.preferredRange = .standard
                         
-                        let renderer = UIGraphicsImageRenderer(size: self.frame.size, format: format)
+                        let renderer = UIGraphicsImageRenderer(size: self.bounds.size, format: format)
                         let renderedImage = renderer.image { rendererContext in
                             let context = rendererContext.cgContext
                             var offset = 0.0
                             
                             context.interpolationQuality = .high
                             context.setAllowsAntialiasing(true)
-                            context.clear(CGRect(origin: CGPoint.zero, size: self.frame.size))
-                            context.translateBy(x: 0, y: self.frame.size.height)
+                            context.clear(CGRect(origin: CGPoint.zero, size: self.bounds.size))
+                            context.translateBy(x: 0, y: self.bounds.size.height)
                             context.scaleBy(x: 1.0, y: -1.0)
-                            context.translateBy(x: self.frame.size.width / 2.0 - self.block.x, y: 0.0)
+                            context.translateBy(x: self.bounds.size.width / 2.0 - self.block.x, y: 0.0)
                             
                             if let underline = self.underline {
                                 context.setFillColor(color1)
@@ -446,7 +446,7 @@ class PromptView: UIView {
                                 var x = 0.0
                                 
                                 for segment in current {
-                                    if Double(self.frame.size.width) / 2.0 - self.block.x + translation + offset + x + segment.size.width >= 0 && Double(self.frame.size.width) / 2.0 - self.block.x + translation + offset + x < self.frame.size.width {
+                                    if Double(self.bounds.size.width) / 2.0 - self.block.x + translation + offset + x + segment.size.width >= 0 && Double(self.bounds.size.width) / 2.0 - self.block.x + translation + offset + x < self.bounds.size.width {
                                         if segment.highlight {
                                             context.setFillColor(color2)
                                         } else {
