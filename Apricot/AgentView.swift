@@ -352,19 +352,25 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
         }
         
-        if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+        do {
             var alpha: Double
             var interval: Double
             var offset: Double
             var keys = [(String, Bool)]()
             let state = String(stars)
+            let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
             
-            if UIDevice.current.orientation.isLandscape {
+            if safeBounds.width > safeBounds.height && !characters.isEmpty {
                 alpha = 1.0
-                interval = (window.screen.bounds.width - 32.0) / Double(characters.count)
-                offset = -16.0 - interval / 2.0 + window.screen.bounds.width / 2.0
+                interval = safeBounds.width / Double(characters.count)
+                offset = safeBounds.maxX - interval / 2.0 - self.bounds.midX
                 
-                self.systemScale = min(window.screen.bounds.height / 2.0 / characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * scale / self.traitCollection.displayScale, $0) }), 1.0)
+                let maxWidth = characters.reduce(0.0, { max((abs($1.insets.right) - abs($1.insets.left)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * scale / self.traitCollection.displayScale, $0) })
+                let maxHeight = characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * scale / self.traitCollection.displayScale, $0) })
+                let horizontalScale = maxWidth > 0.0 ? interval / maxWidth : 1.0
+                let verticalScale = maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0
+                
+                self.systemScale = min(horizontalScale, verticalScale, 1.0)
             } else {
                 alpha = 0.0
                 interval = 0.0
@@ -375,7 +381,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             
             for i in 0..<characters.count {
                 let character = characters[i]
-                let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets, screen: window.screen)
+                let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
                 let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
                 var animations: [Animation]? = nil
                 
@@ -637,7 +643,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }) { finished in
             if self.changed == time {
                 Task {
-                    if finished, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    if finished {
                         var alpha: Double
                         var interval: Double
                         var offset: Double
@@ -960,12 +966,19 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         self.snapshot = ([], nil)
                         self.guest = guest
                         
-                        if UIDevice.current.orientation.isLandscape {
+                        let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
+                        
+                        if safeBounds.width > safeBounds.height && !characters.isEmpty {
                             alpha = 1.0
-                            interval = (window.screen.bounds.width - 32.0) / Double(characters.count)
-                            offset = -16.0 - interval / 2.0 + window.screen.bounds.width / 2.0
+                            interval = safeBounds.width / Double(characters.count)
+                            offset = safeBounds.maxX - interval / 2.0 - self.bounds.midX
                             
-                            self.systemScale = min(window.screen.bounds.height / 2.0 / characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) }), 1.0)
+                            let maxWidth = characters.reduce(0.0, { max((abs($1.insets.right) - abs($1.insets.left)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
+                            let maxHeight = characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
+                            let horizontalScale = maxWidth > 0.0 ? interval / maxWidth : 1.0
+                            let verticalScale = maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0
+                            
+                            self.systemScale = min(horizontalScale, verticalScale, 1.0)
                         } else {
                             alpha = 0.0
                             interval = 0.0
@@ -978,7 +991,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         
                         for i in 0..<characters.count {
                             let character = characters[i]
-                            let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets, screen: window.screen)
+                            let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
                             let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
                             var animations: [Animation]? = nil
                             
@@ -1196,21 +1209,22 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     
     func change(scale: Double) {
         let time = CACurrentMediaTime()
+        let duration = scale == self.userScale ? 0.0 : 0.5
         
         self.changed = time
         
-        UIView.transition(with: self, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+        UIView.transition(with: self, duration: duration, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
             self.alpha = 0.0
         }) { finished in
             if self.changed == time {
-                if finished, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                if finished {
                     self.userScale = scale
                     
                     for characterView in self.characterViews {
                         let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * scale * self.systemScale
                         let frame = CGRect(x: characterView.origin.x * preferredScale / self.traitCollection.displayScale, y: characterView.origin.y * preferredScale / self.traitCollection.displayScale, width: characterView.size.width * preferredScale / self.traitCollection.displayScale, height: characterView.size.height * preferredScale / self.traitCollection.displayScale)
-                        let messageWidth = floor(UIDevice.current.userInterfaceIdiom == .phone ? min(window.screen.bounds.width, window.screen.bounds.height) - 32.0 : min(window.screen.bounds.width, window.screen.bounds.height) / 2.0 - 32.0)
-                        let maxScale = (messageWidth + 16.0) / messageWidth
+                        let messageWidth = characterView.constraints.reduce(0.0, { $1.firstItem === characterView.balloonView && $1.firstAttribute == .width ? $1.constant : $0 })
+                        let maxScale = messageWidth > 0.0 ? (messageWidth + 16.0) / messageWidth : 0.0
                         let balloonHeight = characterView.constraints.reduce(0.0, { $1.firstItem === characterView.balloonView && $1.firstAttribute == .height ? $1.constant : $0 })
                         let horizontalPadding = round((characterView.contentInsets.leading + characterView.contentInsets.trailing) * preferredScale / self.traitCollection.displayScale / 2.0)
                         let verticalPadding = round((characterView.contentInsets.top + characterView.contentInsets.bottom) * preferredScale / self.traitCollection.displayScale / 2.0)
@@ -1304,7 +1318,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                 }
                 
-                UIView.transition(with: self, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
+                UIView.transition(with: self, duration: duration, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
                     self.alpha = 1.0
                 })
             }
@@ -1330,9 +1344,15 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         configuration.cornerStyle = .capsule
         
         if let text {
+            var attributes: [NSAttributedString.Key: Any] = [.font: font]
+            
+            if let language = characterView.language {
+                attributes[.languageIdentifier] = language
+            }
+            
             configuration.imagePadding = 8.0
             configuration.contentInsets = NSDirectionalEdgeInsets(top: (length - max(font.lineHeight, image.size.height)) / 2.0, leading: (length + 16.0 - image.size.width) / 2.0, bottom: (length - max(font.lineHeight, image.size.height)) / 2.0, trailing: (length + 16.0 - image.size.width) / 2.0)
-            configuration.attributedTitle = AttributedString(NSAttributedString(string: text, attributes: [.font: font]))
+            configuration.attributedTitle = AttributedString(NSAttributedString(string: text, attributes: attributes))
         } else {
             configuration.imagePadding = 0.0
             configuration.contentInsets = NSDirectionalEdgeInsets(top: (length - image.size.height) / 2.0, leading: (length - image.size.width) / 2.0, bottom: (length - image.size.height) / 2.0, trailing: (length - image.size.width) / 2.0)
@@ -1858,71 +1878,68 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        if let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            let systemScale = self.systemScale
-            let messageWidth = floor(UIDevice.current.userInterfaceIdiom == .phone ? min(window.screen.bounds.width, window.screen.bounds.height) - 32.0 : min(window.screen.bounds.width, window.screen.bounds.height) / 2.0 - 32.0)
+        let systemScale = self.systemScale
+        let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
+        let transitionDuration = self.window?.windowScene?.effectiveGeometry.isInteractivelyResizing == true ? 0.0 : 0.5
+        
+        if safeBounds.width <= safeBounds.height {
+            let tx = safeBounds.midX - self.bounds.midX
             
-            if self.bounds.width < self.bounds.height {
-                for i in 0..<self.characterViews.count {
-                    let characterView = self.characterViews[i]
-                    
-                    if characterView.transform.tx != 0.0 {
-                        if i > 0 {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
-                                characterView.alpha = 0.0
-                                characterView.transform.tx = 0.0
-                            })
-                        } else {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
-                                characterView.transform.tx = 0.0
-                            })
-                        }
+            for i in 0..<self.characterViews.count {
+                let characterView = self.characterViews[i]
+                
+                if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
+                    if i > 0 {
+                        UIView.transition(with: characterView, duration: transitionDuration, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            characterView.alpha = 0.0
+                            characterView.transform.tx = tx
+                        })
+                    } else {
+                        UIView.transition(with: characterView, duration: transitionDuration, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            characterView.transform.tx = tx
+                        })
                     }
                 }
-                
-                self.systemScale = 1.0
-            } else {
-                let interval = (window.screen.bounds.width - 32.0) / Double(Script.shared.characters.count)
-                let offset = -16.0 - interval / 2.0 + window.screen.bounds.width / 2.0
-                var maxHeight = 0.0
-                
-                for i in 0..<self.characterViews.count {
-                    let characterView = self.characterViews[i]
-                    let height = (characterView.size.height - characterView.contentInsets.top) * (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
-                    let tx = offset - interval * Double(i)
-                    
-                    if characterView.transform.tx != tx {
-                        if i > 0 {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction], animations: {
-                                characterView.alpha = 1.0
-                                characterView.transform.tx = tx
-                            })
-                        } else {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction], animations: {
-                                characterView.transform.tx = tx
-                            })
-                        }
-                    }
-                    
-                    if height > maxHeight {
-                        maxHeight = height
-                    }
-                }
-                
-                self.systemScale = min(window.screen.bounds.height / 2.0 / maxHeight, 1.0)
             }
             
-            if self.characterViews.contains(where: { x in
-                for constraint in x.constraints {
-                    if constraint.firstItem === x.balloonView && constraint.firstAttribute == .width && constraint.constant != messageWidth {
-                        return true
+            self.systemScale = 1.0
+        } else {
+            let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
+            var maxWidth = 0.0
+            var maxHeight = 0.0
+            
+            for i in 0..<self.characterViews.count {
+                let characterView = self.characterViews[i]
+                let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
+                let width = max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale
+                let height = max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale
+                let tx = safeBounds.maxX - interval * (Double(i) + 0.5) - self.bounds.midX
+                
+                if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 1.0) {
+                    if i > 0 {
+                        UIView.transition(with: characterView, duration: transitionDuration, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            characterView.alpha = 1.0
+                            characterView.transform.tx = tx
+                        })
+                    } else {
+                        UIView.transition(with: characterView, duration: transitionDuration, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            characterView.transform.tx = tx
+                        })
                     }
                 }
                 
-                return false
-            }) || self.systemScale != systemScale {
-                self.change(scale: self.userScale)
+                maxWidth = max(width, maxWidth)
+                maxHeight = max(height, maxHeight)
             }
+            
+            let horizontalScale = maxWidth > 0.0 ? interval / maxWidth : 1.0
+            let verticalScale = maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0
+            
+            self.systemScale = min(horizontalScale, verticalScale, 1.0)
+        }
+        
+        if self.systemScale != systemScale {
+            self.change(scale: self.userScale)
         }
     }
     
@@ -2207,7 +2224,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                 }
                 
-                if !characterView.messageQueue.isEmpty, let window = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                if !characterView.messageQueue.isEmpty {
                     if var step = characterView.messageQueue[0].step {
                         if characterView.messageQueue[0].index == -1 {
                             step -= deltaTime
@@ -2248,7 +2265,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             step += deltaTime
                             
                             if step < 1.0 {
-                                let width = floor(UIDevice.current.userInterfaceIdiom == .phone ? min(window.screen.bounds.width, window.screen.bounds.height) - 32.0 : min(window.screen.bounds.width, window.screen.bounds.height) / 2.0 - 32.0)
+                                let width = characterView.constraints.reduce(0.0, { $1.firstItem === characterView.balloonView && $1.firstAttribute == .width ? $1.constant : $0 })
                                 
                                 characterView.balloonView!.alpha = sin(step / 2.0 * .pi)
                                 
@@ -2496,7 +2513,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
     }
     
-    private func make(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double), screen: UIScreen) -> CharacterView {
+    private func make(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double)) -> CharacterView {
         let characterView = CharacterView(frame: .zero)
         let preferredScale = (scale == 0.0 ? self.traitCollection.displayScale : scale) * self.userScale * self.systemScale
         let frame = CGRect(x: location.x * preferredScale / self.traitCollection.displayScale, y: location.y * preferredScale / self.traitCollection.displayScale, width: size.width * preferredScale / self.traitCollection.displayScale, height: insets.bottom * preferredScale / self.traitCollection.displayScale)
@@ -2504,8 +2521,6 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         let maskLayer = CAShapeLayer()
         let shadowLayer = CAShapeLayer()
         let balloonLayer = CAShapeLayer()
-        let messageWidth = floor(UIDevice.current.userInterfaceIdiom == .phone ? min(screen.bounds.width, screen.bounds.height) - 32.0 : min(screen.bounds.width, screen.bounds.height) / 2.0 - 32.0)
-        let maxScale = (messageWidth + 16.0) / messageWidth
         let doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.doubleTapped))
         let horizontalMotionEffect = UIInterpolatingMotionEffect(keyPath: "layer.transform.translation.x", type: .tiltAlongHorizontalAxis)
         let verticalMotionEffect = UIInterpolatingMotionEffect(keyPath: "layer.transform.translation.y", type: .tiltAlongVerticalAxis)
@@ -2544,16 +2559,12 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         self.addConstraint(NSLayoutConstraint(item: characterView, attribute: .centerX, relatedBy: .equal, toItem: self, attribute: .centerX, multiplier: 1.0, constant: 0.0))
         self.addConstraint(NSLayoutConstraint(item: characterView, attribute: .bottom, relatedBy: .equal, toItem: self.safeAreaLayoutGuide, attribute: .bottom, multiplier: 1.0, constant: -72.0))
         
-        characterView.addConstraint(NSLayoutConstraint(item: characterView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(max(frame.width, messageWidth * maxScale))))
+        characterView.addConstraint(NSLayoutConstraint(item: characterView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 0.0))
         characterView.addConstraint(NSLayoutConstraint(item: characterView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(frame.height - frame.origin.y)))
         
         for constraint in characterView.constraints {
-            if constraint.firstItem === characterView.contentView && constraint.secondItem === characterView {
-                if constraint.firstAttribute == .width {
-                    constraint.constant = -floor(max(frame.width, messageWidth * maxScale) - frame.width)
-                } else if constraint.firstAttribute == .height {
-                    constraint.constant = floor(frame.origin.y)
-                }
+            if constraint.firstItem === characterView.contentView && constraint.secondItem === characterView && constraint.firstAttribute == .height {
+                constraint.constant = floor(frame.origin.y)
             }
         }
         
@@ -2597,7 +2608,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         characterView.addConstraint(NSLayoutConstraint(item: characterView.balloonView!, attribute: .centerX, relatedBy: .equal, toItem: characterView, attribute: .centerX, multiplier: 1.0, constant: 0.0))
         characterView.addConstraint(NSLayoutConstraint(item: characterView.balloonView!, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 0.0))
-        characterView.addConstraint(NSLayoutConstraint(item: characterView.balloonView!, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: messageWidth))
+        characterView.addConstraint(NSLayoutConstraint(item: characterView.balloonView!, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 0.0))
         characterView.addConstraint(NSLayoutConstraint(item: characterView.balloonView!, attribute: .bottom, relatedBy: .equal, toItem: characterView.contentView, attribute: .bottom, multiplier: 1.0, constant: -round(frame.origin.y)))
         
         characterView.balloonView!.addConstraint(NSLayoutConstraint(item: visualEffectView, attribute: .leading, relatedBy: .equal, toItem: characterView.balloonView!, attribute: .leading, multiplier: 1.0, constant: 0.0))
@@ -2609,6 +2620,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     }
     
     private func dispatch(characterView: CharacterView) {
+        let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
+        
         if characterView.elapsedTime >= characterView.maxDuration {
             if characterView.stepQueue.isEmpty {
                 if Script.shared.queue.count > 0 {
@@ -2726,7 +2739,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     if characterView.balloonView!.isHidden {
                         characterView.stepQueue.removeFirst()
                         
-                        if UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0 {
+                        if safeBounds.width > safeBounds.height || self.characterViews.firstIndex(of: characterView) == 0 {
                             characterView.show(message: message)
                         }
                     }
@@ -2741,7 +2754,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 case .sound(let sound):
                     characterView.stepQueue.removeFirst()
                     
-                    if UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0, let characterPath = characterView.path, let soundPath = sound.path {
+                    if safeBounds.width > safeBounds.height || self.characterViews.firstIndex(of: characterView) == 0, let characterPath = characterView.path, let soundPath = sound.path {
                         let path = URL(filePath: characterPath).deletingLastPathComponent().appending(path: soundPath, directoryHint: .inferFromPath).path(percentEncoded: false)
                         
                         Task.detached {
@@ -2779,7 +2792,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 case .audio(let data):
                     characterView.stepQueue.removeFirst()
                     
-                    if UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0 {
+                    if safeBounds.width > safeBounds.height || self.characterViews.firstIndex(of: characterView) == 0 {
                         Task.detached {
                             if data.count >= 12, let riff = String(data: data[0..<4], encoding: .ascii), riff == "RIFF", let wave = String(data: data[8..<12], encoding: .ascii), wave == "WAVE", let audioPlayer = try? AVAudioPlayer(data: data) {
                                 let audioSession = AVAudioSession.sharedInstance()
@@ -3065,7 +3078,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             }
                         }
                         
-                        if UIDevice.current.orientation.isLandscape || self.characterViews.firstIndex(of: characterView) == 0 {
+                        if safeBounds.width > safeBounds.height || self.characterViews.firstIndex(of: characterView) == 0 {
                             if stageRequired {
                                 characterView.elapsedTime = characterView.maxDuration
                                 characterView.stagingTimelines.append(contentsOf: cachedTimelines)
@@ -3435,7 +3448,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     }
                                 }
                                 
-                                if UIDevice.current.orientation.isLandscape || characterViews.firstIndex(of: characterView) == 0 {
+                                if (characterView.parentView.map({
+                                    let safeBounds = $0.bounds.inset(by: $0.safeAreaInsets)
+                                    
+                                    return safeBounds.width > safeBounds.height
+                                }) ?? false) || characterViews.firstIndex(of: characterView) == 0 {
                                     if stageRequired {
                                         characterView.elapsedTime = characterView.maxDuration
                                         characterView.stagingTimelines.append(contentsOf: cachedTimelines)
@@ -3804,349 +3821,359 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
         
         func show(message: Message) {
-            guard let window = UIApplication.shared.connectedScenes.first as? UIWindowScene, let parentView = self.parentView else {
+            guard let parentView = self.parentView else {
                 return
             }
             
-            for subview in self.balloonView!.subviews {
-                if let visualEffectView = subview as? UIVisualEffectView {
-                    var content = String()
-                    var index = 0
-                    var i = 0
-                    var current = String()
-                    var text = String()
-                    var breaks = Set<Int>()
-                    var lines = [(labels: [UILabel], text: String, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)]()
-                    var count = 0
-                    var attributes = [(start: Int, end: Int)]()
-                    let font = UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize, weight: .bold)
-                    let lineHeight = ceil(font.lineHeight * 1.5)
-                    let balloonPartSize = CGSizeMake(11.0, 11.0)
-                    let messageWidth = floor(UIDevice.current.userInterfaceIdiom == .phone ? min(window.screen.bounds.width, window.screen.bounds.height) - 32.0 : min(window.screen.bounds.width, window.screen.bounds.height) / 2.0 - 32.0)
-                    let (imageSize, trailing) = visualEffectView.contentView.subviews.reduce((CGSize.zero, 0.0), { x, y in
-                        if let button = y as? UIButton, let configuration = button.configuration, let image = configuration.image {
-                            return (CGSize(width: max(x.0.width, configuration.contentInsets.leading + image.size.width), height: max(x.0.width, configuration.contentInsets.top + configuration.contentInsets.bottom + image.size.height)), max(x.1, configuration.contentInsets.trailing))
-                        }
-                        
-                        return x
-                    })
-                    let radius = lineHeight
-                    let maxLineWidth = messageWidth - radius * 2.0
-                    let maskPath = CGMutablePath()
-                    let accentColor = parentView.accentColor ?? UIColor(named: "AccentColor")!
-                    let language: [(NSAttributedString.Key, Any)] = {
-                        if let language = self.language {
-                            return [(.languageIdentifier, language)]
-                        }
-                        
-                        return []
-                    }()
-                    let messageView = UIView()
-                    let swipeRightGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
-                    let swipeLeftGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
-                    
-                    swipeRightGestureRecognizer.direction = .right
-                    swipeLeftGestureRecognizer.direction = .left
-                    
-                    messageView.translatesAutoresizingMaskIntoConstraints = false
-                    messageView.isUserInteractionEnabled = true
-                    messageView.backgroundColor = .clear
-                    messageView.clipsToBounds = true
-                    messageView.addGestureRecognizer(swipeRightGestureRecognizer)
-                    messageView.addGestureRecognizer(swipeLeftGestureRecognizer)
-                    
-                    visualEffectView.contentView.insertSubview(messageView, at: count)
-                    
-                    for inline in message {
-                        if inline.attributes == nil {
-                            content.append(inline.text)
-                            index += inline.text.count
-                        } else {
-                            let s = inline.text.filter { !$0.isNewline }
-                            
-                            content.append(s)
-                            attributes.append((start: index, end: index + s.count))
-                            index += s.count
-                        }
-                    }
-                    
-                    while i < content.count {
-                        let character = content[content.index(content.startIndex, offsetBy: i)]
-                        
-                        if character.isNewline {
-                            var labels = [UILabel]()
-                            
-                            for _ in 0..<breaks.count + 1 {
-                                let messageLabel = UILabel(frame: CGRect.zero)
-                                let maskLayer = CAShapeLayer()
-                                
-                                maskLayer.fillRule = .evenOdd
-                                maskLayer.strokeColor = UIColor.clear.cgColor
-                                maskLayer.lineWidth = 0.0
-                                maskLayer.fillColor = UIColor(white: 1.0, alpha: 1.0).cgColor
-                                maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
-                                
-                                messageLabel.translatesAutoresizingMaskIntoConstraints = false
-                                messageLabel.isUserInteractionEnabled = false
-                                messageLabel.backgroundColor = .clear
-                                messageLabel.contentMode = .topLeft
-                                messageLabel.font = font
-                                messageLabel.lineBreakMode = .byClipping
-                                messageLabel.numberOfLines = 1
-                                messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
-                                messageLabel.layer.mask = maskLayer
-                                
-                                messageView.insertSubview(messageLabel, at: count)
-                                
-                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
-                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
-                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
-                                
-                                labels.append(messageLabel)
-                                count += 1
-                            }
-                            
-                            lines.append((labels: labels, text: text, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
-                            
-                            if i == content.count - 1 {
-                                let messageLabel = UILabel(frame: CGRect.zero)
-                                let maskLayer = CAShapeLayer()
-                                
-                                maskLayer.fillRule = .evenOdd
-                                maskLayer.strokeColor = UIColor.clear.cgColor
-                                maskLayer.lineWidth = 0.0
-                                maskLayer.fillColor = UIColor(white: 1.0, alpha: 1.0).cgColor
-                                maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
-                                
-                                messageLabel.translatesAutoresizingMaskIntoConstraints = false
-                                messageLabel.isUserInteractionEnabled = false
-                                messageLabel.backgroundColor = .clear
-                                messageLabel.contentMode = .topLeft
-                                messageLabel.font = font
-                                messageLabel.lineBreakMode = .byClipping
-                                messageLabel.numberOfLines = 1
-                                messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
-                                messageLabel.layer.mask = maskLayer
-                                
-                                messageView.insertSubview(messageLabel, at: count)
-                                
-                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
-                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
-                                messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
-                                
-                                count += 1
-                                lines.append((labels: [messageLabel], text: String(), breaks: [], step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
-                                
-                                break
-                            }
-                            
-                            current.removeAll()
-                            text.removeAll()
-                            breaks.removeAll()
-                        } else if character.isWhitespace {
-                            if current.isEmpty {
-                                i += 1
-                                
-                                continue
-                            }
-                            
-                            current.append(character)
-                            text.append(character)
-                            
-                            let offset = lines.reduce(0, { $0 + $1.text.count })
-                            var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
-                            let mutableAttributedString = NSMutableAttributedString()
-                            let paragraphStyle = NSMutableParagraphStyle()
-                            
-                            paragraphStyle.minimumLineHeight = font.lineHeight
-                            paragraphStyle.maximumLineHeight = font.lineHeight
-                            
-                            for j in 1..<current.count {
-                                let highlight = attributes.firstIndex(where: { offset + j >= $0.start && offset + j < $0.end })
-                                var component = components[components.count - 1]
-                                
-                                if highlight == component.highlight {
-                                    component.text.append(current[current.index(current.startIndex, offsetBy: j)])
-                                    components[components.count - 1] = component
-                                } else {
-                                    components.append((text: String(current[current.index(current.startIndex, offsetBy: j)]), highlight: highlight))
+            let safeBounds = parentView.bounds.inset(by: parentView.safeAreaInsets)
+            
+            if safeBounds.width > 0.0 && safeBounds.height > 0.0 {
+                let font = UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize, weight: .bold)
+                let lineHeight = ceil(font.lineHeight * 1.5)
+                let messageWidth = floor(UIDevice.current.userInterfaceIdiom == .phone && safeBounds.width < safeBounds.height ? safeBounds.width - 32.0 : safeBounds.width / Double(parentView.characterViews.count <= 2 ? 2 : parentView.characterViews.count) - 32.0)
+                let radius = lineHeight
+                let maxLineWidth = messageWidth - radius * 2.0
+                
+                if maxLineWidth > 0.0 {
+                    for subview in self.balloonView!.subviews {
+                        if let visualEffectView = subview as? UIVisualEffectView {
+                            var content = String()
+                            var index = 0
+                            var i = 0
+                            var current = String()
+                            var text = String()
+                            var breaks = Set<Int>()
+                            var lines = [(labels: [UILabel], text: String, breaks: Set<Int>, step: Double?, type: (elapsed: Double, speed: Double, buffer: String, count: Int), current: String)]()
+                            var count = 0
+                            var attributes = [(start: Int, end: Int)]()
+                            let balloonPartSize = CGSizeMake(11.0, 11.0)
+                            let maskPath = CGMutablePath()
+                            let accentColor = parentView.accentColor ?? UIColor(named: "AccentColor")!
+                            let language: [(NSAttributedString.Key, Any)] = {
+                                if let language = self.language {
+                                    return [(.languageIdentifier, language)]
                                 }
-                            }
-                            
-                            for component in components {
-                                mutableAttributedString.append(NSAttributedString(string: component.text, attributes: Swift.Dictionary(uniqueKeysWithValues: [(.font, font), (.foregroundColor, component.highlight == nil ? UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) } : accentColor), (.paragraphStyle, paragraphStyle)] + language)))
-                            }
-                            
-                            if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
-                                current.removeSubrange(current.startIndex..<current.endIndex)
-                                text.remove(at: text.index(text.endIndex, offsetBy: -1))
-                                breaks.insert(text.count)
-                            }
-                        } else {
-                            current.append(character)
-                            text.append(character)
-                            
-                            let offset = lines.reduce(0, { $0 + $1.text.count })
-                            var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
-                            let mutableAttributedString = NSMutableAttributedString()
-                            let paragraphStyle = NSMutableParagraphStyle()
-                            
-                            paragraphStyle.minimumLineHeight = font.lineHeight
-                            paragraphStyle.maximumLineHeight = font.lineHeight
-                            
-                            for j in 1..<current.count {
-                                let highlight = attributes.firstIndex(where: { offset + j >= $0.start && offset + j < $0.end })
-                                var component = components[components.count - 1]
                                 
-                                if highlight == component.highlight {
-                                    component.text.append(current[current.index(current.startIndex, offsetBy: j)])
-                                    components[components.count - 1] = component
+                                return []
+                            }()
+                            let messageView = UIView()
+                            let swipeRightGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
+                            let swipeLeftGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(self.swiped))
+                            
+                            swipeRightGestureRecognizer.direction = .right
+                            swipeLeftGestureRecognizer.direction = .left
+                            
+                            messageView.translatesAutoresizingMaskIntoConstraints = false
+                            messageView.isUserInteractionEnabled = true
+                            messageView.backgroundColor = .clear
+                            messageView.clipsToBounds = true
+                            messageView.addGestureRecognizer(swipeRightGestureRecognizer)
+                            messageView.addGestureRecognizer(swipeLeftGestureRecognizer)
+                            
+                            visualEffectView.contentView.insertSubview(messageView, at: count)
+                            
+                            for inline in message {
+                                if inline.attributes == nil {
+                                    content.append(inline.text)
+                                    index += inline.text.count
                                 } else {
-                                    components.append((text: String(current[current.index(current.startIndex, offsetBy: j)]), highlight: highlight))
-                                }
-                            }
-                            
-                            for component in components {
-                                mutableAttributedString.append(NSAttributedString(string: component.text, attributes: Swift.Dictionary(uniqueKeysWithValues: [(.font, font), (.foregroundColor, component.highlight == nil ? UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) } : accentColor), (.paragraphStyle, paragraphStyle)] + language)))
-                            }
-                            
-                            if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
-                                var spaceIndex: Int? = nil
-                                
-                                for j in stride(from: current.count - 1, through: 0, by: -1) {
-                                    let c = current[current.index(current.startIndex, offsetBy: j)]
+                                    let s = inline.text.filter { !$0.isNewline }
                                     
-                                    if c.isWhitespace {
-                                        spaceIndex = j
+                                    content.append(s)
+                                    attributes.append((start: index, end: index + s.count))
+                                    index += s.count
+                                }
+                            }
+                            
+                            while i < content.count {
+                                let character = content[content.index(content.startIndex, offsetBy: i)]
+                                
+                                if character.isNewline {
+                                    var labels = [UILabel]()
+                                    
+                                    for _ in 0..<breaks.count + 1 {
+                                        let messageLabel = UILabel(frame: CGRect.zero)
+                                        let maskLayer = CAShapeLayer()
+                                        
+                                        maskLayer.fillRule = .evenOdd
+                                        maskLayer.strokeColor = UIColor.clear.cgColor
+                                        maskLayer.lineWidth = 0.0
+                                        maskLayer.fillColor = UIColor(white: 1.0, alpha: 1.0).cgColor
+                                        maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
+                                        
+                                        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+                                        messageLabel.isUserInteractionEnabled = false
+                                        messageLabel.backgroundColor = .clear
+                                        messageLabel.contentMode = .topLeft
+                                        messageLabel.font = font
+                                        messageLabel.lineBreakMode = .byClipping
+                                        messageLabel.numberOfLines = 1
+                                        messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
+                                        messageLabel.layer.mask = maskLayer
+                                        
+                                        messageView.insertSubview(messageLabel, at: count)
+                                        
+                                        messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
+                                        messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
+                                        messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
+                                        
+                                        labels.append(messageLabel)
+                                        count += 1
+                                    }
+                                    
+                                    lines.append((labels: labels, text: text, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
+                                    
+                                    if i == content.count - 1 {
+                                        let messageLabel = UILabel(frame: CGRect.zero)
+                                        let maskLayer = CAShapeLayer()
+                                        
+                                        maskLayer.fillRule = .evenOdd
+                                        maskLayer.strokeColor = UIColor.clear.cgColor
+                                        maskLayer.lineWidth = 0.0
+                                        maskLayer.fillColor = UIColor(white: 1.0, alpha: 1.0).cgColor
+                                        maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
+                                        
+                                        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+                                        messageLabel.isUserInteractionEnabled = false
+                                        messageLabel.backgroundColor = .clear
+                                        messageLabel.contentMode = .topLeft
+                                        messageLabel.font = font
+                                        messageLabel.lineBreakMode = .byClipping
+                                        messageLabel.numberOfLines = 1
+                                        messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
+                                        messageLabel.layer.mask = maskLayer
+                                        
+                                        messageView.insertSubview(messageLabel, at: count)
+                                        
+                                        messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
+                                        messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
+                                        messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
+                                        
+                                        count += 1
+                                        lines.append((labels: [messageLabel], text: String(), breaks: [], step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
                                         
                                         break
-                                    } else if !c.isASCII {
-                                        break
+                                    }
+                                    
+                                    current.removeAll()
+                                    text.removeAll()
+                                    breaks.removeAll()
+                                } else if character.isWhitespace {
+                                    if current.isEmpty {
+                                        i += 1
+                                        
+                                        continue
+                                    }
+                                    
+                                    current.append(character)
+                                    text.append(character)
+                                    
+                                    let offset = lines.reduce(0, { $0 + $1.text.count })
+                                    var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
+                                    let mutableAttributedString = NSMutableAttributedString()
+                                    let paragraphStyle = NSMutableParagraphStyle()
+                                    
+                                    paragraphStyle.minimumLineHeight = font.lineHeight
+                                    paragraphStyle.maximumLineHeight = font.lineHeight
+                                    
+                                    for j in 1..<current.count {
+                                        let highlight = attributes.firstIndex(where: { offset + j >= $0.start && offset + j < $0.end })
+                                        var component = components[components.count - 1]
+                                        
+                                        if highlight == component.highlight {
+                                            component.text.append(current[current.index(current.startIndex, offsetBy: j)])
+                                            components[components.count - 1] = component
+                                        } else {
+                                            components.append((text: String(current[current.index(current.startIndex, offsetBy: j)]), highlight: highlight))
+                                        }
+                                    }
+                                    
+                                    for component in components {
+                                        mutableAttributedString.append(NSAttributedString(string: component.text, attributes: Swift.Dictionary(uniqueKeysWithValues: [(.font, font), (.foregroundColor, component.highlight == nil ? UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) } : accentColor), (.paragraphStyle, paragraphStyle)] + language)))
+                                    }
+                                    
+                                    if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
+                                        current.removeSubrange(current.startIndex..<current.endIndex)
+                                        text.remove(at: text.index(text.endIndex, offsetBy: -1))
+                                        breaks.insert(text.count)
+                                    }
+                                } else {
+                                    current.append(character)
+                                    text.append(character)
+                                    
+                                    let offset = lines.reduce(0, { $0 + $1.text.count })
+                                    var components: [(text: String, highlight: Int?)] = [(text: String(current[current.startIndex]), highlight: attributes.firstIndex(where: { offset >= $0.start && offset < $0.end }))]
+                                    let mutableAttributedString = NSMutableAttributedString()
+                                    let paragraphStyle = NSMutableParagraphStyle()
+                                    
+                                    paragraphStyle.minimumLineHeight = font.lineHeight
+                                    paragraphStyle.maximumLineHeight = font.lineHeight
+                                    
+                                    for j in 1..<current.count {
+                                        let highlight = attributes.firstIndex(where: { offset + j >= $0.start && offset + j < $0.end })
+                                        var component = components[components.count - 1]
+                                        
+                                        if highlight == component.highlight {
+                                            component.text.append(current[current.index(current.startIndex, offsetBy: j)])
+                                            components[components.count - 1] = component
+                                        } else {
+                                            components.append((text: String(current[current.index(current.startIndex, offsetBy: j)]), highlight: highlight))
+                                        }
+                                    }
+                                    
+                                    for component in components {
+                                        mutableAttributedString.append(NSAttributedString(string: component.text, attributes: Swift.Dictionary(uniqueKeysWithValues: [(.font, font), (.foregroundColor, component.highlight == nil ? UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) } : accentColor), (.paragraphStyle, paragraphStyle)] + language)))
+                                    }
+                                    
+                                    if mutableAttributedString.boundingRect(with: CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX), options: .usesLineFragmentOrigin, context: nil).width > maxLineWidth {
+                                        var spaceIndex: Int? = nil
+                                        
+                                        for j in stride(from: current.count - 1, through: 0, by: -1) {
+                                            let c = current[current.index(current.startIndex, offsetBy: j)]
+                                            
+                                            if c.isWhitespace {
+                                                spaceIndex = j
+                                                
+                                                break
+                                            } else if !c.isASCII {
+                                                break
+                                            }
+                                        }
+                                        
+                                        if let spaceIndex {
+                                            let distance = -spaceIndex + current.count - 1
+                                            
+                                            current.removeSubrange(current.startIndex..<current.index(current.endIndex, offsetBy: -distance))
+                                            breaks.insert(text.count - distance)
+                                        } else {
+                                            current.removeSubrange(current.startIndex..<current.index(current.endIndex, offsetBy: -1))
+                                            breaks.insert(text.count - 1)
+                                        }
                                     }
                                 }
                                 
-                                if let spaceIndex {
-                                    let distance = -spaceIndex + current.count - 1
-                                    
-                                    current.removeSubrange(current.startIndex..<current.index(current.endIndex, offsetBy: -distance))
-                                    breaks.insert(text.count - distance)
-                                } else {
-                                    current.removeSubrange(current.startIndex..<current.index(current.endIndex, offsetBy: -1))
-                                    breaks.insert(text.count - 1)
-                                }
+                                i += 1
                             }
-                        }
-                        
-                        i += 1
-                    }
-                    
-                    if !text.isEmpty {
-                        var labels = [UILabel]()
-                        
-                        for _ in 0..<breaks.count + 1 {
-                            let messageLabel = UILabel(frame: CGRect.zero)
-                            let maskLayer = CAShapeLayer()
                             
-                            maskLayer.fillRule = .evenOdd
-                            maskLayer.strokeColor = UIColor.clear.cgColor
-                            maskLayer.lineWidth = 0.0
-                            maskLayer.fillColor = UIColor(white: 1.0, alpha: 1.0).cgColor
-                            maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
-                            
-                            messageLabel.translatesAutoresizingMaskIntoConstraints = false
-                            messageLabel.isUserInteractionEnabled = false
-                            messageLabel.backgroundColor = .clear
-                            messageLabel.contentMode = .topLeft
-                            messageLabel.font = font
-                            messageLabel.lineBreakMode = .byClipping
-                            messageLabel.numberOfLines = 1
-                            messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
-                            messageLabel.layer.mask = maskLayer
-                            
-                            messageView.insertSubview(messageLabel, at: count)
-                            
-                            messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
-                            messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
-                            messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
-                            
-                            labels.append(messageLabel)
-                            count += 1
-                        }
-                        
-                        lines.append((labels: labels, text: text, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
-                    }
-                    
-                    self.messageQueue.append((step: 0.0, index: 0, lines: lines, time: 0.0, speed: 1.0, duration: message.duration, slide: (index: 0, step: nil), reverse: false, attributes: attributes, source: message))
-                    
-                    let preferredScale = (self.scale == 0.0 ? self.traitCollection.displayScale : self.scale) * parentView.userScale * parentView.systemScale
-                    let frame = CGRect(x: self.origin.x * preferredScale / self.traitCollection.displayScale, y: self.origin.y * preferredScale / self.traitCollection.displayScale, width: self.size.width * preferredScale / self.traitCollection.displayScale, height: self.size.height * preferredScale / self.traitCollection.displayScale)
-                    let contentHeight = count > 1 ? font.lineHeight + lineHeight * Double(min(count, self.maxLines) - 1) : font.lineHeight
-                    let messageHeight = ceil(radius * 2.0 + contentHeight)
-                    let maxScale = (messageWidth + 16.0) / messageWidth
-                    let balloonPath = self.createBalloonPath(messageWidth: messageWidth, messageHeight: messageHeight, balloonPartSize: balloonPartSize, radius: radius)
-                    let margin = floor((messageHeight + balloonPartSize.height) * maxScale - frame.origin.y)
-                    
-                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
-                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius))
-                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: maxLineWidth))
-                    visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(contentHeight)))
-                    
-                    for constraint in self.constraints {
-                        if constraint.firstItem === self.contentView && constraint.firstAttribute == .height && constraint.secondItem === self {
-                            constraint.constant = -margin
-                        } else if constraint.firstItem === self && constraint.firstAttribute == .height {
-                            constraint.constant = ceil(margin + frame.height)
-                        } else if constraint.firstItem === self.balloonView {
-                            if constraint.firstAttribute == .height {
-                                constraint.constant = messageHeight + balloonPartSize.height
-                            } else if constraint.firstAttribute == .bottom {
-                                constraint.constant = round((messageHeight + balloonPartSize.height) / 2.0 - frame.origin.y)
-                            }
-                        }
-                    }
-                    
-                    for constraint in visualEffectView.contentView.constraints {
-                        if constraint.firstItem is UIButton && constraint.secondItem === visualEffectView.contentView {
-                            if constraint.firstAttribute == .trailing {
-                                constraint.constant = -radius + trailing
-                            } else if constraint.firstAttribute == .bottom {
-                                constraint.constant = -ceil(balloonPartSize.height + radius + (font.lineHeight - imageSize.height) / 2.0)
-                            }
-                        }
-                    }
-                    
-                    maskPath.addPath(balloonPath)
-                    maskPath.addRect(CGRect(x: -8.0 * 2.0, y: -8.0 * 2.0, width: messageWidth + 8.0 * 4.0, height: messageHeight + balloonPartSize.height + 8.0 * 4.0))
-                    maskPath.closeSubpath()
-                    
-                    if let sublayers = self.balloonView!.layer.sublayers {
-                        for sublayer in sublayers {
-                            if let shapeLayer = sublayer as? CAShapeLayer {
-                                shapeLayer.path = balloonPath
-                                shapeLayer.shadowPath = balloonPath
+                            if !text.isEmpty {
+                                var labels = [UILabel]()
                                 
-                                if let maskLayer = shapeLayer.mask as? CAShapeLayer {
-                                    maskLayer.path = maskPath
+                                for _ in 0..<breaks.count + 1 {
+                                    let messageLabel = UILabel(frame: CGRect.zero)
+                                    let maskLayer = CAShapeLayer()
+                                    
+                                    maskLayer.fillRule = .evenOdd
+                                    maskLayer.strokeColor = UIColor.clear.cgColor
+                                    maskLayer.lineWidth = 0.0
+                                    maskLayer.fillColor = UIColor(white: 1.0, alpha: 1.0).cgColor
+                                    maskLayer.path = CGPath(rect: CGRect(x: 0.0, y: 0.0, width: maxLineWidth, height: ceil(font.lineHeight)), transform: nil)
+                                    
+                                    messageLabel.translatesAutoresizingMaskIntoConstraints = false
+                                    messageLabel.isUserInteractionEnabled = false
+                                    messageLabel.backgroundColor = .clear
+                                    messageLabel.contentMode = .topLeft
+                                    messageLabel.font = font
+                                    messageLabel.lineBreakMode = .byClipping
+                                    messageLabel.numberOfLines = 1
+                                    messageLabel.transform = CGAffineTransformMakeTranslation(0.0, 0.0)
+                                    messageLabel.layer.mask = maskLayer
+                                    
+                                    messageView.insertSubview(messageLabel, at: count)
+                                    
+                                    messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .leading, relatedBy: .equal, toItem: messageView, attribute: .leading, multiplier: 1.0, constant: 0.0))
+                                    messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .top, relatedBy: .equal, toItem: messageView, attribute: .top, multiplier: 1.0, constant: lineHeight * Double(count)))
+                                    messageView.addConstraint(NSLayoutConstraint(item: messageLabel, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(font.lineHeight)))
+                                    
+                                    labels.append(messageLabel)
+                                    count += 1
+                                }
+                                
+                                lines.append((labels: labels, text: text, breaks: breaks, step: nil, type: (elapsed: -1.0, speed: message.speed, buffer: String(), count: 0), current: String()))
+                            }
+                            
+                            self.messageQueue.append((step: 0.0, index: 0, lines: lines, time: 0.0, speed: 1.0, duration: message.duration, slide: (index: 0, step: nil), reverse: false, attributes: attributes, source: message))
+                            
+                            let preferredScale = (self.scale == 0.0 ? self.traitCollection.displayScale : self.scale) * parentView.userScale * parentView.systemScale
+                            let frame = CGRect(x: self.origin.x * preferredScale / self.traitCollection.displayScale, y: self.origin.y * preferredScale / self.traitCollection.displayScale, width: self.size.width * preferredScale / self.traitCollection.displayScale, height: self.size.height * preferredScale / self.traitCollection.displayScale)
+                            let contentHeight = count > 1 ? font.lineHeight + lineHeight * Double(min(count, self.maxLines) - 1) : font.lineHeight
+                            let messageHeight = ceil(radius * 2.0 + contentHeight)
+                            let maxScale = (messageWidth + 16.0) / messageWidth
+                            let balloonPath = self.createBalloonPath(messageWidth: messageWidth, messageHeight: messageHeight, balloonPartSize: balloonPartSize, radius: radius)
+                            let margin = floor((messageHeight + balloonPartSize.height) * maxScale - frame.origin.y)
+                            
+                            visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .leading, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .leading, multiplier: 1.0, constant: radius))
+                            visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .top, relatedBy: .equal, toItem: visualEffectView.contentView, attribute: .top, multiplier: 1.0, constant: radius))
+                            visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: maxLineWidth))
+                            visualEffectView.contentView.addConstraint(NSLayoutConstraint(item: messageView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(contentHeight)))
+                            
+                            for constraint in self.constraints {
+                                if constraint.firstItem === self {
+                                    if constraint.firstAttribute == .width {
+                                        constraint.constant = ceil(max(frame.width, messageWidth * maxScale))
+                                    } else if constraint.firstAttribute == .height {
+                                        constraint.constant = ceil(margin + frame.height)
+                                    }
+                                } else if constraint.firstItem === self.contentView && constraint.secondItem === self {
+                                    if constraint.firstAttribute == .width {
+                                        constraint.constant = -floor(max(frame.width, messageWidth * maxScale) - frame.width)
+                                    } else if constraint.firstAttribute == .height {
+                                        constraint.constant = -margin
+                                    }
+                                } else if constraint.firstItem === self.balloonView {
+                                    if constraint.firstAttribute == .width {
+                                        constraint.constant = messageWidth
+                                    } else if constraint.firstAttribute == .height {
+                                        constraint.constant = messageHeight + balloonPartSize.height
+                                    } else if constraint.firstAttribute == .bottom {
+                                        constraint.constant = round((messageHeight + balloonPartSize.height) / 2.0 - frame.origin.y)
+                                    }
                                 }
                             }
-                        }
-                    }
-                    
-                    for subview in self.balloonView!.subviews {
-                        if let visualEffectView = subview as? UIVisualEffectView {
-                            if let maskLayer = visualEffectView.layer.mask as? CAShapeLayer {
-                                maskLayer.path = balloonPath
+                            
+                            for constraint in visualEffectView.contentView.constraints {
+                                if constraint.firstItem is UIButton && constraint.secondItem === visualEffectView.contentView {
+                                    if constraint.firstAttribute == .trailing {
+                                        constraint.constant = -radius
+                                    } else if constraint.firstAttribute == .bottom {
+                                        constraint.constant = -ceil(balloonPartSize.height + radius + font.lineHeight / 2.0)
+                                    }
+                                }
                             }
+                            
+                            maskPath.addPath(balloonPath)
+                            maskPath.addRect(CGRect(x: -8.0 * 2.0, y: -8.0 * 2.0, width: messageWidth + 8.0 * 4.0, height: messageHeight + balloonPartSize.height + 8.0 * 4.0))
+                            maskPath.closeSubpath()
+                            
+                            if let sublayers = self.balloonView!.layer.sublayers {
+                                for sublayer in sublayers {
+                                    if let shapeLayer = sublayer as? CAShapeLayer {
+                                        shapeLayer.path = balloonPath
+                                        shapeLayer.shadowPath = balloonPath
+                                        
+                                        if let maskLayer = shapeLayer.mask as? CAShapeLayer {
+                                            maskLayer.path = maskPath
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            for subview in self.balloonView!.subviews {
+                                if let visualEffectView = subview as? UIVisualEffectView {
+                                    if let maskLayer = visualEffectView.layer.mask as? CAShapeLayer {
+                                        maskLayer.path = balloonPath
+                                    }
+                                }
+                            }
+                            
+                            self.balloonView!.isHidden = false
+                            
+                            break
                         }
                     }
                     
-                    self.balloonView!.isHidden = false
-                    
-                    break
+                    self.parentView?.delegate?.agentWillSpeak(self.parentView!, message: message)
                 }
             }
-            
-            self.parentView?.delegate?.agentWillSpeak(self.parentView!, message: message)
         }
         
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -4803,7 +4830,9 @@ extension UIWindow {
         super.motionEnded(motion, with: event)
         
         if motion == .motionShake {
-            if UIDevice.current.orientation.isLandscape {
+            let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
+            
+            if safeBounds.width > safeBounds.height {
                 for character in Script.shared.characters {
                     Task {
                         await Script.shared.run(name: character.name, sequences: character.sequences.reduce(into: [], { x, y in
