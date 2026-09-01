@@ -67,6 +67,9 @@ struct Chat: View {
    
    var body: some View {
       GeometryReader { geometry in
+         let safeWidth = max(0.0, geometry.size.width - geometry.safeAreaInsets.leading - geometry.safeAreaInsets.trailing)
+         let safeHeight = max(0.0, geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom)
+         
          ZStack {
             ZStack {
                VStack {
@@ -162,7 +165,7 @@ struct Chat: View {
                                     }
                                     
                                     Task {
-                                       await self.talk(image: image, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.mute)
+                                       await self.talk(image: image, temperature: self.temperature, multiple: safeWidth > safeHeight, mute: self.mute)
                                     }
                                  } else {
                                     self.shakes += 1
@@ -201,8 +204,8 @@ struct Chat: View {
                               }
                            }
                            .frame(
-                              width: (UIDevice.current.userInterfaceIdiom == .phone ? min(geometry.size.width, geometry.size.height) / 2.0 : min(geometry.size.width, geometry.size.height) / 4.0) - 32.0,
-                              height: (UIDevice.current.userInterfaceIdiom == .phone ? min(geometry.size.width, geometry.size.height) / 2.0 : min(geometry.size.width, geometry.size.height) / 4.0) - 32.0,
+                              width: UIDevice.current.userInterfaceIdiom == .phone && safeWidth < safeHeight ? (safeWidth - 32.0) / 2.0 : (safeWidth / 2.0 - 32.0) / 2.0,
+                              height: UIDevice.current.userInterfaceIdiom == .phone && safeWidth < safeHeight ? (safeWidth - 32.0) / 2.0 : (safeWidth / 2.0 - 32.0) / 2.0,
                               alignment: .top
                            )
                            .background(Color(UIColor(white: 0.0, alpha: 1.0)))
@@ -676,7 +679,7 @@ struct Chat: View {
                                              }
                                           }
                                        }
-                                    }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
+                                    }))), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: false, mute: self.mute)
                                  }
                               } else {
                                  self.shakes += 1
@@ -852,7 +855,7 @@ struct Chat: View {
                                           }
                                        }
                                     }
-                                 }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
+                                 }))), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: false, mute: self.mute)
                               }
                            } else {
                               self.shakes += 1
@@ -968,7 +971,7 @@ struct Chat: View {
                               }
                            }
                         }
-                     }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
+                     }))), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: false, mute: self.mute)
                   }
                } else if type[0] == "Dictionary" {
                   if self.isRecording {
@@ -1001,7 +1004,7 @@ struct Chat: View {
                               }
                            }
                         }
-                     }))), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: false, mute: self.mute)
+                     }))), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: false, mute: self.mute)
                   }
                } else if type[0] == "Dictionary" {
                   self.showDictionary = true
@@ -1075,12 +1078,15 @@ struct Chat: View {
    }
    
    private func makeMenu(geometryProxy: GeometryProxy) -> some View {
+      let safeWidth = max(0.0, geometryProxy.size.width - geometryProxy.safeAreaInsets.leading - geometryProxy.safeAreaInsets.trailing)
+      let safeHeight = max(0.0, geometryProxy.size.height - geometryProxy.safeAreaInsets.top - geometryProxy.safeAreaInsets.bottom)
+      
       return ZStack {
          Rectangle()
             .fill(.clear)
             .frame(
-               width: geometryProxy.size.width - 32.0,
-               height: geometryProxy.size.height / 2.0 - 72.0
+               width: UIDevice.current.userInterfaceIdiom == .phone && safeWidth < safeHeight ? safeWidth - 32.0 : safeWidth / 2.0 - 32.0,
+               height: safeHeight / 2.0
             )
             .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true))
             .compositingGroup()
@@ -1108,7 +1114,7 @@ struct Chat: View {
                            }
                            
                            Task {
-                              await self.talk(word: Word(name: self.prompt.4[self.prompt.5 - 1].0), temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
+                              await self.talk(word: Word(name: self.prompt.4[self.prompt.5 - 1].0), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: true, mute: self.mute)
                            }
                         } else {
                            self.shakes += 1
@@ -1124,7 +1130,7 @@ struct Chat: View {
                            }
                            
                            Task {
-                              await self.talk(word: word, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, fallback: true, mute: self.mute)
+                              await self.talk(word: word, temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: true, mute: self.mute)
                            }
                         } else {
                            self.shakes += 1
@@ -1680,14 +1686,14 @@ struct Chat: View {
                }
             }
             .frame(
-               width: geometryProxy.size.width - 32.0,
+               width: UIDevice.current.userInterfaceIdiom == .phone && safeWidth < safeHeight ? safeWidth - 32.0 : safeWidth / 2.0 - 32.0,
             )
             .padding(0.0)
             .background(.clear)
             .foregroundStyle(.primary, .secondary)
          }
          .frame(
-            height: geometryProxy.size.height / 2.0 - 72.0
+            height: safeHeight / 2.0
          )
          .padding(0.0)
          .background(.clear)
@@ -3665,7 +3671,10 @@ struct Stage: UIViewRepresentable {
             return true
          }
          
-         if UIDevice.current.orientation.isLandscape || agent.characterViews.firstIndex(where: { $0.name == name }) == 0 {
+         let safeBounds = agent.bounds.inset(by: agent.safeAreaInsets)
+         let multiple = safeBounds.width > safeBounds.height
+         
+         if multiple || agent.characterViews.firstIndex(where: { $0.name == name }) == 0 {
             Task {
                var fallback = false
                
@@ -3689,7 +3698,7 @@ struct Stage: UIViewRepresentable {
                   
                   if words.isEmpty {
                      fallback = true
-                  } else if !(await self.talk(word: words[Int.random(in: 0..<words.count)], temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)) {
+                  } else if !(await self.talk(word: words[Int.random(in: 0..<words.count)], temperature: self.temperature, multiple: multiple, mute: self.parent.mute)) {
                      fallback = true
                   }
                }
@@ -3781,8 +3790,8 @@ struct Stage: UIViewRepresentable {
             
             self.lines.insert(contentsOf: newLines, at: index)
             
-            if let uiView = self.uiView, let window = uiView.window {
-               let maxLines = Int(round(min(window.bounds.width, window.bounds.height) / ceil(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .body).pointSize * 1.5)))
+            if let uiView = self.uiView {
+               let maxLines = max(Int(round(min(uiView.bounds.width, uiView.bounds.height) / ceil(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .body).pointSize * 1.5))), 1)
                
                if self.lines.count > maxLines {
                   self.lines.removeSubrange(maxLines..<self.lines.count)
@@ -3815,8 +3824,10 @@ struct Stage: UIViewRepresentable {
       }
       
       func agentDidStart(_ agent: AgentView) {
+         let safeBounds = agent.bounds.inset(by: agent.safeAreaInsets)
+         
          Task {
-            await self.talk(word: nil, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
+            await self.talk(word: nil, temperature: self.temperature, multiple: safeBounds.width > safeBounds.height, mute: self.parent.mute)
          }
       }
       
@@ -4160,7 +4171,11 @@ struct Stage: UIViewRepresentable {
                   }
                   
                   Task {
-                     await self.talk(word: word, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
+                     await self.talk(word: word, temperature: self.temperature, multiple: wall.subviews.compactMap({ $0 as? AgentView }).first.map({ agent in
+                        let safeBounds = agent.bounds.inset(by: agent.safeAreaInsets)
+                        
+                        return safeBounds.width > safeBounds.height
+                     }) ?? false, mute: self.parent.mute)
                   }
                   
                   self.parent.prompt = (choice.name, word, self.parent.prompt.2, letterSet, self.parent.prompt.4, self.parent.prompt.5, CACurrentMediaTime())
@@ -4168,7 +4183,11 @@ struct Stage: UIViewRepresentable {
                   let word = Word(name: choice.name, attributes: choice.attributes)
                   
                   Task {
-                     await self.talk(word: word, temperature: self.temperature, multiple: UIDevice.current.orientation.isLandscape, mute: self.parent.mute)
+                     await self.talk(word: word, temperature: self.temperature, multiple: wall.subviews.compactMap({ $0 as? AgentView }).first.map({ agent in
+                        let safeBounds = agent.bounds.inset(by: agent.safeAreaInsets)
+                        
+                        return safeBounds.width > safeBounds.height
+                     }) ?? false, mute: self.parent.mute)
                   }
                   
                   self.parent.prompt = (choice.name, word, self.parent.prompt.2, letterSet, self.parent.prompt.4, self.parent.prompt.5, CACurrentMediaTime())
@@ -5858,7 +5877,7 @@ struct Peek: UIViewControllerRepresentable {
                AVCaptureVideoPreviewLayer(session: session)
             }
             self.captureVideoPreviewLayer!.videoGravity = AVLayerVideoGravity.resizeAspectFill
-            self.captureVideoPreviewLayer!.frame = CGRect(origin: CGPoint.zero, size: self.view.frame.size)
+            self.captureVideoPreviewLayer!.frame = self.view.bounds
             
             self.view.layer.addSublayer(self.captureVideoPreviewLayer!)
          }
@@ -5915,12 +5934,12 @@ struct Peek: UIViewControllerRepresentable {
                
                let angle: CGFloat
                
-               switch UIDevice.current.orientation {
-               case UIDeviceOrientation.portraitUpsideDown:
+               switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
+               case .portraitUpsideDown:
                   angle = 270
-               case UIDeviceOrientation.landscapeLeft:
+               case .landscapeLeft:
                   angle = 0
-               case UIDeviceOrientation.landscapeRight:
+               case .landscapeRight:
                   angle = 180
                default:
                   angle = 90
@@ -5992,27 +6011,20 @@ struct Peek: UIViewControllerRepresentable {
       }
       
       override func viewDidLayoutSubviews() {
-         if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
-            captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: self.view.frame.size)
-         }
-      }
-      
-      override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-         self.frameState.withLock { state in
-            state.generation &+= 1
-         }
+         super.viewDidLayoutSubviews()
 
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
             let angle: CGFloat
-
-            captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: size)
+            let sizeChanged = captureVideoPreviewLayer.bounds.size != self.view.bounds.size
             
-            switch UIDevice.current.orientation {
-            case UIDeviceOrientation.portraitUpsideDown:
+            captureVideoPreviewLayer.frame = self.view.bounds
+            
+            switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
+            case .portraitUpsideDown:
                angle = 270
-            case UIDeviceOrientation.landscapeLeft:
+            case .landscapeLeft:
                angle = 0
-            case UIDeviceOrientation.landscapeRight:
+            case .landscapeRight:
                angle = 180
             default:
                angle = 90
@@ -6020,6 +6032,12 @@ struct Peek: UIViewControllerRepresentable {
             
             if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
                connection.videoRotationAngle = angle
+            }
+
+            if sizeChanged {
+               self.frameState.withLock { state in
+                  state.generation &+= 1
+               }
             }
          }
       }
@@ -6086,10 +6104,12 @@ struct Peek: UIViewControllerRepresentable {
 
             let orientation: CGImagePropertyOrientation
 
-            switch UIDevice.current.orientation {
-            case UIDeviceOrientation.landscapeLeft:
+            switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
+            case .portraitUpsideDown:
+               orientation = .left
+            case .landscapeLeft:
                orientation = .up
-            case UIDeviceOrientation.landscapeRight:
+            case .landscapeRight:
                orientation = .down
             default:
                orientation = .right
@@ -6099,9 +6119,15 @@ struct Peek: UIViewControllerRepresentable {
             let currentMediaTime = CACurrentMediaTime()
 
             if self.isViewVisible && !self.isPaused && self.isReady && currentMediaTime - self.elapsedTime >= 1.0 {
-               let scale = min(image.extent.width / self.view.frame.width, image.extent.height / self.view.frame.height)
-               let offsetX = (image.extent.width - self.view.frame.width * scale) / 2.0
-               let offsetY = (image.extent.height - self.view.frame.height * scale) / 2.0
+               let viewSize = self.view.bounds.size
+
+               guard viewSize.width > 0.0 && viewSize.height > 0.0 else {
+                  return
+               }
+
+               let scale = min(image.extent.width / viewSize.width, image.extent.height / viewSize.height)
+               let offsetX = (image.extent.width - viewSize.width * scale) / 2.0
+               let offsetY = (image.extent.height - viewSize.height * scale) / 2.0
                let length = min(image.extent.width, image.extent.height)
                
                self.elapsedTime = currentMediaTime
@@ -6156,7 +6182,7 @@ struct Peek: UIViewControllerRepresentable {
          self.view.addSubview(beamView)
          
          UIView.animate(withDuration: 1.0, delay: 0.0, options: [.curveLinear], animations: {
-            beamView.transform = CGAffineTransformConcat(skewTransform, CGAffineTransformMakeTranslation(floor(frame.height * abs(tan(skewAngle * .pi / 180.0)) / 2.0 + self.view.frame.width), 0.0))
+            beamView.transform = CGAffineTransformConcat(skewTransform, CGAffineTransformMakeTranslation(floor(frame.height * abs(tan(skewAngle * .pi / 180.0)) / 2.0 + self.view.bounds.width), 0.0))
          }, completion: { _ in
             beamView.removeFromSuperview()
          })
@@ -6381,7 +6407,7 @@ struct Activity: View {
                         AxisTick()
                      }
                   }
-                  .aspectRatio(UIDevice.current.userInterfaceIdiom == .phone ? 1.0 : 2.0, contentMode: .fit)
+                  .containerRelativeFrame(.vertical) { length, _ in length / 2.0 }
                   .listRowBackground(Color(uiColor: .systemBackground))
                   .transition(.opacity.animation(.linear))
                }
@@ -8272,7 +8298,7 @@ struct Capture: UIViewControllerRepresentable {
          recognizeTextRequest.usesLanguageCorrection = true
          recognizeTextRequest.recognitionLevel = .accurate
          
-         self.recognizeRegion = self.createRecognizeRegion(size: self.view.frame.size)
+         self.recognizeRegion = self.createRecognizeRegion(size: self.view.bounds.size)
          
          if let preferredLanguage = Locale.preferredLanguages.first, let languageCode = Locale(identifier: preferredLanguage).language.languageCode, let languages = try? recognizeTextRequest.supportedRecognitionLanguages(), let language = languages.first(where: { Locale(identifier: $0).language.languageCode == languageCode }) {
             self.recognitionLanguage = language
@@ -8321,7 +8347,7 @@ struct Capture: UIViewControllerRepresentable {
                AVCaptureVideoPreviewLayer(session: session)
             }
             self.captureVideoPreviewLayer!.videoGravity = AVLayerVideoGravity.resizeAspectFill
-            self.captureVideoPreviewLayer!.frame = CGRect(origin: CGPoint.zero, size: self.view.frame.size)
+            self.captureVideoPreviewLayer!.frame = self.view.bounds
             
             self.view.layer.addSublayer(self.captureVideoPreviewLayer!)
          }
@@ -8378,12 +8404,12 @@ struct Capture: UIViewControllerRepresentable {
                
                let angle: CGFloat
                
-               switch UIDevice.current.orientation {
-               case UIDeviceOrientation.portraitUpsideDown:
+               switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
+               case .portraitUpsideDown:
                   angle = 270
-               case UIDeviceOrientation.landscapeLeft:
+               case .landscapeLeft:
                   angle = 0
-               case UIDeviceOrientation.landscapeRight:
+               case .landscapeRight:
                   angle = 180
                default:
                   angle = 90
@@ -8455,30 +8481,22 @@ struct Capture: UIViewControllerRepresentable {
       }
       
       override func viewDidLayoutSubviews() {
-         if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
-            captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: self.view.frame.size)
-         }
-         
-         self.recognizeRegion = self.createRecognizeRegion(size: self.view.frame.size)
-         self.delegate?.captureDidUpdate(self)
-      }
-      
-      override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-         self.frameState.withLock { state in
-            state.generation &+= 1
-         }
+         super.viewDidLayoutSubviews()
+
+         var sizeChanged = false
 
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
             let angle: CGFloat
             
-            captureVideoPreviewLayer.frame = CGRect(origin: CGPoint.zero, size: size)
+            sizeChanged = captureVideoPreviewLayer.bounds.size != self.view.bounds.size
+            captureVideoPreviewLayer.frame = self.view.bounds
             
-            switch UIDevice.current.orientation {
-            case UIDeviceOrientation.portraitUpsideDown:
+            switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
+            case .portraitUpsideDown:
                angle = 270
-            case UIDeviceOrientation.landscapeLeft:
+            case .landscapeLeft:
                angle = 0
-            case UIDeviceOrientation.landscapeRight:
+            case .landscapeRight:
                angle = 180
             default:
                angle = 90
@@ -8488,9 +8506,14 @@ struct Capture: UIViewControllerRepresentable {
                connection.videoRotationAngle = angle
             }
          }
-         
-         self.recognizeRegion = self.createRecognizeRegion(size: size)
-         self.delegate?.captureDidUpdate(self)
+
+         if sizeChanged {
+            self.frameState.withLock { state in
+               state.generation &+= 1
+            }
+            self.recognizeRegion = self.createRecognizeRegion(size: self.view.bounds.size)
+            self.delegate?.captureDidUpdate(self)
+         }
       }
       
       override func viewWillAppear(_ animated: Bool) {
@@ -8533,8 +8556,6 @@ struct Capture: UIViewControllerRepresentable {
          }
 
          let image = CIImage(cvImageBuffer: pixelBuffer)
-         let pixelWidth = CVPixelBufferGetWidth(pixelBuffer)
-         let pixelHeight = CVPixelBufferGetHeight(pixelBuffer)
 
          Task { @MainActor [weak self] in
             guard let self else {
@@ -8557,15 +8578,13 @@ struct Capture: UIViewControllerRepresentable {
 
             let currentMediaTime = CACurrentMediaTime()
 
-            if self.isViewVisible && !self.isPaused && currentMediaTime - self.elapsedTime >= 1.0, let window = self.view.window, let windowScene = window.windowScene, let recognitionLanguage = self.recognitionLanguage {
-               let outputWidth = Double(pixelWidth) / windowScene.screen.scale
-               let outputHeight = Double(pixelHeight) / windowScene.screen.scale
-               let scale = max(self.view.frame.width / outputWidth, self.view.frame.height / outputHeight)
-               let width = outputWidth * scale
-               let height = outputHeight * scale
-               let offsetX = (width - self.view.frame.width) / 2.0
-               let offsetY = (height - self.view.frame.height) / 2.0
-               let recognizeRegion = CGRect(origin: CGPoint(x: (offsetX + self.recognizeRegion.origin.x) / width, y: (height - offsetY - self.recognizeRegion.origin.y - self.recognizeRegion.height) / height), size: CGSize(width: self.recognizeRegion.width / width, height: self.recognizeRegion.height / height))
+            if self.isViewVisible && !self.isPaused && currentMediaTime - self.elapsedTime >= 1.0, let captureVideoPreviewLayer = self.captureVideoPreviewLayer, let recognitionLanguage = self.recognitionLanguage {
+               let metadataRegion = captureVideoPreviewLayer.metadataOutputRectConverted(fromLayerRect: self.recognizeRegion)
+               let recognizeRegion = CGRect(x: metadataRegion.minX, y: 1.0 - metadataRegion.maxY, width: metadataRegion.width, height: metadataRegion.height).intersection(CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
+
+               guard !recognizeRegion.isNull && recognizeRegion.width > 0.0 && recognizeRegion.height > 0.0 else {
+                  return
+               }
 
                self.elapsedTime = currentMediaTime
 
@@ -8912,12 +8931,10 @@ struct Player: UIViewRepresentable {
          blindLayer.contentsGravity = .resizeAspect
          blindLayer.masksToBounds = true
          
-         if let window = self.window {
-            let length = max(window.bounds.size.width, window.bounds.size.height)
-            
-            blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
-            loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
-         }
+         let length = max(self.bounds.size.width, self.bounds.size.height)
+         
+         blindLayer.frame = CGRect(x: 0.0, y: 0.0, width: length, height: length)
+         loadingLayer.frame = CGRect(x: 0.0, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
          
          blindLayer.addSublayer(loadingLayer)
          
@@ -8936,6 +8953,31 @@ struct Player: UIViewRepresentable {
          super.init(coder: aDecoder)
       }
       
+      override func layoutSubviews() {
+         super.layoutSubviews()
+         
+         guard self.isLoading, let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer else {
+            return
+         }
+         
+         let length = max(self.bounds.size.width, self.bounds.size.height)
+         
+         guard length > 0.0 else {
+            return
+         }
+         
+         let revealStep = min(max(self.revealStep, -1.0), 1.0)
+         let loadingStep = max(self.loadingStep, 0.0)
+         
+         CATransaction.begin()
+         CATransaction.setDisableActions(true)
+         
+         blindLayer.frame = CGRect(x: 0.0, y: -length * sin(revealStep / 2.0 * Double.pi), width: length, height: length)
+         loadingLayer.frame = CGRect(x: -self.backgroundPattern.size.width * loadingStep, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
+         
+         CATransaction.commit()
+      }
+      
       func change(accent: CGColor) {
          self.blindColor = accent
          self.blindLayer?.backgroundColor = accent
@@ -8947,123 +8989,121 @@ struct Player: UIViewRepresentable {
          self.isFetched = false
          
          Task {
-            if let window = self.window, let windowScene = window.windowScene {
-               let length = max(window.bounds.size.width, window.bounds.size.height) * windowScene.screen.scale
+            let length = max(self.bounds.size.width, self.bounds.size.height) * self.traitCollection.displayScale
+            
+            self.fetchedFrames = await Task.detached {
+               var frames = [(image: CGImage?, delay: Double)]()
                
-               self.fetchedFrames = await Task.detached {
-                  var frames = [(image: CGImage?, delay: Double)]()
+               if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                  defer {
+                     try? file.close()
+                  }
                   
-                  if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                     defer {
-                        try? file.close()
-                     }
-                     
-                     if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                        for i in 0..<CGImageSourceGetCount(imageSource) {
-                           if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil), let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, i, nil) as? [String: Any] {
-                              let width: Double
-                              let height: Double
-                              var resizedImage: CGImage? = nil
-                              var delay = 0.0
-                              
-                              if image.width < image.height {
-                                 if Double(image.width) > length {
-                                    width = length
-                                    height = floor(length / Double(image.width) * Double(image.height))
-                                 } else {
-                                    width = Double(image.width)
-                                    height = Double(image.height)
-                                 }
-                              } else if Double(image.height) > length {
-                                 width = floor(length / Double(image.height) * Double(image.height))
-                                 height = length
+                  if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                     for i in 0..<CGImageSourceGetCount(imageSource) {
+                        if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil), let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, i, nil) as? [String: Any] {
+                           let width: Double
+                           let height: Double
+                           var resizedImage: CGImage? = nil
+                           var delay = 0.0
+                           
+                           if image.width < image.height {
+                              if length > 0.0 && Double(image.width) > length {
+                                 width = length
+                                 height = floor(length / Double(image.width) * Double(image.height))
                               } else {
                                  width = Double(image.width)
                                  height = Double(image.height)
                               }
+                           } else if length > 0.0 && Double(image.height) > length {
+                              width = floor(length / Double(image.height) * Double(image.width))
+                              height = length
+                           } else {
+                              width = Double(image.width)
+                              height = Double(image.height)
+                           }
+                           
+                           let size = CGSize(width: width, height: height)
+                           let rendererFormat = UIGraphicsImageRendererFormat()
+                           
+                           rendererFormat.opaque = false
+                           rendererFormat.scale = 1.0
+                           rendererFormat.preferredRange = .standard
+                           
+                           let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
+                           
+                           resizedImage = renderer.image { rendererContext in
+                              let context = rendererContext.cgContext
                               
-                              let size = CGSize(width: width, height: height)
-                              let rendererFormat = UIGraphicsImageRendererFormat()
-                              
-                              rendererFormat.opaque = false
-                              rendererFormat.scale = 1.0
-                              rendererFormat.preferredRange = .standard
-                              
-                              let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
-                              
-                              resizedImage = renderer.image { rendererContext in
-                                 let context = rendererContext.cgContext
-                                 
-                                 context.interpolationQuality = .high
-                                 context.setAllowsAntialiasing(true)
-                                 context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                                 context.translateBy(x: 0.0, y: height)
-                                 context.scaleBy(x: 1.0, y: -1.0)
-                                 context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                              }.cgImage
-                              
-                              for (key, value) in properties {
-                                 if key == kCGImagePropertyPNGDictionary as String, let dictionary = value as? [String: Any] {
-                                    if let delayTime = dictionary[kCGImagePropertyAPNGUnclampedDelayTime as String] {
-                                       if let number = delayTime as? NSNumber {
-                                          let doubleValue = number.doubleValue
-                                          
-                                          if doubleValue <= 0.01 {
-                                             delay = 0.1
-                                          } else {
-                                             delay = doubleValue
-                                          }
+                              context.interpolationQuality = .high
+                              context.setAllowsAntialiasing(true)
+                              context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                              context.translateBy(x: 0.0, y: height)
+                              context.scaleBy(x: 1.0, y: -1.0)
+                              context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                           }.cgImage
+                           
+                           for (key, value) in properties {
+                              if key == kCGImagePropertyPNGDictionary as String, let dictionary = value as? [String: Any] {
+                                 if let delayTime = dictionary[kCGImagePropertyAPNGUnclampedDelayTime as String] {
+                                    if let number = delayTime as? NSNumber {
+                                       let doubleValue = number.doubleValue
+                                       
+                                       if doubleValue <= 0.01 {
+                                          delay = 0.1
+                                       } else {
+                                          delay = doubleValue
                                        }
-                                    } else if let delayTime = dictionary[kCGImagePropertyAPNGDelayTime as String] {
-                                       if let number = delayTime as? NSNumber {
-                                          let doubleValue = number.doubleValue
-                                          
-                                          if doubleValue <= 0.01 {
-                                             delay = 0.1
-                                          } else {
-                                             delay = doubleValue
-                                          }
+                                    }
+                                 } else if let delayTime = dictionary[kCGImagePropertyAPNGDelayTime as String] {
+                                    if let number = delayTime as? NSNumber {
+                                       let doubleValue = number.doubleValue
+                                       
+                                       if doubleValue <= 0.01 {
+                                          delay = 0.1
+                                       } else {
+                                          delay = doubleValue
                                        }
                                     }
                                  }
                               }
-                              
-                              frames.append((image: resizedImage, delay: delay))
                            }
+                           
+                           frames.append((image: resizedImage, delay: delay))
                         }
-                        
-                        for i in stride(from: frames.count - 2, through: 0, by: -1) {
-                           frames.append(frames[i])
-                        }
-                        
-                        return frames
                      }
+                     
+                     for i in stride(from: frames.count - 2, through: 0, by: -1) {
+                        frames.append(frames[i])
+                     }
+                     
+                     return frames
                   }
-                  
-                  return nil
-               }.value
-            }
+               }
+               
+               return nil
+            }.value
             
             self.isReloading = false
          }
       }
       
       override func didMoveToWindow() {
-          super.didMoveToWindow()
-          
-          if self.window == nil {
-              self.displayLink?.invalidate()
-              self.displayLink = nil
-          } else if self.displayLink == nil {
-              let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
-              
-              self.displayLink = displayLink
-              displayLink.add(to: .current, forMode: .common)
-          }
+         super.didMoveToWindow()
+         
+         if self.window == nil {
+            self.displayLink?.invalidate()
+            self.displayLink = nil
+         } else if self.displayLink == nil {
+            let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
+            
+            self.displayLink = displayLink
+            displayLink.add(to: .current, forMode: .common)
+         }
       }
       
       @objc private func step(displayLink: CADisplayLink) {
-         if self.frame.size.width > 0 && self.frame.size.height > 0 {
+         if self.bounds.size.width > 0 && self.bounds.size.height > 0 {
             let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
             
             if self.isLoading {
@@ -9085,8 +9125,8 @@ struct Player: UIViewRepresentable {
                      self.loadingStep = 0.0
                      self.isLoading = false
                   } else {
-                     if let blindLayer = self.blindLayer, let window = self.window {
-                        let length = max(window.bounds.size.width, window.bounds.size.height)
+                     if let blindLayer = self.blindLayer {
+                        let length = max(self.bounds.size.width, self.bounds.size.height)
                         
                         CATransaction.begin()
                         CATransaction.setDisableActions(true)
@@ -9123,8 +9163,8 @@ struct Player: UIViewRepresentable {
                   }
                   
                   if step <= 0.0 {
-                     if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = self.window {
-                        let length = max(window.bounds.size.width, window.bounds.size.height)
+                     if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                        let length = max(self.bounds.size.width, self.bounds.size.height)
                         
                         CATransaction.begin()
                         CATransaction.setDisableActions(true)
@@ -9143,8 +9183,8 @@ struct Player: UIViewRepresentable {
                         self.isFetched = true
                      }
                   } else {
-                     if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = self.window {
-                        let length = max(window.bounds.size.width, window.bounds.size.height)
+                     if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                        let length = max(self.bounds.size.width, self.bounds.size.height)
                         
                         CATransaction.begin()
                         CATransaction.setDisableActions(true)
@@ -9164,8 +9204,8 @@ struct Player: UIViewRepresentable {
                      if self.loadingStep < 0.0 {
                         self.loadingStep = 0.0
                         
-                        if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = self.window {
-                           let length = max(window.bounds.size.width, window.bounds.size.height)
+                        if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                           let length = max(self.bounds.size.width, self.bounds.size.height)
                            
                            CATransaction.begin()
                            CATransaction.setDisableActions(true)
@@ -9182,8 +9222,8 @@ struct Player: UIViewRepresentable {
                            self.loadingStep = 0.0
                         }
                         
-                        if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = self.window {
-                           let length = max(window.bounds.size.width, window.bounds.size.height)
+                        if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                           let length = max(self.bounds.size.width, self.bounds.size.height)
                            
                            CATransaction.begin()
                            CATransaction.setDisableActions(true)
@@ -9204,8 +9244,8 @@ struct Player: UIViewRepresentable {
                      }
                   } else {
                      if self.revealStep > -1.0 {
-                        if let blindLayer = self.blindLayer, let window = self.window {
-                           let length = max(window.bounds.size.width, window.bounds.size.height)
+                        if let blindLayer = self.blindLayer {
+                           let length = max(self.bounds.size.width, self.bounds.size.height)
                            
                            CATransaction.begin()
                            CATransaction.setDisableActions(true)
@@ -9229,8 +9269,8 @@ struct Player: UIViewRepresentable {
                            
                            CATransaction.commit()
                         }
-                     } else if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer, let window = self.window {
-                        let length = max(window.bounds.size.width, window.bounds.size.height)
+                     } else if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
+                        let length = max(self.bounds.size.width, self.bounds.size.height)
                         
                         CATransaction.begin()
                         CATransaction.setDisableActions(true)
