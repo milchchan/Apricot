@@ -170,374 +170,371 @@ class WallView: UIView {
             
             Task {
                 var compositedFrames: [(image: CGImage, delay: Double)]? = nil
-                
-                if let window = self.window, let windowScene = window.windowScene {
-                    let scale = Int(round(windowScene.screen.scale))
-                    let length = max(window.screen.bounds.size.width, window.screen.bounds.size.height) * windowScene.screen.scale
-                    let data = await Task.detached {
-                        var data: ([(image: CGImage, delay: Double)]?, [(image: CGImage?, delay: Double)]?) = (nil, nil)
-                        var caches = [String: Data]()
-                        var minX = 0.0
-                        var minY = 0.0
-                        var maxWidth = 0.0
-                        var maxHeight = 0.0
-                        var maxDuration = 0.0
-                        var animations = [[(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]]()
-                        
-                        for animation in frames {
-                            if !animation.isEmpty {
-                                var tempFrames = [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]()
-                                var duration = 0.0
-                                
-                                for frame in animation {
-                                    if let url = frame.url {
-                                        if url.scheme == "file" {
-                                            var image: CGImage? = nil
-                                            let width: Double
-                                            let height: Double
-                                            
-                                            if let data = caches[url.absoluteString] {
-                                                if let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                    caches[url.absoluteString] = data
-                                                    
-                                                    for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                        image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                                        
-                                                        break
-                                                    }
-                                                }
-                                            } else {
-                                                if scale > 1 {
-                                                    let name = url.lastPathComponent[url.lastPathComponent.startIndex..<url.lastPathComponent.index(url.lastPathComponent.endIndex, offsetBy: -url.pathExtension.count - 1)]
-                                                    let filename = "\(name)@\(scale)\(url.lastPathComponent[url.lastPathComponent.index(url.lastPathComponent.startIndex, offsetBy: name.count)..<url.lastPathComponent.endIndex])"
-                                                    let path = url.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
-                                                    
-                                                    if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                        defer {
-                                                            try? file.close()
-                                                        }
-                                                        
-                                                        if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                            caches[url.absoluteString] = data
-                                                            
-                                                            for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                                image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                                                
-                                                                break
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                let scale = Int(round(self.traitCollection.displayScale))
+                let length = max(self.bounds.size.width, self.bounds.size.height) * self.traitCollection.displayScale
+                let data = await Task.detached {
+                    var data: ([(image: CGImage, delay: Double)]?, [(image: CGImage?, delay: Double)]?) = (nil, nil)
+                    var caches = [String: Data]()
+                    var minX = 0.0
+                    var minY = 0.0
+                    var maxWidth = 0.0
+                    var maxHeight = 0.0
+                    var maxDuration = 0.0
+                    var animations = [[(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]]()
+                    
+                    for animation in frames {
+                        if !animation.isEmpty {
+                            var tempFrames = [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]()
+                            var duration = 0.0
+                            
+                            for frame in animation {
+                                if let url = frame.url {
+                                    if url.scheme == "file" {
+                                        var image: CGImage? = nil
+                                        let width: Double
+                                        let height: Double
+                                        
+                                        if let data = caches[url.absoluteString] {
+                                            if let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                caches[url.absoluteString] = data
                                                 
-                                                if image == nil {
-                                                    let path = url.path(percentEncoded: false)
+                                                for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                    image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
                                                     
-                                                    if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                        defer {
-                                                            try? file.close()
-                                                        }
+                                                    break
+                                                }
+                                            }
+                                        } else {
+                                            if scale > 1 {
+                                                let name = url.lastPathComponent[url.lastPathComponent.startIndex..<url.lastPathComponent.index(url.lastPathComponent.endIndex, offsetBy: -url.pathExtension.count - 1)]
+                                                let filename = "\(name)@\(scale)\(url.lastPathComponent[url.lastPathComponent.index(url.lastPathComponent.startIndex, offsetBy: name.count)..<url.lastPathComponent.endIndex])"
+                                                let path = url.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
+                                                
+                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                                    defer {
+                                                        try? file.close()
+                                                    }
+                                                    
+                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                        caches[url.absoluteString] = data
                                                         
-                                                        if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                            caches[url.absoluteString] = data
+                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                            image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
                                                             
-                                                            for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                                image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                                                
-                                                                break
-                                                            }
+                                                            break
                                                         }
                                                     }
                                                 }
                                             }
                                             
-                                            if let image {
-                                                if frame.width == 0.0 && frame.height == 0.0 {
-                                                    width = Double(image.width)
-                                                    height = Double(image.height)
-                                                } else if frame.width == 0.0 {
-                                                    width = frame.height * Double(image.width) / Double(image.height)
-                                                    height = frame.height
-                                                } else if frame.height == 0.0 {
-                                                    width = frame.width
-                                                    height = frame.width * Double(image.height) / Double(image.width)
-                                                } else {
-                                                    width = frame.width
-                                                    height = frame.height
+                                            if image == nil {
+                                                let path = url.path(percentEncoded: false)
+                                                
+                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                                    defer {
+                                                        try? file.close()
+                                                    }
+                                                    
+                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                        caches[url.absoluteString] = data
+                                                        
+                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                            image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
+                                                            
+                                                            break
+                                                        }
+                                                    }
                                                 }
+                                            }
+                                        }
+                                        
+                                        if let image {
+                                            if frame.width == 0.0 && frame.height == 0.0 {
+                                                width = Double(image.width)
+                                                height = Double(image.height)
+                                            } else if frame.width == 0.0 {
+                                                width = frame.height * Double(image.width) / Double(image.height)
+                                                height = frame.height
+                                            } else if frame.height == 0.0 {
+                                                width = frame.width
+                                                height = frame.width * Double(image.height) / Double(image.width)
                                             } else {
                                                 width = frame.width
                                                 height = frame.height
                                             }
+                                        } else {
+                                            width = frame.width
+                                            height = frame.height
+                                        }
+                                        
+                                        if abs(frame.x) + width > maxWidth {
+                                            maxWidth = abs(frame.x) + width
+                                        }
+                                        
+                                        if abs(frame.y) + height > maxHeight {
+                                            maxHeight = abs(frame.y) + height
+                                        }
+                                        
+                                        tempFrames.append((image: image, x: frame.x, y: frame.y, width: width, height: height, opacity: frame.opacity, delay: frame.delay))
+                                    } else if url.scheme == "https" {
+                                        var imageSource: CGImageSource? = nil
+                                        
+                                        if let data = caches[url.absoluteString] {
+                                            imageSource = CGImageSourceCreateWithData(data as CFData, nil)
+                                        } else if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
+                                            let path = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath).path(percentEncoded: false)
                                             
-                                            if abs(frame.x) + width > maxWidth {
-                                                maxWidth = abs(frame.x) + width
-                                            }
-                                            
-                                            if abs(frame.y) + height > maxHeight {
-                                                maxHeight = abs(frame.y) + height
-                                            }
-                                            
-                                            tempFrames.append((image: image, x: frame.x, y: frame.y, width: width, height: height, opacity: frame.opacity, delay: frame.delay))
-                                        } else if url.scheme == "https" {
-                                            var imageSource: CGImageSource? = nil
-                                            
-                                            if let data = caches[url.absoluteString] {
-                                                imageSource = CGImageSourceCreateWithData(data as CFData, nil)
-                                            } else if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-                                                let path = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath).path(percentEncoded: false)
-                                                
-                                                if FileManager.default.fileExists(atPath: path) {
-                                                    if let file = FileHandle(forReadingAtPath: path) {
-                                                        defer {
-                                                            try? file.close()
-                                                        }
-                                                        
-                                                        if let data = try? file.readToEnd() {
-                                                            imageSource = CGImageSourceCreateWithData(data as CFData, nil)
-                                                            caches[url.absoluteString] = data
-                                                        }
+                                            if FileManager.default.fileExists(atPath: path) {
+                                                if let file = FileHandle(forReadingAtPath: path) {
+                                                    defer {
+                                                        try? file.close()
                                                     }
-                                                } else if let (data, response) = try? await URLSession.shared.data(for: URLRequest(url: url)), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "image/png" || httpResponse.mimeType == "image/apng" {
-                                                    FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
                                                     
-                                                    imageSource = CGImageSourceCreateWithData(data as CFData, nil)
-                                                    caches[url.absoluteString] = data
+                                                    if let data = try? file.readToEnd() {
+                                                        imageSource = CGImageSourceCreateWithData(data as CFData, nil)
+                                                        caches[url.absoluteString] = data
+                                                    }
                                                 }
-                                            }
-                                            
-                                            if let imageSource {
-                                                let through = tempFrames.count
+                                            } else if let (data, response) = try? await URLSession.shared.data(for: URLRequest(url: url)), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "image/png" || httpResponse.mimeType == "image/apng" {
+                                                FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
                                                 
-                                                for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                    if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
-                                                        let width: Double
-                                                        let height: Double
-                                                        var delay = 0.0
-                                                        
-                                                        if frame.width == 0.0 && frame.height == 0.0 {
-                                                            width = Double(image.width)
-                                                            height = Double(image.height)
-                                                        } else if frame.width == 0.0 {
-                                                            width = frame.height * Double(image.width) / Double(image.height)
-                                                            height = frame.height
-                                                        } else if frame.height == 0.0 {
-                                                            width = frame.width
-                                                            height = frame.width * Double(image.height) / Double(image.width)
-                                                        } else {
-                                                            width = frame.width
-                                                            height = frame.height
-                                                        }
-                                                        
-                                                        if abs(frame.x) + width > maxWidth {
-                                                            maxWidth = abs(frame.x) + width
-                                                        }
-                                                        
-                                                        if abs(frame.y) + height > maxHeight {
-                                                            maxHeight = abs(frame.y) + height
-                                                        }
-                                                        
-                                                        if let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, i, nil) as? [String: Any] {
-                                                            for (key, value) in properties {
-                                                                if key == kCGImagePropertyPNGDictionary as String, let dictionary = value as? [String: Any] {
-                                                                    if let delayTime = dictionary[kCGImagePropertyAPNGUnclampedDelayTime as String] {
-                                                                        if let number = delayTime as? NSNumber {
-                                                                            let doubleValue = number.doubleValue
-                                                                            
-                                                                            if doubleValue <= 0.01 {
-                                                                                delay = 0.1
-                                                                            } else {
-                                                                                delay = doubleValue
-                                                                            }
+                                                imageSource = CGImageSourceCreateWithData(data as CFData, nil)
+                                                caches[url.absoluteString] = data
+                                            }
+                                        }
+                                        
+                                        if let imageSource {
+                                            let through = tempFrames.count
+                                            
+                                            for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
+                                                    let width: Double
+                                                    let height: Double
+                                                    var delay = 0.0
+                                                    
+                                                    if frame.width == 0.0 && frame.height == 0.0 {
+                                                        width = Double(image.width)
+                                                        height = Double(image.height)
+                                                    } else if frame.width == 0.0 {
+                                                        width = frame.height * Double(image.width) / Double(image.height)
+                                                        height = frame.height
+                                                    } else if frame.height == 0.0 {
+                                                        width = frame.width
+                                                        height = frame.width * Double(image.height) / Double(image.width)
+                                                    } else {
+                                                        width = frame.width
+                                                        height = frame.height
+                                                    }
+                                                    
+                                                    if abs(frame.x) + width > maxWidth {
+                                                        maxWidth = abs(frame.x) + width
+                                                    }
+                                                    
+                                                    if abs(frame.y) + height > maxHeight {
+                                                        maxHeight = abs(frame.y) + height
+                                                    }
+                                                    
+                                                    if let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, i, nil) as? [String: Any] {
+                                                        for (key, value) in properties {
+                                                            if key == kCGImagePropertyPNGDictionary as String, let dictionary = value as? [String: Any] {
+                                                                if let delayTime = dictionary[kCGImagePropertyAPNGUnclampedDelayTime as String] {
+                                                                    if let number = delayTime as? NSNumber {
+                                                                        let doubleValue = number.doubleValue
+                                                                        
+                                                                        if doubleValue <= 0.01 {
+                                                                            delay = 0.1
+                                                                        } else {
+                                                                            delay = doubleValue
                                                                         }
-                                                                    } else if let delayTime = dictionary[kCGImagePropertyAPNGDelayTime as String] {
-                                                                        if let number = delayTime as? NSNumber {
-                                                                            let doubleValue = number.doubleValue
-                                                                            
-                                                                            if doubleValue <= 0.01 {
-                                                                                delay = 0.1
-                                                                            } else {
-                                                                                delay = doubleValue
-                                                                            }
+                                                                    }
+                                                                } else if let delayTime = dictionary[kCGImagePropertyAPNGDelayTime as String] {
+                                                                    if let number = delayTime as? NSNumber {
+                                                                        let doubleValue = number.doubleValue
+                                                                        
+                                                                        if doubleValue <= 0.01 {
+                                                                            delay = 0.1
+                                                                        } else {
+                                                                            delay = doubleValue
                                                                         }
                                                                     }
                                                                 }
                                                             }
                                                         }
-                                                        
-                                                        tempFrames.append((image: image, x: frame.x, y: frame.y, width: width, height: height, opacity: frame.opacity, delay: delay))
-                                                        duration += delay
                                                     }
-                                                }
-                                                
-                                                if tempFrames.count > through {
-                                                    tempFrames[tempFrames.count - 1].delay += frame.delay
+                                                    
+                                                    tempFrames.append((image: image, x: frame.x, y: frame.y, width: width, height: height, opacity: frame.opacity, delay: delay))
+                                                    duration += delay
                                                 }
                                             }
+                                            
+                                            if tempFrames.count > through {
+                                                tempFrames[tempFrames.count - 1].delay += frame.delay
+                                            }
                                         }
-                                    } else {
-                                        if abs(frame.x) + frame.width > maxWidth {
-                                            maxWidth = abs(frame.x) + frame.width
-                                        }
-                                        
-                                        if abs(frame.y) + frame.height > maxHeight {
-                                            maxHeight = abs(frame.y) + frame.height
-                                        }
-                                        
-                                        tempFrames.append((image: nil, x: frame.x, y: frame.y, width: frame.width, height: frame.height, opacity: frame.opacity, delay: frame.delay))
+                                    }
+                                } else {
+                                    if abs(frame.x) + frame.width > maxWidth {
+                                        maxWidth = abs(frame.x) + frame.width
                                     }
                                     
-                                    if frame.x < 0.0 && frame.x < minX {
-                                        minX = frame.x
+                                    if abs(frame.y) + frame.height > maxHeight {
+                                        maxHeight = abs(frame.y) + frame.height
                                     }
                                     
-                                    if frame.y < 0.0 && frame.y < minY {
-                                        minY = frame.y
-                                    }
-                                    
-                                    duration += frame.delay
+                                    tempFrames.append((image: nil, x: frame.x, y: frame.y, width: frame.width, height: frame.height, opacity: frame.opacity, delay: frame.delay))
                                 }
                                 
-                                if !tempFrames.isEmpty {
-                                    if duration > maxDuration {
-                                        maxDuration = duration
-                                    }
-                                    
-                                    animations.append(tempFrames)
+                                if frame.x < 0.0 && frame.x < minX {
+                                    minX = frame.x
                                 }
+                                
+                                if frame.y < 0.0 && frame.y < minY {
+                                    minY = frame.y
+                                }
+                                
+                                duration += frame.delay
+                            }
+                            
+                            if !tempFrames.isEmpty {
+                                if duration > maxDuration {
+                                    maxDuration = duration
+                                }
+                                
+                                animations.append(tempFrames)
                             }
                         }
+                    }
+                    
+                    if !animations.isEmpty {
+                        var time = 0.0
+                        var splittedAnimations = [(layers: [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)], delay: Double)]()
+                        var unscaledCompositedFrames = [(image: CGImage, delay: Double)]()
+                        var scaledCompositedFrames = [(image: CGImage?, delay: Double)]()
+                        let imageScale: Double
+                        let width: Double
+                        let height: Double
                         
-                        if !animations.isEmpty {
-                            var time = 0.0
-                            var splittedAnimations = [(layers: [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)], delay: Double)]()
-                            var unscaledCompositedFrames = [(image: CGImage, delay: Double)]()
-                            var scaledCompositedFrames = [(image: CGImage?, delay: Double)]()
-                            let imageScale: Double
-                            let width: Double
-                            let height: Double
-                            
-                            if maxWidth < maxHeight {
-                                if maxWidth > length {
-                                    imageScale = length / maxWidth
-                                    width = length
-                                    height = floor(imageScale * maxHeight)
-                                } else {
-                                    imageScale = 1.0
-                                    width = maxWidth
-                                    height = maxHeight
-                                }
-                            } else if maxHeight > length {
-                                imageScale = length / maxHeight
-                                width = floor(imageScale * maxWidth)
-                                height = length
+                        if maxWidth < maxHeight {
+                            if maxWidth > length {
+                                imageScale = length / maxWidth
+                                width = length
+                                height = floor(imageScale * maxHeight)
                             } else {
                                 imageScale = 1.0
                                 width = maxWidth
                                 height = maxHeight
                             }
+                        } else if maxHeight > length {
+                            imageScale = length / maxHeight
+                            width = floor(imageScale * maxWidth)
+                            height = length
+                        } else {
+                            imageScale = 1.0
+                            width = maxWidth
+                            height = maxHeight
+                        }
+                        
+                        repeat {
+                            var layers = [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)]()
+                            var minDelay: Double = Double.greatestFiniteMagnitude
                             
-                            repeat {
-                                var layers = [(image: CGImage?, x: Double, y: Double, width: Double, height: Double, opacity: Double)]()
-                                var minDelay: Double = Double.greatestFiniteMagnitude
+                            for animation in animations {
+                                var frame = animation[0]
                                 
-                                for animation in animations {
-                                    var frame = animation[0]
-                                    
-                                    if frame.delay <= 0.01 {
-                                        frame.delay = 0.1
-                                    }
-                                    
-                                    var delay = frame.delay
-                                    
-                                    if time >= delay {
-                                        for i in 1..<animation.count {
-                                            frame = animation[i]
-                                            delay += frame.delay
-                                            
-                                            if time < delay {
-                                                break
-                                            }
+                                if frame.delay <= 0.01 {
+                                    frame.delay = 0.1
+                                }
+                                
+                                var delay = frame.delay
+                                
+                                if time >= delay {
+                                    for i in 1..<animation.count {
+                                        frame = animation[i]
+                                        delay += frame.delay
+                                        
+                                        if time < delay {
+                                            break
                                         }
-                                    }
-                                    
-                                    layers.append((image: frame.image, x: frame.x, y: frame.y, width: frame.width, height: frame.height, opacity: frame.opacity))
-                                    
-                                    if delay - time > 0.0 && delay < minDelay {
-                                        minDelay = delay
                                     }
                                 }
                                 
-                                splittedAnimations.append((layers: layers, delay: minDelay - time))
-                                time = minDelay
-                            } while time < maxDuration
+                                layers.append((image: frame.image, x: frame.x, y: frame.y, width: frame.width, height: frame.height, opacity: frame.opacity))
+                                
+                                if delay - time > 0.0 && delay < minDelay {
+                                    minDelay = delay
+                                }
+                            }
                             
-                            for animation in splittedAnimations {
-                                var unscaledCompositedImage: CGImage? = nil
-                                var scaledCompositedImage: CGImage? = nil
-                                let unscaledRendererFormat = UIGraphicsImageRendererFormat()
+                            splittedAnimations.append((layers: layers, delay: minDelay - time))
+                            time = minDelay
+                        } while time < maxDuration
+                        
+                        for animation in splittedAnimations {
+                            var unscaledCompositedImage: CGImage? = nil
+                            var scaledCompositedImage: CGImage? = nil
+                            let unscaledRendererFormat = UIGraphicsImageRendererFormat()
+                            
+                            unscaledRendererFormat.opaque = false
+                            unscaledRendererFormat.scale = 1.0
+                            unscaledRendererFormat.preferredRange = .standard
+                            
+                            let unscaledRenderer = UIGraphicsImageRenderer(size: CGSize(width: maxWidth, height: maxHeight), format: unscaledRendererFormat)
+                            
+                            unscaledCompositedImage = unscaledRenderer.image { rendererContext in
+                                let context = rendererContext.cgContext
                                 
-                                unscaledRendererFormat.opaque = false
-                                unscaledRendererFormat.scale = 1.0
-                                unscaledRendererFormat.preferredRange = .standard
+                                context.interpolationQuality = .high
+                                context.setAllowsAntialiasing(true)
+                                context.clear(CGRect(x: 0.0, y: 0.0, width: maxWidth, height: maxHeight))
+                                context.translateBy(x: 0.0, y: maxHeight)
+                                context.scaleBy(x: 1.0, y: -1.0)
                                 
-                                let unscaledRenderer = UIGraphicsImageRenderer(size: CGSize(width: maxWidth, height: maxHeight), format: unscaledRendererFormat)
+                                for layer in animation.layers {
+                                    if let image = layer.image {
+                                        context.draw(image, in: CGRect(x: round(layer.x - minX), y: round(maxHeight - layer.y + minY - layer.height), width: floor(layer.width), height: floor(layer.height)))
+                                    }
+                                }
+                            }.cgImage
+                            
+                            if let unscaledCompositedImage {
+                                unscaledCompositedFrames.append((image: unscaledCompositedImage, delay: animation.delay))
                                 
-                                unscaledCompositedImage = unscaledRenderer.image { rendererContext in
+                                let scaledRendererFormat = UIGraphicsImageRendererFormat()
+                                
+                                scaledRendererFormat.opaque = false
+                                scaledRendererFormat.scale = 1.0
+                                scaledRendererFormat.preferredRange = .standard
+                                
+                                let scaledRenderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: scaledRendererFormat)
+                                
+                                scaledCompositedImage = scaledRenderer.image { rendererContext in
                                     let context = rendererContext.cgContext
                                     
                                     context.interpolationQuality = .high
                                     context.setAllowsAntialiasing(true)
-                                    context.clear(CGRect(x: 0.0, y: 0.0, width: maxWidth, height: maxHeight))
-                                    context.translateBy(x: 0.0, y: maxHeight)
+                                    context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
+                                    context.translateBy(x: 0.0, y: height)
                                     context.scaleBy(x: 1.0, y: -1.0)
-                                    
-                                    for layer in animation.layers {
-                                        if let image = layer.image {
-                                            context.draw(image, in: CGRect(x: round(layer.x - minX), y: round(maxHeight - layer.y + minY - layer.height), width: floor(layer.width), height: floor(layer.height)))
-                                        }
-                                    }
+                                    context.draw(unscaledCompositedImage, in: CGRect(x: 0.0, y: 0.0, width: floor(Double(unscaledCompositedImage.width) * imageScale), height: floor(Double(unscaledCompositedImage.height) * imageScale)))
                                 }.cgImage
-                                
-                                if let unscaledCompositedImage {
-                                    unscaledCompositedFrames.append((image: unscaledCompositedImage, delay: animation.delay))
-                                    
-                                    let scaledRendererFormat = UIGraphicsImageRendererFormat()
-                                    
-                                    scaledRendererFormat.opaque = false
-                                    scaledRendererFormat.scale = 1.0
-                                    scaledRendererFormat.preferredRange = .standard
-                                    
-                                    let scaledRenderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: scaledRendererFormat)
-                                    
-                                    scaledCompositedImage = scaledRenderer.image { rendererContext in
-                                        let context = rendererContext.cgContext
-                                        
-                                        context.interpolationQuality = .high
-                                        context.setAllowsAntialiasing(true)
-                                        context.clear(CGRect(x: 0.0, y: 0.0, width: width, height: height))
-                                        context.translateBy(x: 0.0, y: height)
-                                        context.scaleBy(x: 1.0, y: -1.0)
-                                        context.draw(unscaledCompositedImage, in: CGRect(x: 0.0, y: 0.0, width: floor(Double(unscaledCompositedImage.width) * imageScale), height: floor(Double(unscaledCompositedImage.height) * imageScale)))
-                                    }.cgImage
-                                }
-                                
-                                scaledCompositedFrames.append((image: scaledCompositedImage, delay: animation.delay))
                             }
                             
-                            for i in stride(from: scaledCompositedFrames.count - 2, through: 0, by: -1) {
-                                scaledCompositedFrames.append(scaledCompositedFrames[i])
-                            }
-                            
-                            data = (unscaledCompositedFrames, scaledCompositedFrames)
+                            scaledCompositedFrames.append((image: scaledCompositedImage, delay: animation.delay))
                         }
                         
-                        return data
-                    }.value
+                        for i in stride(from: scaledCompositedFrames.count - 2, through: 0, by: -1) {
+                            scaledCompositedFrames.append(scaledCompositedFrames[i])
+                        }
+                        
+                        data = (unscaledCompositedFrames, scaledCompositedFrames)
+                    }
                     
-                    compositedFrames = data.0
-                    self.fetchedFrames = data.1
-                    self.requestParticles = particles
-                }
+                    return data
+                }.value
+                
+                compositedFrames = data.0
+                self.fetchedFrames = data.1
+                self.requestParticles = particles
                 
                 self.isReloading = false
                 
@@ -855,7 +852,7 @@ class WallView: UIView {
         }
         
         if self.touches.count == 1 {
-            let lineHeight = self.frame.size.height / Double(self.blocks.count)
+            let lineHeight = self.bounds.size.height / Double(self.blocks.count)
             let fontSize = ceil(self.blocks.count == 1 ? lineHeight : lineHeight / 1.5)
             
             if let frames = self.backgroundFrames {
@@ -875,7 +872,7 @@ class WallView: UIView {
                 }
                 
                 if let image = frame.image {
-                    let screenAspect = self.frame.size.width / self.frame.size.height
+                    let screenAspect = self.bounds.size.width / self.bounds.size.height
                     let imageAspect = Double(image.width) / Double(image.height)
                     
                     if screenAspect > imageAspect {
@@ -922,7 +919,7 @@ class WallView: UIView {
         self.tracker.active = false
         
         if self.touches.count == 1 {
-            let lineHeight = self.frame.size.height / Double(self.blocks.count)
+            let lineHeight = self.bounds.size.height / Double(self.blocks.count)
             let fontSize = ceil(self.blocks.count == 1 ? lineHeight : lineHeight / 1.5)
             
             for index in 0..<self.blocks.count {
@@ -964,7 +961,7 @@ class WallView: UIView {
     }
     
     @objc private func step(displayLink: CADisplayLink) {
-        if self.frame.size.width > 0 && self.frame.size.height > 0 && self.isRunning {
+        if self.bounds.size.width > 0 && self.bounds.size.height > 0 && self.isRunning {
             let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
             
             if self.isInvalidated {
@@ -1450,7 +1447,7 @@ class WallView: UIView {
             if let maskLayer = self.maskLayer {
                 typealias Segment = (text: String, framesetter: CTFramesetter?, size: CGSize)
                 let blackColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])
-                let lineHeight = self.frame.size.height / Double(self.blocks.count)
+                let lineHeight = self.bounds.size.height / Double(self.blocks.count)
                 let fontSize = ceil(self.blocks.count == 1 ? lineHeight : lineHeight / 1.5)
                 let margin = ceil(fontSize / 2.0)
                 let fontName = "Futura-Bold"
@@ -1639,9 +1636,9 @@ class WallView: UIView {
                                     var x = 0.0
                                     
                                     for segment in current.reversed() {
-                                        if offset - translation - x >= 0 && offset - translation - x - segment.size.width < self.frame.size.width {
+                                        if offset - translation - x >= 0 && offset - translation - x - segment.size.width < self.bounds.size.width {
                                             let key = "\(fontName)&\(fontSize)&\(segment.text)"
-                                            let transform = CGAffineTransformConcat(CGAffineTransformMakeTranslation(offset - translation - round(x) - ceil(segment.size.width), self.frame.size.height - round(lineHeight * Double(i) + (lineHeight - segment.size.height) / 2.0)), CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, -1.0), CGAffineTransformMakeTranslation(0.0, self.frame.size.height)))
+                                            let transform = CGAffineTransformConcat(CGAffineTransformMakeTranslation(offset - translation - round(x) - ceil(segment.size.width), self.bounds.size.height - round(lineHeight * Double(i) + (lineHeight - segment.size.height) / 2.0)), CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, -1.0), CGAffineTransformMakeTranslation(0.0, self.bounds.size.height)))
                                             
                                             if let value = self.textCache[key] {
                                                 if let path = value.2 {
@@ -1666,16 +1663,16 @@ class WallView: UIView {
                                     
                                     offset += margin
                                 }
-                            } while offset - margin < self.frame.size.width * 2.0
+                            } while offset - margin < self.bounds.size.width * 2.0
                         } else {
                             repeat {
                                 for _ in 0..<2 {
                                     var x = 0.0
                                     
                                     for segment in current {
-                                        if translation + offset + x + segment.size.width >= 0 && translation + offset + x < self.frame.size.width {
+                                        if translation + offset + x + segment.size.width >= 0 && translation + offset + x < self.bounds.size.width {
                                             let key = "\(fontName)&\(fontSize)&\(segment.text)"
-                                            let transform = CGAffineTransformConcat(CGAffineTransformMakeTranslation(translation + offset + round(x), self.frame.size.height - round(lineHeight * Double(i) + (lineHeight - segment.size.height) / 2.0)), CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, -1.0), CGAffineTransformMakeTranslation(0.0, self.frame.size.height)))
+                                            let transform = CGAffineTransformConcat(CGAffineTransformMakeTranslation(translation + offset + round(x), self.bounds.size.height - round(lineHeight * Double(i) + (lineHeight - segment.size.height) / 2.0)), CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, -1.0), CGAffineTransformMakeTranslation(0.0, self.bounds.size.height)))
                                             
                                             if let value = self.textCache[key] {
                                                 if let path = value.2 {
@@ -1700,7 +1697,7 @@ class WallView: UIView {
                                     
                                     offset += margin
                                 }
-                            } while offset - margin < self.frame.size.width * 2.0
+                            } while offset - margin < self.bounds.size.width * 2.0
                         }
                     }
                 }
@@ -1754,7 +1751,7 @@ class WallView: UIView {
                 
                 if mutablePath.isEmpty {
                     if !paths.isEmpty {
-                        maskLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
+                        maskLayer.frame = CGRect(origin: CGPoint.zero, size: self.bounds.size)
                         maskLayer.path = nil
 
                         if let sublayers = maskLayer.sublayers {
@@ -1762,7 +1759,7 @@ class WallView: UIView {
                                 if let shapeLayer = sublayer as? CAShapeLayer {
                                     var path: CGPath = paths[0]
                                     
-                                    shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
+                                    shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.bounds.size)
                                     
                                     for i in 1..<paths.count {
                                         path = path.union(paths[i], using: .winding)
@@ -1794,7 +1791,7 @@ class WallView: UIView {
                     CATransaction.begin()
                     CATransaction.setDisableActions(true)
                     
-                    maskLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
+                    maskLayer.frame = CGRect(origin: CGPoint.zero, size: self.bounds.size)
                     maskLayer.path = mutablePath
                     
                     if let sublayers = maskLayer.sublayers {
@@ -1806,7 +1803,7 @@ class WallView: UIView {
                                 } else {
                                     var path: CGPath = paths[0]
                                     
-                                    shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.frame.size)
+                                    shapeLayer.frame = CGRect(origin: CGPoint.zero, size: self.bounds.size)
                                     
                                     for i in 1..<paths.count {
                                         path = path.union(paths[i], using: .winding)
@@ -1902,10 +1899,11 @@ class WallView: UIView {
                     self.currentTime = 0.0
                 }
                 
-                if let image, let window = self.window, let windowScene = window.windowScene {
+                if let image {
                     let top = 0.5
                     let left = 0.5
-                    let screenAspect = self.frame.size.width / self.frame.size.height
+                    let displayScale = self.traitCollection.displayScale
+                    let screenAspect = self.bounds.size.width / self.bounds.size.height
                     let imageAspect = Double(image.width) / Double(image.height)
                     var sx: Double
                     var sy: Double
@@ -1913,15 +1911,15 @@ class WallView: UIView {
                     var sh: Double
                     
                     if screenAspect > imageAspect {
-                        let ratio = self.frame.size.width * windowScene.screen.scale / Double(image.width)
+                        let ratio = self.bounds.size.width * displayScale / Double(image.width)
                         
                         sx = 0.0
-                        sh = self.frame.size.height * windowScene.screen.scale / ratio
-                        sy = max(0.0, min(Double(image.height) - sh, (Double(image.height) * ratio - self.frame.size.height * windowScene.screen.scale) / ratio * top - self.tracker.movement.y * windowScene.screen.scale / ratio))
+                        sh = self.bounds.size.height * displayScale / ratio
+                        sy = max(0.0, min(Double(image.height) - sh, (Double(image.height) * ratio - self.bounds.size.height * displayScale) / ratio * top - self.tracker.movement.y * displayScale / ratio))
                         sw = Double(image.width)
                         
-                        let insetTop = (Double(image.height) * ratio - self.frame.size.height * windowScene.screen.scale) * top / windowScene.screen.scale
-                        let insetBottom = (self.frame.size.height * windowScene.screen.scale - Double(image.height) * ratio + (Double(image.height) * ratio - self.frame.size.height * windowScene.screen.scale) * top) / windowScene.screen.scale
+                        let insetTop = (Double(image.height) * ratio - self.bounds.size.height * displayScale) * top / displayScale
+                        let insetBottom = (self.bounds.size.height * displayScale - Double(image.height) * ratio + (Double(image.height) * ratio - self.bounds.size.height * displayScale) * top) / displayScale
                         
                         if insetTop < self.tracker.movement.y {
                             if self.tracker.active {
@@ -1947,15 +1945,15 @@ class WallView: UIView {
                             self.tracker.edge = false
                         }
                     } else {
-                        let ratio = self.frame.size.height * windowScene.screen.scale / Double(image.height)
+                        let ratio = self.bounds.size.height * displayScale / Double(image.height)
                         
-                        sw = self.frame.size.width * windowScene.screen.scale / ratio
-                        sx = max(0.0, min(Double(image.width) - sw, (Double(image.width) * ratio - self.frame.size.width * windowScene.screen.scale) / ratio * left - self.tracker.movement.x * windowScene.screen.scale / ratio))
+                        sw = self.bounds.size.width * displayScale / ratio
+                        sx = max(0.0, min(Double(image.width) - sw, (Double(image.width) * ratio - self.bounds.size.width * displayScale) / ratio * left - self.tracker.movement.x * displayScale / ratio))
                         sy = 0.0
                         sh = Double(image.height)
                         
-                        let insetLeft = (Double(image.width) * ratio - self.frame.size.width * windowScene.screen.scale) * left / windowScene.screen.scale
-                        let insetRight = (self.frame.size.width * windowScene.screen.scale - Double(image.width) * ratio + (Double(image.width) * ratio - self.frame.size.width * windowScene.screen.scale) * left) / windowScene.screen.scale
+                        let insetLeft = (Double(image.width) * ratio - self.bounds.size.width * displayScale) * left / displayScale
+                        let insetRight = (self.bounds.size.width * displayScale - Double(image.width) * ratio + (Double(image.width) * ratio - self.bounds.size.width * displayScale) * left) / displayScale
                         
                         if insetLeft < self.tracker.movement.x {
                             if self.tracker.active {
@@ -1985,9 +1983,9 @@ class WallView: UIView {
                     let rect = CGRect(x: round(sx), y: round(sy), width: floor(sw), height: floor(sh))
                     
                     if updateRequired, let imageLayer = self.imageLayer {
-                        let scaleX = self.frame.size.width * windowScene.screen.scale / rect.size.width
-                        let scaleY = self.frame.size.height * windowScene.screen.scale / rect.size.height
-                        let size = CGSize(width: floor(Double(image.width) * scaleX / windowScene.screen.scale), height: floor(Double(image.height) * scaleY / windowScene.screen.scale))
+                        let scaleX = self.bounds.size.width * displayScale / rect.size.width
+                        let scaleY = self.bounds.size.height * displayScale / rect.size.height
+                        let size = CGSize(width: floor(Double(image.width) * scaleX / displayScale), height: floor(Double(image.height) * scaleY / displayScale))
                         var i: CGImage? = nil
                         let rendererFormat = UIGraphicsImageRendererFormat.default()
                         
@@ -2020,7 +2018,7 @@ class WallView: UIView {
                                 CATransaction.begin()
                                 CATransaction.setDisableActions(true)
                                 
-                                imageLayer.frame = CGRect(x: -floor(scaleX * rect.origin.x / windowScene.screen.scale), y: -floor(scaleY * rect.origin.y / windowScene.screen.scale), width: floor(scaleX * Double(image.width) / windowScene.screen.scale), height: floor(scaleY * Double(image.height) / windowScene.screen.scale))
+                                imageLayer.frame = CGRect(x: -floor(scaleX * rect.origin.x / displayScale), y: -floor(scaleY * rect.origin.y / displayScale), width: floor(scaleX * Double(image.width) / displayScale), height: floor(scaleY * Double(image.height) / displayScale))
                                 imageLayer.contents = i
                                 
                                 CATransaction.commit()
@@ -2030,13 +2028,13 @@ class WallView: UIView {
                         }
                     } else if !self.sourceRect.equalTo(rect) {
                         if let imageLayer = self.imageLayer {
-                            let scaleX = self.frame.size.width * windowScene.screen.scale / rect.size.width
-                            let scaleY = self.frame.size.height * windowScene.screen.scale / rect.size.height
+                            let scaleX = self.bounds.size.width * displayScale / rect.size.width
+                            let scaleY = self.bounds.size.height * displayScale / rect.size.height
                             
                             CATransaction.begin()
                             CATransaction.setDisableActions(true)
                             
-                            imageLayer.frame = CGRect(x: -floor(scaleX * rect.origin.x / windowScene.screen.scale), y: -floor(scaleY * rect.origin.y / windowScene.screen.scale), width: floor(scaleX * Double(image.width) / windowScene.screen.scale), height: floor(scaleY * Double(image.height) / windowScene.screen.scale))
+                            imageLayer.frame = CGRect(x: -floor(scaleX * rect.origin.x / displayScale), y: -floor(scaleY * rect.origin.y / displayScale), width: floor(scaleX * Double(image.width) / displayScale), height: floor(scaleY * Double(image.height) / displayScale))
                             
                             CATransaction.commit()
                         }
@@ -2095,7 +2093,7 @@ class WallView: UIView {
                                     CATransaction.begin()
                                     CATransaction.setDisableActions(true)
                                     
-                                    layer.frame = CGRect(x: Double.random(in: -imageSize.width / 2..<self.frame.size.width - imageSize.width / 2), y: Double.random(in: -imageSize.height / 2..<self.frame.size.height - imageSize.height / 2), width: imageSize.width, height: imageSize.height)
+                                    layer.frame = CGRect(x: Double.random(in: -imageSize.width / 2..<self.bounds.size.width - imageSize.width / 2), y: Double.random(in: -imageSize.height / 2..<self.bounds.size.height - imageSize.height / 2), width: imageSize.width, height: imageSize.height)
                                     layer.contents = generatedImage
                                     layer.opacity = Float(step)
                                     layer.transform = CATransform3DMakeScale(step, step, 1.0)
@@ -2149,7 +2147,7 @@ class WallView: UIView {
                                     CATransaction.begin()
                                     CATransaction.setDisableActions(true)
                                     
-                                    layer.frame = CGRect(x: Double.random(in: -sourceImage.size.width / 2..<self.frame.size.width - sourceImage.size.width / 2), y: Double.random(in: -sourceImage.size.height / 2..<self.frame.size.height - sourceImage.size.height / 2), width: sourceImage.size.width, height: sourceImage.size.height)
+                                    layer.frame = CGRect(x: Double.random(in: -sourceImage.size.width / 2..<self.bounds.size.width - sourceImage.size.width / 2), y: Double.random(in: -sourceImage.size.height / 2..<self.bounds.size.height - sourceImage.size.height / 2), width: sourceImage.size.width, height: sourceImage.size.height)
                                     layer.contents = generatedImage
                                     layer.opacity = Float(step)
                                     layer.transform = CATransform3DMakeScale(step, step, 1.0)
