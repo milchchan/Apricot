@@ -1861,15 +1861,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 for i in 0..<self.characterViews.count {
                     let characterView = self.characterViews[i]
                     
-                    if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
-                        if i > 0 {
-                            characterView.alpha = 0.0
-                            characterView.transform.tx = tx
-                        } else {
-                            characterView.alpha = 1.0
-                            characterView.transform.tx = tx
-                        }
+                    if i > 0 {
+                        characterView.alpha = 0.0
                     }
+                    
+                    characterView.transform.tx = tx
                 }
                 
                 self.systemScale = 1.0
@@ -1992,59 +1988,199 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         let systemScale = self.systemScale
         let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
         
-        if safeBounds.width > safeBounds.height {
-            let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
-            var maxWidth = 0.0
-            var maxHeight = 0.0
-            
-            for i in 0..<self.characterViews.count {
-                let characterView = self.characterViews[i]
-                let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
-                let tx = safeBounds.maxX - interval * (Double(i) + 0.5) - self.bounds.midX
+        if let window = self.window, let windowScene = window.windowScene, windowScene.effectiveGeometry.isInteractivelyResizing {
+            if safeBounds.width > safeBounds.height {
+                let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
+                var maxWidth = 0.0
+                var maxHeight = 0.0
                 
-                if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 1.0) {
-                    if i > 0 {
+                for i in 0..<self.characterViews.count {
+                    let characterView = self.characterViews[i]
+                    let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
+                    
+                    if characterView.alpha != 1.0 {
                         UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
                             characterView.alpha = 1.0
-                            characterView.transform.tx = tx
-                        })
-                    } else {
-                        UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
-                            characterView.transform.tx = tx
                         })
                     }
+                    
+                    characterView.transform.tx = safeBounds.maxX - interval * (Double(i) + 0.5) - self.bounds.midX
+                    maxWidth = max(max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale, maxWidth)
+                    maxHeight = max(max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale, maxHeight)
                 }
                 
-                maxWidth = max(max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale, maxWidth)
-                maxHeight = max(max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale, maxHeight)
-            }
-            
-            self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
-        } else {
-            let tx = safeBounds.midX - self.bounds.midX
-            
-            for i in 0..<self.characterViews.count {
-                let characterView = self.characterViews[i]
+                self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
+            } else {
+                let tx = safeBounds.midX - self.bounds.midX
                 
-                if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
-                    if i > 0 {
+                for i in 0..<self.characterViews.count {
+                    let characterView = self.characterViews[i]
+                    
+                    if i > 0 && characterView.alpha != 0.0 {
                         UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
                             characterView.alpha = 0.0
-                            characterView.transform.tx = tx
                         })
-                    } else {
-                        UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
-                            characterView.transform.tx = tx
-                        })
+                    }
+                    
+                    characterView.transform.tx = tx
+                }
+                
+                self.systemScale = 1.0
+            }
+            
+            if self.systemScale != systemScale {
+                for characterView in self.characterViews {
+                    let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale * self.systemScale
+                    let frame = CGRect(x: characterView.origin.x * preferredScale / self.traitCollection.displayScale, y: characterView.origin.y * preferredScale / self.traitCollection.displayScale, width: characterView.size.width * preferredScale / self.traitCollection.displayScale, height: characterView.size.height * preferredScale / self.traitCollection.displayScale)
+                    let messageWidth = characterView.constraints.reduce(0.0, { $1.firstItem === characterView.balloonView && $1.firstAttribute == .width ? $1.constant : $0 })
+                    let maxScale = messageWidth > 0.0 ? (messageWidth + 16.0) / messageWidth : 0.0
+                    let balloonHeight = characterView.constraints.reduce(0.0, { $1.firstItem === characterView.balloonView && $1.firstAttribute == .height ? $1.constant : $0 })
+                    let horizontalPadding = round((characterView.contentInsets.leading + characterView.contentInsets.trailing) * preferredScale / self.traitCollection.displayScale / 2.0)
+                    let verticalPadding = round((characterView.contentInsets.top + characterView.contentInsets.bottom) * preferredScale / self.traitCollection.displayScale / 2.0)
+                    
+                    for motionEffect in characterView.contentView.motionEffects {
+                        if let motionEffectGroup = motionEffect as? UIMotionEffectGroup, let motionEffects = motionEffectGroup.motionEffects {
+                            for me in motionEffects {
+                                if let interpolatingMotionEffect = me as? UIInterpolatingMotionEffect {
+                                    if interpolatingMotionEffect.type == .tiltAlongHorizontalAxis {
+                                        interpolatingMotionEffect.minimumRelativeValue = -horizontalPadding
+                                        interpolatingMotionEffect.maximumRelativeValue = horizontalPadding
+                                    } else if interpolatingMotionEffect.type == .tiltAlongVerticalAxis {
+                                        interpolatingMotionEffect.minimumRelativeValue = -verticalPadding
+                                        interpolatingMotionEffect.maximumRelativeValue = verticalPadding
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    for constraint in characterView.constraints {
+                        if constraint.firstItem === characterView {
+                            if constraint.firstAttribute == .width {
+                                constraint.constant = ceil(max(frame.width, messageWidth * maxScale))
+                            } else if constraint.firstAttribute == .height {
+                                constraint.constant = ceil(frame.height + balloonHeight * maxScale - frame.origin.y)
+                            }
+                        } else if constraint.firstItem === characterView.contentView && constraint.secondItem === characterView {
+                            if constraint.firstAttribute == .width {
+                                constraint.constant = -floor(max(frame.width, messageWidth * maxScale) - frame.width)
+                            } else if constraint.firstAttribute == .height {
+                                constraint.constant = -floor(balloonHeight * maxScale - frame.origin.y)
+                            }
+                        } else if constraint.firstItem === characterView.balloonView {
+                            if constraint.firstAttribute == .width {
+                                constraint.constant = messageWidth
+                            } else if constraint.firstAttribute == .bottom {
+                                constraint.constant = round(balloonHeight / 2.0 - frame.origin.y)
+                            }
+                        }
+                    }
+                    
+                    if !characterView.cachedTimelines.isEmpty {
+                        let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                        
+                        if let image {
+                            let actualScale = self.userScale * self.systemScale
+                            let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
+                            let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
+                            let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
+                            
+                            format.opaque = false
+                            format.preferredRange = .standard
+                            format.scale = self.traitCollection.displayScale
+                            
+                            let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                            let renderedImage = renderer.image { rendererContext in
+                                let context = rendererContext.cgContext
+                                
+                                if actualScale == floor(actualScale) {
+                                    context.interpolationQuality = .none
+                                    context.setAllowsAntialiasing(false)
+                                } else {
+                                    context.interpolationQuality = .high
+                                    context.setAllowsAntialiasing(true)
+                                }
+                                
+                                context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
+                                
+                                if characterView.isMirror {
+                                    context.translateBy(x: imageSize.width, y: imageSize.height)
+                                    context.scaleBy(x: -1.0, y: -1.0)
+                                } else {
+                                    context.translateBy(x: 0, y: imageSize.height)
+                                    context.scaleBy(x: 1.0, y: -1.0)
+                                }
+                                
+                                context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
+                            }
+                            
+                            if let image = renderedImage.cgImage {
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                characterView.contentView.layer.contents = image
+                                
+                                CATransaction.commit()
+                            }
+                        }
                     }
                 }
             }
+        } else {
+            if safeBounds.width > safeBounds.height {
+                let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
+                var maxWidth = 0.0
+                var maxHeight = 0.0
+                
+                for i in 0..<self.characterViews.count {
+                    let characterView = self.characterViews[i]
+                    let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
+                    let tx = safeBounds.maxX - interval * (Double(i) + 0.5) - self.bounds.midX
+                    
+                    if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 1.0) {
+                        if i > 0 {
+                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                                characterView.alpha = 1.0
+                                characterView.transform.tx = tx
+                            })
+                        } else {
+                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                                characterView.transform.tx = tx
+                            })
+                        }
+                    }
+                    
+                    maxWidth = max(max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale, maxWidth)
+                    maxHeight = max(max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale, maxHeight)
+                }
+                
+                self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
+            } else {
+                let tx = safeBounds.midX - self.bounds.midX
+                
+                for i in 0..<self.characterViews.count {
+                    let characterView = self.characterViews[i]
+                    
+                    if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
+                        if i > 0 {
+                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                                characterView.alpha = 0.0
+                                characterView.transform.tx = tx
+                            })
+                        } else {
+                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                                characterView.transform.tx = tx
+                            })
+                        }
+                    }
+                }
+                
+                self.systemScale = 1.0
+            }
             
-            self.systemScale = 1.0
-        }
-        
-        if self.systemScale != systemScale {
-            self.change(scale: self.userScale)
+            if self.systemScale != systemScale {
+                self.change(scale: self.userScale)
+            }
         }
     }
     
