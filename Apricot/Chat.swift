@@ -19,6 +19,8 @@ import UIKit
 
 struct Chat: View {
    @Environment(\.scenePhase) private var scenePhase
+   @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+   @Environment(\.verticalSizeClass) private var verticalSizeClass
    @Environment(\.openURL) private var openURL
    @FocusState private var composerFocused: Bool
    @Namespace private var menuNamespace
@@ -67,9 +69,6 @@ struct Chat: View {
    
    var body: some View {
       GeometryReader { geometry in
-         let safeWidth = max(0.0, geometry.size.width - geometry.safeAreaInsets.leading - geometry.safeAreaInsets.trailing)
-         let safeHeight = max(0.0, geometry.size.height - geometry.safeAreaInsets.top - geometry.safeAreaInsets.bottom)
-         
          ZStack {
             ZStack {
                VStack {
@@ -165,7 +164,7 @@ struct Chat: View {
                                     }
                                     
                                     Task {
-                                       await self.talk(image: image, temperature: self.temperature, multiple: safeWidth > safeHeight, mute: self.mute)
+                                       await self.talk(image: image, temperature: self.temperature, multiple: geometry.size.width > geometry.size.height, mute: self.mute)
                                     }
                                  } else {
                                     self.shakes += 1
@@ -204,8 +203,8 @@ struct Chat: View {
                               }
                            }
                            .frame(
-                              width: UIDevice.current.userInterfaceIdiom == .phone && safeWidth < safeHeight ? (safeWidth - 32.0) / 2.0 : (safeWidth / 2.0 - 32.0) / 2.0,
-                              height: UIDevice.current.userInterfaceIdiom == .phone && safeWidth < safeHeight ? (safeWidth - 32.0) / 2.0 : (safeWidth / 2.0 - 32.0) / 2.0,
+                              width: self.horizontalSizeClass == .compact && self.verticalSizeClass == .regular && geometry.size.width < geometry.size.height ? (geometry.size.width - 32.0) / 2.0 : (geometry.size.width / 2.0 - 32.0) / 2.0,
+                              height: self.horizontalSizeClass == .compact && self.verticalSizeClass == .regular && geometry.size.width < geometry.size.height ? (geometry.size.width - 32.0) / 2.0 : (geometry.size.width / 2.0 - 32.0) / 2.0,
                               alignment: .top
                            )
                            .background(Color(UIColor(white: 0.0, alpha: 1.0)))
@@ -679,7 +678,7 @@ struct Chat: View {
                                              }
                                           }
                                        }
-                                    }))), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: false, mute: self.mute)
+                                    }))), temperature: self.temperature, multiple: geometry.size.width > geometry.size.height, fallback: false, mute: self.mute)
                                  }
                               } else {
                                  self.shakes += 1
@@ -855,7 +854,7 @@ struct Chat: View {
                                           }
                                        }
                                     }
-                                 }))), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: false, mute: self.mute)
+                                 }))), temperature: self.temperature, multiple: geometry.size.width > geometry.size.height, fallback: false, mute: self.mute)
                               }
                            } else {
                               self.shakes += 1
@@ -971,7 +970,7 @@ struct Chat: View {
                               }
                            }
                         }
-                     }))), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: false, mute: self.mute)
+                     }))), temperature: self.temperature, multiple: geometry.size.width > geometry.size.height, fallback: false, mute: self.mute)
                   }
                } else if type[0] == "Dictionary" {
                   if self.isRecording {
@@ -1004,7 +1003,7 @@ struct Chat: View {
                               }
                            }
                         }
-                     }))), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: false, mute: self.mute)
+                     }))), temperature: self.temperature, multiple: geometry.size.width > geometry.size.height, fallback: false, mute: self.mute)
                   }
                } else if type[0] == "Dictionary" {
                   self.showDictionary = true
@@ -1078,15 +1077,12 @@ struct Chat: View {
    }
    
    private func makeMenu(geometryProxy: GeometryProxy) -> some View {
-      let safeWidth = max(0.0, geometryProxy.size.width - geometryProxy.safeAreaInsets.leading - geometryProxy.safeAreaInsets.trailing)
-      let safeHeight = max(0.0, geometryProxy.size.height - geometryProxy.safeAreaInsets.top - geometryProxy.safeAreaInsets.bottom)
-      
       return ZStack {
          Rectangle()
             .fill(.clear)
             .frame(
-               width: UIDevice.current.userInterfaceIdiom == .phone && safeWidth < safeHeight ? safeWidth - 32.0 : safeWidth / 2.0 - 32.0,
-               height: safeHeight / 2.0
+               width: self.horizontalSizeClass == .compact && self.verticalSizeClass == .regular && geometryProxy.size.width < geometryProxy.size.height ? geometryProxy.size.width - 32.0 : geometryProxy.size.width / 2.0 - 32.0,
+               height: (geometryProxy.size.height + geometryProxy.safeAreaInsets.top + geometryProxy.safeAreaInsets.bottom) / 2.0 - geometryProxy.safeAreaInsets.bottom - 72.0
             )
             .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true))
             .compositingGroup()
@@ -1114,7 +1110,7 @@ struct Chat: View {
                            }
                            
                            Task {
-                              await self.talk(word: Word(name: self.prompt.4[self.prompt.5 - 1].0), temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: true, mute: self.mute)
+                              await self.talk(word: Word(name: self.prompt.4[self.prompt.5 - 1].0), temperature: self.temperature, multiple: geometryProxy.size.width > geometryProxy.size.height, fallback: true, mute: self.mute)
                            }
                         } else {
                            self.shakes += 1
@@ -1130,7 +1126,7 @@ struct Chat: View {
                            }
                            
                            Task {
-                              await self.talk(word: word, temperature: self.temperature, multiple: safeWidth > safeHeight, fallback: true, mute: self.mute)
+                              await self.talk(word: word, temperature: self.temperature, multiple: geometryProxy.size.width > geometryProxy.size.height, fallback: true, mute: self.mute)
                            }
                         } else {
                            self.shakes += 1
@@ -1686,14 +1682,14 @@ struct Chat: View {
                }
             }
             .frame(
-               width: UIDevice.current.userInterfaceIdiom == .phone && safeWidth < safeHeight ? safeWidth - 32.0 : safeWidth / 2.0 - 32.0,
+               width: self.horizontalSizeClass == .compact && self.verticalSizeClass == .regular && geometryProxy.size.width < geometryProxy.size.height ? geometryProxy.size.width - 32.0 : geometryProxy.size.width / 2.0 - 32.0,
             )
             .padding(0.0)
             .background(.clear)
             .foregroundStyle(.primary, .secondary)
          }
          .frame(
-            height: safeHeight / 2.0
+            height: (geometryProxy.size.height + geometryProxy.safeAreaInsets.top + geometryProxy.safeAreaInsets.bottom) / 2.0 - geometryProxy.safeAreaInsets.bottom - 72.0
          )
          .padding(0.0)
          .background(.clear)
@@ -6161,31 +6157,97 @@ struct Peek: UIViewControllerRepresentable {
       }
       
       func flash() {
-         let skewAngle = 45.0
-         let beamView = UIView()
-         let gradientLayer = CAGradientLayer()
-         let frame = CGRect(x: 0.0, y: 0.0, width: floor(self.view.bounds.width * 0.25), height: self.view.bounds.height)
-         let skewTransform = CGAffineTransform(a: 1.0, b: 0.0, c: -tan(skewAngle * .pi / 180.0), d: 1.0, tx: 0.0, ty: 0.0)
+         final class BeamView: UIView, @MainActor CAAnimationDelegate {
+            let widthRatio = 0.25
+            let skewAngle = 45.0
+            let startTime = CACurrentMediaTime()
+            let duration = 1.0
+            let gradientLayer = CAGradientLayer()
+            
+            override func layoutSubviews() {
+               super.layoutSubviews()
+               
+               CATransaction.begin()
+               CATransaction.setDisableActions(true)
+               
+               self.gradientLayer.frame = self.bounds
+               
+               CATransaction.commit()
+               
+               if let superview = self.superview, self.layer.animation(forKey: "flash") != nil {
+                  let skewTransform = CATransform3DMakeAffineTransform(CGAffineTransform(a: 1.0, b: 0.0, c: -tan(self.skewAngle * .pi / 180.0), d: 1.0, tx: 0.0, ty: 0.0))
+                  let progress = min((CACurrentMediaTime() - self.startTime) / self.duration, 1.0)
+                  
+                  CATransaction.begin()
+                  
+                  let animation = CABasicAnimation(keyPath: "transform")
+                  
+                  animation.fromValue = CATransform3DConcat(skewTransform, CATransform3DMakeTranslation(floor(superview.bounds.height * abs(tan(self.skewAngle * .pi / 180.0)) / 2.0 - self.bounds.width - superview.bounds.height * abs(tan(self.skewAngle * .pi / 180.0)) + (self.bounds.width + superview.bounds.height * abs(tan(self.skewAngle * .pi / 180.0)) + superview.bounds.width) * progress), 0.0, 0.0))
+                  animation.toValue = CATransform3DConcat(skewTransform, CATransform3DMakeTranslation(floor(superview.bounds.height * abs(tan(self.skewAngle * .pi / 180.0)) / 2.0 + superview.bounds.width), 0.0, 0.0))
+                  animation.beginTime = CACurrentMediaTime()
+                  animation.duration = self.duration * (1.0 - progress)
+                  animation.timingFunction = CAMediaTimingFunction(name: .linear)
+                  animation.isRemovedOnCompletion = false
+                  animation.fillMode = .forwards
+                  animation.delegate = self
+                  
+                  self.layer.add(animation, forKey: "flash")
+                  
+                  CATransaction.commit()
+               }
+            }
+            
+            func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+               if anim === self.layer.animation(forKey: "flash") {
+                  if let superview = self.superview {
+                     for constraint in superview.constraints {
+                        if constraint.firstItem === self && constraint.secondItem === superview {
+                           superview.removeConstraint(constraint)
+                        }
+                     }
+                  }
+                  
+                  self.removeFromSuperview()
+                  self.layer.removeAllAnimations()
+               }
+            }
+         }
          
-         gradientLayer.colors = [UIColor.black.withAlphaComponent(0.5).cgColor, UIColor.black.cgColor, UIColor.black.withAlphaComponent(0.5).cgColor]
-         gradientLayer.locations = [0.0, 0.5, 1.0]
-         gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.5)
-         gradientLayer.endPoint = CGPoint(x: 1.0, y: 0.5)
-         gradientLayer.frame = frame
+         let beamView = BeamView()
+         let skewTransform = CATransform3DMakeAffineTransform(CGAffineTransform(a: 1.0, b: 0.0, c: -tan(beamView.skewAngle * .pi / 180.0), d: 1.0, tx: 0.0, ty: 0.0))
          
+         beamView.gradientLayer.colors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.cgColor, UIColor.black.withAlphaComponent(0.0).cgColor]
+         beamView.gradientLayer.locations = [0.0, 0.5, 1.0]
+         beamView.gradientLayer.startPoint = CGPoint(x: 0.0, y: 0.5)
+         beamView.gradientLayer.endPoint = CGPoint(x: 1.0, y: 0.5)
+         
+         beamView.translatesAutoresizingMaskIntoConstraints = false
          beamView.isUserInteractionEnabled = false
          beamView.backgroundColor = UIColor.white.withAlphaComponent(0.5)
-         beamView.frame = gradientLayer.frame
-         beamView.layer.mask = gradientLayer
-         beamView.transform = CGAffineTransformConcat(skewTransform, CGAffineTransformMakeTranslation(floor(frame.height * abs(tan(skewAngle * .pi / 180.0)) / 2.0 - frame.width - frame.height * abs(tan(skewAngle * .pi / 180.0))), 0.0))
+         beamView.layer.mask = beamView.gradientLayer
          
          self.view.addSubview(beamView)
+         self.view.addConstraint(NSLayoutConstraint(item: beamView, attribute: .leading, relatedBy: .equal, toItem: self.view, attribute: .leading, multiplier: 1.0, constant: 0.0))
+         self.view.addConstraint(NSLayoutConstraint(item: beamView, attribute: .top, relatedBy: .equal, toItem: self.view, attribute: .top, multiplier: 1.0, constant: 0.0))
+         self.view.addConstraint(NSLayoutConstraint(item: beamView, attribute: .width, relatedBy: .equal, toItem: self.view, attribute: .width, multiplier: beamView.widthRatio, constant: 0.0))
+         self.view.addConstraint(NSLayoutConstraint(item: beamView, attribute: .height, relatedBy: .equal, toItem: self.view, attribute: .height, multiplier: 1.0, constant: 0.0))
          
-         UIView.animate(withDuration: 1.0, delay: 0.0, options: [.curveLinear], animations: {
-            beamView.transform = CGAffineTransformConcat(skewTransform, CGAffineTransformMakeTranslation(floor(frame.height * abs(tan(skewAngle * .pi / 180.0)) / 2.0 + self.view.bounds.width), 0.0))
-         }, completion: { _ in
-            beamView.removeFromSuperview()
-         })
+         CATransaction.begin()
+         
+         let animation = CABasicAnimation(keyPath: "transform")
+         
+         animation.fromValue = CATransform3DConcat(skewTransform, CATransform3DMakeTranslation(floor(self.view.bounds.height * abs(tan(beamView.skewAngle * .pi / 180.0)) / 2.0 - self.view.bounds.width * beamView.widthRatio - self.view.bounds.height * abs(tan(beamView.skewAngle * .pi / 180.0))), 0.0, 0.0))
+         animation.toValue = CATransform3DConcat(skewTransform, CATransform3DMakeTranslation(floor(self.view.bounds.height * abs(tan(beamView.skewAngle * .pi / 180.0)) / 2.0 + self.view.bounds.width), 0.0, 0.0))
+         animation.beginTime = beamView.startTime
+         animation.duration = beamView.duration
+         animation.timingFunction = CAMediaTimingFunction(name: .linear)
+         animation.isRemovedOnCompletion = false
+         animation.fillMode = .forwards
+         animation.delegate = beamView
+         
+         beamView.layer.add(animation, forKey: "flash")
+         
+         CATransaction.commit()
       }
       
       nonisolated func computeHash(image: CGImage) -> UInt64? {
@@ -8483,12 +8545,21 @@ struct Capture: UIViewControllerRepresentable {
       override func viewDidLayoutSubviews() {
          super.viewDidLayoutSubviews()
 
-         var sizeChanged = false
+         var layoutChanged = false
+         let recognizeRegion = self.createRecognizeRegion(size: self.view.bounds.size)
+
+         if self.recognizeRegion != recognizeRegion {
+            self.recognizeRegion = recognizeRegion
+            layoutChanged = true
+         }
 
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
             let angle: CGFloat
             
-            sizeChanged = captureVideoPreviewLayer.bounds.size != self.view.bounds.size
+            if captureVideoPreviewLayer.bounds.size != self.view.bounds.size {
+               layoutChanged = true
+            }
+
             captureVideoPreviewLayer.frame = self.view.bounds
             
             switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
@@ -8503,15 +8574,18 @@ struct Capture: UIViewControllerRepresentable {
             }
             
             if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
+               if connection.videoRotationAngle != angle {
+                  layoutChanged = true
+               }
+
                connection.videoRotationAngle = angle
             }
          }
 
-         if sizeChanged {
+         if layoutChanged {
             self.frameState.withLock { state in
                state.generation &+= 1
             }
-            self.recognizeRegion = self.createRecognizeRegion(size: self.view.bounds.size)
             self.delegate?.captureDidUpdate(self)
          }
       }
@@ -8576,6 +8650,19 @@ struct Capture: UIViewControllerRepresentable {
                return
             }
 
+            let orientation: CGImagePropertyOrientation
+
+            switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
+            case .portraitUpsideDown:
+               orientation = .left
+            case .landscapeLeft:
+               orientation = .up
+            case .landscapeRight:
+               orientation = .down
+            default:
+               orientation = .right
+            }
+
             let currentMediaTime = CACurrentMediaTime()
 
             if self.isViewVisible && !self.isPaused && currentMediaTime - self.elapsedTime >= 1.0, let captureVideoPreviewLayer = self.captureVideoPreviewLayer, let recognitionLanguage = self.recognitionLanguage {
@@ -8588,7 +8675,7 @@ struct Capture: UIViewControllerRepresentable {
 
                self.elapsedTime = currentMediaTime
 
-               let recognizedText = await Task.detached { @Sendable [image, recognitionLanguage, recognizeRegion] in
+               let recognizedText = await Task.detached { @Sendable [image, recognitionLanguage, recognizeRegion, orientation] in
                   let recognizeTextRequest = VNRecognizeTextRequest()
 
                   recognizeTextRequest.preferBackgroundProcessing = true
@@ -8597,7 +8684,7 @@ struct Capture: UIViewControllerRepresentable {
                   recognizeTextRequest.recognitionLanguages = [recognitionLanguage]
                   recognizeTextRequest.regionOfInterest = recognizeRegion
 
-                  try? VNImageRequestHandler(ciImage: image, orientation: CGImagePropertyOrientation.up, options: [:]).perform([recognizeTextRequest])
+                  try? VNImageRequestHandler(ciImage: image, orientation: orientation, options: [:]).perform([recognizeTextRequest])
 
                   var maxConfidence: VNConfidence = 0.0
                   var text: String? = nil
@@ -8684,6 +8771,10 @@ struct Gallery: View {
                         .tag(index)
                         .transition(.opacity.animation(.linear))
                         .onAppear {
+                           guard self.paths.indices.contains(index) else {
+                              return
+                           }
+                           
                            self.playables[index] = (true, true)
                         }
                         .onDisappear {
