@@ -241,7 +241,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             
                             for value in paths.values {
                                 var isResolved = false
-
+                                
                                 for language in languages {
                                     for tuple in value {
                                         if tuple.2 == language {
@@ -318,11 +318,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 if !resolvedPaths.contains(where: { $0.1 == tuple.3 }), let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
                                     resolvedPaths.append((tuple.1, tuple.3))
                                 }
-
+                                
                                 isResolved = true
                             }
                         }
-
+                        
                         if isResolved {
                             break
                         }
@@ -352,236 +352,208 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
         }
         
-        do {
-            var alpha: Double
-            var interval: Double
-            var offset: Double
-            var keys = [(String, Bool)]()
-            let state = String(stars)
-            let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
+        var keys = [(String, Bool)]()
+        let state = String(stars)
+        
+        for i in 0..<characters.count {
+            let character = characters[i]
+            let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
+            let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
+            var animations: [Animation]? = nil
             
-            if safeBounds.width > safeBounds.height && !characters.isEmpty {
-                alpha = 1.0
-                interval = safeBounds.width / Double(characters.count)
-                offset = safeBounds.maxX - interval / 2.0 - self.bounds.midX
-                
-                let maxWidth = characters.reduce(0.0, { max((abs($1.insets.right) - abs($1.insets.left)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * scale / self.traitCollection.displayScale, $0) })
-                let maxHeight = characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * scale / self.traitCollection.displayScale, $0) })
-                let horizontalScale = maxWidth > 0.0 ? interval / maxWidth : 1.0
-                let verticalScale = maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0
-                
-                self.systemScale = min(horizontalScale, verticalScale, 1.0)
-            } else {
-                alpha = 0.0
-                interval = 0.0
-                offset = 0.0
-                
-                self.systemScale = 1.0
+            for (key, value) in characterView.types.sorted(by: { $0.value.0 < $1.value.0 }) {
+                if let first = keys.first(where: { $0.0 == key }) {
+                    if first.1 {
+                        characterView.types[key] = (value.0, true, value.2)
+                    }
+                } else if types & Int(pow(2.0, Double(keys.count))) > 0 {
+                    characterView.types[key] = (value.0, true, value.2)
+                    keys.append((key, true))
+                } else {
+                    keys.append((key, false))
+                }
             }
             
-            for i in 0..<characters.count {
-                let character = characters[i]
-                let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
-                let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
-                var animations: [Animation]? = nil
-                
-                for (key, value) in characterView.types.sorted(by: { $0.value.0 < $1.value.0 }) {
-                    if let first = keys.first(where: { $0.0 == key }) {
-                        if first.1 {
-                            characterView.types[key] = (value.0, true, value.2)
-                        }
-                    } else if types & Int(pow(2.0, Double(keys.count))) > 0 {
-                        characterView.types[key] = (value.0, true, value.2)
-                        keys.append((key, true))
-                    } else {
-                        keys.append((key, false))
-                    }
-                }
-                
-                if i > 0 {
-                    characterView.isMirror = true
-                    characterView.alpha = alpha
-                }
-                
-                characterView.transform.tx = offset - interval * Double(i)
-                
-                Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
-                
-                if let date = dateComponents.date {
-                    Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                        if y.name == character.name {
-                            for sequence in y.sequences {
-                                if sequence.name == "Tick" {
-                                    x.append(sequence)
-                                }
-                            }
-                        }
-                    }), state: ISO8601DateFormatter.string(from: date, timeZone: .current, formatOptions: [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime])) { _ in [] }
-                }
-                
+            if i > 0 {
+                characterView.isMirror = true
+            }
+            
+            Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
+            
+            if let date = dateComponents.date {
                 Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
                     if y.name == character.name {
                         for sequence in y.sequences {
-                            if sequence.name == "Star" {
+                            if sequence.name == "Tick" {
                                 x.append(sequence)
                             }
                         }
                     }
-                }), state: state) { _ in [] }
+                }), state: ISO8601DateFormatter.string(from: date, timeZone: .current, formatOptions: [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime])) { _ in [] }
+            }
+            
+            Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                if y.name == character.name {
+                    for sequence in y.sequences {
+                        if sequence.name == "Star" {
+                            x.append(sequence)
+                        }
+                    }
+                }
+            }), state: state) { _ in [] }
+            
+            Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                if y.name == character.name {
+                    for sequence in y.sequences {
+                        if sequence.name == "Start" {
+                            x.append(sequence)
+                        }
+                    }
+                }
+            })) { x in
+                var y = x
                 
-                Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                    if y.name == character.name {
-                        for sequence in y.sequences {
-                            if sequence.name == "Start" {
-                                x.append(sequence)
-                            }
+                animations = x.compactMap({ sequence in
+                    for step in sequence {
+                        if case .animations(let animations) = step {
+                            return animations
                         }
                     }
-                })) { x in
-                    var y = x
                     
-                    animations = x.compactMap({ sequence in
-                        for step in sequence {
-                            if case .animations(let animations) = step {
-                                return animations
-                            }
-                        }
-                        
-                        return nil
-                    }).first
+                    return nil
+                }).first
+                
+                if i == 0 {
+                    var sequence = Sequence(name: nil, state: String())
                     
-                    if i == 0 {
-                        var sequence = Sequence(name: nil, state: String())
-                        
-                        for s in x {
-                            for step in s {
-                                sequence.append(step)
-                            }
+                    for s in x {
+                        for step in s {
+                            sequence.append(step)
                         }
-                        
-                        y.append(sequence)
                     }
                     
-                    y.append(Sequence(name: String()))
-                    
-                    return y
+                    y.append(sequence)
                 }
                 
-                if let animations {
-                    let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
-                    let screenScale = Int(round(self.traitCollection.displayScale))
-                    var pathSet = Set<String>()
-                    
-                    for animation in animations {
-                        for sprite in animation {
-                            if let path = sprite.path, !path.isEmpty && !pathSet.contains(path) {
-                                pathSet.insert(path)
-                            }
+                y.append(Sequence(name: String()))
+                
+                return y
+            }
+            
+            if let animations {
+                let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
+                let screenScale = Int(round(self.traitCollection.displayScale))
+                var pathSet = Set<String>()
+                
+                for animation in animations {
+                    for sprite in animation {
+                        if let path = sprite.path, !path.isEmpty && !pathSet.contains(path) {
+                            pathSet.insert(path)
                         }
                     }
+                }
+                
+                for relativePath in pathSet {
+                    let imageUrl = baseUrl.appending(path: relativePath, directoryHint: .inferFromPath)
+                    var image: CGImage? = nil
                     
-                    for relativePath in pathSet {
-                        let imageUrl = baseUrl.appending(path: relativePath, directoryHint: .inferFromPath)
-                        var image: CGImage? = nil
+                    if screenScale > 1 {
+                        let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
+                        let filename = "\(name)@\(screenScale)\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                        let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                         
-                        if screenScale > 1 {
-                            let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                            let filename = "\(name)@\(screenScale)\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
-                            let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
+                        if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                            defer {
+                                try? file.close()
+                            }
                             
-                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                defer {
-                                    try? file.close()
+                            if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                for i in 0..<CGImageSourceGetCount(imageSource) {
+                                    image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
+                                    
+                                    break
                                 }
-                                
-                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                    for i in 0..<CGImageSourceGetCount(imageSource) {
-                                        image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
+                            }
+                        }
+                    }
+                    
+                    if let image {
+                        characterView.cachedImages[relativePath] = image
+                    } else {
+                        let path = imageUrl.path(percentEncoded: false)
+                        
+                        if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                            defer {
+                                try? file.close()
+                            }
+                            
+                            if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                for i in 0..<CGImageSourceGetCount(imageSource) {
+                                    if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
+                                        characterView.cachedImages[relativePath] = image
                                         
                                         break
                                     }
                                 }
                             }
                         }
-                        
-                        if let image {
-                            characterView.cachedImages[relativePath] = image
-                        } else {
-                            let path = imageUrl.path(percentEncoded: false)
-                            
-                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                defer {
-                                    try? file.close()
-                                }
-                                
-                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                    for i in 0..<CGImageSourceGetCount(imageSource) {
-                                        if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
-                                            characterView.cachedImages[relativePath] = image
-                                            
-                                            break
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    let timelines = animations.map { Timeline(animation: $0) }
-                    let (image, fades) = characterView.preview(timelines: timelines, images: &characterView.cachedImages)
-                    
-                    if let image {
-                        let actualScale = scale * self.systemScale
-                        let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
-                        let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
-                        let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
-                        
-                        format.opaque = false
-                        format.preferredRange = .standard
-                        format.scale = self.traitCollection.displayScale
-                        
-                        let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
-                        let renderedImage = renderer.image { rendererContext in
-                            let context = rendererContext.cgContext
-                            
-                            if actualScale == floor(actualScale) {
-                                context.interpolationQuality = .none
-                                context.setAllowsAntialiasing(false)
-                            } else {
-                                context.interpolationQuality = .high
-                                context.setAllowsAntialiasing(true)
-                            }
-                            
-                            context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
-                            
-                            if characterView.isMirror {
-                                context.translateBy(x: imageSize.width, y: imageSize.height)
-                                context.scaleBy(x: -1.0, y: -1.0)
-                            } else {
-                                context.translateBy(x: 0, y: imageSize.height)
-                                context.scaleBy(x: 1.0, y: -1.0)
-                            }
-                            
-                            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
-                        }
-                        
-                        if let image = renderedImage.cgImage {
-                            CATransaction.begin()
-                            CATransaction.setDisableActions(true)
-                            
-                            characterView.contentView.layer.contents = image
-                            
-                            CATransaction.commit()
-                        }
-                        
-                        for (key, value) in fades {
-                            characterView.fades[key] = value
-                        }
                     }
                 }
                 
-                self.characterViews.append(characterView)
+                let timelines = animations.map { Timeline(animation: $0) }
+                let (image, fades) = characterView.preview(timelines: timelines, images: &characterView.cachedImages)
+                
+                if let image {
+                    let actualScale = scale * self.systemScale
+                    let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
+                    let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
+                    let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
+                    
+                    format.opaque = false
+                    format.preferredRange = .standard
+                    format.scale = self.traitCollection.displayScale
+                    
+                    let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                    let renderedImage = renderer.image { rendererContext in
+                        let context = rendererContext.cgContext
+                        
+                        if actualScale == floor(actualScale) {
+                            context.interpolationQuality = .none
+                            context.setAllowsAntialiasing(false)
+                        } else {
+                            context.interpolationQuality = .high
+                            context.setAllowsAntialiasing(true)
+                        }
+                        
+                        context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
+                        
+                        if characterView.isMirror {
+                            context.translateBy(x: imageSize.width, y: imageSize.height)
+                            context.scaleBy(x: -1.0, y: -1.0)
+                        } else {
+                            context.translateBy(x: 0, y: imageSize.height)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                        }
+                        
+                        context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
+                    }
+                    
+                    if let image = renderedImage.cgImage {
+                        CATransaction.begin()
+                        CATransaction.setDisableActions(true)
+                        
+                        characterView.contentView.layer.contents = image
+                        
+                        CATransaction.commit()
+                    }
+                    
+                    for (key, value) in fades {
+                        characterView.fades[key] = value
+                    }
+                }
             }
+            
+            self.characterViews.append(characterView)
         }
     }
     
@@ -1209,11 +1181,10 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     
     func change(scale: Double) {
         let time = CACurrentMediaTime()
-        let duration = scale == self.userScale ? 0.0 : 0.5
         
         self.changed = time
         
-        UIView.transition(with: self, duration: duration, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+        UIView.transition(with: self, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
             self.alpha = 0.0
         }) { finished in
             if self.changed == time {
@@ -1318,7 +1289,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                 }
                 
-                UIView.transition(with: self, duration: duration, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                UIView.transition(with: self, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
                     self.alpha = 1.0
                 })
             }
@@ -1864,14 +1835,154 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     override func didMoveToWindow() {
         super.didMoveToWindow()
         
-        if self.window == nil {
+        if let window = self.window {
+            let systemScale = self.systemScale
+            let safeBounds = window.bounds.inset(by: window.safeAreaInsets)
+            
+            if safeBounds.width > safeBounds.height {
+                let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
+                var maxWidth = 0.0
+                var maxHeight = 0.0
+                
+                for i in 0..<self.characterViews.count {
+                    let characterView = self.characterViews[i]
+                    let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
+                    
+                    characterView.alpha = 1.0
+                    characterView.transform.tx = safeBounds.maxX - interval * (Double(i) + 0.5) - window.bounds.midX
+                    maxWidth = max(max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale, maxWidth)
+                    maxHeight = max(max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale, maxHeight)
+                }
+                
+                self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
+            } else {
+                let tx = safeBounds.midX - window.bounds.midX
+                
+                for i in 0..<self.characterViews.count {
+                    let characterView = self.characterViews[i]
+                    
+                    if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
+                        if i > 0 {
+                            characterView.alpha = 0.0
+                            characterView.transform.tx = tx
+                        } else {
+                            characterView.alpha = 1.0
+                            characterView.transform.tx = tx
+                        }
+                    }
+                }
+                
+                self.systemScale = 1.0
+            }
+            
+            if self.systemScale != systemScale {
+                for characterView in self.characterViews {
+                    let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale * self.systemScale
+                    let frame = CGRect(x: characterView.origin.x * preferredScale / self.traitCollection.displayScale, y: characterView.origin.y * preferredScale / self.traitCollection.displayScale, width: characterView.size.width * preferredScale / self.traitCollection.displayScale, height: characterView.size.height * preferredScale / self.traitCollection.displayScale)
+                    let messageWidth = characterView.constraints.reduce(0.0, { $1.firstItem === characterView.balloonView && $1.firstAttribute == .width ? $1.constant : $0 })
+                    let maxScale = messageWidth > 0.0 ? (messageWidth + 16.0) / messageWidth : 0.0
+                    let balloonHeight = characterView.constraints.reduce(0.0, { $1.firstItem === characterView.balloonView && $1.firstAttribute == .height ? $1.constant : $0 })
+                    let horizontalPadding = round((characterView.contentInsets.leading + characterView.contentInsets.trailing) * preferredScale / self.traitCollection.displayScale / 2.0)
+                    let verticalPadding = round((characterView.contentInsets.top + characterView.contentInsets.bottom) * preferredScale / self.traitCollection.displayScale / 2.0)
+                    
+                    for motionEffect in characterView.contentView.motionEffects {
+                        if let motionEffectGroup = motionEffect as? UIMotionEffectGroup, let motionEffects = motionEffectGroup.motionEffects {
+                            for me in motionEffects {
+                                if let interpolatingMotionEffect = me as? UIInterpolatingMotionEffect {
+                                    if interpolatingMotionEffect.type == .tiltAlongHorizontalAxis {
+                                        interpolatingMotionEffect.minimumRelativeValue = -horizontalPadding
+                                        interpolatingMotionEffect.maximumRelativeValue = horizontalPadding
+                                    } else if interpolatingMotionEffect.type == .tiltAlongVerticalAxis {
+                                        interpolatingMotionEffect.minimumRelativeValue = -verticalPadding
+                                        interpolatingMotionEffect.maximumRelativeValue = verticalPadding
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    for constraint in characterView.constraints {
+                        if constraint.firstItem === characterView {
+                            if constraint.firstAttribute == .width {
+                                constraint.constant = ceil(max(frame.width, messageWidth * maxScale))
+                            } else if constraint.firstAttribute == .height {
+                                constraint.constant = ceil(frame.height + balloonHeight * maxScale - frame.origin.y)
+                            }
+                        } else if constraint.firstItem === characterView.contentView && constraint.secondItem === characterView {
+                            if constraint.firstAttribute == .width {
+                                constraint.constant = -floor(max(frame.width, messageWidth * maxScale) - frame.width)
+                            } else if constraint.firstAttribute == .height {
+                                constraint.constant = -floor(balloonHeight * maxScale - frame.origin.y)
+                            }
+                        } else if constraint.firstItem === characterView.balloonView {
+                            if constraint.firstAttribute == .width {
+                                constraint.constant = messageWidth
+                            } else if constraint.firstAttribute == .bottom {
+                                constraint.constant = round(balloonHeight / 2.0 - frame.origin.y)
+                            }
+                        }
+                    }
+                    
+                    if !characterView.cachedTimelines.isEmpty {
+                        let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                        
+                        if let image {
+                            let actualScale = self.userScale * self.systemScale
+                            let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
+                            let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
+                            let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
+                            
+                            format.opaque = false
+                            format.preferredRange = .standard
+                            format.scale = self.traitCollection.displayScale
+                            
+                            let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                            let renderedImage = renderer.image { rendererContext in
+                                let context = rendererContext.cgContext
+                                
+                                if actualScale == floor(actualScale) {
+                                    context.interpolationQuality = .none
+                                    context.setAllowsAntialiasing(false)
+                                } else {
+                                    context.interpolationQuality = .high
+                                    context.setAllowsAntialiasing(true)
+                                }
+                                
+                                context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
+                                
+                                if characterView.isMirror {
+                                    context.translateBy(x: imageSize.width, y: imageSize.height)
+                                    context.scaleBy(x: -1.0, y: -1.0)
+                                } else {
+                                    context.translateBy(x: 0, y: imageSize.height)
+                                    context.scaleBy(x: 1.0, y: -1.0)
+                                }
+                                
+                                context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
+                            }
+                            
+                            if let image = renderedImage.cgImage {
+                                CATransaction.begin()
+                                CATransaction.setDisableActions(true)
+                                
+                                characterView.contentView.layer.contents = image
+                                
+                                CATransaction.commit()
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if self.displayLink == nil {
+                let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
+                
+                self.displayLink = displayLink
+                displayLink.add(to: .current, forMode: .common)
+            }
+        } else {
             self.displayLink?.invalidate()
             self.displayLink = nil
-        } else if self.displayLink == nil {
-            let displayLink = CADisplayLink(target: self, selector: #selector(self.step))
-            
-            self.displayLink = displayLink
-            displayLink.add(to: .current, forMode: .common)
         }
     }
     
@@ -1880,30 +1991,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         let systemScale = self.systemScale
         let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
-        let transitionDuration = self.window?.windowScene?.effectiveGeometry.isInteractivelyResizing == true ? 0.0 : 0.5
         
-        if safeBounds.width <= safeBounds.height {
-            let tx = safeBounds.midX - self.bounds.midX
-            
-            for i in 0..<self.characterViews.count {
-                let characterView = self.characterViews[i]
-                
-                if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
-                    if i > 0 {
-                        UIView.transition(with: characterView, duration: transitionDuration, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
-                            characterView.alpha = 0.0
-                            characterView.transform.tx = tx
-                        })
-                    } else {
-                        UIView.transition(with: characterView, duration: transitionDuration, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
-                            characterView.transform.tx = tx
-                        })
-                    }
-                }
-            }
-            
-            self.systemScale = 1.0
-        } else {
+        if safeBounds.width > safeBounds.height {
             let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
             var maxWidth = 0.0
             var maxHeight = 0.0
@@ -1911,31 +2000,47 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             for i in 0..<self.characterViews.count {
                 let characterView = self.characterViews[i]
                 let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
-                let width = max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale
-                let height = max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale
                 let tx = safeBounds.maxX - interval * (Double(i) + 0.5) - self.bounds.midX
                 
                 if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 1.0) {
                     if i > 0 {
-                        UIView.transition(with: characterView, duration: transitionDuration, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                        UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
                             characterView.alpha = 1.0
                             characterView.transform.tx = tx
                         })
                     } else {
-                        UIView.transition(with: characterView, duration: transitionDuration, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                        UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
                             characterView.transform.tx = tx
                         })
                     }
                 }
                 
-                maxWidth = max(width, maxWidth)
-                maxHeight = max(height, maxHeight)
+                maxWidth = max(max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale, maxWidth)
+                maxHeight = max(max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale, maxHeight)
             }
             
-            let horizontalScale = maxWidth > 0.0 ? interval / maxWidth : 1.0
-            let verticalScale = maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0
+            self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
+        } else {
+            let tx = safeBounds.midX - self.bounds.midX
             
-            self.systemScale = min(horizontalScale, verticalScale, 1.0)
+            for i in 0..<self.characterViews.count {
+                let characterView = self.characterViews[i]
+                
+                if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
+                    if i > 0 {
+                        UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            characterView.alpha = 0.0
+                            characterView.transform.tx = tx
+                        })
+                    } else {
+                        UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            characterView.transform.tx = tx
+                        })
+                    }
+                }
+            }
+            
+            self.systemScale = 1.0
         }
         
         if self.systemScale != systemScale {
@@ -2559,7 +2664,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         self.addConstraint(NSLayoutConstraint(item: characterView, attribute: .centerX, relatedBy: .equal, toItem: self, attribute: .centerX, multiplier: 1.0, constant: 0.0))
         self.addConstraint(NSLayoutConstraint(item: characterView, attribute: .bottom, relatedBy: .equal, toItem: self.safeAreaLayoutGuide, attribute: .bottom, multiplier: 1.0, constant: -72.0))
         
-        characterView.addConstraint(NSLayoutConstraint(item: characterView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: 0.0))
+        characterView.addConstraint(NSLayoutConstraint(item: characterView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(frame.width)))
         characterView.addConstraint(NSLayoutConstraint(item: characterView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: ceil(frame.height - frame.origin.y)))
         
         for constraint in characterView.constraints {
@@ -3830,7 +3935,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             if safeBounds.width > 0.0 && safeBounds.height > 0.0 {
                 let font = UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize, weight: .bold)
                 let lineHeight = ceil(font.lineHeight * 1.5)
-                let messageWidth = floor(UIDevice.current.userInterfaceIdiom == .phone && safeBounds.width < safeBounds.height ? safeBounds.width - 32.0 : safeBounds.width / Double(parentView.characterViews.count <= 2 ? 2 : parentView.characterViews.count) - 32.0)
+                let messageWidth = floor(self.traitCollection.horizontalSizeClass == .compact && self.traitCollection.verticalSizeClass == .regular && safeBounds.width < safeBounds.height ? safeBounds.width - 32.0 : safeBounds.width / Double(parentView.characterViews.count <= 2 ? 2 : parentView.characterViews.count) - 32.0)
                 let radius = lineHeight
                 let maxLineWidth = messageWidth - radius * 2.0
                 
