@@ -36,7 +36,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     private var guest: String? = nil
     private var isMute = false
     private var isRunning = true
-    private var changed: CFTimeInterval = 0.0
+    private var revision: UInt64 = 0
     private var stars = 0
     private var snapshot: ([Sprite], CGImage?) = ([], nil)
     var types: [(String, Bool)] {
@@ -606,14 +606,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     }
     
     func change(path: String) {
-        let time = CACurrentMediaTime()
+        self.revision &+= 1
         
-        self.changed = time
+        let revision = self.revision
         
         UIView.transition(with: self, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
             self.alpha = 0.0
         }) { finished in
-            if self.changed == time {
+            if self.revision == revision {
                 Task {
                     if finished {
                         var alpha: Double
@@ -1180,14 +1180,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     }
     
     func change(scale: Double) {
-        let time = CACurrentMediaTime()
+        self.revision &+= 1
         
-        self.changed = time
+        let revision = self.revision
         
         UIView.transition(with: self, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
             self.alpha = 0.0
         }) { finished in
-            if self.changed == time {
+            if self.revision == revision {
                 if finished {
                     self.userScale = scale
                     
