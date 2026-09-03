@@ -5934,9 +5934,9 @@ struct Peek: UIViewControllerRepresentable {
                case .portraitUpsideDown:
                   angle = 270
                case .landscapeLeft:
-                  angle = 0
-               case .landscapeRight:
                   angle = 180
+               case .landscapeRight:
+                  angle = 0
                default:
                   angle = 90
                }
@@ -6019,9 +6019,9 @@ struct Peek: UIViewControllerRepresentable {
             case .portraitUpsideDown:
                angle = 270
             case .landscapeLeft:
-               angle = 0
-            case .landscapeRight:
                angle = 180
+            case .landscapeRight:
+               angle = 0
             default:
                angle = 90
             }
@@ -6104,9 +6104,9 @@ struct Peek: UIViewControllerRepresentable {
             case .portraitUpsideDown:
                orientation = .left
             case .landscapeLeft:
-               orientation = .up
-            case .landscapeRight:
                orientation = .down
+            case .landscapeRight:
+               orientation = .up
             default:
                orientation = .right
             }
@@ -8470,9 +8470,9 @@ struct Capture: UIViewControllerRepresentable {
                case .portraitUpsideDown:
                   angle = 270
                case .landscapeLeft:
-                  angle = 0
-               case .landscapeRight:
                   angle = 180
+               case .landscapeRight:
+                  angle = 0
                default:
                   angle = 90
                }
@@ -8566,9 +8566,9 @@ struct Capture: UIViewControllerRepresentable {
             case .portraitUpsideDown:
                angle = 270
             case .landscapeLeft:
-               angle = 0
-            case .landscapeRight:
                angle = 180
+            case .landscapeRight:
+               angle = 0
             default:
                angle = 90
             }
@@ -8656,9 +8656,9 @@ struct Capture: UIViewControllerRepresentable {
             case .portraitUpsideDown:
                orientation = .left
             case .landscapeLeft:
-               orientation = .up
-            case .landscapeRight:
                orientation = .down
+            case .landscapeRight:
+               orientation = .up
             default:
                orientation = .right
             }
