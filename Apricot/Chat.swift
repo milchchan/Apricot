@@ -178,13 +178,14 @@ struct Chat: View {
                               
                               if !self.isPeekable {
                                  Image(systemName: "exclamationmark.triangle")
+                                    .symbolRenderingMode(.monochrome)
                                     .frame(
                                        width: 16.0,
                                        height: 16.0,
                                        alignment: .center
                                     )
                                     .background(.clear)
-                                    .foregroundStyle(Color(UIColor(white: 1.0, alpha: 1.0)))
+                                    .foregroundStyle(Color(hue: 0.0, saturation: 0.0, brightness: 1.0, opacity: 1.0))
                                     .font(
                                        .system(size: 16.0)
                                     )
@@ -197,7 +198,7 @@ struct Chat: View {
                                        alignment: .center
                                     )
                                     .background(.clear)
-                                    .foregroundStyle(Color(UIColor(white: 1.0, alpha: 1.0)))
+                                    .foregroundStyle(Color(hue: 0.0, saturation: 0.0, brightness: 1.0, opacity: 1.0))
                                     .font(.system(size: 16.0))
                                     .bold()
                               }
@@ -207,7 +208,7 @@ struct Chat: View {
                               height: self.horizontalSizeClass == .compact && self.verticalSizeClass == .regular && geometry.size.width < geometry.size.height ? (geometry.size.width - 32.0) / 2.0 : (geometry.size.width / 2.0 - 32.0) / 2.0,
                               alignment: .top
                            )
-                           .background(Color(UIColor(white: 0.0, alpha: 1.0)))
+                           .background(Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 1.0))
                            .overlay {
                               if !self.revealMenu {
                                  GeometryReader { proxy in
@@ -519,7 +520,7 @@ struct Chat: View {
                                  }
                               }
                               .compositingGroup()
-                              .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
+                              .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
                            }
                         }
                         .padding(EdgeInsets(
@@ -899,7 +900,7 @@ struct Chat: View {
                   .foregroundStyle(.primary)
                   .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true))
                   .compositingGroup()
-                  .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
+                  .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
                   .geometryGroup()
                   .animation(.linear(duration: 0.5),value: self.message)
                   .onTapGesture {
@@ -1086,7 +1087,7 @@ struct Chat: View {
             )
             .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true))
             .compositingGroup()
-            .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
+            .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
          ScrollView([.vertical]) {
             LazyVStack(spacing: 0.0) {
                VStack(spacing: 0.0) {
@@ -1145,6 +1146,7 @@ struct Chat: View {
                            
                         if self.prompt.0 == nil {
                            Image(systemName: "exclamationmark.triangle")
+                              .symbolRenderingMode(.monochrome)
                               .frame(
                                  width: 16.0,
                                  height: 16.0,
@@ -1339,13 +1341,14 @@ struct Chat: View {
                         }) {
                            VStack(alignment: .center, spacing: 8.0) {
                               Image(systemName: "dice")
+                                 .symbolRenderingMode(.monochrome)
                                  .frame(
                                     width: 16.0,
                                     height: 16.0,
                                     alignment: .center
                                  )
                                  .background(.clear)
-                                 .foregroundStyle(.primary, .primary)
+                                 .foregroundStyle(.primary)
                                  .font(
                                     .system(size: 16.0)
                                  )
@@ -3493,7 +3496,7 @@ struct Stage: UIViewRepresentable {
                         
                         if codes.count < attempted.count || codes.contains(where: { $0 != 201 }) {
                            Task.detached {
-                              let image = UIImage(systemName: "exclamationmark.icloud", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
+                              let image = UIImage(systemName: "exclamationmark.icloud", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!.applyingSymbolConfiguration(.preferringMonochrome())!
                               
                               await MainActor.run {
                                  agentView.notify(characterView: first, image: image, text: nil, duration: 3.0)
@@ -4244,7 +4247,7 @@ struct Stage: UIViewRepresentable {
                   if CGImageDestinationFinalize(destination) {
                      FileManager.default.createFile(atPath: documentUrl.appending(path: "\(encodedFrames).png", directoryHint: .inferFromPath).path(percentEncoded: false), contents: data as Data, attributes: nil)
                      
-                     let image = UIImage(systemName: "arrow.down.doc", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
+                     let image = UIImage(systemName: "arrow.down.doc", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!.applyingSymbolConfiguration(.preferringMonochrome())!
                      
                      await MainActor.run {
                         guard let uiView = self?.uiView else {
@@ -8158,17 +8161,18 @@ struct Camera: View {
                path.addQuadCurve(to: CGPoint(x: self.recognizeRegion.origin.x, y: self.recognizeRegion.origin.y + self.recognizeRegion.height - radius), control: CGPoint(x: self.recognizeRegion.origin.x, y: self.recognizeRegion.origin.y + self.recognizeRegion.height))
                path.addLine(to: CGPoint(x: self.recognizeRegion.origin.x, y: self.recognizeRegion.origin.y + self.recognizeRegion.height - radius * 2.0))
             }
-            .stroke(Color(UIColor(white: 1.0, alpha: 1.0)), lineWidth: 2.0)
+            .stroke(Color(hue: 0.0, saturation: 0.0, brightness: 1.0, opacity: 1.0), lineWidth: 2.0)
             
             if !self.isRecognizable {
                Image(systemName: "exclamationmark.triangle")
+                  .symbolRenderingMode(.monochrome)
                   .frame(
                      width: 16.0,
                      height: 16.0,
                      alignment: .center
                   )
                   .background(.clear)
-                  .foregroundStyle(Color(UIColor(white: 1.0, alpha: 1.0)))
+                  .foregroundStyle(Color(hue: 0.0, saturation: 0.0, brightness: 1.0, opacity: 1.0))
                   .font(
                      .system(size: 16.0)
                   )
@@ -8181,7 +8185,7 @@ struct Camera: View {
                      alignment: .center
                   )
                   .background(.clear)
-                  .foregroundStyle(Color(UIColor(white: 1.0, alpha: 1.0)))
+                  .foregroundStyle(Color(hue: 0.0, saturation: 0.0, brightness: 1.0, opacity: 1.0))
                   .font(.system(size: 16.0))
                   .bold()
             } else {
@@ -8225,7 +8229,7 @@ struct Camera: View {
             maxHeight: .infinity
          )
          .ignoresSafeArea(.all)
-         .background(Color(UIColor(white: 0.0, alpha: 1.0)))
+         .background(Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 1.0))
          .navigationBarTitleDisplayMode(.inline)
          .toolbarBackground(.hidden, for: .navigationBar)
          .toolbar {
@@ -8754,7 +8758,7 @@ struct Gallery: View {
                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                            .background(Color(uiColor: .systemBackground))
                            .clipShape(RoundedRectangle(cornerRadius: 16.0))
-                           .shadow(color: Color(UIColor(white: 0.0, alpha: 0.25)), radius: 8.0, x: 0.0, y: 0.0)
+                           .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
                            .opacity(self.playables[index].0 ? 1.0 : 0.0)
                            .transaction {
                               $0.addAnimationCompletion(criteria: .logicallyComplete) {
@@ -9911,6 +9915,7 @@ struct Settings: View {
                         EmptyView()
                      } minimumValueLabel: {
                         Image(systemName: "thermometer.low")
+                           .symbolRenderingMode(.monochrome)
                            .background(.clear)
                            .foregroundStyle(.primary)
                            .font(
@@ -9918,6 +9923,7 @@ struct Settings: View {
                            )
                      } maximumValueLabel: {
                         Image(systemName: "thermometer.high")
+                           .symbolRenderingMode(.monochrome)
                            .background(.clear)
                            .foregroundStyle(.primary)
                            .font(
