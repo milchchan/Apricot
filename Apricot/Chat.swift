@@ -46,7 +46,7 @@ struct Chat: View {
    @State private var isPaused = false
    @State private var isChanging = false
    @State private var isIdle = false
-   @State private var isLoading = false
+   @State private var loadingState: (Bool, UInt64) = (false, 0)
    @State private var loadingAmount = 0.0
    @State private var shakes = 0
    @State private var volumeLevel = 0.0
@@ -75,7 +75,7 @@ struct Chat: View {
                   Stage(prompt: self.$prompt, logs: self.$logs, resource: Binding<(old: String, new: String)>(get: { (old: self.selection, new: self.path.wrappedValue) }, set: { newValue in
                      self.selection = newValue.old
                      self.path.wrappedValue = newValue.new
-                  }), attributes: self.$script.attributes, types: self.$types, labels: self.$labels, likability: self.$likability, choices: self.$choices, words: self.$script.words, active: self.isActive, pause: self.revealMenu || self.showActivity || self.showDictionary || self.showGallery || self.showSettings, idle: self.$isIdle, changing: self.$isChanging, loading: self.$isLoading, discoveries: self.$discoveries, temperature: self.temperature, accent: self.convert(from: self.accent.wrappedValue), scale: self.scale, mute: self.mute)
+                  }), attributes: self.$script.attributes, types: self.$types, labels: self.$labels, likability: self.$likability, choices: self.$choices, words: self.$script.words, active: self.isActive, pause: self.revealMenu || self.showActivity || self.showDictionary || self.showGallery || self.showSettings, idle: self.$isIdle, changing: self.$isChanging, loading: self.$loadingState, discoveries: self.$discoveries, temperature: self.temperature, accent: self.convert(from: self.accent.wrappedValue), scale: self.scale, mute: self.mute)
                   .frame(
                      minWidth: 0.0,
                      maxWidth: .infinity,
@@ -154,7 +154,7 @@ struct Chat: View {
                      if self.isPeeking {
                         ZStack {
                            ZStack {
-                              Peek(peekable: self.$isPeekable, ready: self.isActive && self.isIdle && !self.isLoading && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showGallery && !self.showSettings, pause: self.isPaused, onChange: { image in
+                              Peek(peekable: self.$isPeekable, ready: self.isActive && self.isIdle && !self.loadingState.0 && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showGallery && !self.showSettings, pause: self.isPaused, onChange: { image in
                                  if self.energy >= 1.0 {
                                     self.choices.removeAll()
                                     self.timestamp = Int(Date().timeIntervalSince1970)
@@ -295,7 +295,7 @@ struct Chat: View {
                         .offset(y: -floor(UIFont(name: "DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 5.0))!.lineHeight - UIFont(name: "DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 5.0))!.capHeight))
                      }
                      
-                     if self.isLoading {
+                     if self.loadingState.0 {
                         HStack(spacing: 8.0) {
                            ForEach(0..<3) { index in
                               Circle()
@@ -1769,8 +1769,12 @@ struct Chat: View {
          }
          
          if var prompt = first.prompt, generateRequired {
+            self.loadingState.1 &+= 1
+            
+            let generation = self.loadingState.1
+            
             withAnimation(.easeOut(duration: 0.5)) {
-               self.isLoading = true
+               self.loadingState.0 = true
             }
             
             if let memory = (await Task.detached {
@@ -2109,8 +2113,10 @@ struct Chat: View {
                }
             }
             
-            withAnimation(.easeIn(duration: 0.5)) {
-               self.isLoading = false
+            if self.loadingState.1 == generation {
+               withAnimation(.easeIn(duration: 0.5)) {
+                  self.loadingState.0 = false
+               }
             }
          }
          
@@ -2240,8 +2246,12 @@ struct Chat: View {
                   }
                   
                   if generateRequired {
+                     self.loadingState.1 &+= 1
+                     
+                     let generation = self.loadingState.1
+                     
                      withAnimation(.easeOut(duration: 0.5)) {
-                        self.isLoading = true
+                        self.loadingState.0 = true
                      }
                      
                      for i in 0..<newSequences.count {
@@ -2262,8 +2272,10 @@ struct Chat: View {
                         newSequences[i] = tempSequence
                      }
                      
-                     withAnimation(.easeIn(duration: 0.5)) {
-                        self.isLoading = false
+                     if self.loadingState.1 == generation {
+                        withAnimation(.easeIn(duration: 0.5)) {
+                           self.loadingState.0 = false
+                        }
                      }
                   }
                } else if modifier.isEmpty {
@@ -2422,8 +2434,12 @@ struct Chat: View {
          }
          
          if var prompt = first.prompt {
+            self.loadingState.1 &+= 1
+            
+            let generation = self.loadingState.1
+            
             withAnimation(.easeOut(duration: 0.5)) {
-               self.isLoading = true
+               self.loadingState.0 = true
             }
             
             if let memory = (await Task.detached {
@@ -2488,8 +2504,10 @@ struct Chat: View {
             }.value) {
                messages.append(["role": "user", "content": [["type": "image", "image": dataURL]]])
             } else {
-               withAnimation(.easeIn(duration: 0.5)) {
-                  self.isLoading = false
+               if self.loadingState.1 == generation {
+                  withAnimation(.easeIn(duration: 0.5)) {
+                     self.loadingState.0 = false
+                  }
                }
                
                return
@@ -2689,8 +2707,10 @@ struct Chat: View {
                }
             }
             
-            withAnimation(.easeIn(duration: 0.5)) {
-               self.isLoading = false
+            if self.loadingState.1 == generation {
+               withAnimation(.easeIn(duration: 0.5)) {
+                  self.loadingState.0 = false
+               }
             }
          }
          
@@ -3297,7 +3317,7 @@ struct Stage: UIViewRepresentable {
    var pause: Bool
    @Binding var idle: Bool
    @Binding var changing: Bool
-   @Binding var loading: Bool
+   @Binding var loading: (Bool, UInt64)
    @Binding var discoveries: [Word]
    var temperature: Double
    var accent: UIColor
@@ -3305,7 +3325,7 @@ struct Stage: UIViewRepresentable {
    var mute: Bool
    @State var permissions = Set<String>()
    
-   init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, words: Binding<[Word]>, active: Bool, pause: Bool, idle: Binding<Bool>, changing: Binding<Bool>, loading: Binding<Bool>, discoveries: Binding<[Word]>, temperature: Double, accent: UIColor, scale: Double, mute: Bool) {
+   init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, words: Binding<[Word]>, active: Bool, pause: Bool, idle: Binding<Bool>, changing: Binding<Bool>, loading: Binding<(Bool, UInt64)>, discoveries: Binding<[Word]>, temperature: Double, accent: UIColor, scale: Double, mute: Bool) {
       self._prompt = prompt
       self._logs = logs
       self._resource = resource
@@ -3666,7 +3686,7 @@ struct Stage: UIViewRepresentable {
       }
       
       func agentShouldIdle(_ agent: AgentView, by name: String) -> Bool {
-         if self.parent.loading || !self.active || self.pause || agent.characterViews.contains(where: { $0.name != name && !$0.balloonView!.isHidden }) || Double.random(in: 0.0..<1.0) < 0.5 {
+         if self.parent.loading.0 || !self.active || self.pause || agent.characterViews.contains(where: { $0.name != name && !$0.balloonView!.isHidden }) || Double.random(in: 0.0..<1.0) < 0.5 {
             return true
          }
          
@@ -4331,8 +4351,12 @@ struct Stage: UIViewRepresentable {
                }
                
                if var prompt = first.prompt, generateRequired {
+                  self.parent.loading.1 &+= 1
+                  
+                  let generation = self.parent.loading.1
+                  
                   withAnimation(.easeOut(duration: 0.5)) {
-                     self.parent.loading = true
+                     self.parent.loading.0 = true
                   }
                   
                   if let memory = (await Task.detached {
@@ -4671,8 +4695,10 @@ struct Stage: UIViewRepresentable {
                      }
                   }
                   
-                  withAnimation(.easeIn(duration: 0.5)) {
-                     self.parent.loading = false
+                  if self.parent.loading.1 == generation {
+                     withAnimation(.easeIn(duration: 0.5)) {
+                        self.parent.loading.0 = false
+                     }
                   }
                }
                
@@ -4801,8 +4827,12 @@ struct Stage: UIViewRepresentable {
                         }
                         
                         if generateRequired {
+                           self.parent.loading.1 &+= 1
+                           
+                           let generation = self.parent.loading.1
+                           
                            withAnimation(.easeOut(duration: 0.5)) {
-                              self.parent.loading = true
+                              self.parent.loading.0 = true
                            }
                            
                            for i in 0..<newSequences.count {
@@ -4823,8 +4853,10 @@ struct Stage: UIViewRepresentable {
                               newSequences[i] = tempSequence
                            }
                            
-                           withAnimation(.easeIn(duration: 0.5)) {
-                              self.parent.loading = false
+                           if self.parent.loading.1 == generation {
+                              withAnimation(.easeIn(duration: 0.5)) {
+                                 self.parent.loading.0 = false
+                              }
                            }
                         }
                      } else if modifier.isEmpty {
@@ -4975,8 +5007,12 @@ struct Stage: UIViewRepresentable {
                   time = CACurrentMediaTime()
                }
                
+               self.parent.loading.1 &+= 1
+               
+               let generation = self.parent.loading.1
+               
                withAnimation(.easeOut(duration: 0.5)) {
-                  self.parent.loading = true
+                  self.parent.loading.0 = true
                }
                
                if let memory = (await Task.detached {
@@ -5321,8 +5357,10 @@ struct Stage: UIViewRepresentable {
                   queue.removeAll()
                }
                
-               withAnimation(.easeIn(duration: 0.5)) {
-                  self.parent.loading = false
+               if self.parent.loading.1 == generation {
+                  withAnimation(.easeIn(duration: 0.5)) {
+                     self.parent.loading.0 = false
+                  }
                }
                
                for i in 0..<sequences.count {
