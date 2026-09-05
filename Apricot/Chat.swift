@@ -3967,10 +3967,9 @@ struct Stage: UIViewRepresentable {
                }.value
                
                if !words.isEmpty {
-                  let image = await Task.detached { UIImage(systemName: "plus", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))! }.value
                   let word = words[Int.random(in: 0..<words.count)]
                   
-                  agent.notify(characterView: characterView, image: image, text: word.name, duration: 3.0) { [weak self] in
+                  agent.notify(characterView: characterView, image: await Task.detached { UIImage(systemName: "plus", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))! }.value, text: word.name, duration: 3.0) { [weak self] in
                      guard let self else {
                         return
                      }
