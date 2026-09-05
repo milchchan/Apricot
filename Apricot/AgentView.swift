@@ -1297,7 +1297,6 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     }
     
     func notify(characterView: CharacterView, image: UIImage, text: String?, duration: Double, action: (() -> Void)? = nil) {
-        let backgroundColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.0, alpha: 1.0) : UIColor(white: 1.0, alpha: 1.0) }
         let time = characterView.subviews.reduce(CACurrentMediaTime()) { time, subview in
             if let animation = subview.layer.animation(forKey: "notify") {
                 return max(time, animation.beginTime + animation.duration)
@@ -1306,12 +1305,10 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             return time
         }
         let button = UIButton(type: .system)
-        var configuration = UIButton.Configuration.plain()
+        var configuration = UIButton.Configuration.glass()
         let font = UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize, weight: .bold)
         let length = font.lineHeight + 16.0
         
-        configuration.image = image.withRenderingMode(.alwaysTemplate)
-        configuration.background.backgroundColor = backgroundColor
         configuration.cornerStyle = .capsule
         
         if let text {
@@ -1333,7 +1330,10 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         button.isUserInteractionEnabled = false
         
         if let action {
-            configuration.baseForegroundColor = self.accentColor ?? UIColor(named: "AccentColor")!
+            let color = self.accentColor ?? UIColor(named: "AccentColor")!
+            
+            configuration.image = image.withTintColor(color, renderingMode: .alwaysOriginal)
+            configuration.baseForegroundColor = color
             
             button.isExclusiveTouch = true
             button.configuration = configuration
@@ -1377,17 +1377,20 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     return
                 }
                 
-                button.layer.opacity = 1.0
                 button.isUserInteractionEnabled = true
             }
         } else {
-            configuration.baseForegroundColor = UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 1.0, alpha: 1.0) : UIColor(white: 0.0, alpha: 1.0) }
+            configuration.image = image.withTintColor(.label, renderingMode: .alwaysOriginal)
+            configuration.baseForegroundColor = .label
             
             button.configuration = configuration
         }
         
-        button.layer.opacity = 0.0
         button.layer.transform = CATransform3DMakeScale(1.5, -1.5, 1.0)
+        button.layer.shadowRadius = 8.0
+        button.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+        button.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
+        button.layer.shadowOpacity = 0.25
         characterView.insertSubview(button, belowSubview: characterView.balloonView!)
         characterView.addConstraint(NSLayoutConstraint(item: button, attribute: .centerX, relatedBy: .equal, toItem: characterView, attribute: .centerX, multiplier: 1.0, constant: 0.0))
         characterView.addConstraint(NSLayoutConstraint(item: button, attribute: .bottom, relatedBy: .equal, toItem: characterView, attribute: .bottom, multiplier: 1.0, constant: button.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height))
@@ -1409,7 +1412,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         animationGroup.beginTime = time
         animationGroup.duration = duration + 2.0
         animationGroup.isRemovedOnCompletion = false
-        animationGroup.fillMode = .forwards
+        animationGroup.fillMode = .both
         animationGroup.delegate = self
         animationGroup.animations = [keyframeAnimation1, keyframeAnimation2]
         
