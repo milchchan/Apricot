@@ -3348,7 +3348,16 @@ struct Stage: UIViewRepresentable {
    }
    
    func makeUIView(context: Context) -> WallView {
+      final class WrapView: UIView {
+         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let view = super.hitTest(point, with: event)
+            
+            return view === self ? nil : view
+         }
+      }
+      
       let wallView = WallView(frame: .zero)
+      let wrapView = WrapView(frame: .zero)
       let agentView = AgentView(path: self.resource.old.isEmpty ? Double.random(in: 0..<1) < 0.5 ? "Milch" : "Merku" : self.resource.old, types: self.types, scale: self.scale, stars: self.words.count)
       
       agentView.accent = self.accent
@@ -3356,14 +3365,21 @@ struct Stage: UIViewRepresentable {
       
       context.coordinator.uiView = wallView
       context.coordinator.scale = self.scale
+      wrapView.translatesAutoresizingMaskIntoConstraints = false
+      wrapView.backgroundColor = .clear
       agentView.translatesAutoresizingMaskIntoConstraints = false
       agentView.delegate = context.coordinator
       wallView.delegate = context.coordinator
-      wallView.addSubview(agentView)
-      wallView.addConstraint(NSLayoutConstraint(item: agentView, attribute: .centerX, relatedBy: .equal, toItem: wallView, attribute: .centerX, multiplier: 1.0, constant: 0.0))
-      wallView.addConstraint(NSLayoutConstraint(item: agentView, attribute: .centerY, relatedBy: .equal, toItem: wallView, attribute: .centerY, multiplier: 1.0, constant: 0.0))
-      wallView.addConstraint(NSLayoutConstraint(item: agentView, attribute: .width, relatedBy: .equal, toItem: wallView, attribute: .width, multiplier: 1.0, constant: 0.0))
-      wallView.addConstraint(NSLayoutConstraint(item: agentView, attribute: .height, relatedBy: .equal, toItem: wallView, attribute: .height, multiplier: 1.0, constant: 0.0))
+      wrapView.addSubview(agentView)
+      wallView.addSubview(wrapView)
+      wallView.addConstraint(NSLayoutConstraint(item: agentView, attribute: .centerX, relatedBy: .equal, toItem: wrapView, attribute: .centerX, multiplier: 1.0, constant: 0.0))
+      wallView.addConstraint(NSLayoutConstraint(item: agentView, attribute: .centerY, relatedBy: .equal, toItem: wrapView, attribute: .centerY, multiplier: 1.0, constant: 0.0))
+      wallView.addConstraint(NSLayoutConstraint(item: agentView, attribute: .width, relatedBy: .equal, toItem: wrapView, attribute: .width, multiplier: 1.0, constant: 0.0))
+      wallView.addConstraint(NSLayoutConstraint(item: agentView, attribute: .height, relatedBy: .equal, toItem: wrapView, attribute: .height, multiplier: 1.0, constant: 0.0))
+      wallView.addConstraint(NSLayoutConstraint(item: wrapView, attribute: .centerX, relatedBy: .equal, toItem: wallView, attribute: .centerX, multiplier: 1.0, constant: 0.0))
+      wallView.addConstraint(NSLayoutConstraint(item: wrapView, attribute: .centerY, relatedBy: .equal, toItem: wallView, attribute: .centerY, multiplier: 1.0, constant: 0.0))
+      wallView.addConstraint(NSLayoutConstraint(item: wrapView, attribute: .width, relatedBy: .equal, toItem: wallView, attribute: .width, multiplier: 1.0, constant: 0.0))
+      wallView.addConstraint(NSLayoutConstraint(item: wrapView, attribute: .height, relatedBy: .equal, toItem: wallView, attribute: .height, multiplier: 1.0, constant: 0.0))
       
       Task {
          self.attributes.append(contentsOf: agentView.attributes)
@@ -3380,35 +3396,34 @@ struct Stage: UIViewRepresentable {
    
    func updateUIView(_ uiView: WallView, context: Context) {
       Task {
-         for view in uiView.subviews {
+         for view in uiView.subviews.flatMap(\.subviews) {
             if let agentView = view as? AgentView {
-               var labelSet = Set<String>(self.labels)
-               var isUpdated = false
-               var flags = self.types
-               var current = self.labels
-               var types = agentView.types
-               var typeIndex = -1
-               
                if let first = agentView.characterViews.first {
                   if self.resource.old != self.resource.new {
                      self.resource.old = self.resource.new
                      
-                     await Script.shared.run(name: first.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                        if y.name == first.name {
-                           for sequence in y.sequences {
-                              if sequence.name == "Stop" {
-                                 x.append(sequence)
+                     if agentView.running {
+                        await Script.shared.run(name: first.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                           if y.name == first.name {
+                              for sequence in y.sequences {
+                                 if sequence.name == "Stop" {
+                                    x.append(sequence)
+                                 }
                               }
                            }
+                        }), words: []) { x in
+                           var y = x
+                           
+                           y.append(Sequence(name: nil))
+                           
+                           Script.shared.queue.removeAll()
+                           
+                           return y
                         }
-                     }), words: []) { x in
-                        var y = x
+                     } else {
+                        agentView.change(path: self.resource.new)
                         
-                        y.append(Sequence(name: nil))
-                        
-                        Script.shared.queue.removeAll()
-                        
-                        return y
+                        self.choices.removeAll()
                      }
                   }
                   
@@ -3526,6 +3541,13 @@ struct Stage: UIViewRepresentable {
                      }
                   }
                }
+               
+               var labelSet = Set<String>(self.labels)
+               var isUpdated = false
+               var flags = self.types
+               var current = self.labels
+               var types = agentView.types
+               var typeIndex = -1
                
                for i in 0..<current.count {
                   if flags & Int(pow(2.0, Double(i))) > 0 {
@@ -4053,24 +4075,31 @@ struct Stage: UIViewRepresentable {
       func agentDidStop(_ agent: AgentView) {
          agent.change(path: self.parent.resource.new)
          
-         self.parent.attributes.removeAll()
-         self.parent.types = 0
          self.parent.choices.removeAll()
-         self.parent.permissions.removeAll()
       }
       
-      func agentDidChange(_ agent: AgentView) {
-         self.parent.attributes.append(contentsOf: agent.attributes)
+      func agentDidChange(_ agent: AgentView, successfully flag: Bool) {
+         self.parent.resource = (old: agent.path, new: agent.path)
          
-         withAnimation {
-            self.parent.likability = nil
-            self.parent.changing = false
-         }
-         
-         self.lines.removeAll()
-         
-         if let uiView = self.uiView {
-            uiView.reload(lines: [])
+         if flag {
+            self.parent.attributes = agent.attributes
+            self.parent.types = 0
+            self.parent.permissions.removeAll()
+            
+            withAnimation {
+               self.parent.likability = nil
+               self.parent.changing = false
+            }
+            
+            self.lines.removeAll()
+            
+            if let uiView = self.uiView {
+               uiView.reload(lines: [])
+            }
+         } else if agent.running {
+            withAnimation {
+               self.parent.changing = false
+            }
          }
       }
       
@@ -4189,7 +4218,7 @@ struct Stage: UIViewRepresentable {
                   }
                   
                   Task {
-                     await self.talk(word: word, temperature: self.temperature, multiple: wall.subviews.compactMap({ $0 as? AgentView }).first.map({ agent in
+                     await self.talk(word: word, temperature: self.temperature, multiple: wall.subviews.flatMap(\.subviews).compactMap({ $0 as? AgentView }).first.map({ agent in
                         let safeBounds = agent.bounds.inset(by: agent.safeAreaInsets)
                         
                         return safeBounds.width > safeBounds.height
@@ -4201,7 +4230,7 @@ struct Stage: UIViewRepresentable {
                   let word = Word(name: choice.name, attributes: choice.attributes)
                   
                   Task {
-                     await self.talk(word: word, temperature: self.temperature, multiple: wall.subviews.compactMap({ $0 as? AgentView }).first.map({ agent in
+                     await self.talk(word: word, temperature: self.temperature, multiple: wall.subviews.flatMap(\.subviews).compactMap({ $0 as? AgentView }).first.map({ agent in
                         let safeBounds = agent.bounds.inset(by: agent.safeAreaInsets)
                         
                         return safeBounds.width > safeBounds.height
@@ -4273,7 +4302,7 @@ struct Stage: UIViewRepresentable {
                            return
                         }
                         
-                        for view in uiView.subviews {
+                        for view in uiView.subviews.flatMap(\.subviews) {
                            if let agentView = view as? AgentView {
                               if let characterView = agentView.characterViews.first {
                                  agentView.notify(characterView: characterView, image: image, text: nil, duration: 3.0)
@@ -9575,6 +9604,13 @@ struct Settings: View {
             }
          }
          .transition(.opacity)
+         .onChange(of: self.resource) {
+            withAnimation {
+               for index in self.paths.indices {
+                  self.characters[index].2 = self.paths[index] == self.resource
+               }
+            }
+         }
          .task {
             let (purchased, characters) = await self.load()
             
@@ -9634,20 +9670,11 @@ struct Settings: View {
                         } else if self.resource != self.paths[index] {
                            self.resource = self.paths[index]
                            
-                           for i in 0..<self.paths.count {
-                              if self.paths[i] == self.resource {
-                                 dismiss()
-                                 
-                                 withAnimation {
-                                    self.characters[i].2 = true
-                                    self.changing = true
-                                 }
-                              } else {
-                                 withAnimation {
-                                    self.characters[i].2 = false
-                                 }
-                              }
+                           withAnimation {
+                              self.changing = true
                            }
+                           
+                           dismiss()
                         }
                      }
                   }) {
@@ -10148,7 +10175,7 @@ struct Settings: View {
                                  
                                  if scale > 1 {
                                     let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                                    let filename = "\(name)@\(scale)\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                                    let filename = "\(name)@\(scale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
                                     let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                                     
                                     if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
@@ -10274,7 +10301,7 @@ struct Settings: View {
                               
                               if scale > 1 {
                                  let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                                 let filename = "\(name)@\(scale)\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                                 let filename = "\(name)@\(scale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
                                  let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                                  
                                  if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
