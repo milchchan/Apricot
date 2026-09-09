@@ -207,7 +207,7 @@ class WallView: UIView {
                                         } else {
                                             if scale > 1 {
                                                 let name = url.lastPathComponent[url.lastPathComponent.startIndex..<url.lastPathComponent.index(url.lastPathComponent.endIndex, offsetBy: -url.pathExtension.count - 1)]
-                                                let filename = "\(name)@\(scale)\(url.lastPathComponent[url.lastPathComponent.index(url.lastPathComponent.startIndex, offsetBy: name.count)..<url.lastPathComponent.endIndex])"
+                                                let filename = "\(name)@\(scale)x\(url.lastPathComponent[url.lastPathComponent.index(url.lastPathComponent.startIndex, offsetBy: name.count)..<url.lastPathComponent.endIndex])"
                                                 let path = url.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                                                 
                                                 if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
