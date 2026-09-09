@@ -20,7 +20,7 @@ protocol AgentDelegate: AnyObject {
     func agentDidRefresh(_ agent: AgentView)
     func agentDidTransition(_ agent: AgentView)
     func agentDidStop(_ agent: AgentView)
-    func agentDidChange(_ agent: AgentView)
+    func agentDidChange(_ agent: AgentView, successfully flag: Bool)
     func agentDidUpdate(_ agent: AgentView, background: [[(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]]?)
 }
 
@@ -28,6 +28,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     weak var delegate: (any AgentDelegate)? = nil
     var characterViews = [CharacterView]()
     var attributes = [String]()
+    private(set) var path = String()
     private var displayLink: CADisplayLink? = nil
     private var audioPlayer: AVAudioPlayer? = nil
     private var accentColor: UIColor? = nil
@@ -36,7 +37,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     private var guest: String? = nil
     private var isMute = false
     private var isRunning = true
-    private var revision: UInt64 = 0
+    private var revision: (UInt64, UInt64) = (0, 0)
     private var stars = 0
     private var snapshot: ([Sprite], CGImage?) = ([], nil)
     var types: [(String, Bool)] {
@@ -88,6 +89,9 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
         }
     }
+    var running: Bool {
+        return self.isRunning
+    }
     var idle: Bool {
         return self.characterViews.allSatisfy({ $0.lastIdleDate != nil })
     }
@@ -105,6 +109,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
         
         self.init(frame: .zero)
+        self.path = path
         self.userScale = scale
         self.stars = stars
         
@@ -459,7 +464,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     
                     if screenScale > 1 {
                         let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                        let filename = "\(name)@\(screenScale)\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                        let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
                         let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                         
                         if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
@@ -500,57 +505,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                 }
                 
-                let timelines = animations.map { Timeline(animation: $0) }
-                let (image, fades) = characterView.preview(timelines: timelines, images: &characterView.cachedImages)
-                
-                if let image {
-                    let actualScale = scale * self.systemScale
-                    let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
-                    let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
-                    let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
-                    
-                    format.opaque = false
-                    format.preferredRange = .standard
-                    format.scale = self.traitCollection.displayScale
-                    
-                    let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
-                    let renderedImage = renderer.image { rendererContext in
-                        let context = rendererContext.cgContext
-                        
-                        if actualScale == floor(actualScale) {
-                            context.interpolationQuality = .none
-                            context.setAllowsAntialiasing(false)
-                        } else {
-                            context.interpolationQuality = .high
-                            context.setAllowsAntialiasing(true)
-                        }
-                        
-                        context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
-                        
-                        if characterView.isMirror {
-                            context.translateBy(x: imageSize.width, y: imageSize.height)
-                            context.scaleBy(x: -1.0, y: -1.0)
-                        } else {
-                            context.translateBy(x: 0, y: imageSize.height)
-                            context.scaleBy(x: 1.0, y: -1.0)
-                        }
-                        
-                        context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
-                    }
-                    
-                    if let image = renderedImage.cgImage {
-                        CATransaction.begin()
-                        CATransaction.setDisableActions(true)
-                        
-                        characterView.contentView.layer.contents = image
-                        
-                        CATransaction.commit()
-                    }
-                    
-                    for (key, value) in fades {
-                        characterView.fades[key] = value
-                    }
-                }
+                characterView.cachedTimelines.append(contentsOf: animations.map { Timeline(animation: $0) })
             }
             
             self.characterViews.append(characterView)
@@ -606,101 +561,132 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     }
     
     func change(path: String) {
-        self.revision &+= 1
+        self.revision.0 &+= 2
         
-        let revision = self.revision
+        let generation = self.revision.0
         
-        UIView.transition(with: self, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
-            self.alpha = 0.0
-        }) { finished in
-            if self.revision == revision {
-                Task {
+        UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
+            self.superview?.alpha = 0.0
+        }, completion: { finished in
+            if self.revision.0 == generation {
+                if generation % 2 == 0 {
                     if finished {
-                        var alpha: Double
-                        var interval: Double
-                        var offset: Double
-                        let (characters, attributes, guest) = await Task.detached {
-                            var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
-                            var attributes = [String]()
-                            var guest: String? = nil
-                            
-                            for p in Script.resolve(directory: path) {
-                                let tuple = Script.Parser().parse(path: p)
+                        self.path = path
+                        self.revision.0 &+= 1
+                        
+                        Task {
+                            var alpha: Double
+                            var interval: Double
+                            var offset: Double
+                            let (characters, attributes, guest) = await Task.detached {
+                                var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
+                                var attributes = [String]()
+                                var guest: String? = nil
                                 
-                                for character in tuple.0 {
-                                    if let index = characters.firstIndex(where: { $0.name == character.name }) {
-                                        characters[index] = (name: character.name, path: p, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets)
-                                    } else {
-                                        characters.append((name: character.name, path: p, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets))
-                                    }
-                                }
-                                
-                                for attribute in tuple.1 {
-                                    if !attributes.contains(attribute) {
-                                        attributes.append(attribute)
-                                    }
-                                }
-                            }
-                            
-                            attributes.sort { $0 < $1 }
-                            
-                            if characters.count == 1 {
-                                var resolvedPaths = [(String, String)]()
-                                let parser = Script.Parser()
-                                var languages = [String?]()
-                                
-                                parser.excludeSequences = true
-                                
-                                if let preferredLanguage = Locale.preferredLanguages.first {
-                                    let components = Locale.Language.Components(identifier: preferredLanguage)
+                                for p in Script.resolve(directory: path) {
+                                    let tuple = Script.Parser().parse(path: p)
                                     
-                                    if let languageCode = components.languageCode {
-                                        if let script = components.script {
-                                            languages.append("\(languageCode.identifier)-\(script.identifier)")
+                                    for character in tuple.0 {
+                                        if let index = characters.firstIndex(where: { $0.name == character.name }) {
+                                            characters[index] = (name: character.name, path: p, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets)
+                                        } else {
+                                            characters.append((name: character.name, path: p, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets))
                                         }
-                                        
-                                        languages.append(languageCode.identifier)
+                                    }
+                                    
+                                    for attribute in tuple.1 {
+                                        if !attributes.contains(attribute) {
+                                            attributes.append(attribute)
+                                        }
                                     }
                                 }
                                 
-                                languages.append(nil)
+                                attributes.sort { $0 < $1 }
                                 
-                                if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
-                                    let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
-                                    let documentsPath = documentsUrl.path(percentEncoded: false)
+                                if characters.count == 1 {
+                                    var resolvedPaths = [(String, String)]()
+                                    let parser = Script.Parser()
+                                    var languages = [String?]()
                                     
-                                    if FileManager.default.fileExists(atPath: documentsPath) {
-                                        var urlQueue: [(URL, String)] = [(documentsUrl, "Documents")]
-                                        var directories = [String]()
+                                    parser.excludeSequences = true
+                                    
+                                    if let preferredLanguage = Locale.preferredLanguages.first {
+                                        let components = Locale.Language.Components(identifier: preferredLanguage)
                                         
-                                        repeat {
-                                            let (baseUrl, basePath) = urlQueue.removeFirst()
+                                        if let languageCode = components.languageCode {
+                                            if let script = components.script {
+                                                languages.append("\(languageCode.identifier)-\(script.identifier)")
+                                            }
                                             
-                                            if let urls = try? FileManager.default.contentsOfDirectory(at: baseUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
-                                                for url in urls {
-                                                    if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .nameKey]), values.isDirectory ?? false, let name = values.name {
-                                                        let directory = "\(basePath)/\(name)"
-                                                        
-                                                        directories.append(directory)
-                                                        urlQueue.append((baseUrl.appending(path: name, directoryHint: .isDirectory), directory))
+                                            languages.append(languageCode.identifier)
+                                        }
+                                    }
+                                    
+                                    languages.append(nil)
+                                    
+                                    if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+                                        let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
+                                        let documentsPath = documentsUrl.path(percentEncoded: false)
+                                        
+                                        if FileManager.default.fileExists(atPath: documentsPath) {
+                                            var urlQueue: [(URL, String)] = [(documentsUrl, "Documents")]
+                                            var directories = [String]()
+                                            
+                                            repeat {
+                                                let (baseUrl, basePath) = urlQueue.removeFirst()
+                                                
+                                                if let urls = try? FileManager.default.contentsOfDirectory(at: baseUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
+                                                    for url in urls {
+                                                        if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .nameKey]), values.isDirectory ?? false, let name = values.name {
+                                                            let directory = "\(basePath)/\(name)"
+                                                            
+                                                            directories.append(directory)
+                                                            urlQueue.append((baseUrl.appending(path: name, directoryHint: .isDirectory), directory))
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        } while (!urlQueue.isEmpty)
-                                        
-                                        for directory in directories {
-                                            if let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl.appending(path: directory, directoryHint: .isDirectory), includingPropertiesForKeys: [.nameKey], options: .skipsHiddenFiles) {
-                                                var paths = [String: [(URL, String, String?, String, String?)]]()
-                                                
-                                                for url in urls {
-                                                    if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?))?\.(?:json|xml)$/) {
-                                                        let key = String(match.output.1)
-                                                        let path = url.path(percentEncoded: false)
-                                                        var characterName: String? = nil
-                                                        var prompt: String? = nil
-                                                        
-                                                        if var tuple = paths[key] {
-                                                            if let output = match.output.2 {
+                                            } while (!urlQueue.isEmpty)
+                                            
+                                            for directory in directories {
+                                                if let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl.appending(path: directory, directoryHint: .isDirectory), includingPropertiesForKeys: [.nameKey], options: .skipsHiddenFiles) {
+                                                    var paths = [String: [(URL, String, String?, String, String?)]]()
+                                                    
+                                                    for url in urls {
+                                                        if let values = try? url.resourceValues(forKeys: [.nameKey]), let name = values.name, let match = name.wholeMatch(of: /^(.+?)(?:\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?))?\.(?:json|xml)$/) {
+                                                            let key = String(match.output.1)
+                                                            let path = url.path(percentEncoded: false)
+                                                            var characterName: String? = nil
+                                                            var prompt: String? = nil
+                                                            
+                                                            if var tuple = paths[key] {
+                                                                if let output = match.output.2 {
+                                                                    var languageCode = String(output)
+                                                                    
+                                                                    for character in parser.parse(path: path).0 {
+                                                                        if let language = character.language {
+                                                                            languageCode = language
+                                                                        }
+                                                                        
+                                                                        characterName = character.name
+                                                                        prompt = character.prompt
+                                                                    }
+                                                                    
+                                                                    if let characterName {
+                                                                        tuple.append((url, directory, String(languageCode), characterName, prompt))
+                                                                    }
+                                                                } else {
+                                                                    for character in parser.parse(path: path).0 {
+                                                                        characterName = character.name
+                                                                        prompt = character.prompt
+                                                                    }
+                                                                    
+                                                                    if let characterName {
+                                                                        tuple.append((url, directory, nil, characterName, prompt))
+                                                                    }
+                                                                }
+                                                                
+                                                                paths[key] = tuple
+                                                            } else if let output = match.output.2 {
                                                                 var languageCode = String(output)
                                                                 
                                                                 for character in parser.parse(path: path).0 {
@@ -713,7 +699,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                                                 }
                                                                 
                                                                 if let characterName {
-                                                                    tuple.append((url, directory, String(languageCode), characterName, prompt))
+                                                                    paths[key] = [(url, directory, String(languageCode), characterName, prompt)]
                                                                 }
                                                             } else {
                                                                 for character in parser.parse(path: path).0 {
@@ -722,472 +708,458 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                                                 }
                                                                 
                                                                 if let characterName {
-                                                                    tuple.append((url, directory, nil, characterName, prompt))
+                                                                    paths[key] = [(url, directory, nil, characterName, prompt)]
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    for value in paths.values {
+                                                        var isResolved = false
+                                                        
+                                                        for language in languages {
+                                                            for tuple in value {
+                                                                if tuple.2 == language {
+                                                                    if let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
+                                                                        resolvedPaths.append((tuple.1, tuple.3))
+                                                                    }
+                                                                    
+                                                                    isResolved = true
                                                                 }
                                                             }
                                                             
-                                                            paths[key] = tuple
-                                                        } else if let output = match.output.2 {
-                                                            var languageCode = String(output)
-                                                            
-                                                            for character in parser.parse(path: path).0 {
-                                                                if let language = character.language {
-                                                                    languageCode = language
-                                                                }
-                                                                
-                                                                characterName = character.name
-                                                                prompt = character.prompt
-                                                            }
-                                                            
-                                                            if let characterName {
-                                                                paths[key] = [(url, directory, String(languageCode), characterName, prompt)]
-                                                            }
-                                                        } else {
-                                                            for character in parser.parse(path: path).0 {
-                                                                characterName = character.name
-                                                                prompt = character.prompt
-                                                            }
-                                                            
-                                                            if let characterName {
-                                                                paths[key] = [(url, directory, nil, characterName, prompt)]
+                                                            if isResolved {
+                                                                break
                                                             }
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }
+                                    }
+                                    
+                                    for resouce in ["Merku", "Milch"] {
+                                        var paths = [String: [(String, String, String?, String, String?)]]()
+                                        
+                                        for path in Bundle.main.paths(forResourcesOfType: "xml", inDirectory: resouce) {
+                                            let input = URL(filePath: path).deletingPathExtension().lastPathComponent
+                                            var characterName: String? = nil
+                                            var prompt: String? = nil
+                                            
+                                            if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?)$/) {
+                                                let key = String(match.output.1)
+                                                var languageCode = String(match.output.2)
                                                 
-                                                for value in paths.values {
-                                                    var isResolved = false
+                                                for character in parser.parse(path: path).0 {
+                                                    if let language = character.language {
+                                                        languageCode = language
+                                                    }
                                                     
-                                                    for language in languages {
-                                                        for tuple in value {
-                                                            if tuple.2 == language {
-                                                                if let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
-                                                                    resolvedPaths.append((tuple.1, tuple.3))
-                                                                }
-                                                                
-                                                                isResolved = true
-                                                            }
+                                                    characterName = character.name
+                                                    prompt = character.prompt
+                                                }
+                                                
+                                                if let characterName {
+                                                    if var tuple = paths[key] {
+                                                        tuple.append((path, resouce, languageCode, characterName, prompt))
+                                                        paths[key] = tuple
+                                                    } else {
+                                                        paths[key] = [(path, resouce, languageCode, characterName, prompt)]
+                                                    }
+                                                }
+                                            } else {
+                                                for character in parser.parse(path: path).0 {
+                                                    characterName = character.name
+                                                    prompt = character.prompt
+                                                }
+                                                
+                                                if let characterName {
+                                                    if var tuple = paths[input] {
+                                                        tuple.append((path, resouce, nil, characterName, prompt))
+                                                        paths[input] = tuple
+                                                    } else {
+                                                        paths[input] = [(path, resouce, nil, characterName, prompt)]
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        for value in paths.values {
+                                            var isResolved = false
+                                            
+                                            for language in languages {
+                                                for tuple in value {
+                                                    if tuple.2 == language {
+                                                        if !resolvedPaths.contains(where: { $0.1 == tuple.3 }), let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
+                                                            resolvedPaths.append((tuple.1, tuple.3))
                                                         }
                                                         
-                                                        if isResolved {
-                                                            break
-                                                        }
+                                                        isResolved = true
                                                     }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                for resouce in ["Merku", "Milch"] {
-                                    var paths = [String: [(String, String, String?, String, String?)]]()
-                                    
-                                    for path in Bundle.main.paths(forResourcesOfType: "xml", inDirectory: resouce) {
-                                        let input = URL(filePath: path).deletingPathExtension().lastPathComponent
-                                        var characterName: String? = nil
-                                        var prompt: String? = nil
-                                        
-                                        if let match = input.wholeMatch(of: /^(.+?)\.([a-z]{2,3}(?:-[A-Z][a-z]{3})?)$/) {
-                                            let key = String(match.output.1)
-                                            var languageCode = String(match.output.2)
-                                            
-                                            for character in parser.parse(path: path).0 {
-                                                if let language = character.language {
-                                                    languageCode = language
                                                 }
                                                 
-                                                characterName = character.name
-                                                prompt = character.prompt
-                                            }
-                                            
-                                            if let characterName {
-                                                if var tuple = paths[key] {
-                                                    tuple.append((path, resouce, languageCode, characterName, prompt))
-                                                    paths[key] = tuple
-                                                } else {
-                                                    paths[key] = [(path, resouce, languageCode, characterName, prompt)]
-                                                }
-                                            }
-                                        } else {
-                                            for character in parser.parse(path: path).0 {
-                                                characterName = character.name
-                                                prompt = character.prompt
-                                            }
-                                            
-                                            if let characterName {
-                                                if var tuple = paths[input] {
-                                                    tuple.append((path, resouce, nil, characterName, prompt))
-                                                    paths[input] = tuple
-                                                } else {
-                                                    paths[input] = [(path, resouce, nil, characterName, prompt)]
+                                                if isResolved {
+                                                    break
                                                 }
                                             }
                                         }
                                     }
                                     
-                                    for value in paths.values {
-                                        var isResolved = false
+                                    for i in stride(from: resolvedPaths.count - 1, through: 0, by: -1) {
+                                        if characters.contains(where: { $0.name == resolvedPaths[i].1 }) {
+                                            resolvedPaths.remove(at: i)
+                                        }
+                                    }
+                                    
+                                    if !resolvedPaths.isEmpty {
+                                        let (path, name) = resolvedPaths[Int.random(in: 0..<resolvedPaths.count)]
                                         
-                                        for language in languages {
-                                            for tuple in value {
-                                                if tuple.2 == language {
-                                                    if !resolvedPaths.contains(where: { $0.1 == tuple.3 }), let prompt = tuple.4, prompt.range(of: characters[0].name) != nil {
-                                                        resolvedPaths.append((tuple.1, tuple.3))
-                                                    }
+                                        for filename in Script.resolve(directory: path) {
+                                            for character in Script.Parser().parse(path: filename).0 {
+                                                if character.name == name {
+                                                    characters.append((name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: true, sequences: character.sequences, types: character.types, insets: character.insets))
+                                                    guest = character.name
                                                     
-                                                    isResolved = true
+                                                    break
                                                 }
                                             }
-                                            
-                                            if isResolved {
-                                                break
-                                            }
                                         }
                                     }
                                 }
                                 
-                                for i in stride(from: resolvedPaths.count - 1, through: 0, by: -1) {
-                                    if characters.contains(where: { $0.name == resolvedPaths[i].1 }) {
-                                        resolvedPaths.remove(at: i)
-                                    }
-                                }
-                                
-                                if !resolvedPaths.isEmpty {
-                                    let (path, name) = resolvedPaths[Int.random(in: 0..<resolvedPaths.count)]
-                                    
-                                    for filename in Script.resolve(directory: path) {
-                                        for character in Script.Parser().parse(path: filename).0 {
-                                            if character.name == name {
-                                                characters.append((name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: true, sequences: character.sequences, types: character.types, insets: character.insets))
-                                                guest = character.name
-                                                
-                                                break
-                                            }
+                                if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first, let urls = try? FileManager.default.contentsOfDirectory(at: cachesUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
+                                    for url in urls {
+                                        if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .nameKey]), let isDirectory = values.isDirectory, !isDirectory, let name = values.name, let match = name.firstMatch(of: /^[0-9a-f]{64}$/), !match.output.isEmpty {
+                                            try? FileManager.default.removeItem(atPath: url.path(percentEncoded: false))
                                         }
                                     }
                                 }
-                            }
-                            
-                            if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first, let urls = try? FileManager.default.contentsOfDirectory(at: cachesUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
-                                for url in urls {
-                                    if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .nameKey]), let isDirectory = values.isDirectory, !isDirectory, let name = values.name, let match = name.firstMatch(of: /^[0-9a-f]{64}$/), !match.output.isEmpty {
-                                        try? FileManager.default.removeItem(atPath: url.path(percentEncoded: false))
+                                
+                                if let containerUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.milchchan.Apricot"), let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
+                                    for url in urls {
+                                        if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .nameKey]), let isDirectory = values.isDirectory, !isDirectory, let name = values.name, UUID(uuidString: name) != nil {
+                                            try? FileManager.default.removeItem(atPath: url.path(percentEncoded: false))
+                                        }
                                     }
                                 }
+                                
+                                return (characters, attributes, guest)
+                            }.value
+                            
+                            for i in stride(from: Script.shared.characters.count - 1, through: 0, by: -1) {
+                                if !characters.contains(where: { $0.name == Script.shared.characters[i].name }) {
+                                    Script.shared.characters.remove(at: i)
+                                }
                             }
                             
-                            if let containerUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.milchchan.Apricot"), let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
-                                for url in urls {
-                                    if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .nameKey]), let isDirectory = values.isDirectory, !isDirectory, let name = values.name, UUID(uuidString: name) != nil {
-                                        try? FileManager.default.removeItem(atPath: url.path(percentEncoded: false))
+                            self.attributes.removeAll()
+                            self.attributes.append(contentsOf: attributes)
+                            
+                            for constraint in self.constraints.filter({ constraint in
+                                self.characterViews.contains(where: { characterView in
+                                    constraint.firstItem === characterView || constraint.firstItem === characterView.balloonView
+                                })
+                            }) {
+                                self.removeConstraint(constraint)
+                            }
+                            
+                            for characterView in self.characterViews {
+                                if let gestureRecognizers = characterView.contentView.gestureRecognizers {
+                                    for gestureRecognizer in gestureRecognizers {
+                                        characterView.contentView.removeGestureRecognizer(gestureRecognizer)
                                     }
                                 }
+                                
+                                if let audioPlayer = characterView.audioPlayer, audioPlayer.isPlaying {
+                                    audioPlayer.stop()
+                                }
+                                
+                                characterView.removeFromSuperview()
+                                characterView.balloonView!.removeFromSuperview()
                             }
                             
-                            return (characters, attributes, guest)
-                        }.value
-                        
-                        for i in stride(from: Script.shared.characters.count - 1, through: 0, by: -1) {
-                            if !characters.contains(where: { $0.name == Script.shared.characters[i].name }) {
-                                Script.shared.characters.remove(at: i)
-                            }
-                        }
-                        
-                        self.attributes.removeAll()
-                        self.attributes.append(contentsOf: attributes)
-                        
-                        for constraint in self.constraints.filter({ constraint in
-                            self.characterViews.contains(where: { characterView in
-                                constraint.firstItem === characterView || constraint.firstItem === characterView.balloonView
-                            })
-                        }) {
-                            self.removeConstraint(constraint)
-                        }
-                        
-                        for characterView in self.characterViews {
-                            if let gestureRecognizers = characterView.contentView.gestureRecognizers {
-                                for gestureRecognizer in gestureRecognizers {
-                                    characterView.contentView.removeGestureRecognizer(gestureRecognizer)
+                            self.characterViews.removeAll()
+                            
+                            if Script.shared.characters.count > characters.count {
+                                for i in stride(from: Script.shared.characters.count - 1, to: characters.count - 1, by: -1) {
+                                    Script.shared.characters.remove(at: i)
                                 }
                             }
                             
-                            if let audioPlayer = characterView.audioPlayer, audioPlayer.isPlaying {
-                                audioPlayer.stop()
+                            _ = await Script.shared.update { states in
+                                states.removeAll()
+                                
+                                return true
                             }
                             
-                            characterView.removeFromSuperview()
-                            characterView.balloonView!.removeFromSuperview()
-                        }
-                        
-                        self.characterViews.removeAll()
-                        
-                        if Script.shared.characters.count > characters.count {
-                            for i in stride(from: Script.shared.characters.count - 1, to: characters.count - 1, by: -1) {
-                                Script.shared.characters.remove(at: i)
-                            }
-                        }
-                        
-                        _ = await Script.shared.update { states in
-                            states.removeAll()
+                            Script.shared.queue.removeAll()
                             
-                            return true
-                        }
-                        
-                        Script.shared.queue.removeAll()
-                        
-                        self.snapshot = ([], nil)
-                        self.guest = guest
-                        
-                        let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
-                        
-                        if safeBounds.width > safeBounds.height && !characters.isEmpty {
-                            alpha = 1.0
-                            interval = safeBounds.width / Double(characters.count)
-                            offset = safeBounds.maxX - interval / 2.0 - self.bounds.midX
+                            self.snapshot = ([], nil)
+                            self.guest = guest
                             
-                            let maxWidth = characters.reduce(0.0, { max((abs($1.insets.right) - abs($1.insets.left)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
-                            let maxHeight = characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
-                            let horizontalScale = maxWidth > 0.0 ? interval / maxWidth : 1.0
-                            let verticalScale = maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0
+                            let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
                             
-                            self.systemScale = min(horizontalScale, verticalScale, 1.0)
-                        } else {
-                            alpha = 0.0
-                            interval = 0.0
-                            offset = 0.0
-                            
-                            self.systemScale = 1.0
-                        }
-                        
-                        let state = String(self.stars)
-                        
-                        for i in 0..<characters.count {
-                            let character = characters[i]
-                            let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
-                            let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
-                            var animations: [Animation]? = nil
-                            
-                            if i > 0 {
-                                characterView.isMirror = true
-                                characterView.alpha = alpha
-                            }
-                            
-                            characterView.transform.tx = offset - interval * Double(i)
-                            
-                            if i < Script.shared.characters.count {
-                                Script.shared.characters[i] = (name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences)
+                            if safeBounds.width > safeBounds.height && !characters.isEmpty {
+                                alpha = 1.0
+                                interval = safeBounds.width / Double(characters.count)
+                                offset = safeBounds.maxX - interval / 2.0 - self.bounds.midX
+                                
+                                let maxWidth = characters.reduce(0.0, { max((abs($1.insets.right) - abs($1.insets.left)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
+                                let maxHeight = characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
+                                let horizontalScale = maxWidth > 0.0 ? interval / maxWidth : 1.0
+                                let verticalScale = maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0
+                                
+                                self.systemScale = min(horizontalScale, verticalScale, 1.0)
                             } else {
-                                Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
+                                alpha = 0.0
+                                interval = 0.0
+                                offset = 0.0
+                                
+                                self.systemScale = 1.0
                             }
                             
-                            if let date = dateComponents.date {
+                            let state = String(self.stars)
+                            
+                            for i in 0..<characters.count {
+                                let character = characters[i]
+                                let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
+                                let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
+                                var animations: [Animation]? = nil
+                                
+                                if i > 0 {
+                                    characterView.isMirror = true
+                                    characterView.alpha = alpha
+                                }
+                                
+                                characterView.transform.tx = offset - interval * Double(i)
+                                
+                                self.characterViews.append(characterView)
+                                
+                                if i < Script.shared.characters.count {
+                                    Script.shared.characters[i] = (name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences)
+                                } else {
+                                    Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
+                                }
+                                
+                                if let date = dateComponents.date {
+                                    await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                        if y.name == character.name {
+                                            for sequence in y.sequences {
+                                                if sequence.name == "Tick" {
+                                                    x.append(sequence)
+                                                }
+                                            }
+                                        }
+                                    }), state: ISO8601DateFormatter.string(from: date, timeZone: .current, formatOptions: [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]), words: []) { _ in [] }
+                                }
+                                
                                 await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
                                     if y.name == character.name {
                                         for sequence in y.sequences {
-                                            if sequence.name == "Tick" {
+                                            if sequence.name == "Star" {
                                                 x.append(sequence)
                                             }
                                         }
                                     }
-                                }), state: ISO8601DateFormatter.string(from: date, timeZone: .current, formatOptions: [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]), words: []) { _ in [] }
-                            }
-                            
-                            await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                                if y.name == character.name {
-                                    for sequence in y.sequences {
-                                        if sequence.name == "Star" {
-                                            x.append(sequence)
-                                        }
-                                    }
-                                }
-                            }), state: state, words: []) { _ in [] }
-                            
-                            await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                                if y.name == character.name {
-                                    for sequence in y.sequences {
-                                        if sequence.name == "Start" {
-                                            x.append(sequence)
-                                        }
-                                    }
-                                }
-                            }), words: []) { x in
-                                var y = x
+                                }), state: state, words: []) { _ in [] }
                                 
-                                animations = x.compactMap({ sequence in
-                                    for step in sequence {
-                                        if case .animations(let animations) = step {
-                                            return animations
-                                        }
-                                    }
-                                    
-                                    return nil
-                                }).first
-                                
-                                if i == 0 {
-                                    var sequence = Sequence(name: nil, state: String())
-                                    
-                                    for s in x {
-                                        for step in s {
-                                            sequence.append(step)
-                                        }
-                                    }
-                                    
-                                    y.append(sequence)
-                                }
-                                
-                                y.append(Sequence(name: String()))
-                                
-                                return y
-                            }
-                            
-                            if let animations {
-                                let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
-                                let screenScale = Int(round(self.traitCollection.displayScale))
-                                let loadedImages = await Task.detached { @Sendable [animations, baseUrl, screenScale] in
-                                    var pathSet = Set<String>()
-                                    var images = [String: CGImage]()
-                                    
-                                    for animation in animations {
-                                        for sprite in animation {
-                                            if let path = sprite.path, !path.isEmpty && !pathSet.contains(path) {
-                                                pathSet.insert(path)
+                                await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                    if y.name == character.name {
+                                        for sequence in y.sequences {
+                                            if sequence.name == "Start" {
+                                                x.append(sequence)
                                             }
                                         }
                                     }
+                                }), words: []) { x in
+                                    var y = x
                                     
-                                    for relativePath in pathSet {
-                                        let imageUrl = baseUrl.appending(path: relativePath, directoryHint: .inferFromPath)
-                                        var image: CGImage? = nil
+                                    animations = x.compactMap({ sequence in
+                                        for step in sequence {
+                                            if case .animations(let animations) = step {
+                                                return animations
+                                            }
+                                        }
                                         
-                                        if screenScale > 1 {
-                                            let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                                            let filename = "\(name)@\(screenScale)\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
-                                            let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
-                                            
-                                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                defer {
-                                                    try? file.close()
+                                        return nil
+                                    }).first
+                                    
+                                    if i == 0 {
+                                        var sequence = Sequence(name: nil, state: String())
+                                        
+                                        for s in x {
+                                            for step in s {
+                                                sequence.append(step)
+                                            }
+                                        }
+                                        
+                                        y.append(sequence)
+                                    }
+                                    
+                                    y.append(Sequence(name: String()))
+                                    
+                                    return y
+                                }
+                                
+                                if let animations {
+                                    let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
+                                    let screenScale = Int(round(self.traitCollection.displayScale))
+                                    let loadedImages = await Task.detached { @Sendable [animations, baseUrl, screenScale] in
+                                        var pathSet = Set<String>()
+                                        var images = [String: CGImage]()
+                                        
+                                        for animation in animations {
+                                            for sprite in animation {
+                                                if let path = sprite.path, !path.isEmpty && !pathSet.contains(path) {
+                                                    pathSet.insert(path)
                                                 }
+                                            }
+                                        }
+                                        
+                                        for relativePath in pathSet {
+                                            let imageUrl = baseUrl.appending(path: relativePath, directoryHint: .inferFromPath)
+                                            var image: CGImage? = nil
+                                            
+                                            if screenScale > 1 {
+                                                let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
+                                                let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                                                let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                                                 
-                                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                    for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                        image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                                        
-                                                        break
+                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                                    defer {
+                                                        try? file.close()
                                                     }
-                                                }
-                                            }
-                                        }
-                                        
-                                        if let image {
-                                            images[relativePath] = image
-                                        } else {
-                                            let path = imageUrl.path(percentEncoded: false)
-                                            
-                                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                defer {
-                                                    try? file.close()
-                                                }
-                                                
-                                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                    for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                        if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
-                                                            images[relativePath] = image
+                                                    
+                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                            image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
                                                             
                                                             break
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
-                                    }
-                                    
-                                    return images
-                                }.value
-                                
-                                for (path, image) in loadedImages {
-                                    characterView.cachedImages[path] = image
-                                }
-                                
-                                let timelines = animations.map { Timeline(animation: $0) }
-                                let (image, fades) = characterView.preview(timelines: timelines, images: &characterView.cachedImages)
-                                
-                                if let image {
-                                    let actualScale = self.userScale * self.systemScale
-                                    let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
-                                    let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
-                                    let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
-                                    
-                                    format.opaque = false
-                                    format.preferredRange = .standard
-                                    format.scale = self.traitCollection.displayScale
-                                    
-                                    let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
-                                    let renderedImage = renderer.image { rendererContext in
-                                        let context = rendererContext.cgContext
-                                        
-                                        if actualScale == floor(actualScale) {
-                                            context.interpolationQuality = .none
-                                            context.setAllowsAntialiasing(false)
-                                        } else {
-                                            context.interpolationQuality = .high
-                                            context.setAllowsAntialiasing(true)
+                                            
+                                            if let image {
+                                                images[relativePath] = image
+                                            } else {
+                                                let path = imageUrl.path(percentEncoded: false)
+                                                
+                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                                    defer {
+                                                        try? file.close()
+                                                    }
+                                                    
+                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                            if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
+                                                                images[relativePath] = image
+                                                                
+                                                                break
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                         
-                                        context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
+                                        return images
+                                    }.value
+                                    
+                                    for (path, image) in loadedImages {
+                                        characterView.cachedImages[path] = image
+                                    }
+                                    
+                                    let timelines = animations.map { Timeline(animation: $0) }
+                                    let (image, fades) = characterView.preview(timelines: timelines, images: &characterView.cachedImages)
+                                    
+                                    if let image {
+                                        let actualScale = self.userScale * self.systemScale
+                                        let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
+                                        let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
+                                        let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                                         
-                                        if characterView.isMirror {
-                                            context.translateBy(x: imageSize.width, y: imageSize.height)
-                                            context.scaleBy(x: -1.0, y: -1.0)
-                                        } else {
-                                            context.translateBy(x: 0, y: imageSize.height)
-                                            context.scaleBy(x: 1.0, y: -1.0)
+                                        format.opaque = false
+                                        format.preferredRange = .standard
+                                        format.scale = self.traitCollection.displayScale
+                                        
+                                        let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                                        let renderedImage = renderer.image { rendererContext in
+                                            let context = rendererContext.cgContext
+                                            
+                                            if actualScale == floor(actualScale) {
+                                                context.interpolationQuality = .none
+                                                context.setAllowsAntialiasing(false)
+                                            } else {
+                                                context.interpolationQuality = .high
+                                                context.setAllowsAntialiasing(true)
+                                            }
+                                            
+                                            context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
+                                            
+                                            if characterView.isMirror {
+                                                context.translateBy(x: imageSize.width, y: imageSize.height)
+                                                context.scaleBy(x: -1.0, y: -1.0)
+                                            } else {
+                                                context.translateBy(x: 0, y: imageSize.height)
+                                                context.scaleBy(x: 1.0, y: -1.0)
+                                            }
+                                            
+                                            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
                                         }
                                         
-                                        context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
-                                    }
-                                    
-                                    if let image = renderedImage.cgImage {
-                                        CATransaction.begin()
-                                        CATransaction.setDisableActions(true)
+                                        if let image = renderedImage.cgImage {
+                                            CATransaction.begin()
+                                            CATransaction.setDisableActions(true)
+                                            
+                                            characterView.contentView.layer.contents = image
+                                            
+                                            CATransaction.commit()
+                                        }
                                         
-                                        characterView.contentView.layer.contents = image
-                                        
-                                        CATransaction.commit()
-                                    }
-                                    
-                                    for (key, value) in fades {
-                                        characterView.fades[key] = value
+                                        for (key, value) in fades {
+                                            characterView.fades[key] = value
+                                        }
                                     }
                                 }
                             }
                             
-                            self.characterViews.append(characterView)
+                            WidgetCenter.shared.reloadAllTimelines()
+                            
+                            self.isRunning = true
+                            self.revision.0 &+= 1
+                            
+                            UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
+                                self.superview?.alpha = 1.0
+                            })
+                            
+                            self.delegate?.agentDidChange(self, successfully: true)
                         }
-                        
-                        WidgetCenter.shared.reloadAllTimelines()
-                        
+                    } else {
                         self.isRunning = true
-                        self.delegate?.agentDidChange(self)
+                        
+                        UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
+                            self.superview?.alpha = 1.0
+                        })
+                        
+                        self.delegate?.agentDidChange(self, successfully: false)
                     }
-                    
-                    UIView.transition(with: self, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
-                        self.alpha = 1.0
-                    })
+                } else {
+                    self.delegate?.agentDidChange(self, successfully: false)
                 }
             }
-        }
+        })
     }
     
     func change(scale: Double) {
-        self.revision &+= 1
+        self.revision.1 &+= 1
         
-        let revision = self.revision
+        let generation = self.revision.1
         
-        UIView.transition(with: self, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+        UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
             self.alpha = 0.0
-        }) { finished in
-            if self.revision == revision {
+        }, completion: { finished in
+            if self.revision.1 == generation {
                 if finished {
                     self.userScale = scale
                     
@@ -1289,11 +1261,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                 }
                 
-                UIView.transition(with: self, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
                     self.alpha = 1.0
                 })
             }
-        }
+        })
     }
     
     func notify(characterView: CharacterView, image: UIImage, text: String?, duration: Double, action: (() -> Void)? = nil) {
@@ -1874,7 +1846,62 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 self.systemScale = 1.0
             }
             
-            if self.systemScale != systemScale {
+            if self.systemScale == systemScale {
+                for characterView in self.characterViews {
+                    let (image, fades) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                    
+                    if let image {
+                        let actualScale = self.userScale * self.systemScale
+                        let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
+                        let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
+                        let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
+                        
+                        format.opaque = false
+                        format.preferredRange = .standard
+                        format.scale = self.traitCollection.displayScale
+                        
+                        let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                        let renderedImage = renderer.image { rendererContext in
+                            let context = rendererContext.cgContext
+                            
+                            if actualScale == floor(actualScale) {
+                                context.interpolationQuality = .none
+                                context.setAllowsAntialiasing(false)
+                            } else {
+                                context.interpolationQuality = .high
+                                context.setAllowsAntialiasing(true)
+                            }
+                            
+                            context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
+                            
+                            if characterView.isMirror {
+                                context.translateBy(x: imageSize.width, y: imageSize.height)
+                                context.scaleBy(x: -1.0, y: -1.0)
+                            } else {
+                                context.translateBy(x: 0, y: imageSize.height)
+                                context.scaleBy(x: 1.0, y: -1.0)
+                            }
+                            
+                            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
+                        }
+                        
+                        if let image = renderedImage.cgImage {
+                            CATransaction.begin()
+                            CATransaction.setDisableActions(true)
+                            
+                            characterView.contentView.layer.contents = image
+                            
+                            CATransaction.commit()
+                        }
+                        
+                        for (key, value) in fades {
+                            characterView.fades[key] = value
+                        }
+                    }
+                    
+                    characterView.cachedTimelines.removeAll()
+                }
+            } else {
                 for characterView in self.characterViews {
                     let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale * self.systemScale
                     let frame = CGRect(x: characterView.origin.x * preferredScale / self.traitCollection.displayScale, y: characterView.origin.y * preferredScale / self.traitCollection.displayScale, width: characterView.size.width * preferredScale / self.traitCollection.displayScale, height: characterView.size.height * preferredScale / self.traitCollection.displayScale)
@@ -1922,54 +1949,58 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         }
                     }
                     
-                    if !characterView.cachedTimelines.isEmpty {
-                        let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                    let (image, fades) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                    
+                    if let image {
+                        let actualScale = self.userScale * self.systemScale
+                        let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
+                        let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
+                        let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                         
-                        if let image {
-                            let actualScale = self.userScale * self.systemScale
-                            let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
-                            let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
-                            let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
+                        format.opaque = false
+                        format.preferredRange = .standard
+                        format.scale = self.traitCollection.displayScale
+                        
+                        let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
+                        let renderedImage = renderer.image { rendererContext in
+                            let context = rendererContext.cgContext
                             
-                            format.opaque = false
-                            format.preferredRange = .standard
-                            format.scale = self.traitCollection.displayScale
-                            
-                            let renderer = UIGraphicsImageRenderer(size: imageSize, format: format)
-                            let renderedImage = renderer.image { rendererContext in
-                                let context = rendererContext.cgContext
-                                
-                                if actualScale == floor(actualScale) {
-                                    context.interpolationQuality = .none
-                                    context.setAllowsAntialiasing(false)
-                                } else {
-                                    context.interpolationQuality = .high
-                                    context.setAllowsAntialiasing(true)
-                                }
-                                
-                                context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
-                                
-                                if characterView.isMirror {
-                                    context.translateBy(x: imageSize.width, y: imageSize.height)
-                                    context.scaleBy(x: -1.0, y: -1.0)
-                                } else {
-                                    context.translateBy(x: 0, y: imageSize.height)
-                                    context.scaleBy(x: 1.0, y: -1.0)
-                                }
-                                
-                                context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
+                            if actualScale == floor(actualScale) {
+                                context.interpolationQuality = .none
+                                context.setAllowsAntialiasing(false)
+                            } else {
+                                context.interpolationQuality = .high
+                                context.setAllowsAntialiasing(true)
                             }
                             
-                            if let image = renderedImage.cgImage {
-                                CATransaction.begin()
-                                CATransaction.setDisableActions(true)
-                                
-                                characterView.contentView.layer.contents = image
-                                
-                                CATransaction.commit()
+                            context.clear(CGRect(origin: CGPoint.zero, size: imageSize))
+                            
+                            if characterView.isMirror {
+                                context.translateBy(x: imageSize.width, y: imageSize.height)
+                                context.scaleBy(x: -1.0, y: -1.0)
+                            } else {
+                                context.translateBy(x: 0, y: imageSize.height)
+                                context.scaleBy(x: 1.0, y: -1.0)
                             }
+                            
+                            context.draw(image, in: CGRect(x: 0.0, y: 0.0, width: imageSize.width, height: imageSize.height))
+                        }
+                        
+                        if let image = renderedImage.cgImage {
+                            CATransaction.begin()
+                            CATransaction.setDisableActions(true)
+                            
+                            characterView.contentView.layer.contents = image
+                            
+                            CATransaction.commit()
+                        }
+                        
+                        for (key, value) in fades {
+                            characterView.fades[key] = value
                         }
                     }
+                    
+                    characterView.cachedTimelines.removeAll()
                 }
             }
             
@@ -2002,7 +2033,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
                     
                     if characterView.alpha != 1.0 {
-                        UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                        UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
                             characterView.alpha = 1.0
                         })
                     }
@@ -2020,7 +2051,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     let characterView = self.characterViews[i]
                     
                     if i > 0 && characterView.alpha != 0.0 {
-                        UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                        UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
                             characterView.alpha = 0.0
                         })
                     }
@@ -2142,12 +2173,12 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     
                     if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 1.0) {
                         if i > 0 {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
                                 characterView.alpha = 1.0
                                 characterView.transform.tx = tx
                             })
                         } else {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
                                 characterView.transform.tx = tx
                             })
                         }
@@ -2166,12 +2197,12 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     
                     if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
                         if i > 0 {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
                                 characterView.alpha = 0.0
                                 characterView.transform.tx = tx
                             })
                         } else {
-                            UIView.transition(with: characterView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState], animations: {
+                            UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
                                 characterView.transform.tx = tx
                             })
                         }
@@ -3441,7 +3472,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                         
                                         if scale > 1 {
                                             let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                                            let filename = "\(name)@\(scale)\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                                            let filename = "\(name)@\(scale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
                                             let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                                             
                                             if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
