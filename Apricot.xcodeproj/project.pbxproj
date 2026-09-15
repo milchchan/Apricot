@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		50033B4A2D243E70002B8560 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 50033B492D243E70002B8560 /* InfoPlist.xcstrings */; };
 		500C6EE429D72CF1008CD8B9 /* Milch in Resources */ = {isa = PBXBuildFile; fileRef = 500C6EDF29D72CF1008CD8B9 /* Milch */; };
 		500C6EE629D72CF1008CD8B9 /* Merku in Resources */ = {isa = PBXBuildFile; fileRef = 500C6EE129D72CF1008CD8B9 /* Merku */; };
 		503AA1E72B21B18F00144D7E /* din-2014_extra-bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 503AA1E12B21B18F00144D7E /* din-2014_extra-bold.otf */; };
@@ -77,6 +78,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		50033B492D243E70002B8560 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		500C6EDF29D72CF1008CD8B9 /* Milch */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Milch; sourceTree = "<group>"; };
 		500C6EE129D72CF1008CD8B9 /* Merku */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Merku; sourceTree = "<group>"; };
 		503AA1E12B21B18F00144D7E /* din-2014_extra-bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "din-2014_extra-bold.otf"; sourceTree = "<group>"; };
@@ -191,6 +193,7 @@
 				506E0EE0296085F100099D3A /* Chat.swift */,
 				503AA1E02B21B18F00144D7E /* Fonts */,
 				507CED252C009738001331F0 /* Info.plist */,
+				50033B492D243E70002B8560 /* InfoPlist.xcstrings */,
 				503C7E0129D72CF100E2065B /* KMeans.swift */,
 				50BD1AC92AA0E27100C0D18B /* Localizable.xcstrings */,
 				500C6EE129D72CF1008CD8B9 /* Merku */,
@@ -344,6 +347,7 @@
 				50C4EF072D243E70002DCF8C /* AppIcon.icon in Resources */,
 				50C820992B41B970000D8C28 /* PrivacyInfo.xcprivacy in Resources */,
 				500C6EE629D72CF1008CD8B9 /* Merku in Resources */,
+				50033B4A2D243E70002B8560 /* InfoPlist.xcstrings in Resources */,
 				503AA1EA2B21B18F00144D7E /* din-2014_light.otf in Resources */,
 				503AA1EC2B21B18F00144D7E /* din-2014_bold.otf in Resources */,
 				506E0EE3296085F200099D3A /* Assets.xcassets in Resources */,
@@ -477,6 +481,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -536,6 +541,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
 			};
