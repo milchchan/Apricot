@@ -35,7 +35,7 @@ public final class Timeline: @MainActor Hashable {
                 duration += frame.delay
             }
 
-            if self.animation.repeats > 1 && time > duration * Double(self.animation.repeats) {
+            if self.animation.repeats > 1 && time >= duration * Double(self.animation.repeats) {
                 time = duration
             } else {
                 time = time.truncatingRemainder(dividingBy: duration)
