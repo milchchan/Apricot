@@ -381,7 +381,6 @@ struct Chat: View {
                                     .glassEffect(.regular.interactive(), in: Circle())
                                     .glassEffectID("vision", in: self.menuNamespace)
                                     .glassEffectTransition(.matchedGeometry)
-                                    .clipShape(Circle())
                                  }
                                  
                                  Button(action: {
@@ -485,7 +484,6 @@ struct Chat: View {
                                  .glassEffect(.regular.interactive(), in: Circle())
                                  .glassEffectID("menu", in: self.menuNamespace)
                                  .glassEffectTransition(.matchedGeometry)
-                                 .clipShape(Circle())
                                  
                                  if self.revealMenu {
                                     Button(action: {
@@ -496,7 +494,8 @@ struct Chat: View {
                                           self.revealMenu = false
                                        }
                                     }) {
-                                       Image(systemName: "keyboard")
+                                       Image(systemName: "ellipsis.message")
+                                          .symbolRenderingMode(.monochrome)
                                           .frame(
                                              width: 48.0,
                                              height: 48.0,
@@ -514,13 +513,10 @@ struct Chat: View {
                                     )
                                     .foregroundStyle(.primary)
                                     .glassEffect(.regular.interactive(), in: Circle())
-                                    .glassEffectID("keyboard", in: self.menuNamespace)
+                                    .glassEffectID("message", in: self.menuNamespace)
                                     .glassEffectTransition(.matchedGeometry)
-                                    .clipShape(Circle())
                                  }
                               }
-                              .compositingGroup()
-                              .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
                            }
                         }
                         .padding(EdgeInsets(
@@ -899,8 +895,6 @@ struct Chat: View {
                   .padding(0.0)
                   .foregroundStyle(.primary)
                   .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true))
-                  .compositingGroup()
-                  .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
                   .geometryGroup()
                   .animation(.linear(duration: 0.5),value: self.message)
                   .onTapGesture {
@@ -1086,8 +1080,6 @@ struct Chat: View {
                height: (geometryProxy.size.height + geometryProxy.safeAreaInsets.top + geometryProxy.safeAreaInsets.bottom) / 2.0 - geometryProxy.safeAreaInsets.bottom - 72.0
             )
             .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24.0), isUniform: true))
-            .compositingGroup()
-            .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
          ScrollView([.vertical]) {
             LazyVStack(spacing: 0.0) {
                VStack(spacing: 0.0) {
@@ -3882,7 +3874,18 @@ struct Stage: UIViewRepresentable {
                   
                   if characterView.name != self.snapshot.name || !types.elementsEqual(self.snapshot.types) {
                      if characterView.fades.contains(where: { $0.value > 0.0 && $0.value < 1.0 }) {
-                        let (i, _) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                        let images: [String: CGImage]
+                        let imageScale: Double
+                        
+                        if characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
+                            images = characterView.cachedImages.mapValues { $0.1! }
+                            imageScale = characterView.imageScale
+                        } else {
+                            images = characterView.cachedImages.mapValues { $0.0 }
+                            imageScale = 1.0
+                        }
+                        
+                        let (i, _) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                         
                         if let i {
                            self.snapshot.name = characterView.name
@@ -9114,31 +9117,6 @@ struct Player: UIViewRepresentable {
          super.init(coder: aDecoder)
       }
       
-      override func layoutSubviews() {
-         super.layoutSubviews()
-         
-         guard self.isLoading, let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer else {
-            return
-         }
-         
-         let length = max(self.bounds.size.width, self.bounds.size.height)
-         
-         guard length > 0.0 else {
-            return
-         }
-         
-         let revealStep = min(max(self.revealStep, -1.0), 1.0)
-         let loadingStep = max(self.loadingStep, 0.0)
-         
-         CATransaction.begin()
-         CATransaction.setDisableActions(true)
-         
-         blindLayer.frame = CGRect(x: 0.0, y: -length * sin(revealStep / 2.0 * Double.pi), width: length, height: length)
-         loadingLayer.frame = CGRect(x: -self.backgroundPattern.size.width * loadingStep, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
-         
-         CATransaction.commit()
-      }
-      
       func change(accent: CGColor) {
          self.blindColor = accent
          self.blindLayer?.backgroundColor = accent
@@ -9263,6 +9241,31 @@ struct Player: UIViewRepresentable {
          }
       }
       
+      override func layoutSubviews() {
+         super.layoutSubviews()
+         
+         guard self.isLoading, let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer else {
+            return
+         }
+         
+         let length = max(self.bounds.size.width, self.bounds.size.height)
+         
+         guard length > 0.0 else {
+            return
+         }
+         
+         let revealStep = min(max(self.revealStep, -1.0), 1.0)
+         let loadingStep = max(self.loadingStep, 0.0)
+         
+         CATransaction.begin()
+         CATransaction.setDisableActions(true)
+         
+         blindLayer.frame = CGRect(x: 0.0, y: -length * sin(revealStep / 2.0 * Double.pi), width: length, height: length)
+         loadingLayer.frame = CGRect(x: -self.backgroundPattern.size.width * loadingStep, y: 0.0, width: length + self.backgroundPattern.size.width, height: length)
+         
+         CATransaction.commit()
+      }
+      
       @objc private func step(displayLink: CADisplayLink) {
          if self.bounds.size.width > 0 && self.bounds.size.height > 0 {
             let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
@@ -9272,6 +9275,10 @@ struct Player: UIViewRepresentable {
                   let step = self.revealStep + deltaTime
                   
                   if step >= 1.0 {
+                     self.isLoading = false
+                     self.revealStep = -1.0
+                     self.loadingStep = 0.0
+                     
                      if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
                         CATransaction.begin()
                         CATransaction.setDisableActions(true)
@@ -9281,10 +9288,6 @@ struct Player: UIViewRepresentable {
                         
                         CATransaction.commit()
                      }
-                     
-                     self.revealStep = -1.0
-                     self.loadingStep = 0.0
-                     self.isLoading = false
                   } else {
                      if let blindLayer = self.blindLayer {
                         let length = max(self.bounds.size.width, self.bounds.size.height)
