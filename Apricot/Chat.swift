@@ -3007,7 +3007,7 @@ struct Chat: View {
          let authorizationStatus = SFSpeechRecognizer.authorizationStatus()
          
          if authorizationStatus == .notDetermined {
-            speechAllowed = await withCheckedContinuation(isolation: nil) { @Sendable (continuation: CheckedContinuation<Bool, Never>) in
+            speechAllowed = await withCheckedContinuation { @Sendable (continuation: CheckedContinuation<Bool, Never>) in
                SFSpeechRecognizer.requestAuthorization { status in
                   continuation.resume(returning: status == .authorized)
                }
@@ -3093,17 +3093,16 @@ struct Chat: View {
          
          request.shouldReportPartialResults = true
          
-         self.installTap(on: inputNode, format: inputFormat, request: request) { level, duration in
-            let multiplier = level > self.volumeLevel ? 5.0 : 10.0
-            
-            withAnimation(.linear(duration: duration * multiplier)) {
-               self.volumeLevel = level
-            }
-         }
-         
-         audioEngine.prepare()
-         
          do {
+            try self.installTap(on: inputNode, format: inputFormat, request: request) { level, duration in
+               let multiplier = level > self.volumeLevel ? 5.0 : 10.0
+               
+               withAnimation(.linear(duration: duration * multiplier)) {
+                  self.volumeLevel = level
+               }
+            }
+            
+            audioEngine.prepare()
             try audioEngine.start()
          } catch {
             self.speechRecognizer = nil
@@ -3187,9 +3186,16 @@ struct Chat: View {
       }
    }
    
-   private nonisolated func installTap(on inputNode: AVAudioInputNode, format: AVAudioFormat, request: SFSpeechAudioBufferRecognitionRequest, onChange: @escaping @MainActor (Double, Double) -> Void
-   ) {
-      inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+   private func installTap(on inputNode: AVAudioInputNode, format: AVAudioFormat, request: SFSpeechAudioBufferRecognitionRequest, onChange: @escaping @MainActor (Double, Double) -> Void
+   ) throws {
+      // The tap's Sendable buffer can cross actors; the speech request stays on the main actor.
+      let processBuffer: @MainActor @Sendable (AVReadOnlyAudioPCMBuffer) -> Void = { readOnlyBuffer in
+         guard self.isRecording, self.speechAudioBufferRecognitionRequest === request else {
+            return
+         }
+         
+         let buffer = AVAudioPCMBuffer(copying: readOnlyBuffer)
+         
          guard buffer.frameLength > 0, buffer.stride > 0, buffer.format.sampleRate > 0.0 else {
             return
          }
@@ -3214,8 +3220,13 @@ struct Chat: View {
          let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
          let duration = Double(buffer.frameLength) / buffer.format.sampleRate
          
-         Task { @MainActor in
-            onChange(level, duration)
+         onChange(level, duration)
+      }
+      
+      try inputNode.installAudioTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+         // Preserve the delivery order of audio buffers on the serial main queue.
+         DispatchQueue.main.async {
+            processBuffer(buffer)
          }
       }
    }
@@ -3933,7 +3944,7 @@ struct Stage: UIViewRepresentable {
          if let characterView = agent.characterViews.first {
             let language = characterView.language
             
-            Task {
+            Task { [self] in
                let scores = Script.shared.scores
                let knownWords = Script.shared.words
                let words = await Task.detached { @Sendable [scores, knownWords, language] in
@@ -7977,7 +7988,7 @@ struct Dictionary: View {
          let authorizationStatus = SFSpeechRecognizer.authorizationStatus()
          
          if authorizationStatus == .notDetermined {
-            speechAllowed = await withCheckedContinuation(isolation: nil) { @Sendable (continuation: CheckedContinuation<Bool, Never>) in
+            speechAllowed = await withCheckedContinuation { @Sendable (continuation: CheckedContinuation<Bool, Never>) in
                SFSpeechRecognizer.requestAuthorization { status in
                   continuation.resume(returning: status == .authorized)
                }
@@ -8064,17 +8075,16 @@ struct Dictionary: View {
          
          request.shouldReportPartialResults = true
          
-         self.installTap(on: inputNode, format: inputFormat, request: request) { level, duration in
-            let multiplier = level > self.volumeLevel ? 5.0 : 10.0
-            
-            withAnimation(.linear(duration: duration * multiplier)) {
-               self.volumeLevel = level
-            }
-         }
-         
-         audioEngine.prepare()
-         
          do {
+            try self.installTap(on: inputNode, format: inputFormat, request: request) { level, duration in
+               let multiplier = level > self.volumeLevel ? 5.0 : 10.0
+               
+               withAnimation(.linear(duration: duration * multiplier)) {
+                  self.volumeLevel = level
+               }
+            }
+            
+            audioEngine.prepare()
             try audioEngine.start()
          } catch {
             self.speechRecognizer = nil
@@ -8158,9 +8168,16 @@ struct Dictionary: View {
       }
    }
    
-   private nonisolated func installTap(on inputNode: AVAudioInputNode, format: AVAudioFormat, request: SFSpeechAudioBufferRecognitionRequest, onChange: @escaping @MainActor (Double, Double) -> Void
-   ) {
-      inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+   private func installTap(on inputNode: AVAudioInputNode, format: AVAudioFormat, request: SFSpeechAudioBufferRecognitionRequest, onChange: @escaping @MainActor (Double, Double) -> Void
+   ) throws {
+      // The tap's Sendable buffer can cross actors; the speech request stays on the main actor.
+      let processBuffer: @MainActor @Sendable (AVReadOnlyAudioPCMBuffer) -> Void = { readOnlyBuffer in
+         guard self.isRecording, self.speechAudioBufferRecognitionRequest === request else {
+            return
+         }
+         
+         let buffer = AVAudioPCMBuffer(copying: readOnlyBuffer)
+         
          guard buffer.frameLength > 0, buffer.stride > 0, buffer.format.sampleRate > 0.0 else {
             return
          }
@@ -8185,8 +8202,13 @@ struct Dictionary: View {
          let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
          let duration = Double(buffer.frameLength) / buffer.format.sampleRate
          
-         Task { @MainActor in
-            onChange(level, duration)
+         onChange(level, duration)
+      }
+      
+      try inputNode.installAudioTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+         // Preserve the delivery order of audio buffers on the serial main queue.
+         DispatchQueue.main.async {
+            processBuffer(buffer)
          }
       }
    }
