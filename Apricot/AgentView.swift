@@ -8,6 +8,10 @@
 import Foundation
 import AVFoundation
 import CoreLocation
+import CoreImage
+import ImageIO
+import UniformTypeIdentifiers
+import VideoToolbox
 import UIKit
 import WidgetKit
 
@@ -30,6 +34,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     var attributes = [String]()
     private(set) var path = String()
     private var displayLink: CADisplayLink? = nil
+    private var frameTimestamps = [CFTimeInterval]()
     private var audioPlayer: AVAudioPlayer? = nil
     private var accentColor: UIColor? = nil
     private var userScale = 1.0
@@ -106,7 +111,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     }
     
     convenience init(path: String, types: Int, scale: Double, stars: Int) {
-        var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
+        var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
         
         self.init(frame: .zero)
         self.path = path
@@ -118,9 +123,9 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             
             for character in tuple.0 {
                 if let index = characters.firstIndex(where: { $0.name == character.name }) {
-                    characters[index] = (name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets)
+                    characters[index] = (name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets)
                 } else {
-                    characters.append((name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets))
+                    characters.append((name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets))
                 }
             }
             
@@ -347,7 +352,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 for filename in Script.resolve(directory: path) {
                     for character in Script.Parser().parse(path: filename).0 {
                         if character.name == name {
-                            characters.append((name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: true, sequences: character.sequences, types: character.types, insets: character.insets))
+                            characters.append((name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: true, sequences: character.sequences, types: character.types, insets: character.insets))
                             self.guest = character.name
                             
                             break
@@ -362,7 +367,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         for i in 0..<characters.count {
             let character = characters[i]
-            let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
+            let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
             let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
             var animations: [Animation]? = nil
             
@@ -383,7 +388,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 characterView.isMirror = true
             }
             
-            Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
+            Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
             
             if let date = dateComponents.date {
                 Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
@@ -449,6 +454,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
                 let screenScale = Int(round(self.traitCollection.displayScale))
                 var pathSet = Set<String>()
+                var sources = [(baseUrl, false)]
+                var loadedImages = [String: [(CGImage, Bool)]]()
                 
                 for animation in animations {
                     for sprite in animation {
@@ -458,51 +465,76 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                 }
                 
-                for relativePath in pathSet {
-                    let imageUrl = baseUrl.appending(path: relativePath, directoryHint: .inferFromPath)
-                    var image: CGImage? = nil
-                    
-                    if screenScale > 1 {
-                        let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                        let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
-                        let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
+                if character.upscaling, let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                    sources.insert((documents.appending(path: baseUrl.lastPathComponent, directoryHint: .isDirectory), true), at: 0)
+                }
+                
+                for (source, upscaling) in sources {
+                    for relativePath in pathSet {
+                        let imageUrl = source.appending(path: relativePath, directoryHint: .inferFromPath)
+                        var image: CGImage? = nil
                         
-                        if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                            defer {
-                                try? file.close()
-                            }
+                        if screenScale > 1 {
+                            let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: imageUrl.pathExtension.isEmpty ? 0 : -imageUrl.pathExtension.count - 1)]
+                            let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                            let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                             
-                            if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                for i in 0..<CGImageSourceGetCount(imageSource) {
-                                    image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                    
-                                    break
+                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                defer {
+                                    try? file.close()
                                 }
-                            }
-                        }
-                    }
-                    
-                    if let image {
-                        characterView.cachedImages[relativePath] = image
-                    } else {
-                        let path = imageUrl.path(percentEncoded: false)
-                        
-                        if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                            defer {
-                                try? file.close()
-                            }
-                            
-                            if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                for i in 0..<CGImageSourceGetCount(imageSource) {
-                                    if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
-                                        characterView.cachedImages[relativePath] = image
+                                
+                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                    for i in 0..<CGImageSourceGetCount(imageSource) {
+                                        image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
                                         
                                         break
                                     }
                                 }
                             }
                         }
+                        
+                        if image == nil {
+                            let path = imageUrl.path(percentEncoded: false)
+                            
+                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                defer {
+                                    try? file.close()
+                                }
+                                
+                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                    for i in 0..<CGImageSourceGetCount(imageSource) {
+                                        image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
+                                        
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if let image {
+                            if var value = loadedImages[relativePath] {
+                                value.append((image, upscaling))
+                                loadedImages[relativePath] = value
+                            } else {
+                                loadedImages[relativePath] = [(image, upscaling)]
+                            }
+                        }
                     }
+                }
+                
+                for (key, value) in loadedImages {
+                    if let baseImage = value.first(where: { !$0.1 }) {
+                        if let upscalingImage = value.first(where: { $0.1 }) {
+                            characterView.cachedImages[key] = (baseImage.0, upscalingImage.0)
+                        } else {
+                            characterView.cachedImages[key] = (baseImage.0, nil)
+                        }
+                    }
+                }
+                
+                if let sample = characterView.cachedImages.values.first(where: { $0.1 != nil }), let image = sample.1 {
+                    characterView.imageScale = Double(image.width) / Double(sample.0.width)
                 }
                 
                 characterView.cachedTimelines.append(contentsOf: animations.map { Timeline(animation: $0) })
@@ -579,7 +611,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             var interval: Double
                             var offset: Double
                             let (characters, attributes, guest) = await Task.detached {
-                                var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
+                                var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
                                 var attributes = [String]()
                                 var guest: String? = nil
                                 
@@ -588,9 +620,9 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     
                                     for character in tuple.0 {
                                         if let index = characters.firstIndex(where: { $0.name == character.name }) {
-                                            characters[index] = (name: character.name, path: p, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets)
+                                            characters[index] = (name: character.name, path: p, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets)
                                         } else {
-                                            characters.append((name: character.name, path: p, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets))
+                                            characters.append((name: character.name, path: p, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: false, sequences: character.sequences, types: character.types, insets: character.insets))
                                         }
                                     }
                                     
@@ -817,7 +849,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                         for filename in Script.resolve(directory: path) {
                                             for character in Script.Parser().parse(path: filename).0 {
                                                 if character.name == name {
-                                                    characters.append((name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: true, sequences: character.sequences, types: character.types, insets: character.insets))
+                                                    characters.append((name: character.name, path: filename, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: true, sequences: character.sequences, types: character.types, insets: character.insets))
                                                     guest = character.name
                                                     
                                                     break
@@ -922,7 +954,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             
                             for i in 0..<characters.count {
                                 let character = characters[i]
-                                let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
+                                let characterView = self.make(name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, sequences: character.sequences, types: character.types, insets: character.insets)
                                 let dateComponents = Calendar.current.dateComponents([.calendar, .timeZone, .era, .year, .month, .day, .hour, .minute], from: Date())
                                 var animations: [Animation]? = nil
                                 
@@ -936,9 +968,9 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 self.characterViews.append(characterView)
                                 
                                 if i < Script.shared.characters.count {
-                                    Script.shared.characters[i] = (name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences)
+                                    Script.shared.characters[i] = (name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences)
                                 } else {
-                                    Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
+                                    Script.shared.characters.append((name: character.name, path: character.path, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, prompt: character.prompt, guest: character.guest, sequences: character.sequences))
                                 }
                                 
                                 if let date = dateComponents.date {
@@ -1004,9 +1036,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 if let animations {
                                     let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
                                     let screenScale = Int(round(self.traitCollection.displayScale))
-                                    let loadedImages = await Task.detached { @Sendable [animations, baseUrl, screenScale] in
+                                    let loadedImages = await Task.detached { @Sendable [animations, baseUrl, screenScale, upscaling = character.upscaling] in
                                         var pathSet = Set<String>()
-                                        var images = [String: CGImage]()
+                                        var sources = [(baseUrl, false)]
+                                        var loadedImages = [String: [(CGImage, Bool)]]()
+                                        var cachedImages = [String: (CGImage, CGImage?)]()
                                         
                                         for animation in animations {
                                             for sprite in animation {
@@ -1016,62 +1050,96 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                             }
                                         }
                                         
-                                        for relativePath in pathSet {
-                                            let imageUrl = baseUrl.appending(path: relativePath, directoryHint: .inferFromPath)
-                                            var image: CGImage? = nil
-                                            
-                                            if screenScale > 1 {
-                                                let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                                                let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
-                                                let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
+                                        if upscaling, let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                                            sources.insert((documents.appending(path: baseUrl.lastPathComponent, directoryHint: .isDirectory), true), at: 0)
+                                        }
+                                        
+                                        for (source, upscaling) in sources {
+                                            for relativePath in pathSet {
+                                                let imageUrl = source.appending(path: relativePath, directoryHint: .inferFromPath)
+                                                var image: CGImage? = nil
                                                 
-                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                    defer {
-                                                        try? file.close()
-                                                    }
+                                                if screenScale > 1 {
+                                                    let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: imageUrl.pathExtension.isEmpty ? 0 : -imageUrl.pathExtension.count - 1)]
+                                                    let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                                                    let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                                                     
-                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                            image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                                            
-                                                            break
+                                                    if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                                        defer {
+                                                            try? file.close()
                                                         }
-                                                    }
-                                                }
-                                            }
-                                            
-                                            if let image {
-                                                images[relativePath] = image
-                                            } else {
-                                                let path = imageUrl.path(percentEncoded: false)
-                                                
-                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                    defer {
-                                                        try? file.close()
-                                                    }
-                                                    
-                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                            if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
-                                                                images[relativePath] = image
+                                                        
+                                                        if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                            for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                                image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
                                                                 
                                                                 break
                                                             }
                                                         }
                                                     }
                                                 }
+                                                
+                                                if image == nil {
+                                                    let path = imageUrl.path(percentEncoded: false)
+                                                    
+                                                    if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                                        defer {
+                                                            try? file.close()
+                                                        }
+                                                        
+                                                        if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                            for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                                image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
+                                                                
+                                                                break
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                if let image {
+                                                    if var value = loadedImages[relativePath] {
+                                                        value.append((image, upscaling))
+                                                        loadedImages[relativePath] = value
+                                                    } else {
+                                                        loadedImages[relativePath] = [(image, upscaling)]
+                                                    }
+                                                }
                                             }
                                         }
                                         
-                                        return images
+                                        for (key, value) in loadedImages {
+                                            if let baseImage = value.first(where: { !$0.1 }) {
+                                                if let upscalingImage = value.first(where: { $0.1 }) {
+                                                    cachedImages[key] = (baseImage.0, upscalingImage.0)
+                                                } else {
+                                                    cachedImages[key] = (baseImage.0, nil)
+                                                }
+                                            }
+                                        }
+                                        
+                                        return cachedImages
                                     }.value
                                     
-                                    for (path, image) in loadedImages {
-                                        characterView.cachedImages[path] = image
+                                    characterView.cachedImages = loadedImages
+                                    
+                                    if let sample = loadedImages.values.first(where: { $0.1 != nil }), let image = sample.1 {
+                                        characterView.imageScale = Double(image.width) / Double(sample.0.width)
                                     }
                                     
                                     let timelines = animations.map { Timeline(animation: $0) }
-                                    let (image, fades) = characterView.preview(timelines: timelines, images: &characterView.cachedImages)
+                                    let images: [String: CGImage]
+                                    let imageScale: Double
+                                    
+                                    if characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
+                                        images = characterView.cachedImages.mapValues { $0.1! }
+                                        imageScale = characterView.imageScale
+                                    } else {
+                                        images = characterView.cachedImages.mapValues { $0.0 }
+                                        imageScale = 1.0
+                                    }
+                                    
+                                    let (image, fades) = characterView.preview(timelines: timelines, images: images, imageScale: imageScale)
                                     
                                     if let image {
                                         let actualScale = self.userScale * self.systemScale
@@ -1119,6 +1187,22 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                         
                                         for (key, value) in fades {
                                             characterView.fades[key] = value
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            await AgentView.Upscaler.shared.run(characters: Script.shared.characters) { @MainActor [weak self] total in
+                                guard total > 0 else {
+                                    return
+                                }
+
+                                Task.detached {
+                                    let image = UIImage(systemName: "sparkles", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
+
+                                    await MainActor.run {
+                                        if let self, let characterView = self.characterViews.first {
+                                            self.notify(characterView: characterView, image: image, text: nil, duration: 5.0)
                                         }
                                     }
                                 }
@@ -1211,7 +1295,18 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         }
                         
                         if !characterView.cachedTimelines.isEmpty {
-                            let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                            let images: [String: CGImage]
+                            let imageScale: Double
+                            
+                            if characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
+                                images = characterView.cachedImages.mapValues { $0.1! }
+                                imageScale = characterView.imageScale
+                            } else {
+                                images = characterView.cachedImages.mapValues { $0.0 }
+                                imageScale = 1.0
+                            }
+                            
+                            let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                             
                             if let image {
                                 let actualScale = scale * self.systemScale
@@ -1359,10 +1454,6 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
         
         button.layer.transform = CATransform3DMakeScale(1.5, -1.5, 1.0)
-        button.layer.shadowRadius = 8.0
-        button.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-        button.layer.shadowColor = UIColor(white: 0.0, alpha: 1.0).cgColor
-        button.layer.shadowOpacity = 0.25
         characterView.insertSubview(button, belowSubview: characterView.balloonView!)
         characterView.addConstraint(NSLayoutConstraint(item: button, attribute: .centerX, relatedBy: .equal, toItem: characterView, attribute: .centerX, multiplier: 1.0, constant: 0.0))
         characterView.addConstraint(NSLayoutConstraint(item: button, attribute: .bottom, relatedBy: .equal, toItem: characterView, attribute: .bottom, multiplier: 1.0, constant: button.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height))
@@ -1786,11 +1877,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     guard self.stars == stars else {
                         return false
                     }
-
+                    
                     for key in keys where priorStates[key] != currentStates[key] && states[key] == priorStates[key] {
                         states[key] = currentStates[key]
                     }
-
+                    
                     return true
                 }) {
                     return
@@ -1848,7 +1939,18 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             
             if self.systemScale == systemScale {
                 for characterView in self.characterViews {
-                    let (image, fades) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                    let images: [String: CGImage]
+                    let imageScale: Double
+                    
+                    if characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
+                        images = characterView.cachedImages.mapValues { $0.1! }
+                        imageScale = characterView.imageScale
+                    } else {
+                        images = characterView.cachedImages.mapValues { $0.0 }
+                        imageScale = 1.0
+                    }
+                    
+                    let (image, fades) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                     
                     if let image {
                         let actualScale = self.userScale * self.systemScale
@@ -1949,7 +2051,18 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         }
                     }
                     
-                    let (image, fades) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                    let images: [String: CGImage]
+                    let imageScale: Double
+                    
+                    if characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
+                        images = characterView.cachedImages.mapValues { $0.1! }
+                        imageScale = characterView.imageScale
+                    } else {
+                        images = characterView.cachedImages.mapValues { $0.0 }
+                        imageScale = 1.0
+                    }
+                    
+                    let (image, fades) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                     
                     if let image {
                         let actualScale = self.userScale * self.systemScale
@@ -2010,9 +2123,28 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 self.displayLink = displayLink
                 displayLink.add(to: .current, forMode: .common)
             }
+            
+            Task {
+                await AgentView.Upscaler.shared.run(characters: Script.shared.characters) { @MainActor [weak self] total in
+                    guard total > 0 else {
+                        return
+                    }
+
+                    Task.detached {
+                        let image = UIImage(systemName: "sparkles", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!
+
+                        await MainActor.run {
+                            if let self, let characterView = self.characterViews.first {
+                                self.notify(characterView: characterView, image: image, text: nil, duration: 5.0)
+                            }
+                        }
+                    }
+                }
+            }
         } else {
             self.displayLink?.invalidate()
             self.displayLink = nil
+            self.frameTimestamps.removeAll(keepingCapacity: true)
         }
     }
     
@@ -2111,7 +2243,18 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                     
                     if !characterView.cachedTimelines.isEmpty {
-                        let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: &characterView.cachedImages)
+                        let images: [String: CGImage]
+                        let imageScale: Double
+                        
+                        if characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
+                            images = characterView.cachedImages.mapValues { $0.1! }
+                            imageScale = characterView.imageScale
+                        } else {
+                            images = characterView.cachedImages.mapValues { $0.0 }
+                            imageScale = 1.0
+                        }
+                        
+                        let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                         
                         if let image {
                             let actualScale = self.userScale * self.systemScale
@@ -2329,7 +2472,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     isTouchable = false
                                 }
                                 
-                                if isTouchable, let image = characterView.cachedImages[path] {
+                                if isTouchable, let image = characterView.cachedImages[path]?.0 {
                                     let location = sender.location(in: sender.view)
                                     let x = round(characterView.origin.x + current.location.x)
                                     let y = round(characterView.origin.y + current.location.y)
@@ -2382,119 +2525,161 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
     
     @objc private func step(displayLink: CADisplayLink) {
         if self.frame.size.width > 0 && self.frame.size.height > 0 && self.isRunning {
-            let deltaTime = displayLink.targetTimestamp - displayLink.timestamp
+            let frameRateSampleDuration = 1.0
+            let frameRateDropThreshold = 0.25
+            let deltaTime = self.frameTimestamps.last.map { displayLink.timestamp - $0 } ?? (displayLink.targetTimestamp - displayLink.timestamp)
+            let averageFrameInterval = self.frameTimestamps.count > 1 ? (self.frameTimestamps.last! - self.frameTimestamps[0]) / Double(self.frameTimestamps.count - 1) : deltaTime
+            let isFrameRateDropping = self.frameTimestamps.count > 1 && deltaTime + 0.000001 >= averageFrameInterval / (1.0 - frameRateDropThreshold)
+            
+            self.frameTimestamps.append(displayLink.timestamp)
+            self.frameTimestamps.removeAll { $0 < displayLink.timestamp - frameRateSampleDuration }
             
             for characterView in self.characterViews {
                 if characterView.isLoaded {
+                    var isReady = true
+                    
                     if characterView.stagingTimelines.isEmpty {
+                        isReady = self.dispatch(characterView: characterView)
+                    }
+                    
+                    if isReady {
                         var redrawRequired = false
                         
-                        self.dispatch(characterView: characterView)
-                        
                         if characterView.elapsedTime < characterView.maxDuration {
-                            if characterView.elapsedTime > 0 {
-                                var indexSet = Set<Int>()
-                                var index = 0
+                            let isVisible = (characterView.parentView.map({
+                                let safeBounds = $0.bounds.inset(by: $0.safeAreaInsets)
                                 
-                                if !characterView.nextTimelines.isEmpty {
-                                    var isEnded = true
+                                return safeBounds.width > safeBounds.height
+                            }) ?? false) || self.characterViews.firstIndex(of: characterView) == 0
+                            
+                            if isVisible {
+                                if characterView.elapsedTime > 0 {
+                                    var indexSet = Set<Int>()
+                                    var index = 0
                                     
-                                    for timeline in characterView.cachedTimelines {
-                                        if timeline.animation.repeats > 0 && timeline.time < timeline.duration {
-                                            isEnded = false
+                                    if !characterView.nextTimelines.isEmpty {
+                                        var isEnded = true
+                                        
+                                        for timeline in characterView.cachedTimelines {
+                                            if timeline.animation.repeats > 0 && timeline.time < timeline.duration {
+                                                isEnded = false
+                                                
+                                                break
+                                            }
+                                        }
+                                        
+                                        if isEnded {
+                                            for (timeline, nextTimeline) in characterView.nextTimelines {
+                                                if let i = characterView.cachedTimelines.firstIndex(where: { $0 === timeline }) {
+                                                    nextTimeline.time = 0.0
+                                                    characterView.cachedTimelines[i] = nextTimeline
+                                                    indexSet.insert(i)
+                                                    redrawRequired = true
+                                                }
+                                            }
                                             
-                                            break
+                                            characterView.nextTimelines.removeAll()
                                         }
                                     }
                                     
-                                    if isEnded {
-                                        for (timeline, nextTimeline) in characterView.nextTimelines {
-                                            if let i = characterView.cachedTimelines.firstIndex(where: { $0 === timeline }) {
-                                                nextTimeline.time = 0.0
-                                                characterView.cachedTimelines[i] = nextTimeline
-                                                indexSet.insert(i)
+                                    for timeline in characterView.cachedTimelines {
+                                        if !indexSet.contains(index) {
+                                            let previous = timeline.current
+                                            
+                                            timeline.time += deltaTime
+                                            
+                                            if timeline.animation.repeats == 0 && timeline.time > timeline.duration && characterView.nextTimelines.isEmpty {
+                                                timeline.time = timeline.time.truncatingRemainder(dividingBy: timeline.duration)
+                                            }
+                                            
+                                            if previous != timeline.current {
                                                 redrawRequired = true
                                             }
                                         }
                                         
-                                        characterView.nextTimelines.removeAll()
+                                        index += 1
+                                    }
+                                } else {
+                                    redrawRequired = true
+                                }
+                                
+                                characterView.elapsedTime += deltaTime
+                            } else {
+                                let animationDeltaTime = characterView.maxDuration - characterView.elapsedTime
+                                var indexSet = Set<Int>()
+                                
+                                for (timeline, nextTimeline) in characterView.nextTimelines {
+                                    if let i = characterView.cachedTimelines.firstIndex(where: { $0 === timeline }) {
+                                        nextTimeline.time = max(0.0, animationDeltaTime - max(0.0, timeline.duration - timeline.time))
+                                        
+                                        if nextTimeline.animation.repeats == 0 && nextTimeline.time > nextTimeline.duration {
+                                            nextTimeline.time = nextTimeline.time.truncatingRemainder(dividingBy: nextTimeline.duration)
+                                        }
+                                        
+                                        characterView.cachedTimelines[i] = nextTimeline
+                                        indexSet.insert(i)
                                     }
                                 }
                                 
-                                for timeline in characterView.cachedTimelines {
+                                characterView.nextTimelines.removeAll()
+                                
+                                for (index, timeline) in characterView.cachedTimelines.enumerated() {
                                     if !indexSet.contains(index) {
-                                        let previous = timeline.current
+                                        timeline.time += animationDeltaTime
                                         
-                                        timeline.time += deltaTime
-                                        
-                                        if timeline.animation.repeats == 0 && timeline.time > timeline.duration && characterView.nextTimelines.isEmpty {
+                                        if timeline.animation.repeats == 0 && timeline.time > timeline.duration {
                                             timeline.time = timeline.time.truncatingRemainder(dividingBy: timeline.duration)
                                         }
-                                        
-                                        if previous != timeline.current {
-                                            redrawRequired = true
-                                        }
                                     }
-                                    
-                                    index += 1
                                 }
-                            } else {
+                                
+                                characterView.elapsedTime = characterView.maxDuration
                                 redrawRequired = true
                             }
                             
                             if redrawRequired {
-                                var isDuplicated = false
+                                let sprites = characterView.cachedTimelines.map { $0.current }
                                 
-                                if characterView.cachedTimelines.count == characterView.sprites.count {
-                                    isDuplicated = true
-                                    
-                                    for i in 0..<characterView.cachedTimelines.count {
-                                        if characterView.cachedTimelines[i].current != characterView.sprites[i] {
-                                            isDuplicated = false
-                                            
-                                            break
-                                        }
-                                    }
-                                }
+                                redrawRequired = sprites != characterView.sprites
                                 
-                                if isDuplicated {
-                                    redrawRequired = false
-                                } else {
-                                    characterView.sprites.removeAll()
-                                    
-                                    for timeline in characterView.cachedTimelines {
-                                        characterView.sprites.append(timeline.current)
-                                    }
+                                if redrawRequired {
+                                    characterView.sprites = sprites
                                 }
                             }
-                            
-                            characterView.elapsedTime += deltaTime
                         }
                         
                         if characterView.isInvalidated || redrawRequired {
-                            let (image, completed) = characterView.render(timelines: characterView.cachedTimelines, images: characterView.cachedImages, deltaTime: deltaTime)
+                            let isStaging = !characterView.stagingTimelines.isEmpty
+                            let images: [String: CGImage]
+                            let imageScale: Double
+                            
+                            if !isFrameRateDropping && characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
+                                images = characterView.cachedImages.mapValues { $0.1! }
+                                imageScale = characterView.imageScale
+                            } else {
+                                images = characterView.cachedImages.mapValues { $0.0 }
+                                imageScale = 1.0
+                            }
+                            
+                            let (image, completed) = characterView.render(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale, deltaTime: deltaTime)
                             
                             characterView.isInvalidated = !completed
                             
                             if self.characterViews.firstIndex(of: characterView) == 0, let image {
-                                self.snapshot = (self.snapshot.0, image)
+                                if !isStaging {
+                                    self.snapshot = (self.snapshot.0, image)
+                                }
+                                
                                 self.delegate?.agentDidRender(self, image: image, by: characterView.name!)
                             }
-                        }
-                    } else if characterView.isInvalidated {
-                        let (image, completed) = characterView.render(timelines: characterView.cachedTimelines, images: characterView.cachedImages, deltaTime: deltaTime)
-                        
-                        characterView.isInvalidated = !completed
-                        
-                        if self.characterViews.firstIndex(of: characterView) == 0, let image {
-                            self.delegate?.agentDidRender(self, image: image, by: characterView.name!)
-                        }
-                        
-                        if completed {
-                            characterView.elapsedTime = 0.0
-                            characterView.cachedTimelines.removeAll()
-                            characterView.cachedTimelines.append(contentsOf: characterView.stagingTimelines)
-                            characterView.stagingTimelines.removeAll()
+                            
+                            if completed && isStaging {
+                                characterView.isInvalidated = true
+                                characterView.elapsedTime = 0.0
+                                characterView.cachedTimelines.removeAll()
+                                characterView.cachedTimelines.append(contentsOf: characterView.stagingTimelines)
+                                characterView.stagingTimelines.removeAll()
+                            }
                         }
                     }
                 }
@@ -2785,10 +2970,12 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     }
                 }
             }
+        } else {
+            self.frameTimestamps.removeAll(keepingCapacity: true)
         }
     }
     
-    private func make(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double)) -> CharacterView {
+    private func make(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double)) -> CharacterView {
         let characterView = CharacterView(frame: .zero)
         let preferredScale = (scale == 0.0 ? self.traitCollection.displayScale : scale) * self.userScale * self.systemScale
         let frame = CGRect(x: location.x * preferredScale / self.traitCollection.displayScale, y: location.y * preferredScale / self.traitCollection.displayScale, width: size.width * preferredScale / self.traitCollection.displayScale, height: insets.bottom * preferredScale / self.traitCollection.displayScale)
@@ -2821,6 +3008,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         characterView.size = CGSize(width: size.width, height: insets.bottom)
         characterView.contentInsets = contentInsets
         characterView.scale = scale
+        characterView.upscaling = upscaling
         characterView.language = language
         characterView.translatesAutoresizingMaskIntoConstraints = false
         characterView.contentView.addGestureRecognizer(doubleTapGestureRecognizer)
@@ -2894,8 +3082,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         return characterView
     }
     
-    private func dispatch(characterView: CharacterView) {
-        let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
+    private func dispatch(characterView: CharacterView) -> Bool {
+        var completed = true
         
         if characterView.elapsedTime >= characterView.maxDuration {
             if characterView.stepQueue.isEmpty {
@@ -2911,13 +3099,13 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 if case .message = $0 {
                                     return true
                                 }
-
+                                
                                 return false
                             }) {
                                 self.delegate?.agentDidStart(self)
                             }
                             
-                            return
+                            return completed
                         }
                         
                         for step in sequence {
@@ -3009,6 +3197,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
             
             if !characterView.stepQueue.isEmpty {
+                let safeBounds = self.bounds.inset(by: self.safeAreaInsets)
+                
                 switch characterView.stepQueue.first!.1 {
                 case .message(let message), .synthesis(let message, _):
                     if characterView.balloonView!.isHidden {
@@ -3021,7 +3211,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 case .animations(let animations):
                     if characterView.timelineQueue.isEmpty {
                         characterView.stepQueue.removeFirst()
-
+                        
                         for animation in animations {
                             characterView.timelineQueue.append(Timeline(animation: animation))
                         }
@@ -3131,7 +3321,6 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 } while !queuedTimelines.isEmpty
                 
                 if !timelines.isEmpty {
-                    var previousTimelines = [Timeline]()
                     var minZIndex = Int.max
                     var maxZIndex = Int.min
                     var zIndexSet = Set<Int>()
@@ -3162,670 +3351,357 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         }
                     }
                     
-                    if imagePaths.isEmpty {
-                        var selectedTypes = Set<String>()
-                        var keySet = Set<String>()
-                        var cachedTimelines = [Timeline]()
-                        var currentTypes = Set<String>()
-                        var stageRequired = false
+                    if let characterPath = characterView.path {
+                        let pendingTimelines = timelines
+                        let pendingMinZIndex = minZIndex
+                        let pendingMaxZIndex = maxZIndex
+                        let pendingZIndexSet = zIndexSet
+                        let pendingPathSet = pathSet
                         
-                        for timeline in characterView.cachedTimelines {
-                            if !zIndexSet.contains(timeline.animation.z) {
-                                if timeline.animation.z < minZIndex {
-                                    minZIndex = timeline.animation.z
-                                }
+                        characterView.isLoaded = false
+                        completed = false
+                        
+                        Task.immediate { @MainActor [weak self, imagePaths] in
+                            guard let self else {
+                                return
+                            }
+                            
+                            let paths = Set(imagePaths)
+                            var upscaledPaths = Set<String>()
+                            var imageScale = characterView.imageScale
+                            
+                            if characterView.upscaling {
+                                let candidates: Set<String>
                                 
-                                if timeline.animation.z > maxZIndex {
-                                    maxZIndex = timeline.animation.z
-                                }
-                                
-                                for sprite in timeline.animation {
-                                    if let path = sprite.path, !path.isEmpty && !pathSet.contains(path) {
-                                        pathSet.insert(path)
-                                    }
-                                }
-                                
-                                previousTimelines.append(timeline)
-                            }
-                            
-                            if let type = timeline.animation.type, !selectedTypes.contains(type) && characterView.fades["\(timeline.animation.z)&\(type)"] != nil {
-                                selectedTypes.insert(type)
-                            }
-                        }
-                        
-                        for (key, _) in characterView.cachedImages {
-                            if !pathSet.contains(key) {
-                                keySet.insert(key)
-                            }
-                        }
-                        
-                        characterView.maxDuration = 0.0
-                        characterView.nextTimelines.removeAll()
-                        
-                        for i in minZIndex...maxZIndex {
-                            var timelines1 = [Timeline]()
-                            var timelines2 = [Timeline]()
-                            
-                            for timeline in previousTimelines {
-                                if i == timeline.animation.z {
-                                    timelines1.append(timeline)
-                                }
-                            }
-                            
-                            for timeline in timelines {
-                                if i == timeline.animation.z {
-                                    timelines2.append(timeline)
-                                }
-                            }
-                            
-                            for timeline1 in timelines1 {
-                                if timelines2.isEmpty {
-                                    var frames = [Sprite]()
-                                    
-                                    for sprite in timeline1.animation {
-                                        frames.append(sprite)
-                                    }
-                                    
-                                    let timeline = Timeline(animation: Animation(frames: frames))
-                                    
-                                    timeline.animation.repeats = timeline1.animation.repeats
-                                    timeline.animation.z = timeline1.animation.z
-                                    timeline.animation.type = timeline1.animation.type
-                                    timeline.time = timeline1.time
-                                    
-                                    cachedTimelines.append(timeline)
+                                if await AgentView.Upscaler.shared.isCompleted {
+                                    imageScale = max(imageScale, await AgentView.Upscaler.shared.scale)
+                                    candidates = Set(characterView.cachedImages.keys).union(pendingPathSet)
                                 } else {
-                                    var timeline: Timeline? = nil
-                                    var nextTimeline: Timeline? = nil
-                                    let index = timelines2.firstIndex(where: { $0.animation.type == timeline1.animation.type })
+                                    candidates = paths
+                                }
+                                
+                                upscaledPaths = Set(candidates.filter { characterView.cachedImages[$0]?.1 == nil })
+                            }
+                            
+                            var loadedImages = (images: [String: CGImage](), upscaledImages: [String: CGImage]())
+                            
+                            if !paths.isEmpty || !upscaledPaths.isEmpty {
+                                let baseUrl = URL(filePath: characterPath).deletingLastPathComponent()
+                                let screenScale = Int(round(self.traitCollection.displayScale))
+                                
+                                loadedImages = await Task.detached { @Sendable [paths, upscaledPaths, baseUrl, screenScale] in
+                                    var sources = [(baseUrl, false, paths)]
+                                    var loadedImages = ([String: CGImage](), [String: CGImage]())
                                     
-                                    if let index {
-                                        let timeline2 = timelines2[index]
-                                        var frames = [Sprite]()
-                                        
-                                        for sprite in timeline2.animation {
-                                            if sprite.delay <= 0.01 {
-                                                var tempSprite = sprite
+                                    if !upscaledPaths.isEmpty, let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                                        sources.append((documents.appending(path: baseUrl.lastPathComponent, directoryHint: .isDirectory), true, upscaledPaths))
+                                    }
+                                    
+                                    for (source, upscaling, pathSet) in sources {
+                                        for relativePath in pathSet {
+                                            let imageUrl = source.appending(path: relativePath, directoryHint: .inferFromPath)
+                                            var image: CGImage? = nil
+                                            
+                                            if screenScale > 1 {
+                                                let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: imageUrl.pathExtension.isEmpty ? 0 : -imageUrl.pathExtension.count - 1)]
+                                                let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
+                                                let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
                                                 
-                                                tempSprite.delay = 0.1
-                                                frames.append(tempSprite)
-                                            } else {
-                                                frames.append(sprite)
-                                            }
-                                        }
-                                        
-                                        if timeline1 !== timeline2 && timeline1.time > 0.0 && timeline1.time < timeline1.duration {
-                                            nextTimeline = Timeline(animation: Animation(frames: frames))
-                                            nextTimeline!.animation.repeats = timeline2.animation.repeats
-                                            nextTimeline!.animation.z = timeline2.animation.z
-                                            nextTimeline!.animation.type = timeline2.animation.type
-                                            nextTimeline!.time = timeline2.time
-                                        } else {
-                                            timeline = Timeline(animation: Animation(frames: frames))
-                                            timeline!.animation.repeats = timeline2.animation.repeats
-                                            timeline!.animation.z = timeline2.animation.z
-                                            timeline!.animation.type = timeline2.animation.type
-                                            timeline!.time = timeline2.time
-                                        }
-                                        
-                                        timelines2.remove(at: index)
-                                        
-                                        if timeline == nil {
-                                            var frames = [Sprite]()
-                                            
-                                            for sprite in timeline1.animation {
-                                                frames.append(sprite)
-                                            }
-                                            
-                                            timeline = Timeline(animation: Animation(frames: frames))
-                                            timeline!.animation.repeats = timeline1.animation.repeats
-                                            timeline!.animation.z = timeline1.animation.z
-                                            timeline!.animation.type = timeline1.animation.type
-                                            timeline!.time = timeline1.time
-                                        }
-                                        
-                                        if let nextTimeline {
-                                            characterView.nextTimelines[timeline!] = nextTimeline
-                                        }
-                                        
-                                        cachedTimelines.append(timeline!)
-                                    }
-                                }
-                            }
-                            
-                            for timeline2 in timelines2 {
-                                var frames = [Sprite]()
-                                
-                                for sprite in timeline2.animation {
-                                    if sprite.delay <= 0.01 {
-                                        var tempSprite = sprite
-                                        
-                                        tempSprite.delay = 0.1
-                                        frames.append(tempSprite)
-                                    } else {
-                                        frames.append(sprite)
-                                    }
-                                }
-                                
-                                let timeline = Timeline(animation: Animation(frames: frames))
-                                
-                                timeline.animation.repeats = timeline2.animation.repeats
-                                timeline.animation.z = timeline2.animation.z
-                                timeline.animation.type = timeline2.animation.type
-                                timeline.time = timeline2.time
-                                
-                                cachedTimelines.append(timeline)
-                            }
-                        }
-                        
-                        for timeline in cachedTimelines {
-                            var duration: Double
-                            
-                            if let type = timeline.animation.type, !currentTypes.contains(type) {
-                                currentTypes.insert(type)
-                            }
-                            
-                            if let nextTimeline = characterView.nextTimelines[timeline] {
-                                duration = timeline.duration
-                                
-                                if nextTimeline.animation.repeats > 0 {
-                                    duration += nextTimeline.duration - nextTimeline.time
-                                } else if !nextTimeline.animation.isEmpty {
-                                    duration += nextTimeline.animation.first!.delay
-                                }
-                            } else if timeline.animation.repeats > 0 {
-                                duration = timeline.duration
-                            } else if timeline.animation.isEmpty {
-                                duration = 0.0
-                            } else {
-                                duration = timeline.animation.first!.delay
-                            }
-                            
-                            if duration > characterView.maxDuration {
-                                characterView.maxDuration = duration
-                            }
-                        }
-                        
-                        for type in selectedTypes {
-                            if !currentTypes.contains(type), let value = characterView.types[type] {
-                                characterView.types[type] = (value.0, false, value.2)
-                                stageRequired = true
-                            }
-                        }
-                        
-                        if safeBounds.width > safeBounds.height || self.characterViews.firstIndex(of: characterView) == 0 {
-                            if stageRequired {
-                                characterView.elapsedTime = characterView.maxDuration
-                                characterView.stagingTimelines.append(contentsOf: cachedTimelines)
-                                characterView.isInvalidated = true
-                            } else {
-                                for key in keySet {
-                                    characterView.cachedImages.removeValue(forKey: key)
-                                }
-                                
-                                characterView.elapsedTime = 0.0
-                                characterView.cachedTimelines.removeAll()
-                                characterView.cachedTimelines.append(contentsOf: cachedTimelines)
-                            }
-                        } else {
-                            var redrawRequired = false
-                            var indexSet = Set<Int>()
-                            var index = 0
-                            
-                            for key in keySet {
-                                characterView.cachedImages.removeValue(forKey: key)
-                            }
-                            
-                            characterView.elapsedTime = characterView.maxDuration
-                            characterView.cachedTimelines.removeAll()
-                            characterView.cachedTimelines.append(contentsOf: cachedTimelines)
-                            
-                            if !characterView.nextTimelines.isEmpty {
-                                for (timeline, nextTimeline) in characterView.nextTimelines {
-                                    if let i = characterView.cachedTimelines.firstIndex(where: { $0 === timeline }) {
-                                        nextTimeline.time = characterView.maxDuration - characterView.cachedTimelines[i].duration
-                                        
-                                        if nextTimeline.animation.repeats == 0 && nextTimeline.time > nextTimeline.duration {
-                                            nextTimeline.time = nextTimeline.time.truncatingRemainder(dividingBy: nextTimeline.duration)
-                                        }
-                                        
-                                        characterView.cachedTimelines[i] = nextTimeline
-                                        indexSet.insert(i)
-                                        redrawRequired = true
-                                    }
-                                }
-                                
-                                characterView.nextTimelines.removeAll()
-                            }
-                            
-                            for timeline in characterView.cachedTimelines {
-                                if !indexSet.contains(index) {
-                                    let previous = timeline.current
-                                    
-                                    timeline.time += characterView.maxDuration
-                                    
-                                    if timeline.animation.repeats == 0 && timeline.time > timeline.duration {
-                                        timeline.time = timeline.time.truncatingRemainder(dividingBy: timeline.duration)
-                                    }
-                                    
-                                    if previous != timeline.current {
-                                        redrawRequired = true
-                                    }
-                                }
-                                
-                                index += 1
-                            }
-                            
-                            if redrawRequired {
-                                var isDuplicated = false
-                                
-                                if characterView.cachedTimelines.count == characterView.sprites.count {
-                                    isDuplicated = true
-                                    
-                                    for i in 0..<characterView.cachedTimelines.count {
-                                        if characterView.cachedTimelines[i].current != characterView.sprites[i] {
-                                            isDuplicated = false
-                                            
-                                            break
-                                        }
-                                    }
-                                }
-                                
-                                if isDuplicated {
-                                    redrawRequired = false
-                                } else {
-                                    characterView.sprites.removeAll()
-                                    
-                                    for timeline in characterView.cachedTimelines {
-                                        characterView.sprites.append(timeline.current)
-                                    }
-                                }
-                            }
-                            
-                            if redrawRequired {
-                                characterView.render(timelines: characterView.cachedTimelines, images: characterView.cachedImages, deltaTime: 1.0)
-                            }
-                        }
-                    } else {
-                        let paths = imagePaths
-                        
-                        if let characterPath = characterView.path {
-                            let baseUrl = URL(filePath: characterPath).deletingLastPathComponent()
-                            let scale = Int(round(self.traitCollection.displayScale))
-                            
-                            characterView.isLoaded = false
-                            
-                            let pendingTimelines = timelines
-                            let pendingPreviousTimelines = previousTimelines
-                            let pendingMinZIndex = minZIndex
-                            let pendingMaxZIndex = maxZIndex
-                            let pendingZIndexSet = zIndexSet
-                            let pendingPathSet = pathSet
-
-                            Task { @MainActor [weak self] in
-                                let tempImages = await Task.detached { @Sendable [paths, baseUrl, scale] in
-                                    var images = [(String, CGImage)]()
-                                    
-                                    for relativePath in paths {
-                                        let imageUrl = baseUrl.appending(path: relativePath, directoryHint: .inferFromPath)
-                                        var image: CGImage? = nil
-                                        
-                                        if scale > 1 {
-                                            let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: -imageUrl.pathExtension.count - 1)]
-                                            let filename = "\(name)@\(scale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
-                                            let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
-                                            
-                                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                defer {
-                                                    try? file.close()
-                                                }
-                                                
-                                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                    for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                        image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                                        
-                                                        break
+                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                                    defer {
+                                                        try? file.close()
                                                     }
-                                                }
-                                            }
-                                        }
-                                        
-                                        if let image {
-                                            images.append((relativePath, image))
-                                        } else {
-                                            let path = imageUrl.path(percentEncoded: false)
-                                            
-                                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                defer {
-                                                    try? file.close()
-                                                }
-                                                
-                                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                    for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                        if let image = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
-                                                            images.append((relativePath, image))
+                                                    
+                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                            image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
                                                             
                                                             break
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
-                                    }
-                                    
-                                    return images
-                                }.value
-                                
-                                guard let characterViews = self?.characterViews, characterViews.contains(where: { $0 === characterView }) else {
-                                    return
-                                }
-                                
-                                let timelines = pendingTimelines
-                                var previousTimelines = pendingPreviousTimelines
-                                var minZIndex = pendingMinZIndex
-                                var maxZIndex = pendingMaxZIndex
-                                let zIndexSet = pendingZIndexSet
-                                var pathSet = pendingPathSet
-                                var selectedTypes = Set<String>()
-                                var keySet = Set<String>()
-                                var cachedTimelines = [Timeline]()
-                                var currentTypes = Set<String>()
-                                var stageRequired = false
-                                
-                                for image in tempImages {
-                                    characterView.cachedImages.updateValue(image.1, forKey: image.0)
-                                }
-                                
-                                characterView.isLoaded = true
-                                
-                                for timeline in characterView.cachedTimelines {
-                                    if !zIndexSet.contains(timeline.animation.z) {
-                                        if timeline.animation.z < minZIndex {
-                                            minZIndex = timeline.animation.z
-                                        }
-                                        
-                                        if timeline.animation.z > maxZIndex {
-                                            maxZIndex = timeline.animation.z
-                                        }
-                                        
-                                        for sprite in timeline.animation {
-                                            if let path = sprite.path, !path.isEmpty && !pathSet.contains(path) {
-                                                pathSet.insert(path)
-                                            }
-                                        }
-                                        
-                                        previousTimelines.append(timeline)
-                                    }
-                                    
-                                    if let type = timeline.animation.type, !selectedTypes.contains(type) && characterView.fades["\(timeline.animation.z)&\(type)"] != nil {
-                                        selectedTypes.insert(type)
-                                    }
-                                }
-                                
-                                for (key, _) in characterView.cachedImages {
-                                    if !pathSet.contains(key) {
-                                        keySet.insert(key)
-                                    }
-                                }
-                                
-                                characterView.maxDuration = 0.0
-                                characterView.nextTimelines.removeAll()
-                                
-                                for i in minZIndex...maxZIndex {
-                                    var timelines1 = [Timeline]()
-                                    var timelines2 = [Timeline]()
-                                    
-                                    for timeline in previousTimelines {
-                                        if i == timeline.animation.z {
-                                            timelines1.append(timeline)
-                                        }
-                                    }
-                                    
-                                    for timeline in timelines {
-                                        if i == timeline.animation.z {
-                                            timelines2.append(timeline)
-                                        }
-                                    }
-                                    
-                                    for timeline1 in timelines1 {
-                                        if timelines2.isEmpty {
-                                            var frames = [Sprite]()
                                             
-                                            for sprite in timeline1.animation {
-                                                frames.append(sprite)
-                                            }
-                                            
-                                            let timeline = Timeline(animation: Animation(frames: frames))
-                                            
-                                            timeline.animation.repeats = timeline1.animation.repeats
-                                            timeline.animation.z = timeline1.animation.z
-                                            timeline.animation.type = timeline1.animation.type
-                                            timeline.time = timeline1.time
-                                            
-                                            cachedTimelines.append(timeline)
-                                        } else {
-                                            var timeline: Timeline? = nil
-                                            var nextTimeline: Timeline? = nil
-                                            let index = timelines2.firstIndex(where: { $0.animation.type == timeline1.animation.type })
-                                            
-                                            if let index {
-                                                let timeline2 = timelines2[index]
-                                                var frames = [Sprite]()
+                                            if image == nil {
+                                                let path = imageUrl.path(percentEncoded: false)
                                                 
-                                                for sprite in timeline2.animation {
-                                                    if sprite.delay <= 0.01 {
-                                                        var tempSprite = sprite
-                                                        
-                                                        tempSprite.delay = 0.1
-                                                        frames.append(tempSprite)
-                                                    } else {
-                                                        frames.append(sprite)
+                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
+                                                    defer {
+                                                        try? file.close()
+                                                    }
+                                                    
+                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
+                                                            image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
+                                                            
+                                                            break
+                                                        }
                                                     }
                                                 }
-                                                
-                                                if timeline1 !== timeline2 && timeline1.time > 0.0 && timeline1.time < timeline1.duration {
-                                                    nextTimeline = Timeline(animation: Animation(frames: frames))
-                                                    nextTimeline!.animation.repeats = timeline2.animation.repeats
-                                                    nextTimeline!.animation.z = timeline2.animation.z
-                                                    nextTimeline!.animation.type = timeline2.animation.type
-                                                    nextTimeline!.time = timeline2.time
+                                            }
+                                            
+                                            if let image {
+                                                if upscaling {
+                                                    loadedImages.1[relativePath] = image
                                                 } else {
-                                                    timeline = Timeline(animation: Animation(frames: frames))
-                                                    timeline!.animation.repeats = timeline2.animation.repeats
-                                                    timeline!.animation.z = timeline2.animation.z
-                                                    timeline!.animation.type = timeline2.animation.type
-                                                    timeline!.time = timeline2.time
+                                                    loadedImages.0[relativePath] = image
                                                 }
-                                                
-                                                timelines2.remove(at: index)
-                                                
-                                                if timeline == nil {
-                                                    var frames = [Sprite]()
-                                                    
-                                                    for sprite in timeline1.animation {
-                                                        frames.append(sprite)
-                                                    }
-                                                    
-                                                    timeline = Timeline(animation: Animation(frames: frames))
-                                                    timeline!.animation.repeats = timeline1.animation.repeats
-                                                    timeline!.animation.z = timeline1.animation.z
-                                                    timeline!.animation.type = timeline1.animation.type
-                                                    timeline!.time = timeline1.time
-                                                }
-                                                
-                                                if let nextTimeline {
-                                                    characterView.nextTimelines.updateValue(nextTimeline, forKey: timeline!)
-                                                }
-                                                
-                                                cachedTimelines.append(timeline!)
                                             }
                                         }
                                     }
                                     
-                                    for timeline2 in timelines2 {
+                                    return loadedImages
+                                }.value
+                            }
+                            
+                            let characterViews = self.characterViews
+                            
+                            guard characterViews.contains(where: { $0 === characterView }) else {
+                                return
+                            }
+                            
+                            let timelines = pendingTimelines
+                            var previousTimelines = [Timeline]()
+                            var minZIndex = pendingMinZIndex
+                            var maxZIndex = pendingMaxZIndex
+                            let zIndexSet = pendingZIndexSet
+                            var pathSet = pendingPathSet
+                            var selectedTypes = Set<String>()
+                            var keySet = Set<String>()
+                            var cachedTimelines = [Timeline]()
+                            var currentTypes = Set<String>()
+                            var stageRequired = false
+                            
+                            for (path, image) in loadedImages.0 {
+                                characterView.cachedImages[path] = (image, characterView.cachedImages[path]?.1)
+                            }
+                            
+                            for (path, image) in loadedImages.1 {
+                                if let cachedImage = characterView.cachedImages[path] {
+                                    characterView.cachedImages[path] = (cachedImage.0, image)
+                                    imageScale = Double(image.width) / Double(cachedImage.0.width)
+                                }
+                            }
+                            
+                            if imageScale != characterView.imageScale || !loadedImages.images.isEmpty || !loadedImages.upscaledImages.isEmpty {
+                                characterView.isInvalidated = true
+                            }
+                            
+                            characterView.imageScale = imageScale
+                            
+                            for timeline in characterView.cachedTimelines {
+                                if !zIndexSet.contains(timeline.animation.z) {
+                                    if timeline.animation.z < minZIndex {
+                                        minZIndex = timeline.animation.z
+                                    }
+                                    
+                                    if timeline.animation.z > maxZIndex {
+                                        maxZIndex = timeline.animation.z
+                                    }
+                                    
+                                    for sprite in timeline.animation {
+                                        if let path = sprite.path, !path.isEmpty && !pathSet.contains(path) {
+                                            pathSet.insert(path)
+                                        }
+                                    }
+                                    
+                                    previousTimelines.append(timeline)
+                                }
+                                
+                                if let type = timeline.animation.type, !selectedTypes.contains(type) && characterView.fades["\(timeline.animation.z)&\(type)"] != nil {
+                                    selectedTypes.insert(type)
+                                }
+                            }
+                            
+                            for (key, _) in characterView.cachedImages {
+                                if !pathSet.contains(key) {
+                                    keySet.insert(key)
+                                }
+                            }
+                            
+                            characterView.maxDuration = 0.0
+                            characterView.nextTimelines.removeAll()
+                            
+                            for i in minZIndex...maxZIndex {
+                                var timelines1 = [Timeline]()
+                                var timelines2 = [Timeline]()
+                                
+                                for timeline in previousTimelines {
+                                    if i == timeline.animation.z {
+                                        timelines1.append(timeline)
+                                    }
+                                }
+                                
+                                for timeline in timelines {
+                                    if i == timeline.animation.z {
+                                        timelines2.append(timeline)
+                                    }
+                                }
+                                
+                                for timeline1 in timelines1 {
+                                    if timelines2.isEmpty {
                                         var frames = [Sprite]()
                                         
-                                        for sprite in timeline2.animation {
-                                            if sprite.delay <= 0.01 {
-                                                var tempSprite = sprite
-                                                
-                                                tempSprite.delay = 0.1
-                                                frames.append(tempSprite)
-                                            } else {
-                                                frames.append(sprite)
-                                            }
+                                        for sprite in timeline1.animation {
+                                            frames.append(sprite)
                                         }
                                         
                                         let timeline = Timeline(animation: Animation(frames: frames))
                                         
-                                        timeline.animation.repeats = timeline2.animation.repeats
-                                        timeline.animation.z = timeline2.animation.z
-                                        timeline.animation.type = timeline2.animation.type
-                                        timeline.time = timeline2.time
+                                        timeline.animation.repeats = timeline1.animation.repeats
+                                        timeline.animation.z = timeline1.animation.z
+                                        timeline.animation.type = timeline1.animation.type
+                                        timeline.time = timeline1.time
                                         
                                         cachedTimelines.append(timeline)
-                                    }
-                                }
-                                
-                                for timeline in cachedTimelines {
-                                    let nextTimelines = characterView.nextTimelines
-                                    var duration: Double
-                                    
-                                    if let type = timeline.animation.type, !currentTypes.contains(type) {
-                                        currentTypes.insert(type)
-                                    }
-                                    
-                                    if let nextTimeline = nextTimelines[timeline] {
-                                        duration = timeline.duration - timeline.time
-                                        
-                                        if nextTimeline.animation.repeats > 0 {
-                                            duration += nextTimeline.duration
-                                        } else if !nextTimeline.animation.isEmpty {
-                                            duration += nextTimeline.animation.first!.delay
-                                        }
-                                    } else if timeline.animation.repeats > 0 {
-                                        duration = timeline.duration
-                                    } else if timeline.animation.isEmpty {
-                                        duration = 0.0
                                     } else {
-                                        duration = timeline.animation.first!.delay
-                                    }
-                                    
-                                    if duration > characterView.maxDuration {
-                                        characterView.maxDuration = duration
-                                    }
-                                }
-                                
-                                for type in selectedTypes {
-                                    if !currentTypes.contains(type), let value = characterView.types[type] {
-                                        characterView.types[type] = (value.0, false, value.2)
-                                        stageRequired = true
-                                    }
-                                }
-                                
-                                if (characterView.parentView.map({
-                                    let safeBounds = $0.bounds.inset(by: $0.safeAreaInsets)
-                                    
-                                    return safeBounds.width > safeBounds.height
-                                }) ?? false) || characterViews.firstIndex(of: characterView) == 0 {
-                                    if stageRequired {
-                                        characterView.elapsedTime = characterView.maxDuration
-                                        characterView.stagingTimelines.append(contentsOf: cachedTimelines)
-                                        characterView.isInvalidated = true
-                                    } else {
-                                        for key in keySet {
-                                            characterView.cachedImages.removeValue(forKey: key)
-                                        }
+                                        var timeline: Timeline? = nil
+                                        var nextTimeline: Timeline? = nil
+                                        let index = timelines2.firstIndex(where: { $0.animation.type == timeline1.animation.type })
                                         
-                                        characterView.elapsedTime = 0.0
-                                        characterView.cachedTimelines.removeAll()
-                                        characterView.cachedTimelines.append(contentsOf: cachedTimelines)
-                                    }
-                                } else {
-                                    var redrawRequired = false
-                                    var indexSet = Set<Int>()
-                                    var index = 0
-                                    
-                                    for key in keySet {
-                                        characterView.cachedImages.removeValue(forKey: key)
-                                    }
-                                    
-                                    characterView.elapsedTime = characterView.maxDuration
-                                    characterView.cachedTimelines.removeAll()
-                                    characterView.cachedTimelines.append(contentsOf: cachedTimelines)
-                                    
-                                    if !characterView.nextTimelines.isEmpty {
-                                        for (timeline, nextTimeline) in characterView.nextTimelines {
-                                            if let i = characterView.cachedTimelines.firstIndex(where: { $0 === timeline }) {
-                                                nextTimeline.time = characterView.maxDuration - characterView.cachedTimelines[i].duration
-                                                
-                                                if nextTimeline.animation.repeats == 0 && nextTimeline.time > nextTimeline.duration {
-                                                    nextTimeline.time = nextTimeline.time.truncatingRemainder(dividingBy: nextTimeline.duration)
-                                                }
-                                                
-                                                characterView.cachedTimelines[i] = nextTimeline
-                                                indexSet.insert(i)
-                                                redrawRequired = true
-                                            }
-                                        }
-                                        
-                                        characterView.nextTimelines.removeAll()
-                                    }
-                                    
-                                    for timeline in characterView.cachedTimelines {
-                                        if !indexSet.contains(index) {
-                                            let previous = timeline.current
+                                        if let index {
+                                            let timeline2 = timelines2[index]
+                                            var frames = [Sprite]()
                                             
-                                            timeline.time += characterView.maxDuration
-                                            
-                                            if timeline.animation.repeats == 0 && timeline.time > timeline.duration {
-                                                timeline.time = timeline.time.truncatingRemainder(dividingBy: timeline.duration)
-                                            }
-                                            
-                                            if previous != timeline.current {
-                                                redrawRequired = true
-                                            }
-                                        }
-                                        
-                                        index += 1
-                                    }
-                                    
-                                    if redrawRequired {
-                                        var isDuplicated = false
-                                        
-                                        if characterView.cachedTimelines.count == characterView.sprites.count {
-                                            isDuplicated = true
-                                            
-                                            for i in 0..<characterView.cachedTimelines.count {
-                                                if characterView.cachedTimelines[i].current != characterView.sprites[i] {
-                                                    isDuplicated = false
+                                            for sprite in timeline2.animation {
+                                                if sprite.delay <= 0.01 {
+                                                    var tempSprite = sprite
                                                     
-                                                    break
+                                                    tempSprite.delay = 0.1
+                                                    frames.append(tempSprite)
+                                                } else {
+                                                    frames.append(sprite)
                                                 }
                                             }
-                                        }
-                                        
-                                        if isDuplicated {
-                                            redrawRequired = false
-                                        } else {
-                                            characterView.sprites.removeAll()
                                             
-                                            for timeline in characterView.cachedTimelines {
-                                                characterView.sprites.append(timeline.current)
+                                            if timeline1 !== timeline2 && timeline1.time > 0.0 && timeline1.time < timeline1.duration {
+                                                nextTimeline = Timeline(animation: Animation(frames: frames))
+                                                nextTimeline!.animation.repeats = timeline2.animation.repeats
+                                                nextTimeline!.animation.z = timeline2.animation.z
+                                                nextTimeline!.animation.type = timeline2.animation.type
+                                                nextTimeline!.time = timeline2.time
+                                            } else {
+                                                timeline = Timeline(animation: Animation(frames: frames))
+                                                timeline!.animation.repeats = timeline2.animation.repeats
+                                                timeline!.animation.z = timeline2.animation.z
+                                                timeline!.animation.type = timeline2.animation.type
+                                                timeline!.time = timeline2.time
                                             }
+                                            
+                                            timelines2.remove(at: index)
+                                            
+                                            if timeline == nil {
+                                                var frames = [Sprite]()
+                                                
+                                                for sprite in timeline1.animation {
+                                                    frames.append(sprite)
+                                                }
+                                                
+                                                timeline = Timeline(animation: Animation(frames: frames))
+                                                timeline!.animation.repeats = timeline1.animation.repeats
+                                                timeline!.animation.z = timeline1.animation.z
+                                                timeline!.animation.type = timeline1.animation.type
+                                                timeline!.time = timeline1.time
+                                            }
+                                            
+                                            if let nextTimeline {
+                                                characterView.nextTimelines.updateValue(nextTimeline, forKey: timeline!)
+                                            }
+                                            
+                                            cachedTimelines.append(timeline!)
+                                        }
+                                    }
+                                }
+                                
+                                for timeline2 in timelines2 {
+                                    var frames = [Sprite]()
+                                    
+                                    for sprite in timeline2.animation {
+                                        if sprite.delay <= 0.01 {
+                                            var tempSprite = sprite
+                                            
+                                            tempSprite.delay = 0.1
+                                            frames.append(tempSprite)
+                                        } else {
+                                            frames.append(sprite)
                                         }
                                     }
                                     
-                                    if redrawRequired {
-                                        characterView.render(timelines: characterView.cachedTimelines, images: characterView.cachedImages, deltaTime: 1.0)
-                                    }
+                                    let timeline = Timeline(animation: Animation(frames: frames))
+                                    
+                                    timeline.animation.repeats = timeline2.animation.repeats
+                                    timeline.animation.z = timeline2.animation.z
+                                    timeline.animation.type = timeline2.animation.type
+                                    timeline.time = timeline2.time
+                                    
+                                    cachedTimelines.append(timeline)
                                 }
                             }
+                            
+                            for timeline in cachedTimelines {
+                                var duration: Double
+                                
+                                if let type = timeline.animation.type, !currentTypes.contains(type) {
+                                    currentTypes.insert(type)
+                                }
+                                
+                                if let nextTimeline = characterView.nextTimelines[timeline] {
+                                    duration = timeline.duration - timeline.time
+                                    
+                                    if nextTimeline.animation.repeats > 0 {
+                                        duration += nextTimeline.duration
+                                    } else if !nextTimeline.animation.isEmpty {
+                                        duration += nextTimeline.animation.first!.delay
+                                    }
+                                } else if timeline.animation.repeats > 0 {
+                                    duration = timeline.duration
+                                } else if timeline.animation.isEmpty {
+                                    duration = 0.0
+                                } else {
+                                    duration = timeline.animation.first!.delay
+                                }
+                                
+                                if duration > characterView.maxDuration {
+                                    characterView.maxDuration = duration
+                                }
+                            }
+                            
+                            for type in selectedTypes {
+                                if !currentTypes.contains(type), let value = characterView.types[type] {
+                                    characterView.types[type] = (value.0, false, value.2)
+                                    stageRequired = true
+                                }
+                            }
+                            
+                            if stageRequired {
+                                characterView.isInvalidated = true
+                                characterView.elapsedTime = characterView.maxDuration
+                                characterView.stagingTimelines.append(contentsOf: cachedTimelines)
+                            } else {
+                                for key in keySet {
+                                    characterView.cachedImages.removeValue(forKey: key)
+                                }
+                                
+                                if characterView.cachedTimelines.count != cachedTimelines.count || zip(characterView.cachedTimelines, cachedTimelines).contains(where: { previous, current in
+                                    previous.animation.z != current.animation.z || previous.animation.type != current.animation.type
+                                }) {
+                                    characterView.isInvalidated = true
+                                }
+                                
+                                characterView.elapsedTime = 0.0
+                                characterView.cachedTimelines.removeAll()
+                                characterView.cachedTimelines.append(contentsOf: cachedTimelines)
+                            }
+                            
+                            characterView.isLoaded = true
+                            completed = true
                         }
                     }
                 }
             }
         }
+        
+        return completed
     }
     
     private func snip(image: CGImage) async {
@@ -4018,11 +3894,13 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         var size: CGSize = CGSize.zero
         var contentInsets = NSDirectionalEdgeInsets()
         var scale = 1.0
+        var upscaling = true
+        var imageScale = 1.0
         var language: String? = nil
         var elapsedTime: CFTimeInterval = 0.0
         var maxDuration: CFTimeInterval = 0.0
         var cachedTimelines = [Timeline]()
-        var cachedImages = [String: CGImage]()
+        var cachedImages = [String: (CGImage, CGImage?)]()
         var sprites = [Sprite]()
         var stagingTimelines = [Timeline]()
         var nextTimelines = [Timeline: Timeline]()
@@ -4543,7 +4421,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 isTouchable = false
                             }
                             
-                            if isTouchable, let image = self.cachedImages[path], let parentView = self.parentView {
+                            if isTouchable, let image = self.cachedImages[path]?.0, let parentView = self.parentView {
                                 let x = round(self.origin.x + current.location.x)
                                 let y = round(self.origin.y + current.location.y)
                                 var width = current.size.width
@@ -4667,7 +4545,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
         
         @objc private func refreshOccured(sender: UIRefreshControl) {
-            Task {
+            Task(priority: .utility) {
                 if await Script.shared.update() {
                     await Script.shared.run(name: self.name!, sequences: Script.shared.characters.reduce(into: [], { x, y in
                         if y.name == self.name {
@@ -4695,7 +4573,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
         
         @discardableResult
-        func render(timelines: [Timeline], images: [String: CGImage], deltaTime: Double) -> (CGImage?, Bool) {
+        func render(timelines: [Timeline], images: [String: CGImage], imageScale: Double, deltaTime: Double) -> (CGImage?, Bool) {
             var image: CGImage? = nil
             var completed = true
             
@@ -4704,7 +4582,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 
                 format.opaque = false
                 format.preferredRange = .standard
-                format.scale = self.scale == 0.0 ? self.traitCollection.displayScale : self.scale
+                format.scale = (self.scale == 0.0 ? self.traitCollection.displayScale : self.scale) * imageScale
                 
                 let renderer = UIGraphicsImageRenderer(size: self.size, format: format)
                 let renderedImage = renderer.image { rendererContext in
@@ -4712,7 +4590,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     let actualScale = parentView.userScale * parentView.systemScale
                     let types = self.types.compactMap({ $0.value.1 ? $0.key : nil })
                     
-                    if actualScale == floor(actualScale) {
+                    if imageScale == 1.0 && actualScale == floor(actualScale) {
                         context.interpolationQuality = .none
                         context.setAllowsAntialiasing(false)
                     } else {
@@ -4820,8 +4698,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     let height: Double
                                     
                                     if current.size.width == 0.0 && current.size.height == 0.0 {
-                                        width = Double(i.width)
-                                        height = Double(i.height)
+                                        width = floor(Double(i.width) / imageScale)
+                                        height = floor(Double(i.height) / imageScale)
                                     } else if current.size.width == 0.0 {
                                         width = floor(current.size.height * Double(i.width) / Double(i.height))
                                         height = floor(current.size.height)
@@ -4889,7 +4767,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
         
         @discardableResult
-        func preview(timelines: [Timeline], images: inout [String: CGImage]) -> (CGImage?, [String: Double]) {
+        func preview(timelines: [Timeline], images: [String: CGImage], imageScale: Double) -> (CGImage?, [String: Double]) {
             var minZIndex = Int.max
             var maxZIndex = Int.min
             var image: CGImage? = nil
@@ -4909,7 +4787,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             
             format.opaque = false
             format.preferredRange = .standard
-            format.scale = self.scale == 0.0 ? self.traitCollection.displayScale : self.scale
+            format.scale = (self.scale == 0.0 ? self.traitCollection.displayScale : self.scale) * imageScale
             
             let renderer = UIGraphicsImageRenderer(size: self.size, format: format)
             let renderedImage = renderer.image { rendererContext in
@@ -4986,8 +4864,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     let height: Double
                                     
                                     if current.size.width == 0.0 && current.size.height == 0.0 {
-                                        width = Double(i.width)
-                                        height = Double(i.height)
+                                        width = floor(Double(i.width) / imageScale)
+                                        height = floor(Double(i.height) / imageScale)
                                     } else if current.size.width == 0.0 {
                                         width = floor(current.size.height * Double(i.width) / Double(i.height))
                                         height = floor(current.size.height)
@@ -5097,6 +4975,456 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             
             return balloonPath
         }
+    }
+    
+    private actor Upscaler {
+        static let shared = Upscaler()
+        private(set) var scale = 0.0
+        private(set) var isCompleted = false
+        private var generation: UInt64 = 0
+        
+        private init() {}
+        
+        func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], completion: (@MainActor @Sendable (Int) -> Void)? = nil) {
+            self.isCompleted = false
+            self.generation &+= 1
+            
+            let generation = self.generation
+            let sources = characters.reduce(into: [URL: Set<String>]()) { sources, character in
+                guard character.upscaling else {
+                    return
+                }
+                
+                let baseURL = URL(filePath: character.path).deletingLastPathComponent().standardizedFileURL
+                var paths = Set<String>()
+                var stack = character.sequences
+                
+                while let sequence = stack.popLast() {
+                    for step in sequence {
+                        switch step {
+                        case .sequence(let sequence):
+                            stack.append(sequence)
+                        case .animations(let animations):
+                            paths.formUnion(animations.flatMap { $0.compactMap { $0.path }.filter { !$0.isEmpty } })
+                        default:
+                            break
+                        }
+                    }
+                }
+                
+                sources[baseURL, default: []].formUnion(paths)
+            }
+            
+            self.removeImages(except: Array(sources.keys))
+            
+            Task(priority: .utility) { [sources] in
+#if !targetEnvironment(simulator)
+                if !sources.isEmpty && self.scale == 0 {
+                    _ = await self.configure(width: self.minimumTileDimension, height: self.minimumTileDimension, processor: nil)
+                }
+#endif
+                var succeeded = true
+                var total = 0
+
+                for (baseURL, paths) in sources {
+                    let (isSuccessful, count) = await self.process(paths: paths, baseURL: baseURL)
+
+                    if !isSuccessful {
+                        succeeded = false
+                    }
+
+                    total += count
+                }
+                
+                if self.generation == generation {
+                    self.isCompleted = succeeded
+
+                    await completion?(total)
+                }
+            }
+        }
+        
+        private nonisolated func readImage(at url: URL) -> CGImage? {
+            return autoreleasepool {
+                guard FileManager.default.fileExists(atPath: url.path(percentEncoded: false)),
+                      let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+                return CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+            }
+        }
+        
+        private func removeImages(except baseURLs: [URL]) {
+            let names = Set(baseURLs.map(\.lastPathComponent))
+            
+            guard let documents = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true), let urls = try? FileManager.default.contentsOfDirectory(at: documents, includingPropertiesForKeys: [.isDirectoryKey]) else {
+                return
+            }
+            
+            for url in urls where !names.contains(url.lastPathComponent) {
+                if (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+        }
+        
+        private func process(paths: Set<String>, baseURL: URL) async -> (succeeded: Bool, count: Int) {
+            guard !paths.isEmpty else {
+                return (true, 0)
+            }
+            
+            let directory: URL
+            
+            do {
+                directory = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appending(path: baseURL.lastPathComponent, directoryHint: .isDirectory)
+            } catch {
+                return (false, 0)
+            }
+            
+            var succeeded = true
+            var imagePaths = Set<String>()
+            var directories = [URL: [String]]()
+            
+            for path in paths {
+                guard URL(string: path)?.scheme == nil else {
+                    continue
+                }
+                
+                let imageURL = baseURL.appending(path: path, directoryHint: .inferFromPath)
+                let name = imageURL.deletingPathExtension().lastPathComponent
+                let pathExtension = imageURL.pathExtension
+                var candidates = [path]
+                
+                if name.firstMatch(of: /@[0-9]+x$/) == nil {
+                    let sourceDirectory = imageURL.deletingLastPathComponent().standardizedFileURL
+                    
+                    if directories[sourceDirectory] == nil {
+                        if let filenames = try? FileManager.default.contentsOfDirectory(atPath: sourceDirectory.path(percentEncoded: false)) {
+                            directories[sourceDirectory] = filenames
+                        } else {
+                            directories[sourceDirectory] = []
+                            succeeded = false
+                        }
+                    }
+                    
+                    for filename in directories[sourceDirectory]! {
+                        guard (filename as NSString).pathExtension == pathExtension,
+                              let match = (filename as NSString).deletingPathExtension.wholeMatch(of: /(.+)@[0-9]+x/),
+                              match.output.1 == name else {
+                            continue
+                        }
+                        
+                        candidates.append(((path as NSString).deletingLastPathComponent as NSString).appendingPathComponent(filename))
+                    }
+                }
+                
+                let existingPaths = candidates.filter {
+                    var isDirectory: ObjCBool = false
+                    
+                    return FileManager.default.fileExists(atPath: baseURL.appending(path: $0, directoryHint: .inferFromPath).path(percentEncoded: false), isDirectory: &isDirectory) && !isDirectory.boolValue
+                }
+                
+                if existingPaths.isEmpty {
+                    succeeded = false
+                }
+                
+                imagePaths.formUnion(existingPaths)
+            }
+            
+            var images = imagePaths.compactMap { path -> (path: String, image: CGImage)? in
+                let url = directory.appending(path: path, directoryHint: .inferFromPath)
+                
+                guard self.readImage(at: url) == nil else {
+                    return nil
+                }
+                
+                try? FileManager.default.removeItem(at: url)
+                
+                guard let image = self.readImage(at: baseURL.appending(path: path, directoryHint: .inferFromPath)) else {
+                    succeeded = false
+                    
+                    return nil
+                }
+                
+                return (path, image)
+            }
+            
+            guard !images.isEmpty else {
+                return (succeeded, 0)
+            }
+            
+#if !targetEnvironment(simulator)
+            guard VTSuperResolutionScalerConfiguration.isSupported else {
+                return (false, 0)
+            }
+            
+            images.sort {
+                let lhs = self.calculateInputDimensions(for: $0.image)
+                let rhs = self.calculateInputDimensions(for: $1.image)
+                
+                if lhs != rhs {
+                    return lhs < rhs
+                }
+                
+                return $0.path < $1.path
+            }
+            
+            let processor = VTFrameProcessor()
+            var configuration: VTSuperResolutionScalerConfiguration?
+            var total = 0
+            
+            defer {
+                if configuration != nil {
+                    processor.endSession()
+                }
+            }
+            
+            for (path, original) in images {
+                let url = directory.appending(path: path, directoryHint: .inferFromPath)
+                
+                guard self.readImage(at: url) == nil else {
+                    continue
+                }
+                
+                try? FileManager.default.removeItem(at: url)
+                
+                let image = await self.upscale(original, processor: processor, configuration: &configuration)
+                
+                guard self.readImage(at: url) == nil else {
+                    continue
+                }
+                
+                try? FileManager.default.removeItem(at: url)
+                
+                guard let image else {
+                    succeeded = false
+                    
+                    if configuration == nil {
+                        break
+                    }
+                    
+                    continue
+                }
+                
+                do {
+                    try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try autoreleasepool {
+                        let data = NSMutableData()
+                        
+                        guard let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else {
+                            throw CocoaError(.fileWriteUnknown)
+                        }
+                        
+                        CGImageDestinationAddImage(destination, image, nil)
+                        
+                        guard CGImageDestinationFinalize(destination) else {
+                            throw CocoaError(.fileWriteUnknown)
+                        }
+                        
+                        try (data as Data).write(to: url, options: .atomic)
+                    }
+
+                    total += 1
+                } catch {
+                    succeeded = false
+                }
+            }
+            
+            return (succeeded, total)
+#else
+            return (false, 0)
+#endif
+        }
+        
+#if !targetEnvironment(simulator)
+        // https://developer.apple.com/documentation/videotoolbox/vtsuperresolutionscalerconfiguration
+        private let padding = 16
+        private let minimumTileDimension = 128
+        private let maximumTileDimension = 512
+        private let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        private lazy var context = CIContext(options: [.cacheIntermediates: false])
+        
+        private func calculateInputDimensions(for image: CGImage) -> (width: Int, height: Int) {
+            func dimension(for length: Int) -> Int {
+                let paddedLength = length + self.padding * 2
+                var dimension = self.minimumTileDimension
+                
+                while dimension < paddedLength && dimension < self.maximumTileDimension {
+                    dimension *= 2
+                }
+                
+                return dimension
+            }
+            
+            return (dimension(for: image.width), dimension(for: image.height))
+        }
+        
+        private func upscale(_ image: CGImage, processor: VTFrameProcessor, configuration: inout VTSuperResolutionScalerConfiguration?) async -> CGImage? {
+            let (width, height) = self.calculateInputDimensions(for: image)
+            
+            if configuration?.frameWidth != width || configuration?.frameHeight != height {
+                if configuration != nil {
+                    processor.endSession()
+                }
+                
+                configuration = nil
+                configuration = await self.configure(width: width, height: height, processor: processor)
+            }
+            
+            guard let configuration, let pixelFormat = configuration.supportedPixelFormats.first else {
+                return nil
+            }
+            
+            let scale = configuration.scaleFactor
+            let outputWidth = image.width * scale
+            let outputHeight = image.height * scale
+            
+            guard let output = CGContext(data: nil, width: outputWidth, height: outputHeight, bitsPerComponent: 8, bytesPerRow: outputWidth * 4, space: self.colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue), let colors = self.extendTransparentColors(in: image) else {
+                return nil
+            }
+            
+            let source = CIImage(cgImage: colors).clampedToExtent()
+            let alpha = CIImage(cgImage: image).clampedToExtent().samplingLinear().transformed(by: CGAffineTransform(scaleX: CGFloat(scale), y: CGFloat(scale)))
+            let tileWidth = width - self.padding * 2
+            let tileHeight = height - self.padding * 2
+            
+            for y in stride(from: 0, to: image.height, by: tileHeight) {
+                for x in stride(from: 0, to: image.width, by: tileWidth) {
+                    let contentWidth = min(tileWidth, image.width - x)
+                    let contentHeight = min(tileHeight, image.height - y)
+                    let input = source.transformed(by: CGAffineTransform(translationX: CGFloat(self.padding - x), y: CGFloat(self.padding - y))).cropped(to: CGRect(x: 0, y: 0, width: width, height: height))
+                    
+                    guard let sourceBuffer = self.makeBuffer(attributes: configuration.sourcePixelBufferAttributes, pixelFormat: pixelFormat), let destinationBuffer = self.makeBuffer(attributes: configuration.destinationPixelBufferAttributes, pixelFormat: pixelFormat) else {
+                        return nil
+                    }
+                    
+                    self.context.render(input, to: sourceBuffer, bounds: input.extent, colorSpace: self.colorSpace)
+                    
+                    guard let sourceFrame = VTFrameProcessorFrame(buffer: sourceBuffer, presentationTimeStamp: .zero), let destinationFrame = VTFrameProcessorFrame(buffer: destinationBuffer, presentationTimeStamp: .zero), let parameters = VTSuperResolutionScalerParameters(sourceFrame: sourceFrame, previousFrame: nil, previousOutputFrame: nil, opticalFlow: nil, submissionMode: .random, destinationFrame: destinationFrame) else {
+                        return nil
+                    }
+                    
+                    let succeeded = await withCheckedContinuation { continuation in
+                        processor.process(parameters: parameters) { _, error in
+                            continuation.resume(returning: error == nil)
+                        }
+                    }
+                    
+                    guard succeeded else {
+                        return nil
+                    }
+                    
+                    let destinationRect = CGRect(x: x * scale, y: y * scale, width: contentWidth * scale, height: contentHeight * scale)
+                    let result = CIImage(cvPixelBuffer: destinationBuffer, options: [.colorSpace: self.colorSpace]).applyingFilter("CIColorMatrix", parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: 0), "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 1)]).transformed(by: CGAffineTransform(translationX: CGFloat((x - self.padding) * scale), y: CGFloat((y - self.padding) * scale))).cropped(to: destinationRect).applyingFilter("CIBlendWithAlphaMask", parameters: [kCIInputBackgroundImageKey: CIImage(color: .clear).cropped(to: destinationRect), kCIInputMaskImageKey: alpha])
+                    
+                    guard let tile = self.context.createCGImage(result, from: destinationRect, format: .RGBA8, colorSpace: self.colorSpace) else {
+                        return nil
+                    }
+                    
+                    output.draw(tile, in: destinationRect)
+                }
+            }
+            
+            return output.makeImage()
+        }
+        
+        private func configure(width: Int, height: Int, processor: VTFrameProcessor?) async -> VTSuperResolutionScalerConfiguration? {
+            guard let scale = VTSuperResolutionScalerConfiguration.supportedScaleFactors.filter({ $0 > 1 }).min(), let configuration = VTSuperResolutionScalerConfiguration(frameWidth: width, frameHeight: height, scaleFactor: scale, inputType: .image, usePrecomputedFlow: false, qualityPrioritization: .normal, revision: VTSuperResolutionScalerConfiguration.defaultRevision) else {
+                return nil
+            }
+            
+            let scaleFactor = configuration.scaleFactor
+            
+            if self.scale == 0 {
+                self.scale = Double(scaleFactor)
+            }
+            
+            guard let processor else { return configuration }
+            
+            do {
+                if configuration.configurationModelStatus != .ready {
+                    try await configuration.downloadConfigurationModel()
+                }
+                
+                try processor.startSession(configuration: configuration)
+                
+                return configuration
+            } catch {
+                return nil
+            }
+        }
+        
+        private func makeBuffer(attributes: [String: any Sendable], pixelFormat: OSType) -> CVPixelBuffer? {
+            let requested: [String: any Sendable] = [kCVPixelBufferPixelFormatTypeKey as String: pixelFormat, kCVPixelBufferIOSurfacePropertiesKey as String: [String: Int]()]
+            var resolved: CFDictionary?
+            
+            guard CVPixelBufferCreateResolvedAttributesDictionary(kCFAllocatorDefault, [attributes, requested] as CFArray, &resolved) == kCVReturnSuccess, let resolved else {
+                return nil
+            }
+            
+            var pool: CVPixelBufferPool?
+            var buffer: CVPixelBuffer?
+            
+            guard CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, resolved, &pool) == kCVReturnSuccess, let pool, CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &buffer) == kCVReturnSuccess, let buffer else {
+                return nil
+            }
+            
+            return buffer
+        }
+        
+        private func extendTransparentColors(in image: CGImage) -> CGImage? {
+            let width = image.width
+            let height = image.height
+            
+            guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue), let data = context.data else {
+                return nil
+            }
+            
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            
+            let bytes = data.assumingMemoryBound(to: UInt8.self)
+            var queue = [Int]()
+            var visited = [Bool](repeating: false, count: width * height)
+            for index in 0..<width * height {
+                let offset = index * 4
+                let alpha = Int(bytes[offset + 3])
+                
+                if alpha > 0 {
+                    for channel in 0..<3 {
+                        bytes[offset + channel] = UInt8(min(255, (Int(bytes[offset + channel]) * 255 + alpha / 2) / alpha))
+                    }
+                    
+                    visited[index] = true
+                    queue.append(index)
+                }
+                
+                bytes[offset + 3] = 255
+            }
+            
+            var head = 0
+            
+            while head < queue.count {
+                let index = queue[head]
+                
+                head += 1
+                
+                let x = index % width
+                let y = index / width
+                
+                for neighbor in [x > 0 ? index - 1 : -1, x + 1 < width ? index + 1 : -1, y > 0 ? index - width : -1, y + 1 < height ? index + width : -1] where neighbor >= 0 {
+                    
+                    if !visited[neighbor] {
+                        for channel in 0..<3 {
+                            bytes[neighbor * 4 + channel] = bytes[index * 4 + channel]
+                        }
+                        
+                        visited[neighbor] = true
+                        queue.append(neighbor)
+                    }
+                }
+            }
+            
+            return context.makeImage()
+        }
+#endif
     }
 }
 
