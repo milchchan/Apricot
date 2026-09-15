@@ -452,9 +452,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             
             if let animations {
                 let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
-                let screenScale = Int(round(self.traitCollection.displayScale))
+                let displayScale = Double(self.traitCollection.displayScale)
+                let screenScale = Int(round(displayScale))
                 var pathSet = Set<String>()
                 var sources = [(baseUrl, false)]
+                var selectedPaths = [String: String]()
                 var loadedImages = [String: [(CGImage, Bool)]]()
                 
                 for animation in animations {
@@ -466,18 +468,30 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 }
                 
                 if character.upscaling, let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                    sources.insert((documents.appending(path: baseUrl.lastPathComponent, directoryHint: .isDirectory), true), at: 0)
+                    sources.append((documents.appending(path: baseUrl.lastPathComponent, directoryHint: .isDirectory), true))
                 }
                 
                 for (source, upscaling) in sources {
                     for relativePath in pathSet {
                         let imageUrl = source.appending(path: relativePath, directoryHint: .inferFromPath)
+                        var candidates = [relativePath]
                         var image: CGImage? = nil
                         
-                        if screenScale > 1 {
+                        if upscaling {
+                            guard let path = selectedPaths[relativePath] else {
+                                continue
+                            }
+                            
+                            candidates = [path]
+                        } else if screenScale > 1 {
                             let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: imageUrl.pathExtension.isEmpty ? 0 : -imageUrl.pathExtension.count - 1)]
                             let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
-                            let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
+                            
+                            candidates.insert(((relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(filename), at: 0)
+                        }
+                        
+                        for candidate in candidates {
+                            let path = source.appending(path: candidate, directoryHint: .inferFromPath).path(percentEncoded: false)
                             
                             if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
                                 defer {
@@ -492,23 +506,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     }
                                 }
                             }
-                        }
-                        
-                        if image == nil {
-                            let path = imageUrl.path(percentEncoded: false)
                             
-                            if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                defer {
-                                    try? file.close()
-                                }
+                            if image != nil {
+                                selectedPaths[relativePath] = candidate
                                 
-                                if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                    for i in 0..<CGImageSourceGetCount(imageSource) {
-                                        image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                        
-                                        break
-                                    }
-                                }
+                                break
                             }
                         }
                         
@@ -526,7 +528,21 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 for (key, value) in loadedImages {
                     if let baseImage = value.first(where: { !$0.1 }) {
                         if let upscalingImage = value.first(where: { $0.1 }) {
-                            characterView.cachedImages[key] = (baseImage.0, upscalingImage.0)
+                            if Double(upscalingImage.0.width) / Double(baseImage.0.width) > displayScale {
+                                let width = Int(Double(baseImage.0.width) * displayScale)
+                                let height = Int(Double(baseImage.0.height) * displayScale)
+                                
+                                if let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                                    
+                                    context.interpolationQuality = .high
+                                    context.draw(upscalingImage.0, in: CGRect(x: 0, y: 0, width: width, height: height))
+                                    characterView.cachedImages[key] = (baseImage.0, context.makeImage())
+                                } else {
+                                    characterView.cachedImages[key] = (baseImage.0, nil)
+                                }
+                            } else {
+                                characterView.cachedImages[key] = (baseImage.0, upscalingImage.0)
+                            }
                         } else {
                             characterView.cachedImages[key] = (baseImage.0, nil)
                         }
@@ -599,7 +615,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
             self.superview?.alpha = 0.0
-        }, completion: { finished in
+        }, completion: { [self] finished in
             if self.revision.0 == generation {
                 if generation % 2 == 0 {
                     if finished {
@@ -1035,10 +1051,12 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 
                                 if let animations {
                                     let baseUrl = URL(filePath: character.path).deletingLastPathComponent()
-                                    let screenScale = Int(round(self.traitCollection.displayScale))
-                                    let loadedImages = await Task.detached { @Sendable [animations, baseUrl, screenScale, upscaling = character.upscaling] in
+                                    let displayScale = Double(self.traitCollection.displayScale)
+                                    let screenScale = Int(round(displayScale))
+                                    let loadedImages = await Task.detached { @Sendable [animations, baseUrl, screenScale, displayScale, upscaling = character.upscaling] in
                                         var pathSet = Set<String>()
                                         var sources = [(baseUrl, false)]
+                                        var selectedPaths = [String: String]()
                                         var loadedImages = [String: [(CGImage, Bool)]]()
                                         var cachedImages = [String: (CGImage, CGImage?)]()
                                         
@@ -1051,18 +1069,30 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                         }
                                         
                                         if upscaling, let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                                            sources.insert((documents.appending(path: baseUrl.lastPathComponent, directoryHint: .isDirectory), true), at: 0)
+                                            sources.append((documents.appending(path: baseUrl.lastPathComponent, directoryHint: .isDirectory), true))
                                         }
                                         
                                         for (source, upscaling) in sources {
                                             for relativePath in pathSet {
                                                 let imageUrl = source.appending(path: relativePath, directoryHint: .inferFromPath)
+                                                var candidates = [relativePath]
                                                 var image: CGImage? = nil
                                                 
-                                                if screenScale > 1 {
+                                                if upscaling {
+                                                    guard let path = selectedPaths[relativePath] else {
+                                                        continue
+                                                    }
+                                                    
+                                                    candidates = [path]
+                                                } else if screenScale > 1 {
                                                     let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: imageUrl.pathExtension.isEmpty ? 0 : -imageUrl.pathExtension.count - 1)]
                                                     let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
-                                                    let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
+                                                    
+                                                    candidates.insert(((relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(filename), at: 0)
+                                                }
+                                                
+                                                for candidate in candidates {
+                                                    let path = source.appending(path: candidate, directoryHint: .inferFromPath).path(percentEncoded: false)
                                                     
                                                     if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
                                                         defer {
@@ -1077,23 +1107,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                                             }
                                                         }
                                                     }
-                                                }
-                                                
-                                                if image == nil {
-                                                    let path = imageUrl.path(percentEncoded: false)
                                                     
-                                                    if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                        defer {
-                                                            try? file.close()
-                                                        }
+                                                    if image != nil {
+                                                        selectedPaths[relativePath] = candidate
                                                         
-                                                        if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                            for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                                image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                                                
-                                                                break
-                                                            }
-                                                        }
+                                                        break
                                                     }
                                                 }
                                                 
@@ -1111,21 +1129,36 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                         for (key, value) in loadedImages {
                                             if let baseImage = value.first(where: { !$0.1 }) {
                                                 if let upscalingImage = value.first(where: { $0.1 }) {
-                                                    cachedImages[key] = (baseImage.0, upscalingImage.0)
+                                                    if Double(upscalingImage.0.width) / Double(baseImage.0.width) > displayScale {
+                                                        let width = Int(Double(baseImage.0.width) * displayScale)
+                                                        let height = Int(Double(baseImage.0.height) * displayScale)
+                                                        
+                                                        if let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                                                            
+                                                            context.interpolationQuality = .high
+                                                            context.draw(upscalingImage.0, in: CGRect(x: 0, y: 0, width: width, height: height))
+                                                            cachedImages[key] = (baseImage.0, context.makeImage())
+                                                        } else {
+                                                            cachedImages[key] = (baseImage.0, nil)
+                                                        }
+                                                    } else {
+                                                        cachedImages[key] = (baseImage.0, upscalingImage.0)
+                                                    }
                                                 } else {
                                                     cachedImages[key] = (baseImage.0, nil)
                                                 }
                                             }
                                         }
                                         
-                                        return cachedImages
+                                        if let sample = cachedImages.values.first(where: { $0.1 != nil }), let image = sample.1 {
+                                            return (cachedImages, Double(image.width) / Double(sample.0.width))
+                                        }
+                                        
+                                        return (cachedImages, 1.0)
                                     }.value
                                     
-                                    characterView.cachedImages = loadedImages
-                                    
-                                    if let sample = loadedImages.values.first(where: { $0.1 != nil }), let image = sample.1 {
-                                        characterView.imageScale = Double(image.width) / Double(sample.0.width)
-                                    }
+                                    characterView.cachedImages = loadedImages.0
+                                    characterView.imageScale = loadedImages.1
                                     
                                     let timelines = animations.map { Timeline(animation: $0) }
                                     let images: [String: CGImage]
@@ -1490,7 +1523,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         self.stars = stars
         
-        Task {
+        Task { [self] in
             var background: [[(url: URL?, x: Double, y: Double, width: Double, height: Double, opacity: Double, delay: Double)]]? = nil
             
             if prior < stars {
@@ -2124,7 +2157,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 displayLink.add(to: .current, forMode: .common)
             }
             
-            Task {
+            Task { [weak self] in
                 await AgentView.Upscaler.shared.run(characters: Script.shared.characters) { @MainActor [weak self] total in
                     guard total > 0 else {
                         return
@@ -3367,14 +3400,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             }
                             
                             let paths = Set(imagePaths)
+                            let displayScale = Double(self.traitCollection.displayScale)
                             var upscaledPaths = Set<String>()
-                            var imageScale = characterView.imageScale
+                            let imageScale = characterView.imageScale
                             
                             if characterView.upscaling {
                                 let candidates: Set<String>
                                 
                                 if await AgentView.Upscaler.shared.isCompleted {
-                                    imageScale = max(imageScale, await AgentView.Upscaler.shared.scale)
                                     candidates = Set(characterView.cachedImages.keys).union(pendingPathSet)
                                 } else {
                                     candidates = paths
@@ -3383,15 +3416,17 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 upscaledPaths = Set(candidates.filter { characterView.cachedImages[$0]?.1 == nil })
                             }
                             
-                            var loadedImages = (images: [String: CGImage](), upscaledImages: [String: CGImage]())
+                            let loadedImages: ([String: (CGImage, CGImage?)], Double)
                             
                             if !paths.isEmpty || !upscaledPaths.isEmpty {
                                 let baseUrl = URL(filePath: characterPath).deletingLastPathComponent()
-                                let screenScale = Int(round(self.traitCollection.displayScale))
+                                let screenScale = Int(round(displayScale))
                                 
-                                loadedImages = await Task.detached { @Sendable [paths, upscaledPaths, baseUrl, screenScale] in
-                                    var sources = [(baseUrl, false, paths)]
-                                    var loadedImages = ([String: CGImage](), [String: CGImage]())
+                                loadedImages = await Task.detached { @Sendable [paths, upscaledPaths, baseUrl, screenScale, displayScale, imageScale] in
+                                    var sources = [(baseUrl, false, paths.union(upscaledPaths))]
+                                    var selectedPaths = [String: String]()
+                                    var loadedImages = [String: [(CGImage, Bool)]]()
+                                    var cachedImages = [String: (CGImage, CGImage?)]()
                                     
                                     if !upscaledPaths.isEmpty, let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                                         sources.append((documents.appending(path: baseUrl.lastPathComponent, directoryHint: .isDirectory), true, upscaledPaths))
@@ -3400,12 +3435,24 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     for (source, upscaling, pathSet) in sources {
                                         for relativePath in pathSet {
                                             let imageUrl = source.appending(path: relativePath, directoryHint: .inferFromPath)
+                                            var candidates = [relativePath]
                                             var image: CGImage? = nil
                                             
-                                            if screenScale > 1 {
+                                            if upscaling {
+                                                guard let path = selectedPaths[relativePath] else {
+                                                    continue
+                                                }
+                                                
+                                                candidates = [path]
+                                            } else if screenScale > 1 {
                                                 let name = imageUrl.lastPathComponent[imageUrl.lastPathComponent.startIndex..<imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.endIndex, offsetBy: imageUrl.pathExtension.isEmpty ? 0 : -imageUrl.pathExtension.count - 1)]
                                                 let filename = "\(name)@\(screenScale)x\(imageUrl.lastPathComponent[imageUrl.lastPathComponent.index(imageUrl.lastPathComponent.startIndex, offsetBy: name.count)..<imageUrl.lastPathComponent.endIndex])"
-                                                let path = imageUrl.deletingLastPathComponent().appending(path: filename, directoryHint: .inferFromPath).path(percentEncoded: false)
+                                                
+                                                candidates.insert(((relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(filename), at: 0)
+                                            }
+                                            
+                                            for candidate in candidates {
+                                                let path = source.appending(path: candidate, directoryHint: .inferFromPath).path(percentEncoded: false)
                                                 
                                                 if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
                                                     defer {
@@ -3420,38 +3467,57 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                                         }
                                                     }
                                                 }
-                                            }
-                                            
-                                            if image == nil {
-                                                let path = imageUrl.path(percentEncoded: false)
                                                 
-                                                if FileManager.default.fileExists(atPath: path), let file = FileHandle(forReadingAtPath: path) {
-                                                    defer {
-                                                        try? file.close()
-                                                    }
+                                                if image != nil {
+                                                    selectedPaths[relativePath] = candidate
                                                     
-                                                    if let data = try? file.readToEnd(), let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
-                                                        for i in 0..<CGImageSourceGetCount(imageSource) {
-                                                            image = CGImageSourceCreateImageAtIndex(imageSource, i, nil)
-                                                            
-                                                            break
-                                                        }
-                                                    }
+                                                    break
                                                 }
                                             }
                                             
                                             if let image {
-                                                if upscaling {
-                                                    loadedImages.1[relativePath] = image
+                                                if var value = loadedImages[relativePath] {
+                                                    value.append((image, upscaling))
+                                                    loadedImages[relativePath] = value
                                                 } else {
-                                                    loadedImages.0[relativePath] = image
+                                                    loadedImages[relativePath] = [(image, upscaling)]
                                                 }
                                             }
                                         }
                                     }
                                     
-                                    return loadedImages
+                                    for (key, value) in loadedImages {
+                                        if let baseImage = value.first(where: { !$0.1 })?.0 {
+                                            if let upscalingImage = value.first(where: { $0.1 }) {
+                                                if Double(upscalingImage.0.width) / Double(baseImage.width) > displayScale {
+                                                    let width = Int(Double(baseImage.width) * displayScale)
+                                                    let height = Int(Double(baseImage.height) * displayScale)
+                                                    
+                                                    if let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                                                        
+                                                        context.interpolationQuality = .high
+                                                        context.draw(upscalingImage.0, in: CGRect(x: 0, y: 0, width: width, height: height))
+                                                        cachedImages[key] = (baseImage, context.makeImage())
+                                                    } else {
+                                                        cachedImages[key] = (baseImage, nil)
+                                                    }
+                                                } else {
+                                                    cachedImages[key] = (baseImage, upscalingImage.0)
+                                                }
+                                            } else if paths.contains(key) {
+                                                cachedImages[key] = (baseImage, nil)
+                                            }
+                                        }
+                                    }
+                                    
+                                    if let sample = cachedImages.values.first(where: { $0.1 != nil }), let image = sample.1 {
+                                        return (cachedImages, Double(image.width) / Double(sample.0.width))
+                                    }
+                                    
+                                    return (cachedImages, imageScale)
                                 }.value
+                            } else {
+                                loadedImages = ([String: (CGImage, CGImage?)](), imageScale)
                             }
                             
                             let characterViews = self.characterViews
@@ -3473,21 +3539,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             var stageRequired = false
                             
                             for (path, image) in loadedImages.0 {
-                                characterView.cachedImages[path] = (image, characterView.cachedImages[path]?.1)
+                                characterView.cachedImages[path] = (image.0, image.1 ?? characterView.cachedImages[path]?.1)
                             }
                             
-                            for (path, image) in loadedImages.1 {
-                                if let cachedImage = characterView.cachedImages[path] {
-                                    characterView.cachedImages[path] = (cachedImage.0, image)
-                                    imageScale = Double(image.width) / Double(cachedImage.0.width)
-                                }
-                            }
-                            
-                            if imageScale != characterView.imageScale || !loadedImages.images.isEmpty || !loadedImages.upscaledImages.isEmpty {
+                            if loadedImages.1 != characterView.imageScale || !loadedImages.0.isEmpty {
                                 characterView.isInvalidated = true
                             }
                             
-                            characterView.imageScale = imageScale
+                            characterView.imageScale = loadedImages.1
                             
                             for timeline in characterView.cachedTimelines {
                                 if !zIndexSet.contains(timeline.animation.z) {
