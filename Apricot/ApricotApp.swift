@@ -24,17 +24,21 @@ struct ApricotApp: App {
             if self.scenePhase == .background {
                 UIApplication.shared.shortcutItems = [UIApplicationShortcutItem(type: "Dictionary", localizedTitle: String(localized: "Dictionary"), localizedSubtitle: nil, icon: UIApplicationShortcutIcon.init(systemImageName: "book"))]
                 
-                let request = BGAppRefreshTaskRequest(identifier: "com.milchchan.Apricot.refresh")
-                
-                request.earliestBeginDate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
-                try? BGTaskScheduler.shared.submit(request)
+                Task.detached(priority: .background) {
+                    let request = BGAppRefreshTaskRequest(identifier: "com.milchchan.Apricot.refresh")
+                    
+                    request.earliestBeginDate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
+                    try? await BGTaskScheduler.shared.submitTaskRequest(request)
+                }
             }
         }
         .backgroundTask(.appRefresh("com.milchchan.Apricot.refresh")) {
-            let taskRequest = BGAppRefreshTaskRequest(identifier: "com.milchchan.Apricot.refresh")
-            
-            taskRequest.earliestBeginDate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
-            try? BGTaskScheduler.shared.submit(taskRequest)
+            Task.detached(priority: .background) {
+                let taskRequest = BGAppRefreshTaskRequest(identifier: "com.milchchan.Apricot.refresh")
+                
+                taskRequest.earliestBeginDate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
+                try? await BGTaskScheduler.shared.submitTaskRequest(taskRequest)
+            }
             
             let config = URLSessionConfiguration.background(withIdentifier: "com.milchchan.Apricot.refresh")
             
