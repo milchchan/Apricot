@@ -168,7 +168,7 @@ class WallView: UIView {
             self.isLoading = true
             self.isFetched = false
             
-            Task {
+            Task(priority: .utility) {
                 var compositedFrames: [(image: CGImage, delay: Double)]? = nil
                 let scale = Int(round(self.traitCollection.displayScale))
                 let length = max(self.bounds.size.width, self.bounds.size.height) * self.traitCollection.displayScale
@@ -189,7 +189,7 @@ class WallView: UIView {
                             
                             for frame in animation {
                                 if let url = frame.url {
-                                    if url.scheme == "file" {
+                                    if url.isFileURL {
                                         var image: CGImage? = nil
                                         let width: Double
                                         let height: Double
@@ -546,7 +546,7 @@ class WallView: UIView {
     }
     
     func reload(image: CGImage) async {
-        Task {
+        Task(priority: .utility) {
             self.pickedColor = await Task.detached {
                 var pickedColor: CGColor? = nil
                 
@@ -1250,6 +1250,10 @@ class WallView: UIView {
                     let step = self.revealStep + deltaTime
                     
                     if step >= 1.0 {
+                        self.isLoading = false
+                        self.revealStep = -1.0
+                        self.loadingStep = 0.0
+                        
                         if let blindLayer = self.blindLayer, let loadingLayer = self.loadingLayer {
                             CATransaction.begin()
                             CATransaction.setDisableActions(true)
@@ -1259,10 +1263,6 @@ class WallView: UIView {
                             
                             CATransaction.commit()
                         }
-                        
-                        self.revealStep = -1.0
-                        self.loadingStep = 0.0
-                        self.isLoading = false
                     } else {
                         if let blindLayer = self.blindLayer {
                             let length = max(self.bounds.width, self.bounds.height)
