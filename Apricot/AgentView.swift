@@ -2421,11 +2421,15 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 return view!.hitTest(CGPoint(x: point.x - characterView.frame.origin.x - characterView.balloonView!.frame.origin.x - messageLabel.frame.origin.x, y: point.y - characterView.frame.origin.y - (characterView.frame.height - characterView.balloonView!.frame.origin.y - characterView.balloonView!.frame.height) - messageLabel.frame.origin.y), with: event)
             } else {
                 for subview in characterView.balloonView!.subviews {
-                    if let visualEffectView = subview as? UIVisualEffectView, let maskLayer = visualEffectView.layer.mask as? CAShapeLayer, let path = maskLayer.path {
-                        var transform = CGAffineTransformMakeScale(characterView.balloonView!.transform.a, -characterView.balloonView!.transform.d)
-                        
-                        if let p = path.copy(using: &transform), p.contains(CGPoint(x: point.x - characterView.frame.origin.x - characterView.balloonView!.frame.origin.x, y: point.y - characterView.frame.origin.y - (characterView.frame.height - characterView.balloonView!.frame.origin.y - characterView.balloonView!.frame.height))) {
-                            return view
+                    if let visualEffectView = subview as? UIVisualEffectView, let maskView = visualEffectView.mask, let sublayers = maskView.layer.sublayers {
+                        for sublayer in sublayers {
+                            if let maskLayer = sublayer as? CAShapeLayer, let path = maskLayer.path {
+                                var transform = CGAffineTransformMakeScale(characterView.balloonView!.transform.a, -characterView.balloonView!.transform.d)
+                                
+                                if let p = path.copy(using: &transform), p.contains(CGPoint(x: point.x - characterView.frame.origin.x - characterView.balloonView!.frame.origin.x, y: point.y - characterView.frame.origin.y - (characterView.frame.height - characterView.balloonView!.frame.origin.y - characterView.balloonView!.frame.height))) {
+                                    return view
+                                }
+                            }
                         }
                     }
                 }
@@ -3012,7 +3016,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         let characterView = CharacterView(frame: .zero)
         let preferredScale = (scale == 0.0 ? self.traitCollection.displayScale : scale) * self.userScale * self.systemScale
         let frame = CGRect(x: location.x * preferredScale / self.traitCollection.displayScale, y: location.y * preferredScale / self.traitCollection.displayScale, width: size.width * preferredScale / self.traitCollection.displayScale, height: insets.bottom * preferredScale / self.traitCollection.displayScale)
-        let visualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+        let visualEffectView = UIVisualEffectView(effect: UIGlassEffect(style: .regular))
+        let maskView = UIView(frame: .zero)
         let maskLayer = CAShapeLayer()
         let shadowLayer = CAShapeLayer()
         let balloonLayer = CAShapeLayer()
@@ -3094,10 +3099,12 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         characterView.insertSubview(characterView.balloonView!, aboveSubview: characterView.contentView)
         
+        maskView.layer.addSublayer(balloonLayer)
+        
         visualEffectView.translatesAutoresizingMaskIntoConstraints = false
         visualEffectView.isUserInteractionEnabled = true
         visualEffectView.backgroundColor = .clear
-        visualEffectView.layer.mask = balloonLayer
+        visualEffectView.mask = maskView
         visualEffectView.contentView.isUserInteractionEnabled = true
         
         characterView.balloonView!.addSubview(visualEffectView)
@@ -4370,9 +4377,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             }
                             
                             for subview in self.balloonView!.subviews {
-                                if let visualEffectView = subview as? UIVisualEffectView {
-                                    if let maskLayer = visualEffectView.layer.mask as? CAShapeLayer {
-                                        maskLayer.path = balloonPath
+                                if let visualEffectView = subview as? UIVisualEffectView, let maskView = visualEffectView.mask, let sublayers = maskView.layer.sublayers {
+                                    for sublayer in sublayers {
+                                        if let maskLayer = sublayer as? CAShapeLayer {
+                                            maskLayer.path = balloonPath
+                                        }
                                     }
                                 }
                             }
@@ -4408,6 +4417,24 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             if self.feedbackGenerator == nil {
                 self.feedbackGenerator = UIImpactFeedbackGenerator()
                 self.feedbackGenerator!.prepare()
+            }
+        }
+        
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            
+            for subview in self.balloonView!.subviews {
+                if let visualEffectView = subview as? UIVisualEffectView, let maskView = visualEffectView.mask, maskView.frame != self.balloonView!.bounds {
+                    maskView.frame = self.balloonView!.bounds
+                    
+                    if let sublayers = maskView.layer.sublayers {
+                        for sublayer in sublayers {
+                            if let maskLayer = sublayer as? CAShapeLayer {
+                                maskLayer.frame = maskView.bounds
+                            }
+                        }
+                    }
+                }
             }
         }
         
