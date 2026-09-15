@@ -3094,11 +3094,47 @@ struct Chat: View {
          request.shouldReportPartialResults = true
          
          do {
-            try self.installTap(on: inputNode, format: inputFormat, request: request) { level, duration in
+            let processBuffer: @MainActor @Sendable (AVReadOnlyAudioPCMBuffer) -> Void = { readOnlyBuffer in
+               guard self.isRecording, self.speechAudioBufferRecognitionRequest === request else {
+                  return
+               }
+               
+               let buffer = AVAudioPCMBuffer(copying: readOnlyBuffer)
+               
+               guard buffer.frameLength > 0, buffer.stride > 0, buffer.format.sampleRate > 0.0 else {
+                  return
+               }
+               
+               request.append(buffer)
+               
+               guard let floatChannelData = buffer.floatChannelData else {
+                  return
+               }
+               
+               let pointee = floatChannelData.pointee
+               var sum: Float = 0.0
+               
+               for i in stride(from: 0, to: Int(buffer.frameLength), by: buffer.stride) {
+                  sum += pointee[i] * pointee[i]
+               }
+               
+               let rms = sqrt(sum / Float(buffer.frameLength))
+               let dB = rms == 0.0 ? 0.0 : 20.0 * log10(rms)
+               let minimum: Float = -50.0
+               let maximum: Float = -25.0
+               let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
+               let duration = Double(buffer.frameLength) / buffer.format.sampleRate
+               
                let multiplier = level > self.volumeLevel ? 5.0 : 10.0
                
                withAnimation(.linear(duration: duration * multiplier)) {
                   self.volumeLevel = level
+               }
+            }
+            
+            try inputNode.installAudioTap(onBus: 0, bufferSize: 1024, format: inputFormat) { buffer, _ in
+               DispatchQueue.main.async {
+                  processBuffer(buffer)
                }
             }
             
@@ -3183,51 +3219,6 @@ struct Chat: View {
       withAnimation(.linear(duration: 0.5)) {
          self.isRecording = false
          self.volumeLevel = 0.0
-      }
-   }
-   
-   private func installTap(on inputNode: AVAudioInputNode, format: AVAudioFormat, request: SFSpeechAudioBufferRecognitionRequest, onChange: @escaping @MainActor (Double, Double) -> Void
-   ) throws {
-      // The tap's Sendable buffer can cross actors; the speech request stays on the main actor.
-      let processBuffer: @MainActor @Sendable (AVReadOnlyAudioPCMBuffer) -> Void = { readOnlyBuffer in
-         guard self.isRecording, self.speechAudioBufferRecognitionRequest === request else {
-            return
-         }
-         
-         let buffer = AVAudioPCMBuffer(copying: readOnlyBuffer)
-         
-         guard buffer.frameLength > 0, buffer.stride > 0, buffer.format.sampleRate > 0.0 else {
-            return
-         }
-         
-         request.append(buffer)
-         
-         guard let floatChannelData = buffer.floatChannelData else {
-            return
-         }
-         
-         let pointee = floatChannelData.pointee
-         var sum: Float = 0.0
-         
-         for i in stride(from: 0, to: Int(buffer.frameLength), by: buffer.stride) {
-            sum += pointee[i] * pointee[i]
-         }
-         
-         let rms = sqrt(sum / Float(buffer.frameLength))
-         let dB = rms == 0.0 ? 0.0 : 20.0 * log10(rms)
-         let minimum: Float = -50.0
-         let maximum: Float = -25.0
-         let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
-         let duration = Double(buffer.frameLength) / buffer.format.sampleRate
-         
-         onChange(level, duration)
-      }
-      
-      try inputNode.installAudioTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-         // Preserve the delivery order of audio buffers on the serial main queue.
-         DispatchQueue.main.async {
-            processBuffer(buffer)
-         }
       }
    }
    
@@ -8076,11 +8067,47 @@ struct Dictionary: View {
          request.shouldReportPartialResults = true
          
          do {
-            try self.installTap(on: inputNode, format: inputFormat, request: request) { level, duration in
+            let processBuffer: @MainActor @Sendable (AVReadOnlyAudioPCMBuffer) -> Void = { readOnlyBuffer in
+               guard self.isRecording, self.speechAudioBufferRecognitionRequest === request else {
+                  return
+               }
+               
+               let buffer = AVAudioPCMBuffer(copying: readOnlyBuffer)
+               
+               guard buffer.frameLength > 0, buffer.stride > 0, buffer.format.sampleRate > 0.0 else {
+                  return
+               }
+               
+               request.append(buffer)
+               
+               guard let floatChannelData = buffer.floatChannelData else {
+                  return
+               }
+               
+               let pointee = floatChannelData.pointee
+               var sum: Float = 0.0
+               
+               for i in stride(from: 0, to: Int(buffer.frameLength), by: buffer.stride) {
+                  sum += pointee[i] * pointee[i]
+               }
+               
+               let rms = sqrt(sum / Float(buffer.frameLength))
+               let dB = rms == 0.0 ? 0.0 : 20.0 * log10(rms)
+               let minimum: Float = -50.0
+               let maximum: Float = -25.0
+               let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
+               let duration = Double(buffer.frameLength) / buffer.format.sampleRate
+               
                let multiplier = level > self.volumeLevel ? 5.0 : 10.0
                
                withAnimation(.linear(duration: duration * multiplier)) {
                   self.volumeLevel = level
+               }
+            }
+            
+            try inputNode.installAudioTap(onBus: 0, bufferSize: 1024, format: inputFormat) { buffer, _ in
+               DispatchQueue.main.async {
+                  processBuffer(buffer)
                }
             }
             
@@ -8165,51 +8192,6 @@ struct Dictionary: View {
       withAnimation(.linear(duration: 0.5)) {
          self.isRecording = false
          self.volumeLevel = 0.0
-      }
-   }
-   
-   private func installTap(on inputNode: AVAudioInputNode, format: AVAudioFormat, request: SFSpeechAudioBufferRecognitionRequest, onChange: @escaping @MainActor (Double, Double) -> Void
-   ) throws {
-      // The tap's Sendable buffer can cross actors; the speech request stays on the main actor.
-      let processBuffer: @MainActor @Sendable (AVReadOnlyAudioPCMBuffer) -> Void = { readOnlyBuffer in
-         guard self.isRecording, self.speechAudioBufferRecognitionRequest === request else {
-            return
-         }
-         
-         let buffer = AVAudioPCMBuffer(copying: readOnlyBuffer)
-         
-         guard buffer.frameLength > 0, buffer.stride > 0, buffer.format.sampleRate > 0.0 else {
-            return
-         }
-         
-         request.append(buffer)
-         
-         guard let floatChannelData = buffer.floatChannelData else {
-            return
-         }
-         
-         let pointee = floatChannelData.pointee
-         var sum: Float = 0.0
-         
-         for i in stride(from: 0, to: Int(buffer.frameLength), by: buffer.stride) {
-            sum += pointee[i] * pointee[i]
-         }
-         
-         let rms = sqrt(sum / Float(buffer.frameLength))
-         let dB = rms == 0.0 ? 0.0 : 20.0 * log10(rms)
-         let minimum: Float = -50.0
-         let maximum: Float = -25.0
-         let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
-         let duration = Double(buffer.frameLength) / buffer.format.sampleRate
-         
-         onChange(level, duration)
-      }
-      
-      try inputNode.installAudioTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-         // Preserve the delivery order of audio buffers on the serial main queue.
-         DispatchQueue.main.async {
-            processBuffer(buffer)
-         }
       }
    }
 }
