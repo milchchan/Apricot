@@ -15,7 +15,7 @@ final public class Script: NSObject, ObservableObject {
     @Published public var words = [Word]()
     @Published public var attributes = [String]()
     @Published public var scores = [String: (String, Double, [String]?, Date)]()
-    public var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])]()
+    public var characters = [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])]()
     private let runtime = Script.Runtime()
     public var states: [String: String] {
         return self.runtime.states
@@ -706,7 +706,7 @@ final public class Script: NSObject, ObservableObject {
         }
         
         @MainActor
-        public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, completion: (([Sequence]) -> [Sequence])? = nil) {
+        public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, completion: (([Sequence]) -> [Sequence])? = nil) {
             var preparedSequences = self.prepare(characters: characters, name: name, sequences: sequences, state: state, transform: { (s) -> [Sequence] in
                 return s.isEmpty ? s : [s[Int.random(in: 0..<s.count)]]
             })
@@ -722,7 +722,7 @@ final public class Script: NSObject, ObservableObject {
         }
         
         @MainActor
-        public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (String, Double, [String]?, Date)], words: [Word], temperature: Double = 1.0, completion: (([Sequence]) -> [Sequence])? = nil) async {
+        public func run(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (String, Double, [String]?, Date)], words: [Word], temperature: Double = 1.0, completion: (([Sequence]) -> [Sequence])? = nil) async {
             var preparedSequences = await self.prepareAsync(characters: characters, name: name, sequences: sequences, state: state, scores: scores, words: words, temperature: temperature)
             
             if let completion {
@@ -736,7 +736,7 @@ final public class Script: NSObject, ObservableObject {
         }
         
         @MainActor
-        private func prepare(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, transform: (([Sequence]) -> [Sequence])? = nil) -> [Sequence] {
+        private func prepare(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, transform: (([Sequence]) -> [Sequence])? = nil) -> [Sequence] {
             var executionQueue: [(sequences: [Sequence], state: String?, next: (sequence: Sequence, steps: [Sequence.Step], sequences: [Sequence])?)] = [(sequences: sequences, state: state, next: nil)]
             var preparedSequences = [Sequence]()
             
@@ -1076,7 +1076,7 @@ final public class Script: NSObject, ObservableObject {
             return preparedSequences
         }
         
-        private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, transform: (([Sequence]) -> [Sequence])? = nil) async -> [Sequence] {
+        private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, transform: (([Sequence]) -> [Sequence])? = nil) async -> [Sequence] {
             var executionQueue: [(sequences: [Sequence], state: String?, next: (sequence: Sequence, steps: [Sequence.Step], sequences: [Sequence])?)] = [(sequences: sequences, state: state, next: nil)]
             var preparedSequences = [Sequence]()
                 
@@ -1430,7 +1430,7 @@ final public class Script: NSObject, ObservableObject {
             return preparedSequences
         }
         
-        private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (String, Double, [String]?, Date)], words: [Word], temperature: Double = 1.0, beamWidth: Int = 3) async -> [Sequence] {
+        private func prepareAsync(characters: [(name: String, path: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, prompt: String?, guest: Bool, sequences: [Sequence])], name: String, sequences: [Sequence], state: String? = nil, scores: [String: (String, Double, [String]?, Date)], words: [Word], temperature: Double = 1.0, beamWidth: Int = 3) async -> [Sequence] {
             return await Task.detached {
                 let epsilon: Double = 1e-6
                 var preparedSequences = [Sequence]()
@@ -1823,10 +1823,10 @@ final public class Script: NSObject, ObservableObject {
     public class Parser: NSObject, XMLParserDelegate {
         public var excludeSequences = false
         private var workingStack: [Any]? = nil
-        private var characters = [(id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
+        private var characters = [(id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, preview: String?, prompt: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))]()
         private var attributes = [String]()
         
-        public func parse(path: String) -> ([(id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))], [String]) {
+        public func parse(path: String) -> ([(id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, preview: String?, prompt: String?, sequences: [Sequence], types: [String: (Int, Set<Int>)], insets: (top: Double, left: Double, bottom: Double, right: Double))], [String]) {
             if let file = FileHandle(forReadingAtPath: path) {
                 var isXml = false
                 
@@ -2162,7 +2162,7 @@ final public class Script: NSObject, ObservableObject {
                                 }
                             }
                             
-                            self.characters.append((id: nil, name: name, location: CGPoint(x: jsonRoot["x"] as? Double ?? 0.0, y: jsonRoot["y"] as? Double ?? 0.0), size: CGSize(width: width, height: height), scale: jsonRoot["scale"] as? Double ?? 1.0, language: jsonRoot["language"] as? String, preview: jsonRoot["preview"] as? String, prompt: prompt, sequences: sequences, types: types, insets: insets))
+                            self.characters.append((id: nil, name: name, location: CGPoint(x: jsonRoot["x"] as? Double ?? 0.0, y: jsonRoot["y"] as? Double ?? 0.0), size: CGSize(width: width, height: height), scale: jsonRoot["scale"] as? Double ?? 1.0, upscaling: jsonRoot["upscaling"] as? Bool ?? true, language: jsonRoot["language"] as? String, preview: jsonRoot["preview"] as? String, prompt: prompt, sequences: sequences, types: types, insets: insets))
                         }
                     }
                 }
@@ -2181,6 +2181,7 @@ final public class Script: NSObject, ObservableObject {
                     var location = CGPoint()
                     var size = CGSize()
                     var scale = 1.0
+                    var upscaling = true
                     
                     if let x = attributeDict["x"] {
                         location.x = Double(x)!
@@ -2202,11 +2203,15 @@ final public class Script: NSObject, ObservableObject {
                         scale = Double(s)!
                     }
                     
+                    if let s = attributeDict["upscaling"] {
+                        upscaling = Bool(s)!
+                    }
+                    
                     if self.excludeSequences {
-                        self.characters.append((id: attributeDict["id"], name: name, location: location, size: size, scale: scale, language: attributeDict["language"], preview: attributeDict["preview"], prompt: attributeDict["prompt"], sequences: [Sequence](), types: [:], insets: (top: Double.greatestFiniteMagnitude, left: Double.greatestFiniteMagnitude, bottom: -Double.greatestFiniteMagnitude, right: -Double.greatestFiniteMagnitude)))
+                        self.characters.append((id: attributeDict["id"], name: name, location: location, size: size, scale: scale, upscaling: upscaling, language: attributeDict["language"], preview: attributeDict["preview"], prompt: attributeDict["prompt"], sequences: [Sequence](), types: [:], insets: (top: Double.greatestFiniteMagnitude, left: Double.greatestFiniteMagnitude, bottom: -Double.greatestFiniteMagnitude, right: -Double.greatestFiniteMagnitude)))
                         parser.abortParsing()
                     } else {
-                        workingStack.append((id: attributeDict["id"], name: name, location: location, size: size, scale: scale, language: attributeDict["language"], preview: attributeDict["preview"], prompt: attributeDict["prompt"], sequences: [Sequence]()))
+                        workingStack.append((id: attributeDict["id"], name: name, location: location, size: size, scale: scale, upscaling: upscaling, language: attributeDict["language"], preview: attributeDict["preview"], prompt: attributeDict["prompt"], sequences: [Sequence]()))
                         self.workingStack = workingStack
                     }
                 }
@@ -2314,8 +2319,8 @@ final public class Script: NSObject, ObservableObject {
             if elementName == "character" {
                 if var workingStack = self.workingStack {
                     while !workingStack.isEmpty {
-                        if let character = workingStack.last as? (id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence]) {
-                            self.characters.append((id: character.id, name: character.name, location: character.location, size: character.size, scale: character.scale, language: character.language, preview: character.preview, prompt: character.prompt, sequences: character.sequences, types: [:], insets: (top: Double.greatestFiniteMagnitude, left: Double.greatestFiniteMagnitude, bottom: -Double.greatestFiniteMagnitude, right: -Double.greatestFiniteMagnitude)))
+                        if let character = workingStack.last as? (id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, preview: String?, prompt: String?, sequences: [Sequence]) {
+                            self.characters.append((id: character.id, name: character.name, location: character.location, size: character.size, scale: character.scale, upscaling: character.upscaling, language: character.language, preview: character.preview, prompt: character.prompt, sequences: character.sequences, types: [:], insets: (top: Double.greatestFiniteMagnitude, left: Double.greatestFiniteMagnitude, bottom: -Double.greatestFiniteMagnitude, right: -Double.greatestFiniteMagnitude)))
                             
                             break
                         } else {
@@ -2334,7 +2339,7 @@ final public class Script: NSObject, ObservableObject {
                         
                         if var childSequence = obj as? Sequence {
                             for i in stride(from: workingStack.count - 1, through: 0, by: -1) {
-                                if var character = workingStack[i] as? (id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence]) {
+                                if var character = workingStack[i] as? (id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, preview: String?, prompt: String?, sequences: [Sequence]) {
                                     var isChildSequence = true
                                     var tempStack = [Any]()
                                     
@@ -2359,7 +2364,7 @@ final public class Script: NSObject, ObservableObject {
                                             isChildSequence = false
                                             
                                             break
-                                        } else if workingStack.last! is (id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, language: String?, preview: String?, prompt: String?, sequences: [Sequence]) {
+                                        } else if workingStack.last! is (id: String?, name: String, location: CGPoint, size: CGSize, scale: Double, upscaling: Bool, language: String?, preview: String?, prompt: String?, sequences: [Sequence]) {
                                             break
                                         } else {
                                             tempStack.append(workingStack.popLast()!)
