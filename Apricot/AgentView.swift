@@ -1838,19 +1838,19 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             
                             if let data = try? file.readToEnd(), let audioPlayer = try? AVAudioPlayer(data: data) {
                                 let audioSession = AVAudioSession.sharedInstance()
-                                var isActivated = true
+                                let isActivated: Bool
                                 
                                 do {
-                                    if audioSession.category != .playAndRecord && audioSession.category != .ambient {
-                                        try audioSession.setCategory(.ambient)
+                                    if audioSession.category != .playAndRecord && (audioSession.category != .ambient || audioSession.mode != .default) {
+                                        try audioSession.setCategory(.ambient, mode: .default)
                                     }
                                     
-                                    try audioSession.setActive(true)
+                                    isActivated = try await audioSession.activate()
                                 } catch {
                                     isActivated = false
                                 }
                                 
-                                if isActivated {
+                                if isActivated && audioPlayer.prepareToPlay() {
                                     await MainActor.run {
                                         guard let self else {
                                             return
@@ -3270,19 +3270,19 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 
                                 if let data = try? file.readToEnd(), let audioPlayer = try? AVAudioPlayer(data: data) {
                                     let audioSession = AVAudioSession.sharedInstance()
-                                    var isActivated = true
+                                    let isActivated: Bool
                                     
                                     do {
-                                        if audioSession.category != .playAndRecord && audioSession.category != .ambient {
-                                            try audioSession.setCategory(.ambient)
+                                        if audioSession.category != .playAndRecord && (audioSession.category != .ambient || audioSession.mode != .default) {
+                                            try audioSession.setCategory(.ambient, mode: .default)
                                         }
                                         
-                                        try audioSession.setActive(true)
+                                        isActivated = try await audioSession.activate()
                                     } catch {
                                         isActivated = false
                                     }
                                     
-                                    if isActivated {
+                                    if isActivated && audioPlayer.prepareToPlay() {
                                         await MainActor.run {
                                             characterView.audioPlayer = audioPlayer
                                             characterView.audioPlayer!.delegate = characterView
@@ -3301,19 +3301,19 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         Task.detached {
                             if data.count >= 12, let riff = String(data: data[0..<4], encoding: .ascii), riff == "RIFF", let wave = String(data: data[8..<12], encoding: .ascii), wave == "WAVE", let audioPlayer = try? AVAudioPlayer(data: data) {
                                 let audioSession = AVAudioSession.sharedInstance()
-                                var isActivated = true
+                                let isActivated: Bool
                                 
                                 do {
-                                    if audioSession.category != .playAndRecord && audioSession.category != .ambient {
-                                        try audioSession.setCategory(.ambient)
+                                    if audioSession.category != .playAndRecord && (audioSession.category != .ambient || audioSession.mode != .default) {
+                                        try audioSession.setCategory(.ambient, mode: .default)
                                     }
                                     
-                                    try audioSession.setActive(true)
+                                    isActivated = try await audioSession.activate()
                                 } catch {
                                     isActivated = false
                                 }
                                 
-                                if isActivated {
+                                if isActivated && audioPlayer.prepareToPlay() {
                                     await MainActor.run {
                                         characterView.audioPlayer = audioPlayer
                                         characterView.audioPlayer!.delegate = characterView
@@ -4397,16 +4397,10 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
         }
         
-        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-            UIView.transition(with: self.contentView, duration: 0.5, options: [.curveEaseIn, .allowUserInteraction], animations: {
-                self.contentView.alpha = 0.5
-            })
-        }
-        
-        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-            UIView.transition(with: self.contentView, duration: 0.5, options: [.curveEaseOut, .allowUserInteraction], animations: {
-                self.contentView.alpha = 1.0
-            })
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            if scrollView.contentOffset.y > 0 {
+                scrollView.contentOffset.y = 0
+            }
         }
         
         override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -4415,7 +4409,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
             
             if self.feedbackGenerator == nil {
-                self.feedbackGenerator = UIImpactFeedbackGenerator()
+                self.feedbackGenerator = UIImpactFeedbackGenerator(style: .soft, view: self)
                 self.feedbackGenerator!.prepare()
             }
         }
@@ -4544,12 +4538,13 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         })
                         
                         if !sequences.isEmpty {
+                            self.touch = nil
+                            self.feedbackGenerator?.impactOccurred()
+                            self.feedbackGenerator?.prepare()
+                            
                             Task {
                                 await Script.shared.run(name: self.name!, sequences: sequences, state: state, words: [])
                             }
-                            
-                            self.feedbackGenerator?.impactOccurred()
-                            self.feedbackGenerator?.prepare()
                         }
                     } else if state != Script.shared.states["DoubleTap"] {
                         let sequences = Script.shared.characters.reduce(into: [Sequence](), { x, y in
@@ -4563,28 +4558,52 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         })
                         
                         if !sequences.isEmpty {
+                            self.touch = nil
+                            self.feedbackGenerator?.impactOccurred()
+                            self.feedbackGenerator?.prepare()
+                            
+                            
                             Task {
                                 await Script.shared.run(name: self.name!, sequences: sequences, state: state, words: [])
                             }
-                            
-                            self.feedbackGenerator?.impactOccurred()
-                            self.feedbackGenerator?.prepare()
                         }
                     }
                 }
-                
-                self.touch = nil
             }
         }
         
         override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
             self.touch = nil
             self.feedbackGenerator = nil
+            
+            Task {
+                _ = await Script.shared.update { states in
+                    if states["DoubleClick"] != nil {
+                        states.removeValue(forKey: "DoubleClick")
+                    } else if states["DoubleTap"] != nil {
+                        states.removeValue(forKey: "DoubleTap")
+                    }
+                    
+                    return true
+                }
+            }
         }
         
         override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
             self.touch = nil
             self.feedbackGenerator = nil
+            
+            Task {
+                _ = await Script.shared.update { states in
+                    if states["DoubleClick"] != nil {
+                        states.removeValue(forKey: "DoubleClick")
+                    } else if states["DoubleTap"] != nil {
+                        states.removeValue(forKey: "DoubleTap")
+                    }
+                    
+                    return true
+                }
+            }
         }
         
         @objc private func swiped(sender: UISwipeGestureRecognizer) {
@@ -5005,17 +5024,15 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         
                         if let jsonObject = try? JSONSerialization.jsonObject(with: data), let jsonRoot = jsonObject as? [String: Any], let currentWeather = jsonRoot["currentWeather"] as? [String: Any], let conditionCode = currentWeather["conditionCode"] as? String {
                             for character in Script.shared.characters {
-                                Task {
-                                    await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
-                                        if y.name == character.name {
-                                            for sequence in y.sequences {
-                                                if sequence.name == "Weather" {
-                                                    x.append(sequence)
-                                                }
+                                await Script.shared.run(name: character.name, sequences: Script.shared.characters.reduce(into: [], { x, y in
+                                    if y.name == character.name {
+                                        for sequence in y.sequences {
+                                            if sequence.name == "Weather" {
+                                                x.append(sequence)
                                             }
                                         }
-                                    }), state: conditionCode, words: [])
-                                }
+                                    }
+                                }), state: conditionCode, words: [])
                             }
                         }
                     }
@@ -5253,7 +5270,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 return $0.path < $1.path
             }
             
-            let processor = VTFrameProcessor()
+            var processor = VTFrameProcessor()
             var configuration: VTSuperResolutionScalerConfiguration?
             var total = 0
             
@@ -5272,7 +5289,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 
                 try? FileManager.default.removeItem(at: url)
                 
-                let image = await self.upscale(original, processor: processor, configuration: &configuration)
+                let image = await self.upscale(original, processor: &processor, configuration: &configuration)
                 
                 guard self.readImage(at: url) == nil else {
                     continue
@@ -5343,12 +5360,13 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             return (dimension(for: image.width), dimension(for: image.height))
         }
         
-        private func upscale(_ image: CGImage, processor: VTFrameProcessor, configuration: inout VTSuperResolutionScalerConfiguration?) async -> CGImage? {
+        private func upscale(_ image: CGImage, processor: inout VTFrameProcessor, configuration: inout VTSuperResolutionScalerConfiguration?) async -> CGImage? {
             let (width, height) = self.calculateInputDimensions(for: image)
             
             if configuration?.frameWidth != width || configuration?.frameHeight != height {
                 if configuration != nil {
                     processor.endSession()
+                    processor = VTFrameProcessor()
                 }
                 
                 configuration = nil
@@ -5378,7 +5396,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     let contentHeight = min(tileHeight, image.height - y)
                     let input = source.transformed(by: CGAffineTransform(translationX: CGFloat(self.padding - x), y: CGFloat(self.padding - y))).cropped(to: CGRect(x: 0, y: 0, width: width, height: height))
                     
-                    guard let sourceBuffer = self.makeBuffer(attributes: configuration.sourcePixelBufferAttributes, pixelFormat: pixelFormat), let destinationBuffer = self.makeBuffer(attributes: configuration.destinationPixelBufferAttributes, pixelFormat: pixelFormat) else {
+                    guard let sourceBuffer = self.makeBuffer(attributes: configuration.sourcePixelBufferAttributes, pixelFormat: pixelFormat), let destinationBuffer = self.makeBuffer(attributes: configuration.destinationPixelBufferAttributes) else {
                         return nil
                     }
                     
@@ -5388,13 +5406,9 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         return nil
                     }
                     
-                    let succeeded = await withCheckedContinuation { continuation in
-                        processor.process(parameters: parameters) { _, error in
-                            continuation.resume(returning: error == nil)
-                        }
-                    }
-                    
-                    guard succeeded else {
+                    do {
+                        _ = try await processor.process(parameters: parameters)
+                    } catch {
                         return nil
                     }
                     
@@ -5438,8 +5452,13 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
         }
         
-        private func makeBuffer(attributes: [String: any Sendable], pixelFormat: OSType) -> CVPixelBuffer? {
-            let requested: [String: any Sendable] = [kCVPixelBufferPixelFormatTypeKey as String: pixelFormat, kCVPixelBufferIOSurfacePropertiesKey as String: [String: Int]()]
+        private func makeBuffer(attributes: [String: any Sendable], pixelFormat: OSType? = nil) -> CVPixelBuffer? {
+            var requested: [String: any Sendable] = [kCVPixelBufferIOSurfacePropertiesKey as String: [String: Int]()]
+            
+            if let pixelFormat {
+                requested[kCVPixelBufferPixelFormatTypeKey as String] = pixelFormat
+            }
+            
             var resolved: CFDictionary?
             
             guard CVPixelBufferCreateResolvedAttributesDictionary(kCFAllocatorDefault, [attributes, requested] as CFArray, &resolved) == kCVReturnSuccess, let resolved else {
