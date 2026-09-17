@@ -1683,6 +1683,7 @@ struct Chat: View {
             .background(.clear)
             .foregroundStyle(.primary, .secondary)
          }
+         .contentMargins(.vertical, 24.0, for: .scrollIndicators)
          .frame(
             height: (geometryProxy.size.height + geometryProxy.safeAreaInsets.top + geometryProxy.safeAreaInsets.bottom) / 2.0 - geometryProxy.safeAreaInsets.bottom - 72.0
          )
@@ -2987,11 +2988,13 @@ struct Chat: View {
       
       return nil
    }
-      
+   
    private func startRecognize() {
       guard let recognizer = SFSpeechRecognizer() else {
          return
       }
+      
+      self.composerFocused = false
       
       withAnimation(.linear(duration: 0.5)) {
          self.isRecording = true
@@ -3022,7 +3025,11 @@ struct Chat: View {
          
          guard speechAllowed else {
             self.speechRecognizer = nil
-            self.isRecording = false
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
             
             return
          }
@@ -3035,32 +3042,59 @@ struct Chat: View {
          
          guard microphoneAllowed else {
             self.speechRecognizer = nil
-            self.isRecording = false
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
             
             return
          }
          
-         let audioSessionActivated: Bool
-         do {
+         let audioSessionConfigured = await Task.detached {
             let audioSession = AVAudioSession.sharedInstance()
             
-            if audioSession.category != .playAndRecord || audioSession.mode != .measurement {
-               try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
+            do {
+               if audioSession.category != .playAndRecord || audioSession.mode != .measurement || audioSession.categoryOptions != .mixWithOthers {
+                  try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .mixWithOthers)
+               }
+               
+               return true
+            } catch {
+               return false
             }
-            
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-            audioSessionActivated = true
-         } catch {
+         }.value
+         let audioSessionActivated: Bool
+         
+         if audioSessionConfigured {
+            do {
+               audioSessionActivated = try await AVAudioSession.sharedInstance().activate()
+            } catch {
+               audioSessionActivated = false
+            }
+         } else {
             audioSessionActivated = false
          }
          
          guard self.isRecording, self.speechRecognizer === recognizer else {
+            if self.speechRecognizer == nil && audioSessionConfigured {
+               await self.restoreAudio()
+            }
+            
             return
          }
          
          guard audioSessionActivated && recognizer.isAvailable else {
             self.speechRecognizer = nil
-            self.isRecording = false
+            
+            if audioSessionConfigured {
+               await self.restoreAudio()
+            }
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
             
             return
          }
@@ -3080,6 +3114,7 @@ struct Chat: View {
          
          guard inputFormat.sampleRate > 0.0, inputFormat.channelCount > 0 else {
             self.speechRecognizer = nil
+            await self.restoreAudio()
             
             withAnimation(.linear(duration: 0.5)) {
                self.isRecording = false
@@ -3124,7 +3159,6 @@ struct Chat: View {
                let maximum: Float = -25.0
                let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
                let duration = Double(buffer.frameLength) / buffer.format.sampleRate
-               
                let multiplier = level > self.volumeLevel ? 5.0 : 10.0
                
                withAnimation(.linear(duration: duration * multiplier)) {
@@ -3142,6 +3176,7 @@ struct Chat: View {
             try audioEngine.start()
          } catch {
             self.speechRecognizer = nil
+            await self.restoreAudio()
             
             withAnimation(.linear(duration: 0.5)) {
                self.isRecording = false
@@ -3166,9 +3201,13 @@ struct Chat: View {
                      audioEngine.inputNode.removeTap(onBus: 0)
                      self.audioEngine = nil
                      
-                     withAnimation(.linear(duration: 0.5)) {
-                        self.isRecording = false
-                        self.volumeLevel = 0.0
+                     Task { @MainActor in
+                        await self.restoreAudio()
+                        
+                        withAnimation(.linear(duration: 0.5)) {
+                           self.isRecording = false
+                           self.volumeLevel = 0.0
+                        }
                      }
                   }
                   
@@ -3184,9 +3223,13 @@ struct Chat: View {
                audioEngine.inputNode.removeTap(onBus: 0)
                self.audioEngine = nil
                
-               withAnimation(.linear(duration: 0.5)) {
-                  self.isRecording = false
-                  self.volumeLevel = 0.0
+               Task { @MainActor in
+                  await self.restoreAudio()
+                  
+                  withAnimation(.linear(duration: 0.5)) {
+                     self.isRecording = false
+                     self.volumeLevel = 0.0
+                  }
                }
             }
          })
@@ -3216,10 +3259,24 @@ struct Chat: View {
          self.speechAudioBufferRecognitionRequest = nil
       }
       
-      withAnimation(.linear(duration: 0.5)) {
-         self.isRecording = false
-         self.volumeLevel = 0.0
+      Task {
+         await self.restoreAudio()
+         
+         withAnimation(.linear(duration: 0.5)) {
+            self.isRecording = false
+            self.volumeLevel = 0.0
+         }
       }
+   }
+   
+   private func restoreAudio() async {
+      await Task.detached {
+         let audioSession = AVAudioSession.sharedInstance()
+         
+         if audioSession.category == .playAndRecord && audioSession.mode == .measurement {
+            try? audioSession.setCategory(.ambient, mode: .default)
+         }
+      }.value
    }
    
    private nonisolated func resize(image: CGImage, maximum: Double = 768) -> CGImage? {
@@ -6392,104 +6449,107 @@ struct Activity: View {
    
    var body: some View {
       NavigationStack {
-         ScrollViewReader { proxy in
-            List {
-               EmptyView()
-                  .id(self.topID)
-               
-               if self.mode == 0 {
-                  if self.stats != nil {
-                     self.makeStats()
-                  }
+         GeometryReader { geometry in
+            ScrollViewReader { proxy in
+               List {
+                  EmptyView()
+                     .id(self.topID)
                   
-                  if let achievements = self.achievements, !achievements.isEmpty {
-                     self.makeAchievements()
-                  }
-               } else if self.mode == 1 {
-                  if self.trendings != nil {
-                     self.makeTrendings()
-                  }
-               } else {
-                  if self.contents != nil {
-                     self.makeLogs()
-                  }
-               }
-            }
-            .frame(
-               maxWidth: .infinity,
-               maxHeight: .infinity
-            )
-            .background(.clear)
-            .scrollContentBackground(.hidden)
-            .listStyle(DefaultListStyle())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-               ToolbarItem(placement: .principal) {
-                  Text("Activity")
-                     .foregroundStyle(.primary)
-                     .font(.headline)
-                     .fontWeight(.semibold)
-                     .lineLimit(1)
-                     .textCase(.uppercase)
-               }
-               ToolbarItem(placement: .cancellationAction) {
-                  Button(action: {
-                     dismiss()
-                  }) {
-                     ZStack {
-                        Image(systemName: "xmark")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(.primary)
-                           .font(
-                              .system(size: 8.0)
-                           )
-                           .bold()
+                  if self.mode == 0 {
+                     if self.stats != nil {
+                        self.makeStats(geometryProxy: geometry)
+                     }
+                     
+                     if let achievements = self.achievements, !achievements.isEmpty {
+                        self.makeAchievements()
+                     }
+                  } else if self.mode == 1 {
+                     if self.trendings != nil {
+                        self.makeTrendings()
+                     }
+                  } else {
+                     if self.contents != nil {
+                        self.makeLogs()
                      }
                   }
-                  .contentShape(Circle())
                }
-               ToolbarItem(placement: .primaryAction) {
-                  Button(action: {
-                     withAnimation {
-                        proxy.scrollTo(self.topID, anchor: .bottom)
-                        self.mode = (self.mode + 1) % 3
-                     }
-                  }) {
-                     ZStack {
-                        Image(systemName: "arrow.left.arrow.right")
-                           .frame(
-                              alignment: .center
-                           )
-                           .background(.clear)
-                           .foregroundStyle(.primary)
-                           .font(
-                              .system(size: 8.0)
-                           )
-                           .bold()
-                     }
+               .frame(
+                  maxWidth: .infinity,
+                  maxHeight: .infinity
+               )
+               .background(.clear)
+               .scrollContentBackground(.hidden)
+               .scrollEdgeEffectStyle(.soft, for: .vertical)
+               .listStyle(DefaultListStyle())
+               .navigationBarTitleDisplayMode(.inline)
+               .toolbarBackground(.hidden, for: .navigationBar)
+               .toolbar {
+                  ToolbarItem(placement: .principal) {
+                     Text("Activity")
+                        .foregroundStyle(.primary)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .textCase(.uppercase)
                   }
-                  .contentShape(Circle())
+                  ToolbarItem(placement: .cancellationAction) {
+                     Button(action: {
+                        dismiss()
+                     }) {
+                        ZStack {
+                           Image(systemName: "xmark")
+                              .frame(
+                                 alignment: .center
+                              )
+                              .background(.clear)
+                              .foregroundStyle(.primary)
+                              .font(
+                                 .system(size: 8.0)
+                              )
+                              .bold()
+                        }
+                     }
+                     .contentShape(Circle())
+                  }
+                  ToolbarItem(placement: .primaryAction) {
+                     Button(action: {
+                        withAnimation {
+                           proxy.scrollTo(self.topID, anchor: .bottom)
+                           self.mode = (self.mode + 1) % 3
+                        }
+                     }) {
+                        ZStack {
+                           Image(systemName: "arrow.left.arrow.right")
+                              .frame(
+                                 alignment: .center
+                              )
+                              .background(.clear)
+                              .foregroundStyle(.primary)
+                              .font(
+                                 .system(size: 8.0)
+                              )
+                              .bold()
+                        }
+                     }
+                     .contentShape(Circle())
+                  }
                }
-            }
-            .transition(.opacity)
-            .task {
-               let (stats, mean, variance, achievements, remains, trendings, indexes, contents) = await self.load()
-               
-               withAnimation {
-                  self.stats = stats
-                  self.mean = mean
-                  self.variance = variance
-                  self.achievements = achievements
-                  self.remains = remains
-                  self.trendings = trendings.reduce(into: [], { x, y in
-                     x.append(y.0)
-                  })
-                  self.indexes = indexes
-                  self.contents = contents
+               .transition(.opacity)
+               .task {
+                  let (stats, mean, variance, achievements, remains, trendings, indexes, contents) = await self.load()
+                  
+                  withAnimation {
+                     self.stats = stats
+                     self.mean = mean
+                     self.variance = variance
+                     self.achievements = achievements
+                     self.remains = remains
+                     self.trendings = trendings.reduce(into: [], { x, y in
+                        x.append(y.0)
+                     })
+                     self.indexes = indexes
+                     self.contents = contents
+                  }
                }
             }
          }
@@ -6504,7 +6564,7 @@ struct Activity: View {
       self._logs = logs
    }
    
-   private func makeStats() -> some View {
+   private func makeStats(geometryProxy: GeometryProxy) -> some View {
       return Section(header: Text("Stats")
          .foregroundStyle(.primary)
             .fontWeight(.semibold)
@@ -6543,7 +6603,7 @@ struct Activity: View {
                         AxisTick()
                      }
                   }
-                  .containerRelativeFrame(.vertical) { length, _ in length / 2.0 }
+                  .frame(height: geometryProxy.size.height / 2.0)
                   .listRowBackground(Color(uiColor: .systemBackground))
                   .transition(.opacity.animation(.linear))
                }
@@ -7270,6 +7330,7 @@ struct Dictionary: View {
             )
             .background(.clear)
             .scrollContentBackground(.hidden)
+            .scrollEdgeEffectStyle(.soft, for: .vertical)
             .listStyle(DefaultListStyle())
             .environment(\.editMode, .constant(self.isEditing ? EditMode.active : EditMode.inactive))
             .navigationBarTitleDisplayMode(.inline)
@@ -7493,11 +7554,6 @@ struct Dictionary: View {
                   .onChange(of: self.inputFocused) {
                      if self.inputFocused && self.isRecording {
                         self.stopRecognize()
-                     }
-                  }
-                  .onChange(of: self.isRecording) {
-                     if self.isRecording && self.inputFocused {
-                        self.inputFocused = false
                      }
                   }
                   .onChange(of: self.isCapturing) {
@@ -7966,6 +8022,8 @@ struct Dictionary: View {
          return
       }
       
+      self.inputFocused = false
+      
       withAnimation(.linear(duration: 0.5)) {
          self.isRecording = true
       }
@@ -7994,7 +8052,11 @@ struct Dictionary: View {
          
          guard speechAllowed else {
             self.speechRecognizer = nil
-            self.isRecording = false
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
             
             return
          }
@@ -8007,33 +8069,59 @@ struct Dictionary: View {
          
          guard microphoneAllowed else {
             self.speechRecognizer = nil
-            self.isRecording = false
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
             
             return
          }
          
-         let audioSessionActivated: Bool
-         
-         do {
+         let audioSessionConfigured = await Task.detached {
             let audioSession = AVAudioSession.sharedInstance()
             
-            if audioSession.category != .playAndRecord || audioSession.mode != .measurement {
-               try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .duckOthers)
+            do {
+               if audioSession.category != .playAndRecord || audioSession.mode != .measurement || audioSession.categoryOptions != .mixWithOthers {
+                  try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .mixWithOthers)
+               }
+               
+               return true
+            } catch {
+               return false
             }
-            
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-            audioSessionActivated = true
-         } catch {
+         }.value
+         let audioSessionActivated: Bool
+         
+         if audioSessionConfigured {
+            do {
+               audioSessionActivated = try await AVAudioSession.sharedInstance().activate()
+            } catch {
+               audioSessionActivated = false
+            }
+         } else {
             audioSessionActivated = false
          }
          
          guard self.isRecording, self.speechRecognizer === recognizer else {
+            if self.speechRecognizer == nil && audioSessionConfigured {
+               await self.restoreAudio()
+            }
+            
             return
          }
          
          guard audioSessionActivated && recognizer.isAvailable else {
             self.speechRecognizer = nil
-            self.isRecording = false
+            
+            if audioSessionConfigured {
+               await self.restoreAudio()
+            }
+            
+            withAnimation(.linear(duration: 0.5)) {
+               self.isRecording = false
+               self.volumeLevel = 0.0
+            }
             
             return
          }
@@ -8053,6 +8141,7 @@ struct Dictionary: View {
          
          guard inputFormat.sampleRate > 0.0, inputFormat.channelCount > 0 else {
             self.speechRecognizer = nil
+            await self.restoreAudio()
             
             withAnimation(.linear(duration: 0.5)) {
                self.isRecording = false
@@ -8097,7 +8186,6 @@ struct Dictionary: View {
                let maximum: Float = -25.0
                let level = Double(dB > maximum ? 1.0 : (abs(minimum) - abs(max(dB, minimum))) / (abs(minimum) - abs(maximum)))
                let duration = Double(buffer.frameLength) / buffer.format.sampleRate
-               
                let multiplier = level > self.volumeLevel ? 5.0 : 10.0
                
                withAnimation(.linear(duration: duration * multiplier)) {
@@ -8115,6 +8203,7 @@ struct Dictionary: View {
             try audioEngine.start()
          } catch {
             self.speechRecognizer = nil
+            await self.restoreAudio()
             
             withAnimation(.linear(duration: 0.5)) {
                self.isRecording = false
@@ -8139,9 +8228,13 @@ struct Dictionary: View {
                      audioEngine.inputNode.removeTap(onBus: 0)
                      self.audioEngine = nil
                      
-                     withAnimation(.linear(duration: 0.5)) {
-                        self.isRecording = false
-                        self.volumeLevel = 0.0
+                     Task { @MainActor in
+                        await self.restoreAudio()
+                        
+                        withAnimation(.linear(duration: 0.5)) {
+                           self.isRecording = false
+                           self.volumeLevel = 0.0
+                        }
                      }
                   }
                   
@@ -8157,9 +8250,13 @@ struct Dictionary: View {
                audioEngine.inputNode.removeTap(onBus: 0)
                self.audioEngine = nil
                
-               withAnimation(.linear(duration: 0.5)) {
-                  self.isRecording = false
-                  self.volumeLevel = 0.0
+               Task { @MainActor in
+                  await self.restoreAudio()
+                  
+                  withAnimation(.linear(duration: 0.5)) {
+                     self.isRecording = false
+                     self.volumeLevel = 0.0
+                  }
                }
             }
          })
@@ -8189,10 +8286,24 @@ struct Dictionary: View {
          self.speechAudioBufferRecognitionRequest = nil
       }
       
-      withAnimation(.linear(duration: 0.5)) {
-         self.isRecording = false
-         self.volumeLevel = 0.0
+      Task {
+         await self.restoreAudio()
+         
+         withAnimation(.linear(duration: 0.5)) {
+            self.isRecording = false
+            self.volumeLevel = 0.0
+         }
       }
+   }
+   
+   private func restoreAudio() async {
+      await Task.detached {
+         let audioSession = AVAudioSession.sharedInstance()
+         
+         if audioSession.category == .playAndRecord && audioSession.mode == .measurement {
+            try? audioSession.setCategory(.ambient, mode: .default)
+         }
+      }.value
    }
 }
 
@@ -9559,6 +9670,7 @@ struct Settings: View {
          )
          .background(.clear)
          .scrollContentBackground(.hidden)
+         .scrollEdgeEffectStyle(.soft, for: .vertical)
          .listStyle(DefaultListStyle())
          .navigationBarTitleDisplayMode(.inline)
          .toolbarBackground(.hidden, for: .navigationBar)
