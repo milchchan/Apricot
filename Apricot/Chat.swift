@@ -3931,38 +3931,13 @@ struct Stage: UIViewRepresentable {
                if characterView.name == name {
                   let types = characterView.types.compactMap({ $0.value.1 ? $0.key : nil })
                   
-                  if characterView.name != self.snapshot.name || !types.elementsEqual(self.snapshot.types) {
-                     if characterView.fades.contains(where: { $0.value > 0.0 && $0.value < 1.0 }) {
-                        let images: [String: CGImage]
-                        let imageScale: Double
-                        
-                        if characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
-                            images = characterView.cachedImages.mapValues { $0.1! }
-                            imageScale = characterView.imageScale
-                        } else {
-                            images = characterView.cachedImages.mapValues { $0.0 }
-                            imageScale = 1.0
-                        }
-                        
-                        let (i, _) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
-                        
-                        if let i {
-                           self.snapshot.name = characterView.name
-                           self.snapshot.types.removeAll()
-                           self.snapshot.types.append(contentsOf: types)
-                           
-                           Task {
-                              await uiView.reload(image: i)
-                           }
-                        }
-                     } else {
-                        self.snapshot.name = characterView.name
-                        self.snapshot.types.removeAll()
-                        self.snapshot.types.append(contentsOf: types)
-                        
-                        Task {
-                           await uiView.reload(image: image)
-                        }
+                  if (characterView.name != self.snapshot.name || !types.elementsEqual(self.snapshot.types)) && !characterView.fades.contains(where: { $0.value > 0.0 && $0.value < 1.0 }) {
+                     self.snapshot.name = characterView.name
+                     self.snapshot.types.removeAll()
+                     self.snapshot.types.append(contentsOf: types)
+                     
+                     Task {
+                        await uiView.reload(image: image)
                      }
                   }
                }
