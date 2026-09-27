@@ -954,10 +954,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 
                                 let maxWidth = characters.reduce(0.0, { max((abs($1.insets.right) - abs($1.insets.left)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
                                 let maxHeight = characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
-                                let horizontalScale = maxWidth > 0.0 ? interval / maxWidth : 1.0
-                                let verticalScale = maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0
                                 
-                                self.systemScale = min(horizontalScale, verticalScale, 1.0)
+                                self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
                             } else {
                                 alpha = 0.0
                                 interval = 0.0
@@ -1175,8 +1173,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                     let (image, fades) = characterView.preview(timelines: timelines, images: images, imageScale: imageScale)
                                     
                                     if let image {
-                                        let actualScale = self.userScale * self.systemScale
-                                        let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * actualScale
+                                        let adjustedScale = self.userScale * self.systemScale
+                                        let imageScale = (character.scale == 0.0 ? 1.0 : character.scale / self.traitCollection.displayScale) * adjustedScale
                                         let imageSize = CGSize(width: ceil(character.size.width * imageScale), height: ceil(character.size.height * imageScale))
                                         let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                                         
@@ -1188,7 +1186,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                         let renderedImage = renderer.image { rendererContext in
                                             let context = rendererContext.cgContext
                                             
-                                            if actualScale == floor(actualScale) {
+                                            if adjustedScale == floor(adjustedScale) {
                                                 context.interpolationQuality = .none
                                                 context.setAllowsAntialiasing(false)
                                             } else {
@@ -1342,8 +1340,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                             
                             if let image {
-                                let actualScale = scale * self.systemScale
-                                let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
+                                let adjustedScale = scale * self.systemScale
+                                let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * adjustedScale
                                 let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
                                 let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                                 
@@ -1355,7 +1353,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                                 let renderedImage = renderer.image { rendererContext in
                                     let context = rendererContext.cgContext
                                     
-                                    if actualScale == floor(actualScale) {
+                                    if adjustedScale == floor(adjustedScale) {
                                         context.interpolationQuality = .none
                                         context.setAllowsAntialiasing(false)
                                     } else {
@@ -1986,8 +1984,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     let (image, fades) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                     
                     if let image {
-                        let actualScale = self.userScale * self.systemScale
-                        let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
+                        let adjustedScale = self.userScale * self.systemScale
+                        let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * adjustedScale
                         let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
                         let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                         
@@ -1999,7 +1997,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         let renderedImage = renderer.image { rendererContext in
                             let context = rendererContext.cgContext
                             
-                            if actualScale == floor(actualScale) {
+                            if adjustedScale == floor(adjustedScale) {
                                 context.interpolationQuality = .none
                                 context.setAllowsAntialiasing(false)
                             } else {
@@ -2098,8 +2096,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     let (image, fades) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                     
                     if let image {
-                        let actualScale = self.userScale * self.systemScale
-                        let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
+                        let adjustedScale = self.userScale * self.systemScale
+                        let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * adjustedScale
                         let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
                         let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                         
@@ -2111,7 +2109,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         let renderedImage = renderer.image { rendererContext in
                             let context = rendererContext.cgContext
                             
-                            if actualScale == floor(actualScale) {
+                            if adjustedScale == floor(adjustedScale) {
                                 context.interpolationQuality = .none
                                 context.setAllowsAntialiasing(false)
                             } else {
@@ -2290,8 +2288,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         let (image, _) = characterView.preview(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale)
                         
                         if let image {
-                            let actualScale = self.userScale * self.systemScale
-                            let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * actualScale
+                            let adjustedScale = self.userScale * self.systemScale
+                            let imageScale = (characterView.scale == 0.0 ? 1.0 : characterView.scale / self.traitCollection.displayScale) * adjustedScale
                             let imageSize = CGSize(width: ceil(characterView.size.width * imageScale), height: ceil(characterView.size.height * imageScale))
                             let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                             
@@ -2303,7 +2301,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             let renderedImage = renderer.image { rendererContext in
                                 let context = rendererContext.cgContext
                                 
-                                if actualScale == floor(actualScale) {
+                                if adjustedScale == floor(adjustedScale) {
                                     context.interpolationQuality = .none
                                     context.setAllowsAntialiasing(false)
                                 } else {
@@ -2686,36 +2684,58 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         }
                         
                         if characterView.isInvalidated || redrawRequired {
-                            let isStaging = !characterView.stagingTimelines.isEmpty
-                            let images: [String: CGImage]
-                            let imageScale: Double
-                            
-                            if !isFrameRateDropping && characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
-                                images = characterView.cachedImages.mapValues { $0.1! }
-                                imageScale = characterView.imageScale
-                            } else {
-                                images = characterView.cachedImages.mapValues { $0.0 }
-                                imageScale = 1.0
-                            }
-                            
-                            let (image, completed) = characterView.render(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale, deltaTime: deltaTime)
-                            
-                            characterView.isInvalidated = !completed
-                            
-                            if self.characterViews.firstIndex(of: characterView) == 0, let image {
-                                if !isStaging {
-                                    self.snapshot = (self.snapshot.0, image)
+                            if isFrameRateDropping {
+                                let (image, completed) = characterView.render(timelines: characterView.cachedTimelines, images: characterView.cachedImages.mapValues { $0.0 }, imageScale: 1.0, adjustedScale: self.userScale * self.systemScale, deltaTime: deltaTime)
+                                
+                                characterView.isInvalidated = !completed
+                                
+                                if self.characterViews.firstIndex(of: characterView) == 0, let image {
+                                    self.delegate?.agentDidRender(self, image: image, by: characterView.name!)
                                 }
                                 
-                                self.delegate?.agentDidRender(self, image: image, by: characterView.name!)
-                            }
-                            
-                            if completed && isStaging {
-                                characterView.isInvalidated = true
-                                characterView.elapsedTime = 0.0
-                                characterView.cachedTimelines.removeAll()
-                                characterView.cachedTimelines.append(contentsOf: characterView.stagingTimelines)
-                                characterView.stagingTimelines.removeAll()
+                                if completed && !characterView.stagingTimelines.isEmpty {
+                                    characterView.isInvalidated = true
+                                    characterView.elapsedTime = 0.0
+                                    characterView.cachedTimelines.removeAll()
+                                    characterView.cachedTimelines.append(contentsOf: characterView.stagingTimelines)
+                                    characterView.stagingTimelines.removeAll()
+                                }
+                            } else {
+                                let images: [String: CGImage]
+                                let imageScale: Double
+                                
+                                if characterView.imageScale > 1.0 && characterView.cachedImages.values.allSatisfy({ $0.1 != nil }) {
+                                    images = characterView.cachedImages.mapValues { $0.1! }
+                                    imageScale = characterView.imageScale
+                                } else {
+                                    images = characterView.cachedImages.mapValues { $0.0 }
+                                    imageScale = 1.0
+                                }
+                                
+                                let (image, completed) = characterView.render(timelines: characterView.cachedTimelines, images: images, imageScale: imageScale, adjustedScale: self.userScale * self.systemScale, deltaTime: deltaTime)
+                                
+                                characterView.isInvalidated = !completed
+                                
+                                if completed {
+                                    if characterView.stagingTimelines.isEmpty {
+                                        if self.characterViews.firstIndex(of: characterView) == 0, let image {
+                                            self.snapshot = (self.snapshot.0, image)
+                                            self.delegate?.agentDidRender(self, image: image, by: characterView.name!)
+                                        }
+                                    } else {
+                                        if self.characterViews.firstIndex(of: characterView) == 0, let image {
+                                            self.delegate?.agentDidRender(self, image: image, by: characterView.name!)
+                                        }
+                                        
+                                        characterView.isInvalidated = true
+                                        characterView.elapsedTime = 0.0
+                                        characterView.cachedTimelines.removeAll()
+                                        characterView.cachedTimelines.append(contentsOf: characterView.stagingTimelines)
+                                        characterView.stagingTimelines.removeAll()
+                                    }
+                                } else if self.characterViews.firstIndex(of: characterView) == 0, let image {
+                                    self.delegate?.agentDidRender(self, image: image, by: characterView.name!)
+                                }
                             }
                         }
                     }
@@ -4678,7 +4698,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
         
         @discardableResult
-        func render(timelines: [Timeline], images: [String: CGImage], imageScale: Double, deltaTime: Double) -> (CGImage?, Bool) {
+        func render(timelines: [Timeline], images: [String: CGImage], imageScale: Double, adjustedScale: Double, deltaTime: Double) -> (CGImage?, Bool) {
             var image: CGImage? = nil
             var completed = true
             
@@ -4692,10 +4712,10 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 let renderer = UIGraphicsImageRenderer(size: self.size, format: format)
                 let renderedImage = renderer.image { rendererContext in
                     let context = rendererContext.cgContext
-                    let actualScale = parentView.userScale * parentView.systemScale
+                    let adjustedScale = parentView.userScale * parentView.systemScale
                     let types = self.types.compactMap({ $0.value.1 ? $0.key : nil })
                     
-                    if imageScale == 1.0 && actualScale == floor(actualScale) {
+                    if imageScale == 1.0 && adjustedScale == floor(adjustedScale) {
                         context.interpolationQuality = .none
                         context.setAllowsAntialiasing(false)
                     } else {
@@ -4830,8 +4850,8 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 image = renderedImage.cgImage
             }
             
-            if let image, let parentView = self.parentView {
-                let scale = (self.scale == 0.0 ? 1.0 : self.scale / self.traitCollection.displayScale) * parentView.userScale * parentView.systemScale
+            if let image {
+                let scale = (self.scale == 0.0 ? 1.0 : self.scale / self.traitCollection.displayScale) * adjustedScale
                 let size = CGSize(width: ceil(self.size.width * scale), height: ceil(self.size.height * scale))
                 let format = UIGraphicsImageRendererFormat(for: self.traitCollection)
                 
