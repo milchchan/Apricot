@@ -5204,7 +5204,6 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             
             var succeeded = true
             var imagePaths = Set<String>()
-            var directories = [URL: [String]]()
             
             for path in paths {
                 guard URL(string: path)?.scheme == nil else {
@@ -5212,44 +5211,13 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 }
                 
                 let imageURL = baseURL.appending(path: path, directoryHint: .inferFromPath)
-                let name = imageURL.deletingPathExtension().lastPathComponent
-                let pathExtension = imageURL.pathExtension
-                var candidates = [path]
+                var isDirectory: ObjCBool = false
                 
-                if name.firstMatch(of: /@[0-9]+x$/) == nil {
-                    let sourceDirectory = imageURL.deletingLastPathComponent().standardizedFileURL
-                    
-                    if directories[sourceDirectory] == nil {
-                        if let filenames = try? FileManager.default.contentsOfDirectory(atPath: sourceDirectory.path(percentEncoded: false)) {
-                            directories[sourceDirectory] = filenames
-                        } else {
-                            directories[sourceDirectory] = []
-                            succeeded = false
-                        }
-                    }
-                    
-                    for filename in directories[sourceDirectory]! {
-                        guard (filename as NSString).pathExtension == pathExtension,
-                              let match = (filename as NSString).deletingPathExtension.wholeMatch(of: /(.+)@[0-9]+x/),
-                              match.output.1 == name else {
-                            continue
-                        }
-                        
-                        candidates.append(((path as NSString).deletingLastPathComponent as NSString).appendingPathComponent(filename))
-                    }
-                }
-                
-                let existingPaths = candidates.filter {
-                    var isDirectory: ObjCBool = false
-                    
-                    return FileManager.default.fileExists(atPath: baseURL.appending(path: $0, directoryHint: .inferFromPath).path(percentEncoded: false), isDirectory: &isDirectory) && !isDirectory.boolValue
-                }
-                
-                if existingPaths.isEmpty {
+                if FileManager.default.fileExists(atPath: imageURL.path(percentEncoded: false), isDirectory: &isDirectory) && !isDirectory.boolValue {
+                    imagePaths.insert(path)
+                } else {
                     succeeded = false
                 }
-                
-                imagePaths.formUnion(existingPaths)
             }
             
             var images = imagePaths.compactMap { path -> (path: String, image: CGImage)? in
