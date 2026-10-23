@@ -4147,7 +4147,7 @@ struct Stage: UIViewRepresentable {
             }
             
             return false
-         }) || (self.parent.likability ?? 0.0) >= 0.5, let uiView = self.uiView {
+         }) || self.parent.likability ?? 0.0 >= 0.5, let uiView = self.uiView {
             if !background.isEmpty {
                self.timestamp = Date()
             }
@@ -8387,8 +8387,8 @@ struct Camera: View {
             maxWidth: .infinity,
             maxHeight: .infinity
          )
-         .ignoresSafeArea(.all)
          .background(Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 1.0))
+         .ignoresSafeArea(.all)
          .navigationBarTitleDisplayMode(.inline)
          .toolbarBackground(.hidden, for: .navigationBar)
          .toolbar {
@@ -8891,6 +8891,7 @@ struct Capture: UIViewControllerRepresentable {
 struct Gallery: View {
    let accent: UIColor
    @Environment(\.dismiss) private var dismiss
+   @State private var isEditing = false
    @State private var page = 0
    @State private var position = 1
    @State private var paths = [String]()
@@ -8898,94 +8899,150 @@ struct Gallery: View {
    
    var body: some View {
       NavigationStack {
-         VStack(spacing: 0.0) {
-            Group {
-               if self.paths.indices.contains(self.page) && self.paths.count == self.playables.count {
-                  TabView(selection: self.$page) {
-                     ForEach(Array(self.paths.enumerated()), id: \.offset) { (index, path) in
-                        ZStack {
+         ZStack(alignment: .bottom) {
+            VStack(spacing: 0.0) {
+               Group {
+                  if self.paths.indices.contains(self.page) && self.paths.count == self.playables.count {
+                     TabView(selection: self.$page) {
+                        ForEach(Array(self.paths.enumerated()), id: \.offset) { (index, path) in
                            ZStack {
-                              if self.playables[index].1 {
-                                 Player(path: path, accent: self.accent)
-                                    .frame(
-                                       maxWidth: .infinity,
-                                       maxHeight: .infinity
-                                    )
-                                    .background(.clear)
-                              }
-                           }
-                           .frame(maxWidth: .infinity, maxHeight: .infinity)
-                           .background(Color(uiColor: .systemBackground))
-                           .clipShape(RoundedRectangle(cornerRadius: 16.0))
-                           .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
-                           .opacity(self.playables[index].0 ? 1.0 : 0.0)
-                           .transaction {
-                              $0.addAnimationCompletion(criteria: .logicallyComplete) {
-                                 if self.playables.indices.contains(index) && !self.playables[index].0 && self.playables[index].1 {
-                                    self.playables[index] = (false, false)
+                              ZStack {
+                                 if self.playables[index].1 {
+                                    Player(path: path, accent: self.accent)
+                                       .frame(
+                                          maxWidth: .infinity,
+                                          maxHeight: .infinity
+                                       )
+                                       .background(.clear)
                                  }
                               }
+                              .frame(maxWidth: .infinity, maxHeight: .infinity)
+                              .background(Color(uiColor: .systemBackground))
+                              .clipShape(RoundedRectangle(cornerRadius: 16.0))
+                              .shadow(color: Color(hue: 0.0, saturation: 0.0, brightness: 0.0, opacity: 0.25), radius: 8.0, x: 0.0, y: 0.0)
+                              .opacity(self.playables[index].0 ? 1.0 : 0.0)
+                              .transaction {
+                                 $0.addAnimationCompletion(criteria: .logicallyComplete) {
+                                    if self.playables.indices.contains(index) && !self.playables[index].0 && self.playables[index].1 {
+                                       self.playables[index] = (false, false)
+                                    }
+                                 }
+                              }
+                              .animation(.easeInOut(duration: 0.5), value: self.playables[index].0)
                            }
-                           .animation(.easeInOut(duration: 0.5), value: self.playables[index].0)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(.clear)
-                        .padding(16.0)
-                        .tag(index)
-                        .transition(.opacity.animation(.linear))
-                        .onAppear {
-                           guard self.paths.indices.contains(index) else {
-                              return
+                           .frame(maxWidth: .infinity, maxHeight: .infinity)
+                           .background(.clear)
+                           .padding(16.0)
+                           .tag(index)
+                           .transition(.opacity.animation(.linear))
+                           .onAppear {
+                              guard self.paths.indices.contains(index) else {
+                                 return
+                              }
+                              
+                              self.playables[index] = (true, true)
                            }
-                           
-                           self.playables[index] = (true, true)
-                        }
-                        .onDisappear {
-                           guard self.paths.indices.contains(index) else {
-                              return
+                           .onDisappear {
+                              guard self.paths.indices.contains(index) else {
+                                 return
+                              }
+                              
+                              self.playables[index] = (false, false)
                            }
-
-                           self.playables[index] = (false, false)
                         }
                      }
+                     .tabViewStyle(.page(indexDisplayMode: .never))
+                  } else {
+                     Color.clear
                   }
-                  .tabViewStyle(.page(indexDisplayMode: .never))
-               } else {
-                  Color.clear
                }
+               .frame(
+                  maxWidth: .infinity,
+                  maxHeight: .infinity
+               )
+               .background(.clear)
+               ZStack {
+                  HStack(alignment: .center, spacing: 16.0) {
+                     Text(String(format: "%ld", self.position))
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize)))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .contentTransition(.numericText(value: Double(self.position)))
+                     Text(String(format: "%ld", max(self.paths.count, 1)))
+                        .background(.clear)
+                        .foregroundStyle(.primary)
+                        .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize)))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .contentTransition(.numericText(value: Double(max(self.paths.count, 1))))
+                  }
+                  Rectangle()
+                     .fill(.primary)
+                     .frame(
+                        width: 1.0,
+                        height: 16.0
+                     )
+               }
+               .padding(0.0)
+               .opacity(self.paths.isEmpty ? 0.0 : 1.0)
+               .animation(.linear(duration: 0.5), value: self.paths.isEmpty)
             }
-            .frame(
-               maxWidth: .infinity,
-               maxHeight: .infinity
-            )
-            .background(.clear)
+            
             ZStack {
-               HStack(alignment: .center, spacing: 16.0) {
-                  Text(String(format: "%ld", self.position))
-                     .background(.clear)
-                     .foregroundStyle(.primary)
-                     .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize)))
-                     .lineLimit(1)
-                     .truncationMode(.tail)
-                     .contentTransition(.numericText(value: Double(self.position)))
-                  Text(String(format: "%ld", max(self.paths.count, 1)))
-                     .background(.clear)
-                     .foregroundStyle(.primary)
-                     .font(.custom("DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize)))
-                     .lineLimit(1)
-                     .truncationMode(.tail)
-                     .contentTransition(.numericText(value: Double(max(self.paths.count, 1))))
+               Button(role: .destructive, action: {
+                  guard self.paths.indices.contains(self.page), self.playables.indices.contains(self.page) else {
+                     return
+                  }
+                  
+                  let removedPage = self.page
+                  let path = self.paths[removedPage]
+                  let remainingCount = self.paths.count - 1
+                  let nextPage = remainingCount > 0 ? min(removedPage, remainingCount - 1) : 0
+                  
+                  withAnimation {
+                     self.page = nextPage
+                     self.paths.remove(at: removedPage)
+                     self.playables.remove(at: removedPage)
+                     
+                     if self.playables.indices.contains(self.page) {
+                        self.playables[self.page] = (true, true)
+                     }
+                  }
+                  
+                  Task.detached {
+                     if FileManager.default.fileExists(atPath: path) {
+                        try? FileManager.default.removeItem(atPath: path)
+                     }
+                  }
+               }) {
+                  ZStack {
+                     Image(systemName: "trash")
+                        .frame(
+                           width: 48.0,
+                           height: 48.0,
+                           alignment: .center
+                        )
+                        .background(.clear)
+                        .font(
+                           .system(size: 16.0)
+                        )
+                        .bold()
+                        .padding(0.0)
+                        .transition(.opacity)
+                  }
                }
-               Rectangle()
-                  .fill(.primary)
-                  .frame(
-                     width: 1.0,
-                     height: 16.0
-                  )
+               .frame(
+                  alignment: .center
+               )
+               .foregroundStyle(.primary)
+               .glassEffect(.regular.interactive(), in: Circle())
             }
-            .padding(0.0)
-            .opacity(self.paths.isEmpty ? 0.0 : 1.0)
-            .animation(.linear(duration: 0.5), value: self.paths.isEmpty)
+            .offset(y: -max(UIFont(name: "DIN2014-Demi", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .footnote).pointSize))!.lineHeight, 16.0) - 32.0)
+            .opacity(self.isEditing && self.paths.indices.contains(self.page) ? 1.0 : 0.0)
+            .allowsHitTesting(self.isEditing && self.paths.indices.contains(self.page))
+            .animation(.easeInOut(duration: 0.5), value: self.isEditing && self.paths.indices.contains(self.page))
          }
          .frame(
             maxWidth: .infinity,
@@ -9025,48 +9082,37 @@ struct Gallery: View {
             }
             ToolbarItem(placement: .primaryAction) {
                Button(action: {
-                  guard self.paths.indices.contains(self.page), self.playables.indices.contains(self.page) else {
-                     return
-                  }
-
-                  let removedPage = self.page
-                  let path = self.paths[removedPage]
-                  let remainingCount = self.paths.count - 1
-                  let nextPage = remainingCount > 0 ? min(removedPage, remainingCount - 1) : 0
-
-                  withAnimation {
-                     self.page = nextPage
-                     self.paths.remove(at: removedPage)
-                     self.playables.remove(at: removedPage)
-
-                     if self.playables.indices.contains(self.page) {
-                        self.playables[self.page] = (true, true)
-                     }
-                  }
-
-                  Task.detached {
-                     if FileManager.default.fileExists(atPath: path) {
-                        try? FileManager.default.removeItem(atPath: path)
-                     }
+                  withAnimation(.linear(duration: 0.5)) {
+                     self.isEditing.toggle()
                   }
                }) {
-                  ZStack {
-                     Image(systemName: "trash")
-                        .frame(
-                           alignment: .center
-                        )
-                        .background(.clear)
-                        .foregroundStyle(.primary)
-                        .font(
-                           .system(size: 8.0)
-                        )
-                        .bold()
-                        .opacity(self.paths.indices.contains(self.page) ? 1.0 : 0.5)
-                        .animation(.linear, value: self.paths.indices.contains(self.page))
+                  if self.isEditing {
+                     ZStack {
+                        Image(systemName: "checkmark")
+                           .frame(
+                              alignment: .center
+                           )
+                           .background(.clear)
+                           .foregroundStyle(.primary)
+                           .font(.system(size: 8.0))
+                           .bold()
+                           .transition(.opacity)
+                     }
+                  } else {
+                     ZStack {
+                        Image(systemName: "pencil")
+                           .frame(
+                              alignment: .center
+                           )
+                           .background(.clear)
+                           .foregroundStyle(.primary)
+                           .font(.system(size: 8.0))
+                           .bold()
+                           .transition(.opacity)
+                     }
                   }
                }
                .contentShape(Circle())
-               .disabled(!self.paths.indices.contains(self.page))
             }
          }
          .transition(.opacity)
