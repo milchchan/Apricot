@@ -19,12 +19,13 @@ protocol WallDelegate: AnyObject {
 
 class WallView: UIView {
     weak var delegate: (any WallDelegate)? = nil
+    private(set) var lines = [(text: String, attributes: [(name: String?, start: Int, end: Int)])]()
     private var displayLink: CADisplayLink? = nil
     private var tracker: (active: Bool, edge: Bool, movement: (x: Double, y: Double), velocity: (x: Double, y: Double)) = (active: false, edge: true, movement: (x: 0.0, y: 0.0), velocity: (x: 0.0, y: 0.0))
     private var pinches = [(touches: [UITouch], center: (x: Double, y: Double), movement: (x: Double, y: Double), radius: Double, velocity: Double, current:(x: Double, y: Double, radius: Double))]()
     private var touches = [(touch: UITouch, location: (x: Double, y: Double), movement: (x: Double, y: Double), velocity: (x: Double, y: Double), timestamp: CFTimeInterval)]()
     private var blocks = [(running: Bool, time: Double, duration: Double, type: (elapsed: Double, speed: Double, reverse: Bool, buffer: String, count: Int), text: String, attributes: [(start: Int, end: Int)], current: String, scroll: (touch: UITouch?, step: Double), shake: (time: Double?, x: Double), elapsed: Double, rtl: Bool)]()
-    private var lines = [(text: String, attributes: [(start: Int, end: Int)])]()
+    private var pendingLines = [(text: String, attributes: [(name: String?, start: Int, end: Int)])]()
     private var isRunning = false
     private var isInvalidated = false
     private var isReloading = false
@@ -150,11 +151,11 @@ class WallView: UIView {
         super.init(coder: aDecoder)
     }
     
-    func reload(lines: [(text: String, attributes: [(start: Int, end: Int)])]) {
-        self.lines.removeAll()
+    func reload(lines: [(text: String, attributes: [(name: String?, start: Int, end: Int)])]) {
+        self.pendingLines.removeAll()
         
         for line in lines {
-            self.lines.append(line)
+            self.pendingLines.append(line)
         }
         
         self.isInvalidated = true
@@ -928,7 +929,7 @@ class WallView: UIView {
                 if y <= self.touches[0].location.y && self.touches[0].location.y < y + fontSize {
                     let point = CGPoint(x: self.touches[0].location.x, y: self.touches[0].location.y)
                     
-                    if !self.subviews.contains(where: { $0.hitTest(point, with: nil) != nil }), let delegate = self.delegate {
+                    if self.blocks[index].running && !self.blocks[index].current.isEmpty && !self.subviews.contains(where: { $0.hitTest(point, with: nil) != nil }), let delegate = self.delegate {
                         if delegate.wallCanSelect(self, at: index) {
                             if self.blocks[index].scroll.touch == nil {
                                 self.blocks[index].scroll.touch = self.touches[0].touch
@@ -980,11 +981,24 @@ class WallView: UIView {
             
             if self.blocks.first(where: { $0.running || $0.type.elapsed >= 0.0 || $0.type.reverse }) == nil {
                 self.blocks.removeAll()
+                self.lines = self.pendingLines
                 self.fontCache.removeAll()
                 self.textCache.removeAll()
                 
                 for (i, line) in self.lines.enumerated() {
-                    self.blocks.append((running: true, time: 0.0, duration: -1.0, type: (elapsed: -1.0, speed: 50.0, reverse: false, buffer: String(), count: 0), text: line.text, attributes: line.attributes, current: String(), scroll: (touch: nil, step: 0.0), shake: (time: nil, x: 0.0), elapsed: Double.random(in: 0.0..<60.0), rtl: i % 2 == 1))
+                    var attributes = [(start: Int, end: Int)]()
+                    var indexByStart = [Int: Int]()
+                    
+                    for attribute in line.attributes {
+                        if let index = indexByStart[attribute.start] {
+                            attributes[index].end = max(attributes[index].end, attribute.end)
+                        } else {
+                            indexByStart[attribute.start] = attributes.count
+                            attributes.append((start: attribute.start, end: attribute.end))
+                        }
+                    }
+                    
+                    self.blocks.append((running: true, time: 0.0, duration: -1.0, type: (elapsed: -1.0, speed: 50.0, reverse: false, buffer: String(), count: 0), text: line.text, attributes: attributes, current: String(), scroll: (touch: nil, step: 0.0), shake: (time: nil, x: 0.0), elapsed: Double.random(in: 0.0..<60.0), rtl: i % 2 == 1))
                 }
             }
             
