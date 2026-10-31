@@ -44,13 +44,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Your camera is used for image analysis."
+            "value" : "Your camera is used to understand what it captures."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "画像解析のためにカメラを使用します。"
+            "value" : "映した内容を読み取るためにカメラを使用します。"
           }
         }
       }
@@ -62,13 +62,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Your location is used to get weather information."
+            "value" : "Your location is used to let characters react to local weather."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "天気情報を取得するために位置情報を使用します。"
+            "value" : "キャラクターが現在地の天候に反応できるよう、位置情報を使用します。"
           }
         }
       }
@@ -80,13 +80,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Your microphone is used to record voices."
+            "value" : "Your microphone is used for voice input."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "音声を録音するためにマイクを使用します。"
+            "value" : "音声を入力するためにマイクを使用します。"
           }
         }
       }
@@ -98,13 +98,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Speech recognition is used to convert speech into text."
+            "value" : "Speech recognition is used to transcribe your speech."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "音声をテキストに変換するために音声認識を使用します。"
+            "value" : "話した内容を文字に変換するために音声認識を使用します。"
           }
         }
       }
