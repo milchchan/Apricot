@@ -3820,7 +3820,7 @@ struct Stage: UIViewRepresentable {
       
       func agentWillSpeak(_ agent: AgentView, message: Message) {
          let nowDate = Date()
-         var newLines = [(text: String(), attributes: [(name: String?, start: Int, end: Int)](), timestamp: nowDate)]
+         var rawLines = [(text: String(), attributes: [(name: String?, start: Int, end: Int, term: Range<Int>)](), timestamp: nowDate)]
          
          for inline in message {
             if let names = inline.attributes {
@@ -3842,41 +3842,139 @@ struct Stage: UIViewRepresentable {
                   continue
                }
                
-               let lineIndex = newLines.count - 1
-               let start = newLines[lineIndex].text.count
-               let modifierEnd = start + modifier.count
-               let end = start + text.count
+               let lineIndex = rawLines.count - 1
+               let start = rawLines[lineIndex].text.unicodeScalars.count
+               let modifierEnd = start + modifier.unicodeScalars.count
+               let end = start + text.unicodeScalars.count
+               let termRange = modifierEnd..<end
                
-               newLines[lineIndex].text.append(contentsOf: text)
+               rawLines[lineIndex].text.append(contentsOf: text)
                
                if !modifier.isEmpty {
-                  newLines[lineIndex].attributes.append((name: nil, start: start, end: modifierEnd))
+                  rawLines[lineIndex].attributes.append((name: nil, start: start, end: modifierEnd, term: termRange))
                }
                
                if names.isEmpty {
-                  newLines[lineIndex].attributes.append((name: nil, start: start, end: end))
+                  rawLines[lineIndex].attributes.append((name: nil, start: start, end: end, term: termRange))
                } else {
                   for name in names {
-                     newLines[lineIndex].attributes.append((name: name, start: start, end: end))
+                     rawLines[lineIndex].attributes.append((name: name, start: start, end: end, term: termRange))
                   }
                }
             } else {
                for character in inline.text {
                   if character.isNewline {
-                     if !newLines.last!.text.isEmpty {
-                        newLines.append((text: String(), attributes: [], timestamp: nowDate))
+                     if !rawLines.last!.text.isEmpty {
+                        rawLines.append((text: String(), attributes: [], timestamp: nowDate))
                      }
                   } else {
-                     newLines[newLines.count - 1].text.append(character)
+                     rawLines[rawLines.count - 1].text.append(character)
                   }
                }
             }
          }
          
-         if newLines.last!.text.isEmpty {
-            newLines.removeLast()
+         let newLines = rawLines.compactMap { line -> (text: String, attributes: [(name: String?, start: Int, end: Int)], timestamp: Date)? in
+            var filtered = String()
+            var scalarOffsets = [0]
+            var contentOffsets = [0]
+            var scalarCount = 0
+            var contentCount = 0
+
+            for character in line.text {
+               let scalars = character.unicodeScalars
+               var keep = true
+
+               for index in scalars.indices {
+                  let scalar = scalars[index]
+
+                  guard scalar.properties.isEmoji else {
+                     continue
+                  }
+
+                  let nextIndex = scalars.index(after: index)
+                  let next = nextIndex < scalars.endIndex ? scalars[nextIndex] : nil
+
+                  if next?.value == 0xFE0E {
+                     continue
+                  }
+
+                  if scalar.properties.isEmojiPresentation || next?.value == 0xFE0F || next?.properties.isEmojiModifier == true {
+                     keep = false
+                     
+                     break
+                  }
+
+                  if next?.value == 0x20E3 && (scalar.value == 0x23 || scalar.value == 0x2A || (0x30...0x39).contains(scalar.value)) {
+                     keep = false
+                     
+                     break
+                  }
+
+                  if index > scalars.startIndex && scalars[scalars.index(before: index)].value == 0x200D {
+                     keep = false
+                     
+                     break
+                  }
+               }
+
+               if keep {
+                  filtered.append(character)
+               }
+
+               for scalar in character.unicodeScalars {
+                  if keep {
+                     scalarCount += 1
+
+                     if !scalar.properties.isWhitespace {
+                        contentCount += 1
+                     }
+                  }
+
+                  scalarOffsets.append(scalarCount)
+                  contentOffsets.append(contentCount)
+               }
+            }
+
+            var starts = [Int](repeating: 0, count: scalarCount + 1)
+            var ends = [Int](repeating: 0, count: scalarCount + 1)
+            var scalarIndex = 0
+            var characterIndex = 0
+
+            for character in filtered {
+               for _ in character.unicodeScalars {
+                  starts[scalarIndex] = characterIndex
+                  scalarIndex += 1
+                  ends[scalarIndex] = characterIndex + 1
+               }
+
+               characterIndex += 1
+            }
+
+            starts[scalarIndex] = characterIndex
+
+            let filteredAttributes = line.attributes.compactMap { attribute -> (name: String?, start: Int, end: Int)? in
+               guard contentOffsets[attribute.term.lowerBound] < contentOffsets[attribute.term.upperBound] else {
+                  return nil
+               }
+
+               let start = scalarOffsets[attribute.start]
+               let end = scalarOffsets[attribute.end]
+
+               guard start < end else {
+                  return nil
+               }
+
+               return (name: attribute.name, start: starts[start], end: ends[end])
+            }
+
+            guard !filtered.allSatisfy({ $0.isWhitespace }) else {
+               return nil
+            }
+
+            return (text: filtered, attributes: filteredAttributes, timestamp: line.timestamp)
          }
-         
+
          if !newLines.isEmpty {
             let index = self.lines.firstIndex { $0.timestamp < nowDate } ?? self.lines.endIndex
             
@@ -3897,19 +3995,7 @@ struct Stage: UIViewRepresentable {
                }
                
                uiView.reload(lines: lines.map { line in
-                  var attributes = [(start: Int, end: Int)]()
-                  var indexByStart = [Int: Int]()
-                  
-                  for attribute in line.attributes {
-                     if let index = indexByStart[attribute.start] {
-                        attributes[index].end = max(attributes[index].end, attribute.end)
-                     } else {
-                        indexByStart[attribute.start] = attributes.count
-                        attributes.append((start: attribute.start, end: attribute.end))
-                     }
-                  }
-                  
-                  return (text: line.text, attributes: attributes)
+                  return (text: line.text, attributes: line.attributes)
                })
             }
          }
@@ -4159,12 +4245,12 @@ struct Stage: UIViewRepresentable {
       }
       
       func wallCanSelect(_ wall: WallView, at index: Int) -> Bool {
-         return index < self.lines.count && !self.lines[index].attributes.isEmpty
+         return wall.lines.indices.contains(index) && !wall.lines[index].attributes.isEmpty
       }
       
       func wallDidSelect(_ wall: WallView, at index: Int) {
-         if index < self.lines.count {
-            let line = self.lines[index]
+         if wall.lines.indices.contains(index) {
+            let line = wall.lines[index]
             var ranges = [(start: Int, boundary: Int, end: Int, attributes: [String])]()
             var indexByStart = [Int: Int]()
             var attributeNamesByStart = [Int: Set<String>]()
@@ -4235,7 +4321,7 @@ struct Stage: UIViewRepresentable {
                   }
                }
                
-               if candidates.contains(where: { $0.name == name && $0.modifier == modifier && $0.attributes == range.attributes }) {
+               if !candidates.contains(where: { $0.name == name && $0.modifier == modifier && $0.attributes == range.attributes }) {
                   candidates.append((name: name, modifier: modifier, attributes: range.attributes))
                }
             }
