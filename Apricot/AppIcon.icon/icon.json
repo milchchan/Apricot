@@ -38,6 +38,7 @@
     {
       "layers" : [
         {
+          "glass" : false,
           "image-name-specializations" : [
             {
               "value" : "Face.svg"
