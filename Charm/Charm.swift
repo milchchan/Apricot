@@ -134,6 +134,19 @@ struct CharmEntryView : View {
     private let starImage: UIImage
     
     var body: some View {
+        self.content
+            .containerBackground(for: .widget) {
+                if self.widgetFamily == .accessoryCircular {
+                    Rectangle().fill(.fill.tertiary)
+                } else {
+                    ContainerRelativeShape()
+                        .foregroundColor(Color(uiColor: UIColor(named: "WidgetBackground")!))
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch self.widgetFamily {
         case .accessoryCircular:
             VStack(alignment: .center, spacing: 8.0) {
@@ -154,7 +167,6 @@ struct CharmEntryView : View {
                     .truncationMode(.tail)
                     .frame(height: UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize * 1.5, weight: .bold).capHeight)
             }
-            .containerBackground(.fill.tertiary, for: .widget)
         case .systemSmall:
             ZStack {
                 GeometryReader { geometry in
@@ -182,6 +194,8 @@ struct CharmEntryView : View {
                 }
             }
         default:
+            let imageOffset = self.widgetFamily == .systemMedium || self.widgetFamily == .systemExtraLarge ? self.entry.offset : 0.0
+            
             ZStack {
                 GeometryReader { geometry in
                     self.entry.image
@@ -192,7 +206,7 @@ struct CharmEntryView : View {
                             height: geometry.size.height,
                             alignment: .top
                         )
-                        .offset(y: self.widgetFamily == .systemMedium ? -geometry.size.height * self.entry.offset : 0.0)
+                        .offset(y: -geometry.size.height * imageOffset)
                         .clipped()
                 }
                 .blur(radius: 32.0)
@@ -205,7 +219,7 @@ struct CharmEntryView : View {
                             height: geometry.size.height,
                             alignment: .top
                         )
-                        .offset(y: self.widgetFamily == .systemMedium ? -geometry.size.height * self.entry.offset : 0.0)
+                        .offset(y: -geometry.size.height * imageOffset)
                         .clipped()
                 }
                 VStack(alignment: .center, spacing: 8.0) {
@@ -226,10 +240,6 @@ struct CharmEntryView : View {
                         .frame(height: ceil(UIFont(name: "DIN2014-Bold", size: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .headline).pointSize * 2.0))!.capHeight))
                         .contentTransition(.numericText(value: Double(self.entry.stars)))
                 }
-            }
-            .containerBackground(for: .widget) {
-                ContainerRelativeShape()
-                    .foregroundColor(Color(uiColor: UIColor(named: "WidgetBackground")!))
             }
         }
     }
@@ -298,7 +308,7 @@ struct Charm: Widget {
         }
         .configurationDisplayName(self.name)
         .description("Charm")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryCircular])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge, .systemExtraLargePortrait, .accessoryCircular])
         .contentMarginsDisabled()
     }
 }
