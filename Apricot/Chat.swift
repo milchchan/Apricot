@@ -69,8 +69,6 @@ struct Chat: View {
    
    var body: some View {
       GeometryReader { geometry in
-         let horizontalInsetDifference = geometry.safeAreaInsets.leading - geometry.safeAreaInsets.trailing
-
          ZStack {
             ZStack {
                VStack {
@@ -324,8 +322,8 @@ struct Chat: View {
                   maxWidth: .infinity,
                   alignment: .top
                )
-               .padding(.leading, max(-horizontalInsetDifference, 0.0))
-               .padding(.trailing, max(horizontalInsetDifference, 0.0))
+               .padding(.leading, max(-geometry.safeAreaInsets.leading + geometry.safeAreaInsets.trailing, 0.0))
+               .padding(.trailing, max(geometry.safeAreaInsets.leading - geometry.safeAreaInsets.trailing, 0.0))
                .background(.clear)
                VStack(spacing: 0.0) {
                   Spacer()
