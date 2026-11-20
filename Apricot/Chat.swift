@@ -69,6 +69,8 @@ struct Chat: View {
    
    var body: some View {
       GeometryReader { geometry in
+         let horizontalInsetDifference = geometry.safeAreaInsets.leading - geometry.safeAreaInsets.trailing
+
          ZStack {
             ZStack {
                VStack {
@@ -319,9 +321,11 @@ struct Chat: View {
                   Spacer()
                }
                .frame(
+                  maxWidth: .infinity,
                   alignment: .top
                )
-               .padding(0.0)
+               .padding(.leading, max(-horizontalInsetDifference, 0.0))
+               .padding(.trailing, max(horizontalInsetDifference, 0.0))
                .background(.clear)
                VStack(spacing: 0.0) {
                   Spacer()
@@ -598,6 +602,7 @@ struct Chat: View {
                      .presentationDetents([.large])
                   })
                }
+               .frame(maxWidth: .infinity)
                .background(.clear)
                .ignoresSafeArea(.all)
             }
@@ -6017,12 +6022,32 @@ struct Peek: UIViewControllerRepresentable {
       private let captureSession = Mutex(AVCaptureSession())
       private let frameState = Mutex((isProcessing: false, generation: UInt64(0)))
       private var captureVideoPreviewLayer: AVCaptureVideoPreviewLayer? = nil
+      private var captureDevice: AVCaptureDevice? = nil
+      private var previewRotation: (coordinator: AVCaptureDevice.RotationCoordinator, observation: NSKeyValueObservation)? = nil
       private var isCaptureSessionConfigured = false
       private var isConfiguringCaptureSession = false
       private var isViewVisible = false
       private var elapsedTime = CACurrentMediaTime()
       private let threshold = 8
       private var peekedImageHash: UInt64 = 0
+      private var cameraImageOrientation: CGImagePropertyOrientation? {
+         guard self.view.window != nil, self.previewRotation != nil else {
+            return nil
+         }
+
+         switch self.captureVideoPreviewLayer?.connection?.videoRotationAngle {
+         case 0:
+            return .up
+         case 90:
+            return .right
+         case 180:
+            return .down
+         case 270:
+            return .left
+         default:
+            return nil
+         }
+      }
 
       override func viewDidLoad() {
          super.viewDidLoad()
@@ -6075,7 +6100,7 @@ struct Peek: UIViewControllerRepresentable {
                return
             }
 
-            let configured = self.configureCaptureSession()
+            let device = self.configureCaptureSession()
 
             Task { @MainActor [weak self] in
                guard let self else {
@@ -6084,7 +6109,9 @@ struct Peek: UIViewControllerRepresentable {
 
                self.isConfiguringCaptureSession = false
 
-               if configured {
+               if let device, self.captureVideoPreviewLayer != nil {
+                  self.captureDevice = device
+                  self.updatePreviewRotation()
                   self.isCaptureSessionConfigured = true
 
                   if self.isViewVisible {
@@ -6096,6 +6123,39 @@ struct Peek: UIViewControllerRepresentable {
                   self.delegate?.peekDidFail(self)
                }
             }
+         }
+      }
+
+      private func updatePreviewRotation() {
+         guard self.view.window != nil, let device = self.captureDevice, let previewLayer = self.captureVideoPreviewLayer else {
+            return
+         }
+
+         if self.previewRotation == nil {
+            let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: previewLayer)
+            let observation = coordinator.observe(\.videoRotationAngleForHorizonLevelPreview, options: .new) { [weak self] _, _ in
+               MainActor.assumeIsolated {
+                  self?.updatePreviewRotation()
+               }
+            }
+
+            self.previewRotation = (coordinator, observation)
+         }
+
+         guard let coordinator = self.previewRotation?.coordinator, let connection = previewLayer.connection else {
+            return
+         }
+
+         let angle = coordinator.videoRotationAngleForHorizonLevelPreview
+
+         guard connection.videoRotationAngle != angle, connection.isVideoRotationAngleSupported(angle) else {
+            return
+         }
+
+         connection.videoRotationAngle = angle
+
+         self.frameState.withLock { state in
+            state.generation &+= 1
          }
       }
 
@@ -6112,29 +6172,6 @@ struct Peek: UIViewControllerRepresentable {
             self.captureSession.withLock { session in
                if !session.isRunning {
                   session.startRunning()
-               }
-            }
-            
-            Task { @MainActor [weak self] in
-               guard let self, let captureVideoPreviewLayer = self.captureVideoPreviewLayer else {
-                  return
-               }
-               
-               let angle: CGFloat
-               
-               switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
-               case .portraitUpsideDown:
-                  angle = 270
-               case .landscapeLeft:
-                  angle = 180
-               case .landscapeRight:
-                  angle = 0
-               default:
-                  angle = 90
-               }
-               
-               if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
-                  connection.videoRotationAngle = angle
                }
             }
          }
@@ -6154,10 +6191,10 @@ struct Peek: UIViewControllerRepresentable {
          }
       }
 
-      nonisolated private func configureCaptureSession() -> Bool {
+      nonisolated private func configureCaptureSession() -> AVCaptureDevice? {
          return self.captureSession.withLock { session in
             guard let captureDevice = AVCaptureDevice.default(for: .video), let input = try? AVCaptureDeviceInput(device: captureDevice) else {
-               return false
+               return nil
             }
 
             let output = AVCaptureVideoDataOutput()
@@ -6167,7 +6204,7 @@ struct Peek: UIViewControllerRepresentable {
             output.alwaysDiscardsLateVideoFrames = true
 
             guard session.canAddInput(input) else {
-               return false
+               return nil
             }
 
             session.beginConfiguration()
@@ -6181,20 +6218,26 @@ struct Peek: UIViewControllerRepresentable {
             guard session.canAddOutput(output) else {
                session.removeInput(input)
 
-               return false
+               return nil
             }
 
             session.addOutput(output)
 
-            if let connection = output.connection(with: .video), connection.isVideoStabilizationSupported {
-               connection.preferredVideoStabilizationMode = .auto
+            if let connection = output.connection(with: .video) {
+               if connection.isVideoRotationAngleSupported(0) {
+                  connection.videoRotationAngle = 0
+               }
+
+               if connection.isVideoStabilizationSupported {
+                  connection.preferredVideoStabilizationMode = .auto
+               }
             }
 
             if session.canSetSessionPreset(.photo) {
                session.sessionPreset = .photo
             }
 
-            return true
+            return captureDevice
          }
       }
       
@@ -6202,25 +6245,9 @@ struct Peek: UIViewControllerRepresentable {
          super.viewDidLayoutSubviews()
 
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
-            let angle: CGFloat
             let sizeChanged = captureVideoPreviewLayer.bounds.size != self.view.bounds.size
             
             captureVideoPreviewLayer.frame = self.view.bounds
-            
-            switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
-            case .portraitUpsideDown:
-               angle = 270
-            case .landscapeLeft:
-               angle = 180
-            case .landscapeRight:
-               angle = 0
-            default:
-               angle = 90
-            }
-            
-            if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
-               connection.videoRotationAngle = angle
-            }
 
             if sizeChanged {
                self.frameState.withLock { state in
@@ -6228,6 +6255,8 @@ struct Peek: UIViewControllerRepresentable {
                }
             }
          }
+
+         self.updatePreviewRotation()
       }
       
       override func viewWillAppear(_ animated: Bool) {
@@ -6240,6 +6269,11 @@ struct Peek: UIViewControllerRepresentable {
          self.startCaptureSession()
       }
       
+      override func viewDidAppear(_ animated: Bool) {
+         super.viewDidAppear(animated)
+         self.updatePreviewRotation()
+      }
+
       override func viewWillDisappear(_ animated: Bool) {
          self.isViewVisible = false
          self.frameState.withLock { state in
@@ -6286,21 +6320,8 @@ struct Peek: UIViewControllerRepresentable {
                state.generation == generation
             }
 
-            guard isCurrent else {
+            guard isCurrent, let orientation = self.cameraImageOrientation else {
                return
-            }
-
-            let orientation: CGImagePropertyOrientation
-
-            switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
-            case .portraitUpsideDown:
-               orientation = .left
-            case .landscapeLeft:
-               orientation = .down
-            case .landscapeRight:
-               orientation = .up
-            default:
-               orientation = .right
             }
 
             let image = sourceImage.oriented(orientation)
@@ -8594,12 +8615,32 @@ struct Capture: UIViewControllerRepresentable {
       private let captureSession = Mutex(AVCaptureSession())
       private let frameState = Mutex((isProcessing: false, generation: UInt64(0)))
       private var captureVideoPreviewLayer: AVCaptureVideoPreviewLayer? = nil
+      private var captureDevice: AVCaptureDevice? = nil
+      private var previewRotation: (coordinator: AVCaptureDevice.RotationCoordinator, observation: NSKeyValueObservation)? = nil
       private var recognitionLanguage: String? = nil
       private var isCaptureSessionConfigured = false
       private var isConfiguringCaptureSession = false
       private var isViewVisible = false
       private var elapsedTime = 0.0
+      private var cameraImageOrientation: CGImagePropertyOrientation? {
+         guard self.view.window != nil, self.previewRotation != nil else {
+            return nil
+         }
 
+         switch self.captureVideoPreviewLayer?.connection?.videoRotationAngle {
+         case 0:
+            return .up
+         case 90:
+            return .right
+         case 180:
+            return .down
+         case 270:
+            return .left
+         default:
+            return nil
+         }
+      }
+      
       override func viewDidLoad() {
          super.viewDidLoad()
          
@@ -8668,7 +8709,7 @@ struct Capture: UIViewControllerRepresentable {
                return
             }
 
-            let configured = self.configureCaptureSession()
+            let device = self.configureCaptureSession()
 
             Task { @MainActor [weak self] in
                guard let self else {
@@ -8677,7 +8718,9 @@ struct Capture: UIViewControllerRepresentable {
 
                self.isConfiguringCaptureSession = false
 
-               if configured {
+               if let device, self.captureVideoPreviewLayer != nil {
+                  self.captureDevice = device
+                  self.updatePreviewRotation()
                   self.isCaptureSessionConfigured = true
 
                   if self.isViewVisible {
@@ -8689,6 +8732,39 @@ struct Capture: UIViewControllerRepresentable {
                   self.delegate?.captureDidFail(self)
                }
             }
+         }
+      }
+
+      private func updatePreviewRotation() {
+         guard self.view.window != nil, let device = self.captureDevice, let previewLayer = self.captureVideoPreviewLayer else {
+            return
+         }
+
+         if self.previewRotation == nil {
+            let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: previewLayer)
+            let observation = coordinator.observe(\.videoRotationAngleForHorizonLevelPreview, options: .new) { [weak self] _, _ in
+               MainActor.assumeIsolated {
+                  self?.updatePreviewRotation()
+               }
+            }
+
+            self.previewRotation = (coordinator, observation)
+         }
+
+         guard let coordinator = self.previewRotation?.coordinator, let connection = previewLayer.connection else {
+            return
+         }
+
+         let angle = coordinator.videoRotationAngleForHorizonLevelPreview
+
+         guard connection.videoRotationAngle != angle, connection.isVideoRotationAngleSupported(angle) else {
+            return
+         }
+
+         connection.videoRotationAngle = angle
+
+         self.frameState.withLock { state in
+            state.generation &+= 1
          }
       }
 
@@ -8705,29 +8781,6 @@ struct Capture: UIViewControllerRepresentable {
             self.captureSession.withLock { session in
                if !session.isRunning {
                   session.startRunning()
-               }
-            }
-
-            Task { @MainActor [weak self] in
-               guard let self, let captureVideoPreviewLayer = self.captureVideoPreviewLayer else {
-                  return
-               }
-               
-               let angle: CGFloat
-               
-               switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
-               case .portraitUpsideDown:
-                  angle = 270
-               case .landscapeLeft:
-                  angle = 180
-               case .landscapeRight:
-                  angle = 0
-               default:
-                  angle = 90
-               }
-               
-               if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
-                  connection.videoRotationAngle = angle
                }
             }
          }
@@ -8747,10 +8800,10 @@ struct Capture: UIViewControllerRepresentable {
          }
       }
 
-      nonisolated private func configureCaptureSession() -> Bool {
+      nonisolated private func configureCaptureSession() -> AVCaptureDevice? {
          return self.captureSession.withLock { session in
             guard let captureDevice = AVCaptureDevice.default(for: .video), let input = try? AVCaptureDeviceInput(device: captureDevice) else {
-               return false
+               return nil
             }
 
             let output = AVCaptureVideoDataOutput()
@@ -8760,7 +8813,7 @@ struct Capture: UIViewControllerRepresentable {
             output.alwaysDiscardsLateVideoFrames = true
 
             guard session.canAddInput(input) else {
-               return false
+               return nil
             }
 
             session.beginConfiguration()
@@ -8774,20 +8827,26 @@ struct Capture: UIViewControllerRepresentable {
             guard session.canAddOutput(output) else {
                session.removeInput(input)
 
-               return false
+               return nil
             }
 
             session.addOutput(output)
 
-            if let connection = output.connection(with: .video), connection.isVideoStabilizationSupported {
-               connection.preferredVideoStabilizationMode = .auto
+            if let connection = output.connection(with: .video) {
+               if connection.isVideoRotationAngleSupported(0) {
+                  connection.videoRotationAngle = 0
+               }
+
+               if connection.isVideoStabilizationSupported {
+                  connection.preferredVideoStabilizationMode = .auto
+               }
             }
 
             if session.canSetSessionPreset(.photo) {
                session.sessionPreset = .photo
             }
 
-            return true
+            return captureDevice
          }
       }
       
@@ -8803,33 +8862,14 @@ struct Capture: UIViewControllerRepresentable {
          }
 
          if let captureVideoPreviewLayer = self.captureVideoPreviewLayer {
-            let angle: CGFloat
-            
             if captureVideoPreviewLayer.bounds.size != self.view.bounds.size {
                layoutChanged = true
             }
 
             captureVideoPreviewLayer.frame = self.view.bounds
-            
-            switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
-            case .portraitUpsideDown:
-               angle = 270
-            case .landscapeLeft:
-               angle = 180
-            case .landscapeRight:
-               angle = 0
-            default:
-               angle = 90
-            }
-            
-            if let connection = captureVideoPreviewLayer.connection, connection.isVideoRotationAngleSupported(angle) {
-               if connection.videoRotationAngle != angle {
-                  layoutChanged = true
-               }
-
-               connection.videoRotationAngle = angle
-            }
          }
+
+         self.updatePreviewRotation()
 
          if layoutChanged {
             self.frameState.withLock { state in
@@ -8849,6 +8889,11 @@ struct Capture: UIViewControllerRepresentable {
          self.startCaptureSession()
       }
       
+      override func viewDidAppear(_ animated: Bool) {
+         super.viewDidAppear(animated)
+         self.updatePreviewRotation()
+      }
+
       override func viewWillDisappear(_ animated: Bool) {
          self.isViewVisible = false
          self.frameState.withLock { state in
@@ -8878,7 +8923,7 @@ struct Capture: UIViewControllerRepresentable {
             return
          }
 
-         let image = CIImage(cvImageBuffer: pixelBuffer)
+         let sourceImage = CIImage(cvImageBuffer: pixelBuffer)
 
          Task { @MainActor [weak self] in
             guard let self else {
@@ -8895,28 +8940,18 @@ struct Capture: UIViewControllerRepresentable {
                state.generation == generation
             }
 
-            guard isCurrent else {
+            guard isCurrent, let orientation = self.cameraImageOrientation else {
                return
-            }
-
-            let orientation: CGImagePropertyOrientation
-
-            switch self.view.window?.windowScene?.effectiveGeometry.interfaceOrientation ?? .portrait {
-            case .portraitUpsideDown:
-               orientation = .left
-            case .landscapeLeft:
-               orientation = .down
-            case .landscapeRight:
-               orientation = .up
-            default:
-               orientation = .right
             }
 
             let currentMediaTime = CACurrentMediaTime()
 
             if self.isViewVisible && !self.isPaused && currentMediaTime - self.elapsedTime >= 1.0, let captureVideoPreviewLayer = self.captureVideoPreviewLayer, let recognitionLanguage = self.recognitionLanguage {
                let metadataRegion = captureVideoPreviewLayer.metadataOutputRectConverted(fromLayerRect: self.recognizeRegion)
-               let recognizeRegion = CGRect(x: metadataRegion.minX, y: 1.0 - metadataRegion.maxY, width: metadataRegion.width, height: metadataRegion.height).intersection(CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
+               let sourceExtent = sourceImage.extent
+               let rotation = sourceImage.orientationTransform(for: orientation)
+               let image = sourceImage.transformed(by: rotation)
+               let recognizeRegion = CGRect(x: sourceExtent.minX + metadataRegion.minX * sourceExtent.width, y: sourceExtent.minY + (1.0 - metadataRegion.maxY) * sourceExtent.height, width: metadataRegion.width * sourceExtent.width, height: metadataRegion.height * sourceExtent.height).applying(rotation).offsetBy(dx: -image.extent.minX, dy: -image.extent.minY).applying(CGAffineTransform(scaleX: 1.0 / image.extent.width, y: 1.0 / image.extent.height)).intersection(CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
 
                guard !recognizeRegion.isNull && recognizeRegion.width > 0.0 && recognizeRegion.height > 0.0 else {
                   return
@@ -8924,7 +8959,7 @@ struct Capture: UIViewControllerRepresentable {
 
                self.elapsedTime = currentMediaTime
 
-               let recognizedText = await Task.detached { @Sendable [image, recognitionLanguage, recognizeRegion, orientation] in
+               let recognizedText = await Task.detached { @Sendable [image, recognitionLanguage, recognizeRegion] in
                   let recognizeTextRequest = VNRecognizeTextRequest()
 
                   recognizeTextRequest.preferBackgroundProcessing = true
@@ -8933,7 +8968,7 @@ struct Capture: UIViewControllerRepresentable {
                   recognizeTextRequest.recognitionLanguages = [recognitionLanguage]
                   recognizeTextRequest.regionOfInterest = recognizeRegion
 
-                  try? VNImageRequestHandler(ciImage: image, orientation: orientation, options: [:]).perform([recognizeTextRequest])
+                  try? VNImageRequestHandler(ciImage: image, options: [:]).perform([recognizeTextRequest])
 
                   var maxConfidence: VNConfidence = 0.0
                   var text: String? = nil
