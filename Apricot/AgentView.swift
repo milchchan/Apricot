@@ -949,8 +949,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                             
                             if safeBounds.width > safeBounds.height && !characters.isEmpty {
                                 alpha = 1.0
-                                interval = safeBounds.width / Double(characters.count)
-                                offset = safeBounds.maxX - interval / 2.0 - self.bounds.midX
+                                (interval, offset) = self.calculateCharacterSpacing(in: safeBounds, centeredAt: self.bounds.midX, count: characters.count)
                                 
                                 let maxWidth = characters.reduce(0.0, { max((abs($1.insets.right) - abs($1.insets.left)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
                                 let maxHeight = characters.reduce(0.0, { max((abs($1.insets.bottom) - abs($1.insets.top)) * ($1.scale == 0.0 ? self.traitCollection.displayScale : $1.scale) * self.userScale / self.traitCollection.displayScale, $0) })
@@ -1928,7 +1927,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             self.delegate?.agentDidUpdate(self, background: background)
         }
     }
-    
+
     override func didMoveToWindow() {
         super.didMoveToWindow()
         
@@ -1937,7 +1936,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             let safeBounds = window.bounds.inset(by: window.safeAreaInsets)
             
             if safeBounds.width > safeBounds.height {
-                let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
+                let (interval, firstOffset) = self.calculateCharacterSpacing(in: safeBounds, centeredAt: window.bounds.midX, count: self.characterViews.count)
                 var maxWidth = 0.0
                 var maxHeight = 0.0
                 
@@ -1946,15 +1945,13 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
                     
                     characterView.alpha = 1.0
-                    characterView.transform.tx = safeBounds.maxX - interval * (Double(i) + 0.5) - window.bounds.midX
+                    characterView.transform.tx = firstOffset - interval * Double(i)
                     maxWidth = max(max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale, maxWidth)
                     maxHeight = max(max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale, maxHeight)
                 }
                 
                 self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
             } else {
-                let tx = safeBounds.midX - window.bounds.midX
-                
                 for i in 0..<self.characterViews.count {
                     let characterView = self.characterViews[i]
                     
@@ -1962,7 +1959,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         characterView.alpha = 0.0
                     }
                     
-                    characterView.transform.tx = tx
+                    characterView.transform.tx = 0.0
                 }
                 
                 self.systemScale = 1.0
@@ -2179,6 +2176,11 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         }
     }
     
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        self.setNeedsLayout()
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         
@@ -2187,7 +2189,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         if let window = self.window, let windowScene = window.windowScene, windowScene.effectiveGeometry.isInteractivelyResizing {
             if safeBounds.width > safeBounds.height {
-                let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
+                let (interval, firstOffset) = self.calculateCharacterSpacing(in: safeBounds, centeredAt: self.bounds.midX, count: self.characterViews.count)
                 var maxWidth = 0.0
                 var maxHeight = 0.0
                 
@@ -2201,15 +2203,13 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         })
                     }
                     
-                    characterView.transform.tx = safeBounds.maxX - interval * (Double(i) + 0.5) - self.bounds.midX
+                    characterView.transform.tx = firstOffset - interval * Double(i)
                     maxWidth = max(max(characterView.size.width - characterView.contentInsets.leading - characterView.contentInsets.trailing, 0.0) * preferredScale, maxWidth)
                     maxHeight = max(max(abs(characterView.size.height) - characterView.contentInsets.top, 0.0) * preferredScale, maxHeight)
                 }
                 
                 self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
             } else {
-                let tx = safeBounds.midX - self.bounds.midX
-                
                 for i in 0..<self.characterViews.count {
                     let characterView = self.characterViews[i]
                     
@@ -2219,7 +2219,7 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                         })
                     }
                     
-                    characterView.transform.tx = tx
+                    characterView.transform.tx = 0.0
                 }
                 
                 self.systemScale = 1.0
@@ -2336,14 +2336,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             }
         } else {
             if safeBounds.width > safeBounds.height {
-                let interval = safeBounds.width / Double(max(self.characterViews.count, 1))
+                let (interval, firstOffset) = self.calculateCharacterSpacing(in: safeBounds, centeredAt: self.bounds.midX, count: self.characterViews.count)
                 var maxWidth = 0.0
                 var maxHeight = 0.0
                 
                 for i in 0..<self.characterViews.count {
                     let characterView = self.characterViews[i]
                     let preferredScale = (characterView.scale == 0.0 ? self.traitCollection.displayScale : characterView.scale) * self.userScale / self.traitCollection.displayScale
-                    let tx = safeBounds.maxX - interval * (Double(i) + 0.5) - self.bounds.midX
+                    let tx = firstOffset - interval * Double(i)
                     
                     if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 1.0) {
                         if i > 0 {
@@ -2364,20 +2364,18 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 
                 self.systemScale = min(maxWidth > 0.0 ? interval / maxWidth : 1.0, maxHeight > 0.0 ? safeBounds.height / 2.0 / maxHeight : 1.0, 1.0)
             } else {
-                let tx = safeBounds.midX - self.bounds.midX
-                
                 for i in 0..<self.characterViews.count {
                     let characterView = self.characterViews[i]
                     
-                    if characterView.transform.tx != tx || (i > 0 && characterView.alpha != 0.0) {
+                    if characterView.transform.tx != 0.0 || (i > 0 && characterView.alpha != 0.0) {
                         if i > 0 {
                             UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
                                 characterView.alpha = 0.0
-                                characterView.transform.tx = tx
+                                characterView.transform.tx = 0.0
                             })
                         } else {
                             UIView.animate(withDuration: 0.5, delay: 0.0, options: [.curveEaseIn, .allowUserInteraction, .beginFromCurrentState, .overrideInheritedDuration, .overrideInheritedCurve], animations: {
-                                characterView.transform.tx = tx
+                                characterView.transform.tx = 0.0
                             })
                         }
                     }
@@ -3939,6 +3937,14 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         return (red: red, green: green, blue: blue, alpha: alpha)
     }
     
+    private func calculateCharacterSpacing(in safeBounds: CGRect, centeredAt centerX: CGFloat, count: Int) -> (interval: Double, firstOffset: Double) {
+        let centeredWidth = 2.0 * min(centerX - safeBounds.minX, safeBounds.maxX - centerX)
+        let interval = Double(centeredWidth > 0.0 ? centeredWidth : safeBounds.width) / Double(max(count, 1))
+        let rightEdge = centeredWidth > 0.0 ? centerX + centeredWidth / 2.0 : safeBounds.maxX
+
+        return (interval, Double(rightEdge - centerX) - interval / 2.0)
+    }
+    
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         for characterView in self.characterViews {
             for view in characterView.subviews {
@@ -4069,7 +4075,15 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
             if safeBounds.width > 0.0 && safeBounds.height > 0.0 {
                 let font = UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .subheadline).pointSize, weight: .bold)
                 let lineHeight = ceil(font.lineHeight * 1.5)
-                let messageWidth = floor(self.traitCollection.horizontalSizeClass == .compact && self.traitCollection.verticalSizeClass == .regular && safeBounds.width < safeBounds.height ? safeBounds.width - 32.0 : safeBounds.width / Double(parentView.characterViews.count <= 2 ? 2 : parentView.characterViews.count) - 32.0)
+                let messageWidth = floor(parentView.calculateCharacterSpacing(
+                    in: safeBounds,
+                    centeredAt: parentView.bounds.midX,
+                    count: (
+                        self.traitCollection.horizontalSizeClass == .compact
+                            && self.traitCollection.verticalSizeClass == .regular
+                            && safeBounds.width < safeBounds.height
+                    ) ? 1 : max(parentView.characterViews.count, 2)
+                ).interval - 32.0)
                 let radius = lineHeight
                 let maxLineWidth = messageWidth - radius * 2.0
                 
