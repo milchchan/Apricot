@@ -1561,8 +1561,7 @@ final public class Script: NSObject, ObservableObject {
                     }) == !attributeSet.isEmpty {
                         var replacementCache = [String: (text: String, attributes: [String])]()
                         var tempAttributeSet = Set<String>()
-                        var outputs = [([(text: String, attributes: [String]?)], [String: (text: String, attributes: [String])], Double)]()
-                        
+
                         for index in preparedSequences.indices {
                             var sequence = preparedSequences[index]
                             var steps = [Sequence.Step]()
@@ -1571,8 +1570,7 @@ final public class Script: NSObject, ObservableObject {
                                 if case .message(let message) = step, message.allSatisfy({ $0.attributes == nil }) {
                                     var input = String(message.content)
                                     var output = String()
-                                    
-                                    outputs.append(([], Swift.Dictionary<String, (text: String, attributes: [String])>(uniqueKeysWithValues: zip(replacementCache.keys, replacementCache.values)), 1.0))
+                                    var outputs = [([(text: String, attributes: [String]?)](), replacementCache, 1.0)]
                                     
                                     repeat {
                                         if let match = input.firstMatch(of: /({{1,2})([^{}]+)(}{1,2})/) {
@@ -1635,19 +1633,26 @@ final public class Script: NSObject, ObservableObject {
                                                 }
                                                 
                                                 output.removeAll()
-                                                outputs.removeAll()
-                                                candidates.sort { $0.3 > $1.3 }
-                                                
-                                                for j in 0..<min(beamWidth, candidates.count) {
-                                                    var tempInlines = candidates[j].0
-                                                    var tempReplacementCache = Swift.Dictionary<String, (text: String, attributes: [String])>(uniqueKeysWithValues: zip(candidates[j].1.keys, candidates[j].1.values))
-                                                    
-                                                    tempInlines.append(candidates[j].2)
-                                                    tempReplacementCache[attributePattern] = candidates[j].2
-                                                    outputs.append((tempInlines, tempReplacementCache, candidates[j].3))
+
+                                                if !candidates.isEmpty {
+                                                    outputs.removeAll()
+                                                    candidates.sort { $0.3 > $1.3 }
+
+                                                    for j in 0..<min(beamWidth, candidates.count) {
+                                                        var tempInlines = candidates[j].0
+                                                        var tempReplacementCache = candidates[j].1
+
+                                                        tempInlines.append(candidates[j].2)
+                                                        tempReplacementCache[attributePattern] = candidates[j].2
+                                                        outputs.append((tempInlines, tempReplacementCache, candidates[j].3))
+                                                    }
+
+                                                    tempAttributeSet.insert(attributePattern)
                                                 }
-                                                
-                                                tempAttributeSet.insert(attributePattern)
+                                            }
+
+                                            if !tempAttributeSet.contains(attributePattern) {
+                                                output.append("{\(match.output.2)}")
                                             }
                                             
                                             if match.output.3.count == 2 {
@@ -1701,10 +1706,10 @@ final public class Script: NSObject, ObservableObject {
 
                             preparedSequences[index] = sequence
                         }
-                        
+
                         await self.outerSemaphore.signal()
                         
-                        break
+                        return preparedSequences
                     }
                     
                     preparedSequences.removeAll()
