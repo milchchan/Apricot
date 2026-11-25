@@ -26,11 +26,11 @@ struct Chat: View {
    @Namespace private var menuNamespace
    @StateObject private var shortcut = Shortcut.shared
    @StateObject private var script: Script
-   @State private var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double) = (nil, nil, false, nil, [], 0, 0)
+   @State private var prompt: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)])?, Int, Double) = (nil, nil, false, nil, nil, 0, 0)
    @State private var logs = [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]()
    @State private var labels = [String]()
    @State private var likability: Double? = nil
-   @State private var choices = [(String, URL?)]()
+   @State private var choices: (Double, [(String, URL?)])?
    @State private var discoveries = [Word]()
    @State private var revealMenu = false
    @State private var showActivity = false
@@ -156,7 +156,7 @@ struct Chat: View {
                            ZStack {
                               Peek(peekable: self.$isPeekable, ready: self.isActive && self.isIdle && !self.loadingState.0 && !self.revealMenu && !self.showActivity && !self.showDictionary && !self.showGallery && !self.showSettings, pause: self.isPaused, onChange: { image in
                                  if self.energy >= 1.0 {
-                                    self.choices.removeAll()
+                                    self.choices = nil
                                     self.timestamp = Int(Date().timeIntervalSince1970)
                                     
                                     withAnimation {
@@ -647,7 +647,7 @@ struct Chat: View {
                                     }.value
                                  }
                               } else if self.energy >= 1.0 {
-                                 self.choices.removeAll()
+                                 self.choices = nil
                                  self.timestamp = Int(Date().timeIntervalSince1970)
                                  
                                  withAnimation {
@@ -823,7 +823,7 @@ struct Chat: View {
                         .clipShape(Circle())
                         Button(action: {
                            if self.energy >= 1.0 {
-                              self.choices.removeAll()
+                              self.choices = nil
                               self.timestamp = Int(Date().timeIntervalSince1970)
                               
                               withAnimation {
@@ -952,7 +952,7 @@ struct Chat: View {
          .onChange(of: self.shortcut.type) {
             if let type = self.shortcut.type, !type.isEmpty {
                if type[0].isEmpty {
-                  self.choices.removeAll()
+                  self.choices = nil
                   self.showActivity = false
                   self.showDictionary = false
                   self.showGallery = false
@@ -1089,15 +1089,17 @@ struct Chat: View {
                   Button(action: {
                      if self.prompt.2 && self.prompt.5 == 0 {
                         self.prompt = (self.prompt.0, self.prompt.1, false, self.prompt.3, self.prompt.4, self.prompt.5, CACurrentMediaTime())
-                     } else if self.prompt.5 > 0 {
-                        if let url = self.prompt.4[self.prompt.5 - 1].1 {
+                     } else if self.prompt.5 > 0, let choices = self.prompt.4 {
+                        let choice = choices.1[self.prompt.5 - 1]
+
+                        if let url = choice.1 {
                            openURL(url)
                            
                            withAnimation {
                               self.revealMenu = false
                            }
                         } else if self.energy >= 1.0 {
-                           self.choices.removeAll()
+                           self.choices = nil
                            self.timestamp = Int(Date().timeIntervalSince1970)
                            
                            withAnimation {
@@ -1106,14 +1108,14 @@ struct Chat: View {
                            }
                            
                            Task {
-                              await self.talk(word: Word(name: self.prompt.4[self.prompt.5 - 1].0), temperature: self.temperature, multiple: geometryProxy.size.width > geometryProxy.size.height, fallback: true, mute: self.mute)
+                              await self.talk(word: Word(name: choice.0), choiceGroup: choices.0, temperature: self.temperature, multiple: geometryProxy.size.width > geometryProxy.size.height, fallback: true, mute: self.mute)
                            }
                         } else {
                            self.shakes += 1
                         }
                      } else if let word = self.prompt.1 {
                         if self.energy >= 1.0 {
-                           self.choices.removeAll()
+                           self.choices = nil
                            self.timestamp = Int(Date().timeIntervalSince1970)
                            
                            withAnimation {
@@ -1246,20 +1248,20 @@ struct Chat: View {
                   .animation(.easeInOut(duration: 0.5), value: self.energy)
                   HStack(alignment: .center, spacing: 0.0) {
                      VStack(alignment: .center, spacing: 0.0) {
-                        if !self.prompt.4.isEmpty {
+                        if let choices = self.prompt.4 {
                            Button(action: {
-                              let index = (self.prompt.5 - 1) % (self.prompt.4.count + 1)
+                              let index = (self.prompt.5 - 1) % (choices.1.count + 1)
                               
                               if index > 0 {
-                                 self.prompt = (self.prompt.4[index - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
+                                 self.prompt = (choices.1[index - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, choices, index, CACurrentMediaTime())
                               } else if index == 0 {
                                  if let word = self.prompt.1 {
-                                    self.prompt = (word.name, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
+                                    self.prompt = (word.name, self.prompt.1, self.prompt.2, self.prompt.3, choices, index, CACurrentMediaTime())
                                  } else {
-                                    self.prompt = (nil, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
+                                    self.prompt = (nil, self.prompt.1, self.prompt.2, self.prompt.3, choices, index, CACurrentMediaTime())
                                  }
                               } else {
-                                 self.prompt = (self.prompt.4[self.prompt.4.count - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, self.prompt.4.count, CACurrentMediaTime())
+                                 self.prompt = (choices.1[choices.1.count - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, choices, choices.1.count, CACurrentMediaTime())
                               }
                            }) {
                               Image(systemName: "chevron.backward")
@@ -1370,16 +1372,16 @@ struct Chat: View {
                         maxWidth: .infinity
                      )
                      VStack(alignment: .center, spacing: 0.0) {
-                        if !self.prompt.4.isEmpty {
+                        if let choices = self.prompt.4 {
                            Button(action: {
-                              let index = (self.prompt.5 + 1) % (self.prompt.4.count + 1)
+                              let index = (self.prompt.5 + 1) % (choices.1.count + 1)
                               
                               if index > 0 {
-                                 self.prompt = (self.prompt.4[index - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
+                                 self.prompt = (choices.1[index - 1].0, self.prompt.1, self.prompt.2, self.prompt.3, choices, index, CACurrentMediaTime())
                               } else if let word = self.prompt.1 {
-                                 self.prompt = (word.name, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
+                                 self.prompt = (word.name, self.prompt.1, self.prompt.2, self.prompt.3, choices, index, CACurrentMediaTime())
                               } else {
-                                 self.prompt = (nil, self.prompt.1, self.prompt.2, self.prompt.3, self.prompt.4, index, CACurrentMediaTime())
+                                 self.prompt = (nil, self.prompt.1, self.prompt.2, self.prompt.3, choices, index, CACurrentMediaTime())
                               }
                            }) {
                               Image(systemName: "chevron.forward")
@@ -1707,63 +1709,39 @@ struct Chat: View {
       }
    }
    
-   private func talk(word: Word, temperature: Double, multiple: Bool, fallback: Bool, mute: Bool) async {
+   private func talk(word: Word, choiceGroup: Double? = nil, temperature: Double, multiple: Bool, fallback: Bool, mute: Bool) async {
       var queue = Script.shared.characters
       
       if let first = queue.first {
          let input = word.name.filter { !$0.isNewline }
-         var logs = [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]()
          let attributes = word.attributes ?? []
          let generateRequired: Bool
          let time: Double
+         let logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
          var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
          
          if multiple {
             queue.removeFirst()
-            
-            if let last = self.logs.last {
-               var isContinuous = false
-               
-               for log in self.logs {
-                  if log.group == last.group {
-                     if log.from == nil, let choices = log.choices, choices.contains(where: { $0 == input }) {
-                        isContinuous = true
-                     }
-                     
-                     logs.append(log)
-                  }
-               }
-               
-               if isContinuous {
-                  generateRequired = true
-                  time = last.group
-               } else {
-                  logs.removeAll()
-                  generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" })
-                  time = CACurrentMediaTime()
-               }
-            } else {
-               generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" })
-               time = CACurrentMediaTime()
-            }
          } else {
             queue.removeAll()
-            
-            if let last = self.logs.last, self.logs.contains(where: { x in
-               if x.from == nil && x.group == last.group, let choices = x.choices {
-                  return choices.contains(where: { $0 == input })
-               }
-               
-               return false
-            }) {
-               generateRequired = true
-               time = last.group
-            } else {
-               generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" })
-               time = CACurrentMediaTime()
-            }
          }
-         
+
+         if let group = choiceGroup ?? self.logs.last(where: { $0.to == nil })?.group,
+            choiceGroup != nil || self.logs.contains(where: { $0.group == group && $0.from == first.name && $0.to == nil && $0.choices?.contains(input) == true }) {
+            generateRequired = true
+            time = group
+
+            if multiple {
+               logs = self.logs.filter { $0.group == group }
+            } else {
+               logs = []
+            }
+         } else {
+            generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" })
+            time = CACurrentMediaTime()
+            logs = []
+         }
+
          if var prompt = first.prompt, generateRequired {
             self.loadingState.1 &+= 1
             
@@ -1784,96 +1762,31 @@ struct Chat: View {
             }
             
             var messages: [[String: Any]] = [["role": "system", "content": prompt]]
-            var i = logs.count - 1
-            
-            while i > 0 {
-               if let from = logs[i].from, from != first.name && logs[i - 1].from == first.name {
+
+            for log in self.logs {
+               if log.from == nil && log.to == first.name {
                   var parts = [[String: Any]]()
-                  
-                  if let text = logs[i].content.text {
+
+                  if let text = log.content.text {
                      parts.append(["type": "text", "text": text])
                   }
-                  
-                  if let image = logs[i].content.image {
-                     if let dataURL = (await Task.detached {
-                        var dataURL: String? = nil
-                        
-                        if let resizedImage = self.resize(image: image) {
-                           dataURL = self.convert(image: resizedImage)
-                        }
-                        
-                        return dataURL
-                     }.value) {
-                        parts.append(["type": "image", "image": dataURL])
-                     }
+
+                  if let image = log.content.image, let dataURL = (await Task.detached {
+                     self.resize(image: image).flatMap { self.convert(image: $0) }
+                  }.value) {
+                     parts.append(["type": "image", "image": dataURL])
                   }
-                  
+
                   if !parts.isEmpty {
-                     if let raw = logs[i - 1].raw {
-                        messages.insert(["role": "user", "content": parts], at: 1)
-                        messages.insert(["role": "assistant", "content": raw], at: 1)
-                     } else if let text = logs[i - 1].content.text {
-                        messages.insert(["role": "user", "content": parts], at: 1)
-                        messages.insert(["role": "assistant", "content": text], at: 1)
-                     }
+                     messages.append(["role": "user", "content": parts])
                   }
-                  
-                  i -= 2
-               } else {
-                  i -= 1
+               } else if log.from == first.name && log.to == nil, let text = log.raw ?? log.content.text {
+                  messages.append(["role": "assistant", "content": text])
                }
             }
-            
-            if messages.count == 1 {
-               var i = self.logs.count - 1
-               
-               while i >= 0 {
-                  if self.logs[i].from == first.name && self.logs[i].to == nil {
-                     if i - 1 >= 0 && self.logs[i].group == self.logs[i - 1].group && self.logs[i - 1].from == nil && self.logs[i - 1].to == first.name {
-                        var parts = [[String: Any]]()
-                        
-                        if let text = self.logs[i - 1].content.text {
-                           parts.append(["type": "text", "text": text])
-                        }
-                        
-                        if let image = self.logs[i - 1].content.image {
-                           if let dataURL = (await Task.detached {
-                              var dataURL: String? = nil
-                              
-                              if let resizedImage = self.resize(image: image) {
-                                 dataURL = self.convert(image: resizedImage)
-                              }
-                              
-                              return dataURL
-                           }.value) {
-                              parts.append(["type": "image", "image": dataURL])
-                           }
-                        }
-                        
-                        if !parts.isEmpty {
-                           if let raw = self.logs[i].raw {
-                              messages.insert(["role": "assistant", "content": raw], at: 1)
-                              messages.insert(["role": "user", "content": parts], at: 1)
-                           } else if let text = self.logs[i].content.text {
-                              messages.insert(["role": "assistant", "content": text], at: 1)
-                              messages.insert(["role": "user", "content": parts], at: 1)
-                           }
-                        }
-                        
-                        i -= 1
-                     } else if let raw = self.logs[i].raw {
-                        messages.insert(["role": "assistant", "content": raw], at: 1)
-                     } else if let text = self.logs[i].content.text {
-                        messages.insert(["role": "assistant", "content": text], at: 1)
-                     }
-                  }
-                  
-                  i -= 1
-               }
-               
-               messages.append(["role": "user", "content": [["type": "text", "text": input]]])
-            }
-            
+
+            messages.append(["role": "user", "content": [["type": "text", "text": input]]])
+
             if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                var sequence = Sequence(name: "Activate", state: nil)
                let id = UUID()
@@ -1973,19 +1886,20 @@ struct Chat: View {
                      }.value) {
                         prompt.append("\n\(memory)")
                      }
-                     
+
                      var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
                      var i = logs.count - 1
                      
                      while i > 0 {
-                        if logs[i].from == character.name {
+                        if logs[i].from == character.name && logs[i].to == first.name,
+                           let j = logs[..<i].lastIndex(where: { $0.from == first.name && $0.to == nil }) {
                            var parts = [[String: Any]]()
                            
-                           if let text = logs[i - 1].content.text {
+                           if let text = logs[j].content.text {
                               parts.append(["type": "text", "text": text])
                            }
                            
-                           if let image = logs[i - 1].content.image {
+                           if let image = logs[j].content.image {
                               if let dataURL = (await Task.detached {
                                  var dataURL: String? = nil
                                  
@@ -2009,7 +1923,7 @@ struct Chat: View {
                               }
                            }
                            
-                           i -= 2
+                           i = j - 1
                         } else {
                            i -= 1
                         }
@@ -2341,7 +2255,7 @@ struct Chat: View {
                
                self.logs.append((id: nil, from: nil, to: first.name, group: time, raw: nil, content: (text: input, image: nil), choices: nil))
                self.logs.append((id: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
-               self.choices.removeAll()
+               self.choices = nil
                
                for var sequence in newSequences {
                   sequence.append(.completion)
@@ -2349,7 +2263,7 @@ struct Chat: View {
                   Script.shared.queue.append((first.name, sequence))
                }
             } else if fallback {
-               self.choices.removeAll()
+               self.choices = nil
                
                await Script.shared.run(name: first.name, sequences: tempSequences, words: [])
             }
@@ -2380,8 +2294,7 @@ struct Chat: View {
                      choices = c.reduce(into: [String](), { x, y in
                         x.append(y.0)
                      })
-                     self.choices.removeAll()
-                     self.choices.append(contentsOf: c)
+                     self.choices = c.isEmpty ? nil : (time, c)
                   } else {
                      choices = nil
                   }
@@ -2404,13 +2317,23 @@ struct Chat: View {
             }
          }
          
-         while self.logs.count > 10 {
-            let group = self.logs[0].group
+         if self.logs.count > 10 {
+            var firstIndices = [Double: Int]()
             
-            for i in stride(from: self.logs.count - 1, through: 0, by: -1) {
-               if self.logs[i].group == group {
-                  self.logs.remove(at: i)
-               }
+            for (i, log) in self.logs.enumerated() where firstIndices[log.group] == nil {
+               firstIndices[log.group] = i
+            }
+
+            var start = self.logs.count - 10
+            var i = self.logs.count
+            
+            while i > start && start > 0 {
+               i -= 1
+               start = min(start, firstIndices[self.logs[i].group] ?? i)
+            }
+
+            if start > 0 {
+               self.logs.removeSubrange(..<start)
             }
          }
       }
@@ -2608,7 +2531,7 @@ struct Chat: View {
                      }.value) {
                         prompt.append("\n\(memory)")
                      }
-                     
+
                      if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]], voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                         var sequence = Sequence(name: "Activate", state: nil)
                         let id = UUID()
@@ -2736,8 +2659,7 @@ struct Chat: View {
                   choices = c.reduce(into: [String](), { x, y in
                      x.append(y.0)
                   })
-                  self.choices.removeAll()
-                  self.choices.append(contentsOf: c)
+                  self.choices = c.isEmpty ? nil : (time, c)
                } else {
                   choices = nil
                }
@@ -2779,13 +2701,23 @@ struct Chat: View {
             }
          }
          
-         while self.logs.count > 10 {
-            let group = self.logs[0].group
+         if self.logs.count > 10 {
+            var firstIndices = [Double: Int]()
             
-            for i in stride(from: self.logs.count - 1, through: 0, by: -1) {
-               if self.logs[i].group == group {
-                  self.logs.remove(at: i)
-               }
+            for (i, log) in self.logs.enumerated() where firstIndices[log.group] == nil {
+               firstIndices[log.group] = i
+            }
+
+            var start = self.logs.count - 10
+            var i = self.logs.count
+            
+            while i > start && start > 0 {
+               i -= 1
+               start = min(start, firstIndices[self.logs[i].group] ?? i)
+            }
+
+            if start > 0 {
+               self.logs.removeSubrange(..<start)
             }
          }
       }
@@ -3358,14 +3290,14 @@ struct Chat: View {
 }
 
 struct Stage: UIViewRepresentable {
-   @Binding var prompt: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)
+   @Binding var prompt: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)])?, Int, Double)
    @Binding var logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
    @Binding var resource: (old: String, new: String)
    @Binding var attributes: [String]
    @Binding var types: Int
    @Binding var labels: [String]
    @Binding var likability: Double?
-   @Binding var choices: [(String, URL?)]
+   @Binding var choices: (Double, [(String, URL?)])?
    @Binding var words: [Word]
    var active: Bool
    var pause: Bool
@@ -3379,7 +3311,7 @@ struct Stage: UIViewRepresentable {
    var mute: Bool
    @State var permissions = Set<String>()
    
-   init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likability: Binding<Double?>, choices: Binding<[(String, URL?)]>, words: Binding<[Word]>, active: Bool, pause: Bool, idle: Binding<Bool>, changing: Binding<Bool>, loading: Binding<(Bool, UInt64)>, discoveries: Binding<[Word]>, temperature: Double, accent: UIColor, scale: Double, mute: Bool) {
+   init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)])?, Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likability: Binding<Double?>, choices: Binding<(Double, [(String, URL?)])?>, words: Binding<[Word]>, active: Bool, pause: Bool, idle: Binding<Bool>, changing: Binding<Bool>, loading: Binding<(Bool, UInt64)>, discoveries: Binding<[Word]>, temperature: Double, accent: UIColor, scale: Double, mute: Bool) {
       self._prompt = prompt
       self._logs = logs
       self._resource = resource
@@ -3477,7 +3409,7 @@ struct Stage: UIViewRepresentable {
                      } else {
                         agentView.change(path: self.resource.new)
                         
-                        self.choices.removeAll()
+                        self.choices = nil
                      }
                   }
                   
@@ -4201,7 +4133,7 @@ struct Stage: UIViewRepresentable {
       func agentDidStop(_ agent: AgentView) {
          agent.change(path: self.parent.resource.new)
          
-         self.parent.choices.removeAll()
+         self.parent.choices = nil
       }
       
       func agentDidChange(_ agent: AgentView, successfully flag: Bool) {
@@ -4332,7 +4264,7 @@ struct Stage: UIViewRepresentable {
             if !candidates.isEmpty {
                let choice = candidates[Int.random(in: 0..<candidates.count)]
                
-               self.parent.choices.removeAll()
+               self.parent.choices = nil
                
                if let modifier = choice.modifier {
                   let word: Word
@@ -4449,8 +4381,8 @@ struct Stage: UIViewRepresentable {
          var queue = Script.shared.characters
          
          if let first = queue.first {
-            var logs = [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]()
             let time: Double
+            let logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
             var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
             
             if let word {
@@ -4460,50 +4392,25 @@ struct Stage: UIViewRepresentable {
                
                if multiple {
                   queue.removeFirst()
-                  
-                  if let last = self.parent.logs.last {
-                     var isContinuous = false
-                     
-                     for log in self.parent.logs {
-                        if log.group == last.group {
-                           if log.from == nil, let choices = log.choices, choices.contains(where: { $0 == input }) {
-                              isContinuous = true
-                           }
-                           
-                           logs.append(log)
-                        }
-                     }
-                     
-                     if isContinuous {
-                        generateRequired = true
-                        time = last.group
-                     } else {
-                        logs.removeAll()
-                        generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" })
-                        time = CACurrentMediaTime()
-                     }
-                  } else {
-                     generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" })
-                     time = CACurrentMediaTime()
-                  }
                } else {
                   queue.removeAll()
-                  
-                  if let last = self.parent.logs.last, self.parent.logs.contains(where: { x in
-                     if x.from == nil && x.group == last.group, let choices = x.choices {
-                        return choices.contains(where: { $0 == input })
-                     }
-                     
-                     return false
-                  }) {
-                     generateRequired = true
-                     time = last.group
-                  } else {
-                     generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" })
-                     time = CACurrentMediaTime()
-                  }
                }
-               
+
+               if let group = self.parent.logs.last(where: { $0.to == nil })?.group, self.parent.logs.contains(where: { $0.group == group && $0.from == first.name && $0.to == nil && $0.choices?.contains(input) == true }) {
+                  generateRequired = true
+                  time = group
+
+                  if multiple {
+                     logs = self.parent.logs.filter { $0.group == group }
+                  } else {
+                     logs = []
+                  }
+               } else {
+                  generateRequired = attributes.isEmpty || !first.sequences.contains(where: { $0.name == "Activate" })
+                  time = CACurrentMediaTime()
+                  logs = []
+               }
+
                if var prompt = first.prompt, generateRequired {
                   self.parent.loading.1 &+= 1
                   
@@ -4524,96 +4431,31 @@ struct Stage: UIViewRepresentable {
                   }
                   
                   var messages: [[String: Any]] = [["role": "system", "content": prompt]]
-                  var i = logs.count - 1
-                  
-                  while i > 0 {
-                     if let from = logs[i].from, from != first.name && logs[i - 1].from == first.name {
+
+                  for log in self.parent.logs {
+                     if log.from == nil && log.to == first.name {
                         var parts = [[String: Any]]()
-                        
-                        if let text = logs[i].content.text {
+
+                        if let text = log.content.text {
                            parts.append(["type": "text", "text": text])
                         }
-                        
-                        if let image = logs[i].content.image {
-                           if let dataURL = (await Task.detached {
-                              var dataURL: String? = nil
-                              
-                              if let resizedImage = self.resize(image: image) {
-                                 dataURL = self.convert(image: resizedImage)
-                              }
-                              
-                              return dataURL
-                           }.value) {
-                              parts.append(["type": "image", "image": dataURL])
-                           }
+
+                        if let image = log.content.image, let dataURL = (await Task.detached {
+                           self.resize(image: image).flatMap { self.convert(image: $0) }
+                        }.value) {
+                           parts.append(["type": "image", "image": dataURL])
                         }
-                        
+
                         if !parts.isEmpty {
-                           if let raw = logs[i - 1].raw {
-                              messages.insert(["role": "user", "content": parts], at: 1)
-                              messages.insert(["role": "assistant", "content": raw], at: 1)
-                           } else if let text = logs[i - 1].content.text {
-                              messages.insert(["role": "user", "content": parts], at: 1)
-                              messages.insert(["role": "assistant", "content": text], at: 1)
-                           }
+                           messages.append(["role": "user", "content": parts])
                         }
-                        
-                        i -= 2
-                     } else {
-                        i -= 1
+                     } else if log.from == first.name && log.to == nil, let text = log.raw ?? log.content.text {
+                        messages.append(["role": "assistant", "content": text])
                      }
                   }
-                  
-                  if messages.count == 1 {
-                     var i = self.parent.logs.count - 1
-                     
-                     while i >= 0 {
-                        if self.parent.logs[i].from == first.name && self.parent.logs[i].to == nil {
-                           if i - 1 >= 0 && self.parent.logs[i].group == self.parent.logs[i - 1].group && self.parent.logs[i - 1].from == nil && self.parent.logs[i - 1].to == first.name {
-                              var parts = [[String: Any]]()
-                              
-                              if let text = self.parent.logs[i - 1].content.text {
-                                 parts.append(["type": "text", "text": text])
-                              }
-                              
-                              if let image = self.parent.logs[i - 1].content.image {
-                                 if let dataURL = (await Task.detached {
-                                    var dataURL: String? = nil
-                                    
-                                    if let resizedImage = self.resize(image: image) {
-                                       dataURL = self.convert(image: resizedImage)
-                                    }
-                                    
-                                    return dataURL
-                                 }.value) {
-                                    parts.append(["type": "image", "image": dataURL])
-                                 }
-                              }
-                              
-                              if !parts.isEmpty {
-                                 if let raw = self.parent.logs[i].raw {
-                                    messages.insert(["role": "assistant", "content": raw], at: 1)
-                                    messages.insert(["role": "user", "content": parts], at: 1)
-                                 } else if let text = self.parent.logs[i].content.text {
-                                    messages.insert(["role": "assistant", "content": text], at: 1)
-                                    messages.insert(["role": "user", "content": parts], at: 1)
-                                 }
-                              }
-                              
-                              i -= 1
-                           } else if let raw = self.parent.logs[i].raw {
-                              messages.insert(["role": "assistant", "content": raw], at: 1)
-                           } else if let text = self.parent.logs[i].content.text {
-                              messages.insert(["role": "assistant", "content": text], at: 1)
-                           }
-                        }
-                        
-                        i -= 1
-                     }
-                     
-                     messages.append(["role": "user", "content": [["type": "text", "text": input]]])
-                  }
-                  
+
+                  messages.append(["role": "user", "content": [["type": "text", "text": input]]])
+
                   if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                      var sequence = Sequence(name: "Activate", state: nil)
                      let id = UUID()
@@ -4713,19 +4555,20 @@ struct Stage: UIViewRepresentable {
                            }.value) {
                               prompt.append("\n\(memory)")
                            }
-                           
+
                            var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
                            var i = logs.count - 1
                            
                            while i > 0 {
-                              if logs[i].from == character.name {
+                              if logs[i].from == character.name && logs[i].to == first.name,
+                                 let j = logs[..<i].lastIndex(where: { $0.from == first.name && $0.to == nil }) {
                                  var parts = [[String: Any]]()
                                  
-                                 if let text = logs[i - 1].content.text {
+                                 if let text = logs[j].content.text {
                                     parts.append(["type": "text", "text": text])
                                  }
                                  
-                                 if let image = logs[i - 1].content.image {
+                                 if let image = logs[j].content.image {
                                     if let dataURL = (await Task.detached {
                                        var dataURL: String? = nil
                                        
@@ -4749,7 +4592,7 @@ struct Stage: UIViewRepresentable {
                                     }
                                  }
                                  
-                                 i -= 2
+                                 i = j - 1
                               } else {
                                  i -= 1
                               }
@@ -5080,7 +4923,7 @@ struct Stage: UIViewRepresentable {
                      
                      self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, raw: nil, content: (text: input, image: nil), choices: nil))
                      self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
-                     self.parent.choices.removeAll()
+                     self.parent.choices = nil
                      
                      for var sequence in newSequences {
                         sequence.append(.completion)
@@ -5117,8 +4960,7 @@ struct Stage: UIViewRepresentable {
                            choices = c.reduce(into: [String](), { x, y in
                               x.append(y.0)
                            })
-                           self.parent.choices.removeAll()
-                           self.parent.choices.append(contentsOf: c)
+                           self.parent.choices = c.isEmpty ? nil : (time, c)
                         } else {
                            choices = nil
                         }
@@ -5143,24 +4985,12 @@ struct Stage: UIViewRepresentable {
             } else if var prompt = first.prompt {
                if multiple {
                   queue.removeFirst()
-                  
-                  if let last = self.parent.logs.last {
-                     for log in self.parent.logs {
-                        if log.group == last.group {
-                           logs.append(log)
-                        }
-                     }
-                     
-                     logs.removeAll()
-                     time = CACurrentMediaTime()
-                  } else {
-                     time = CACurrentMediaTime()
-                  }
                } else {
                   queue.removeAll()
-                  time = CACurrentMediaTime()
                }
-               
+
+               time = CACurrentMediaTime()
+
                self.parent.loading.1 &+= 1
                
                let generation = self.parent.loading.1
@@ -5180,94 +5010,29 @@ struct Stage: UIViewRepresentable {
                }
                
                var messages: [[String: Any]] = [["role": "system", "content": prompt]]
-               var i = logs.count - 1
-               
-               while i > 0 {
-                  if let from = logs[i].from, from != first.name && logs[i - 1].from == first.name {
+
+               for log in self.parent.logs {
+                  if log.from == nil && log.to == first.name {
                      var parts = [[String: Any]]()
-                     
-                     if let text = logs[i].content.text {
+
+                     if let text = log.content.text {
                         parts.append(["type": "text", "text": text])
                      }
-                     
-                     if let image = logs[i].content.image {
-                        if let dataURL = (await Task.detached {
-                           var dataURL: String? = nil
-                           
-                           if let resizedImage = self.resize(image: image) {
-                              dataURL = self.convert(image: resizedImage)
-                           }
-                           
-                           return dataURL
-                        }.value) {
-                           parts.append(["type": "image", "image": dataURL])
-                        }
+
+                     if let image = log.content.image, let dataURL = (await Task.detached {
+                        self.resize(image: image).flatMap { self.convert(image: $0) }
+                     }.value) {
+                        parts.append(["type": "image", "image": dataURL])
                      }
-                     
+
                      if !parts.isEmpty {
-                        if let raw = logs[i - 1].raw {
-                           messages.insert(["role": "user", "content": parts], at: 1)
-                           messages.insert(["role": "assistant", "content": raw], at: 1)
-                        } else if let text = logs[i - 1].content.text {
-                           messages.insert(["role": "user", "content": parts], at: 1)
-                           messages.insert(["role": "assistant", "content": text], at: 1)
-                        }
+                        messages.append(["role": "user", "content": parts])
                      }
-                     
-                     i -= 2
-                  } else {
-                     i -= 1
+                  } else if log.from == first.name && log.to == nil, let text = log.raw ?? log.content.text {
+                     messages.append(["role": "assistant", "content": text])
                   }
                }
-               
-               if messages.count == 1 {
-                  var i = self.parent.logs.count - 1
-                  
-                  while i >= 0 {
-                     if self.parent.logs[i].from == first.name && self.parent.logs[i].to == nil {
-                        if i - 1 >= 0 && self.parent.logs[i].group == self.parent.logs[i - 1].group && self.parent.logs[i - 1].from == nil && self.parent.logs[i - 1].to == first.name {
-                           var parts = [[String: Any]]()
-                           
-                           if let text = self.parent.logs[i - 1].content.text {
-                              parts.append(["type": "text", "text": text])
-                           }
-                           
-                           if let image = self.parent.logs[i - 1].content.image {
-                              if let dataURL = (await Task.detached {
-                                 var dataURL: String? = nil
-                                 
-                                 if let resizedImage = self.resize(image: image) {
-                                    dataURL = self.convert(image: resizedImage)
-                                 }
-                                 
-                                 return dataURL
-                              }.value) {
-                                 parts.append(["type": "image", "image": dataURL])
-                              }
-                           }
-                           
-                           if !parts.isEmpty {
-                              if let raw = self.parent.logs[i].raw {
-                                 messages.insert(["role": "assistant", "content": raw], at: 1)
-                                 messages.insert(["role": "user", "content": parts], at: 1)
-                              } else if let text = self.parent.logs[i].content.text {
-                                 messages.insert(["role": "assistant", "content": text], at: 1)
-                                 messages.insert(["role": "user", "content": parts], at: 1)
-                              }
-                           }
-                           
-                           i -= 1
-                        } else if let raw = self.parent.logs[i].raw {
-                           messages.insert(["role": "assistant", "content": raw], at: 1)
-                        } else if let text = self.parent.logs[i].content.text {
-                           messages.insert(["role": "assistant", "content": text], at: 1)
-                        }
-                     }
-                     
-                     i -= 1
-                  }
-               }
-               
+
                if let (output, content, likability, terms, state, choices, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: first.path, sequences: first.sequences), language: first.language, temperature: temperature) {
                   var sequence = Sequence(name: "Activate", state: nil)
                   let id = UUID()
@@ -5367,48 +5132,9 @@ struct Stage: UIViewRepresentable {
                         }.value) {
                            prompt.append("\n\(memory)")
                         }
-                        
-                        var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
-                        var i = logs.count - 1
-                        
-                        while i > 0 {
-                           if logs[i].from == character.name {
-                              var parts = [[String: Any]]()
-                              
-                              if let text = logs[i - 1].content.text {
-                                 parts.append(["type": "text", "text": text])
-                              }
-                              
-                              if let image = logs[i - 1].content.image {
-                                 if let dataURL = (await Task.detached {
-                                    var dataURL: String? = nil
-                                    
-                                    if let resizedImage = self.resize(image: image) {
-                                       dataURL = self.convert(image: resizedImage)
-                                    }
-                                    
-                                    return dataURL
-                                 }.value) {
-                                    parts.append(["type": "image", "image": dataURL])
-                                 }
-                              }
-                              
-                              if !parts.isEmpty {
-                                 if let raw = logs[i].raw {
-                                    messages.insert(["role": "assistant", "content": raw], at: 1)
-                                    messages.insert(["role": "user", "content": parts], at: 1)
-                                 } else if let text = logs[i].content.text {
-                                    messages.insert(["role": "assistant", "content": text], at: 1)
-                                    messages.insert(["role": "user", "content": parts], at: 1)
-                                 }
-                              }
-                              
-                              i -= 2
-                           } else {
-                              i -= 1
-                           }
-                        }
-                        
+
+                        let messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
+
                         if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                            var sequence = Sequence(name: "Activate", state: nil)
                            let id = UUID()
@@ -5543,8 +5269,7 @@ struct Stage: UIViewRepresentable {
                         choices = c.reduce(into: [String](), { x, y in
                            x.append(y.0)
                         })
-                        self.parent.choices.removeAll()
-                        self.parent.choices.append(contentsOf: c)
+                        self.parent.choices = c.isEmpty ? nil : (time, c)
                      } else {
                         choices = nil
                      }
@@ -5568,13 +5293,23 @@ struct Stage: UIViewRepresentable {
                return false
             }
             
-            while self.parent.logs.count > 10 {
-               let group = self.parent.logs[0].group
+            if self.parent.logs.count > 10 {
+               var firstIndices = [Double: Int]()
                
-               for i in stride(from: self.parent.logs.count - 1, through: 0, by: -1) {
-                  if self.parent.logs[i].group == group {
-                     self.parent.logs.remove(at: i)
-                  }
+               for (i, log) in self.parent.logs.enumerated() where firstIndices[log.group] == nil {
+                  firstIndices[log.group] = i
+               }
+
+               var start = self.parent.logs.count - 10
+               var i = self.parent.logs.count
+               
+               while i > start && start > 0 {
+                  i -= 1
+                  start = min(start, firstIndices[self.parent.logs[i].group] ?? i)
+               }
+
+               if start > 0 {
+                  self.parent.logs.removeSubrange(..<start)
                }
             }
          }
@@ -5875,7 +5610,7 @@ struct Stage: UIViewRepresentable {
 
 struct Prompt: UIViewRepresentable {
    let active: Bool
-   let input: (String?, Word?, Bool, Set<Character>?, [(String, URL?)], Int, Double)?
+   let input: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)])?, Int, Double)?
    let accent: UIColor
    let font: UIFont
    
@@ -8459,7 +8194,7 @@ struct Camera: View {
                   dismiss()
                }) {
                   ZStack {
-                     Prompt(active: self.active, input: (self.recognizedText, nil, false, nil, [], 0, CACurrentMediaTime()), accent: UIColor(white: 1.0, alpha: 1.0), font: UIFont.systemFont(ofSize: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0), weight: .semibold))
+                     Prompt(active: self.active, input: (self.recognizedText, nil, false, nil, nil, 0, CACurrentMediaTime()), accent: UIColor(white: 1.0, alpha: 1.0), font: UIFont.systemFont(ofSize: round(UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0), weight: .semibold))
                         .frame(
                            height: ceil(UIFont.systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .callout).pointSize * 2.0, weight: .semibold).lineHeight),
                            alignment: .center
