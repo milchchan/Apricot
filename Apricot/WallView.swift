@@ -283,7 +283,8 @@ class WallView: UIView {
                                         if let data = caches[url.absoluteString] {
                                             imageSource = CGImageSourceCreateWithData(data as CFData, nil)
                                         } else if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-                                            let path = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath).path(percentEncoded: false)
+                                            let cacheURL = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath)
+                                            let path = cacheURL.path(percentEncoded: false)
                                             
                                             if FileManager.default.fileExists(atPath: path) {
                                                 if let file = FileHandle(forReadingAtPath: path) {
@@ -297,7 +298,19 @@ class WallView: UIView {
                                                     }
                                                 }
                                             } else if let (data, response) = try? await URLSession.shared.data(for: URLRequest(url: url)), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "image/png" || httpResponse.mimeType == "image/apng" {
-                                                FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+                                                let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+                                                defer {
+                                                    try? FileManager.default.removeItem(at: temporaryURL)
+                                                }
+
+                                                if (try? FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? data.write(to: temporaryURL)) != nil, (try? FileManager.default.moveItem(at: temporaryURL, to: cacheURL)) == nil {
+                                                    var isDirectory: ObjCBool = false
+
+                                                    if FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue {
+                                                        _ = try? FileManager.default.replaceItemAt(cacheURL, withItemAt: temporaryURL)
+                                                    }
+                                                }
                                                 
                                                 imageSource = CGImageSourceCreateWithData(data as CFData, nil)
                                                 caches[url.absoluteString] = data
