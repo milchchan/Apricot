@@ -3850,11 +3850,36 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                 
                 if cropWidth > 0 && cropHeight > 0, let croppedImage = image.cropping(to: CGRect(x: minX, y: minY, width: cropWidth, height: cropHeight)), let containerUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.milchchan.Apricot"), let mutableData = CFDataCreateMutable(nil, 0), let destination = CGImageDestinationCreateWithData(mutableData, UTType.png.identifier as CFString, 1, nil) {
                     let uuid = UUID().uuidString
-                    
+                    let url = containerUrl.appending(path: uuid, directoryHint: .notDirectory)
+
                     CGImageDestinationAddImage(destination, croppedImage, nil)
-                    CGImageDestinationFinalize(destination)
-                    
-                    FileManager.default.createFile(atPath: containerUrl.appending(path: uuid, directoryHint: .inferFromPath).path(percentEncoded: false), contents: mutableData as Data, attributes: nil)
+
+                    guard CGImageDestinationFinalize(destination) else {
+                        return
+                    }
+
+                    let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+                    defer {
+                        try? FileManager.default.removeItem(at: temporaryURL)
+                    }
+
+                    guard (try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? (mutableData as Data).write(to: temporaryURL)) != nil else {
+                        return
+                    }
+
+                    let path = url.path(percentEncoded: false)
+                    var isDirectory: ObjCBool = false
+
+                    if FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
+                        guard !isDirectory.boolValue, (try? (FileManager.default.replaceItemAt(url, withItemAt: temporaryURL) ?? url)) != nil else {
+                            return
+                        }
+                    } else if (try? FileManager.default.moveItem(at: temporaryURL, to: url)) == nil {
+                        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue, (try? (FileManager.default.replaceItemAt(url, withItemAt: temporaryURL) ?? url)) != nil else {
+                            return
+                        }
+                    }
                     
                     if let urls = try? FileManager.default.contentsOfDirectory(at: containerUrl, includingPropertiesForKeys: [.isDirectoryKey, .nameKey], options: .skipsHiddenFiles) {
                         var queue = [(URL, String)]()
@@ -4907,6 +4932,10 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
         
         @discardableResult
         func preview(timelines: [Timeline], images: [String: CGImage], imageScale: Double) -> (CGImage?, [String: Double]) {
+            guard !timelines.isEmpty else {
+                return (nil, [:])
+            }
+
             var minZIndex = Int.max
             var maxZIndex = Int.min
             var image: CGImage? = nil
@@ -5309,27 +5338,59 @@ class AgentView: UIView, @MainActor CAAnimationDelegate, @MainActor AVAudioPlaye
                     continue
                 }
                 
-                do {
-                    try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                    try autoreleasepool {
-                        let data = NSMutableData()
+                autoreleasepool {
+                    let data = NSMutableData()
+
+                    guard let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else {
+                        succeeded = false
                         
-                        guard let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else {
-                            throw CocoaError(.fileWriteUnknown)
+                        return
+                    }
+
+                    CGImageDestinationAddImage(destination, image, nil)
+
+                    guard CGImageDestinationFinalize(destination) else {
+                        succeeded = false
+                        
+                        return
+                    }
+
+                    let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+                    defer {
+                        try? FileManager.default.removeItem(at: temporaryURL)
+                    }
+
+                    guard (try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? (data as Data).write(to: temporaryURL)) != nil else {
+                        succeeded = false
+                        
+                        return
+                    }
+
+                    let path = url.path(percentEncoded: false)
+                    var isDirectory: ObjCBool = false
+
+                    if !FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
+                        if (try? FileManager.default.moveItem(at: temporaryURL, to: url)) != nil {
+                            total += 1
+                            
+                            return
                         }
-                        
-                        CGImageDestinationAddImage(destination, image, nil)
-                        
-                        guard CGImageDestinationFinalize(destination) else {
-                            throw CocoaError(.fileWriteUnknown)
+
+                        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+                            succeeded = false
+                            
+                            return
                         }
+                    }
+
+                    guard !isDirectory.boolValue, (try? (FileManager.default.replaceItemAt(url, withItemAt: temporaryURL) ?? url)) != nil else {
+                        succeeded = false
                         
-                        try (data as Data).write(to: url, options: .atomic)
+                        return
                     }
 
                     total += 1
-                } catch {
-                    succeeded = false
                 }
             }
             
