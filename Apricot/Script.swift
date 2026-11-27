@@ -391,19 +391,20 @@ final public class Script: NSObject, ObservableObject {
                 var words = [(id: Int, name: String, language: String?, date: Date)]()
                 
                 if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-                    let path = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath).path(percentEncoded: false)
-                    
-                    if FileManager.default.fileExists(atPath: path) {
-                        if let file = FileHandle(forWritingAtPath: path) {
-                            defer {
-                                try? file.close()
-                            }
-                            
-                            try? file.truncate(atOffset: 0)
-                            try? file.write(contentsOf: data)
+                    let cacheURL = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath)
+                    let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+                    defer {
+                        try? FileManager.default.removeItem(at: temporaryURL)
+                    }
+
+                    if (try? FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? data.write(to: temporaryURL)) != nil {
+                        let path = cacheURL.path(percentEncoded: false)
+                        var isDirectory: ObjCBool = false
+
+                        if FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) || ((try? FileManager.default.moveItem(at: temporaryURL, to: cacheURL)) == nil && FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)), !isDirectory.boolValue {
+                            _ = try? FileManager.default.replaceItemAt(cacheURL, withItemAt: temporaryURL)
                         }
-                    } else {
-                        FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
                     }
                 }
                 
@@ -1538,12 +1539,9 @@ final public class Script: NSObject, ObservableObject {
                     
                     if isAvailable && !words.isEmpty == preparedSequences.contains(where: { sequence in
                         for step in sequence {
-                            if case .message(let message) = step {
-                                if let match = message.content.firstMatch(of: /({{1,2})[^{}]+(}{1,2})/), match.output.1.count < 2 || match.output.2.count < 2 {
-                                    return true
-                                }
-                                
-                                return false
+                            if case .message(let message) = step,
+                               message.content.matches(of: /({{1,2})[^{}]+(}{1,2})/).contains(where: { $0.output.1.count < 2 || $0.output.2.count < 2 }) {
+                                return true
                             }
                         }
                         
