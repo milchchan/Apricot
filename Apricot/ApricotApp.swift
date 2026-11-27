@@ -56,19 +56,20 @@ struct ApricotApp: App {
             }), let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode), httpResponse.mimeType == "application/json" {
                 await Task.detached {
                     if let cachesUrl = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-                        let path = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath).path(percentEncoded: false)
-                        
-                        if FileManager.default.fileExists(atPath: path) {
-                            if let file = FileHandle(forWritingAtPath: path) {
-                                defer {
-                                    try? file.close()
-                                }
-                                
-                                try? file.truncate(atOffset: 0)
-                                try? file.write(contentsOf: data)
+                        let cacheURL = cachesUrl.appending(path: SHA256.hash(data: Data(url.absoluteString.utf8)).compactMap { String(format: "%02x", $0) }.joined(), directoryHint: .inferFromPath)
+                        let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+                        defer {
+                            try? FileManager.default.removeItem(at: temporaryURL)
+                        }
+
+                        if (try? FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? data.write(to: temporaryURL)) != nil {
+                            let path = cacheURL.path(percentEncoded: false)
+                            var isDirectory: ObjCBool = false
+
+                            if FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) || ((try? FileManager.default.moveItem(at: temporaryURL, to: cacheURL)) == nil && FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)), !isDirectory.boolValue {
+                                _ = try? FileManager.default.replaceItemAt(cacheURL, withItemAt: temporaryURL)
                             }
-                        } else {
-                            FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
                         }
                     }
                 }.value
@@ -86,7 +87,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         self.updateListenerTask = Task.detached(priority: .background) {
             for await verificationResult in Transaction.updates {
                 guard case .verified(let transaction) = verificationResult, transaction.revocationDate == nil else {
-                    return
+                    continue
                 }
                 
                 await transaction.finish()
