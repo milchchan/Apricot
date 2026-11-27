@@ -26,11 +26,11 @@ struct Chat: View {
    @Namespace private var menuNamespace
    @StateObject private var shortcut = Shortcut.shared
    @StateObject private var script: Script
-   @State private var prompt: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)])?, Int, Double) = (nil, nil, false, nil, nil, 0, 0)
-   @State private var logs = [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]()
+   @State private var prompt: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)], UUID?)?, Int, Double) = (nil, nil, false, nil, nil, 0, 0)
+   @State private var logs = [(id: UUID?, parent: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]()
    @State private var labels = [String]()
    @State private var likability: Double? = nil
-   @State private var choices: (Double, [(String, URL?)])?
+   @State private var choices: (Double, [(String, URL?)], UUID?)?
    @State private var discoveries = [Word]()
    @State private var revealMenu = false
    @State private var showActivity = false
@@ -1108,7 +1108,7 @@ struct Chat: View {
                            }
                            
                            Task {
-                              await self.talk(word: Word(name: choice.0), choiceGroup: choices.0, temperature: self.temperature, multiple: geometryProxy.size.width > geometryProxy.size.height, fallback: true, mute: self.mute)
+                              await self.talk(word: Word(name: choice.0), origin: choices.0, parent: choices.2, temperature: self.temperature, multiple: geometryProxy.size.width > geometryProxy.size.height, fallback: true, mute: self.mute)
                            }
                         } else {
                            self.shakes += 1
@@ -1709,15 +1709,19 @@ struct Chat: View {
       }
    }
    
-   private func talk(word: Word, choiceGroup: Double? = nil, temperature: Double, multiple: Bool, fallback: Bool, mute: Bool) async {
+   private func talk(word: Word, origin: Double? = nil, parent: UUID? = nil, temperature: Double, multiple: Bool, fallback: Bool, mute: Bool) async {
       var queue = Script.shared.characters
       
       if let first = queue.first {
          let input = word.name.filter { !$0.isNewline }
          let attributes = word.attributes ?? []
+         let history = self.logs
+         let historyEnd = parent.flatMap { id in
+            history.firstIndex(where: { $0.id == id && $0.from == first.name && $0.to == nil })
+         }.map { $0 + 1 } ?? history.endIndex
          let generateRequired: Bool
          let time: Double
-         let logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
+         let logs: [(id: UUID?, parent: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
          var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
          
          if multiple {
@@ -1726,13 +1730,13 @@ struct Chat: View {
             queue.removeAll()
          }
 
-         if let group = choiceGroup ?? self.logs.last(where: { $0.to == nil })?.group,
-            choiceGroup != nil || self.logs.contains(where: { $0.group == group && $0.from == first.name && $0.to == nil && $0.choices?.contains(input) == true }) {
+         if let group = origin ?? history.last(where: { $0.to == nil })?.group,
+            origin != nil || history.contains(where: { $0.group == group && $0.from == first.name && $0.to == nil && $0.choices?.contains(input) == true }) {
             generateRequired = true
             time = group
 
             if multiple {
-               logs = self.logs.filter { $0.group == group }
+               logs = history.filter { $0.group == group }
             } else {
                logs = []
             }
@@ -1763,7 +1767,7 @@ struct Chat: View {
             
             var messages: [[String: Any]] = [["role": "system", "content": prompt]]
 
-            for log in self.logs {
+            for log in history[..<historyEnd] {
                if log.from == nil && log.to == first.name {
                   var parts = [[String: Any]]()
 
@@ -1868,7 +1872,7 @@ struct Chat: View {
                if let memory {
                   await Task.detached {
                      if let data = memory.data(using: .utf8) {
-                        self.save(data)
+                        self.save(data, to: "MEMORY.md")
                      }
                   }.value
                }
@@ -1887,48 +1891,38 @@ struct Chat: View {
                         prompt.append("\n\(memory)")
                      }
 
-                     var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
-                     var i = logs.count - 1
-                     
-                     while i > 0 {
-                        if logs[i].from == character.name && logs[i].to == first.name,
-                           let j = logs[..<i].lastIndex(where: { $0.from == first.name && $0.to == nil }) {
-                           var parts = [[String: Any]]()
-                           
-                           if let text = logs[j].content.text {
-                              parts.append(["type": "text", "text": text])
-                           }
-                           
-                           if let image = logs[j].content.image {
-                              if let dataURL = (await Task.detached {
-                                 var dataURL: String? = nil
-                                 
-                                 if let resizedImage = self.resize(image: image) {
-                                    dataURL = self.convert(image: resizedImage)
-                                 }
-                                 
-                                 return dataURL
-                              }.value) {
-                                 parts.append(["type": "image", "image": dataURL])
-                              }
-                           }
-                           
-                           if !parts.isEmpty {
-                              if let raw = logs[i].raw {
-                                 messages.insert(["role": "assistant", "content": raw], at: 1)
-                                 messages.insert(["role": "user", "content": parts], at: 1)
-                              } else if let text = logs[i].content.text {
-                                 messages.insert(["role": "assistant", "content": text], at: 1)
-                                 messages.insert(["role": "user", "content": parts], at: 1)
-                              }
-                           }
-                           
-                           i = j - 1
-                        } else {
-                           i -= 1
+                     var messages: [[String: Any]] = [["role": "system", "content": prompt]]
+                     var replies = [UUID: String]()
+
+                     for log in logs where log.from == character.name && log.to == first.name {
+                        if let parent = log.parent, let text = log.raw ?? log.content.text {
+                           replies[parent] = text
                         }
                      }
-                     
+
+                     for log in history[..<historyEnd] where log.from == first.name && log.to == nil {
+                        if let id = log.id, let reply = replies[id] {
+                           var parts = [[String: Any]]()
+
+                           if let text = log.content.text {
+                              parts.append(["type": "text", "text": text])
+                           }
+
+                           if let image = log.content.image, let dataURL = (await Task.detached {
+                              self.resize(image: image).flatMap { self.convert(image: $0) }
+                           }.value) {
+                              parts.append(["type": "image", "image": dataURL])
+                           }
+
+                           if !parts.isEmpty {
+                              messages.append(["role": "user", "content": parts])
+                              messages.append(["role": "assistant", "content": reply])
+                           }
+                        }
+                     }
+
+                     messages.append(["role": "user", "content": [["type": "text", "text": content]]])
+
                      if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : await self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                         var sequence = Sequence(name: "Activate", state: nil)
                         let id = UUID()
@@ -2010,7 +2004,7 @@ struct Chat: View {
                         if let memory {
                            await Task.detached {
                               if let data = memory.data(using: .utf8) {
-                                 self.save(data)
+                                 self.save(data, to: "MEMORY.md")
                               }
                            }.value
                         }
@@ -2253,8 +2247,8 @@ struct Chat: View {
                   }
                }
                
-               self.logs.append((id: nil, from: nil, to: first.name, group: time, raw: nil, content: (text: input, image: nil), choices: nil))
-               self.logs.append((id: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
+               self.logs.append((id: nil, parent: nil, from: nil, to: first.name, group: time, raw: nil, content: (text: input, image: nil), choices: nil))
+               self.logs.append((id: nil, parent: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
                self.choices = nil
                
                for var sequence in newSequences {
@@ -2294,16 +2288,16 @@ struct Chat: View {
                      choices = c.reduce(into: [String](), { x, y in
                         x.append(y.0)
                      })
-                     self.choices = c.isEmpty ? nil : (time, c)
+                     self.choices = c.isEmpty ? nil : (time, c, sequences[i].1)
                   } else {
                      choices = nil
                   }
                   
                   if i > 0 {
-                     self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                     self.logs.append((id: sequences[i].1, parent: sequences[0].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                   } else {
-                     self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: input, image: nil), choices: choices))
-                     self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                     self.logs.append((id: nil, parent: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: input, image: nil), choices: choices))
+                     self.logs.append((id: sequences[i].1, parent: nil, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                   }
                   
                   if let likability = sequences[i].4 {
@@ -2513,7 +2507,7 @@ struct Chat: View {
                if let memory {
                   await Task.detached {
                      if let data = memory.data(using: .utf8) {
-                        self.save(data)
+                        self.save(data, to: "MEMORY.md")
                      }
                   }.value
                }
@@ -2613,7 +2607,7 @@ struct Chat: View {
                         if let memory {
                            await Task.detached {
                               if let data = memory.data(using: .utf8) {
-                                 self.save(data)
+                                 self.save(data, to: "MEMORY.md")
                               }
                            }.value
                         }
@@ -2659,13 +2653,13 @@ struct Chat: View {
                   choices = c.reduce(into: [String](), { x, y in
                      x.append(y.0)
                   })
-                  self.choices = c.isEmpty ? nil : (time, c)
+                  self.choices = c.isEmpty ? nil : (time, c, sequences[i].1)
                } else {
                   choices = nil
                }
                
                if i > 0 {
-                  self.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                  self.logs.append((id: sequences[i].1, parent: sequences[0].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                } else {
                   var index = self.logs.count - 1
                   
@@ -2687,8 +2681,8 @@ struct Chat: View {
                      index -= 1
                   }
                   
-                  self.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: nil, image: image), choices: choices))
-                  self.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                  self.logs.append((id: nil, parent: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: nil, image: image), choices: choices))
+                  self.logs.append((id: sequences[i].1, parent: nil, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                }
                
                if let likability = sequences[i].4 {
@@ -2739,23 +2733,41 @@ struct Chat: View {
       return nil
    }
    
-   private nonisolated func save(_ data: Data, to filename: String = "MEMORY.md") {
-      if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
-         let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
-         
-         if FileManager.default.fileExists(atPath: path) {
-            if let file = FileHandle(forWritingAtPath: path) {
-               defer {
-                  try? file.close()
-               }
-               
-               try? file.truncate(atOffset: 0)
-               try? file.write(contentsOf: data)
-            }
-         } else {
-            FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+   private nonisolated func save(_ data: Data, to filename: String) {
+      guard FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
+         return
+      }
+
+      let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
+      let url = documentsUrl.appending(path: filename, directoryHint: .notDirectory)
+      let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+      defer {
+         try? FileManager.default.removeItem(at: temporaryURL)
+      }
+
+      guard (try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? data.write(to: temporaryURL)) != nil else {
+         return
+      }
+
+      let path = url.path(percentEncoded: false)
+      var isDirectory: ObjCBool = false
+
+      if !FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
+         if (try? FileManager.default.moveItem(at: temporaryURL, to: url)) != nil {
+            return
+         }
+
+         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+            return
          }
       }
+
+      guard !isDirectory.boolValue else {
+         return
+      }
+
+      _ = try? FileManager.default.replaceItemAt(url, withItemAt: temporaryURL)
    }
    
    private func sample(path: String, sequences: [Sequence]) async -> Data? {
@@ -3290,14 +3302,14 @@ struct Chat: View {
 }
 
 struct Stage: UIViewRepresentable {
-   @Binding var prompt: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)])?, Int, Double)
-   @Binding var logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
+   @Binding var prompt: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)], UUID?)?, Int, Double)
+   @Binding var logs: [(id: UUID?, parent: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
    @Binding var resource: (old: String, new: String)
    @Binding var attributes: [String]
    @Binding var types: Int
    @Binding var labels: [String]
    @Binding var likability: Double?
-   @Binding var choices: (Double, [(String, URL?)])?
+   @Binding var choices: (Double, [(String, URL?)], UUID?)?
    @Binding var words: [Word]
    var active: Bool
    var pause: Bool
@@ -3311,7 +3323,7 @@ struct Stage: UIViewRepresentable {
    var mute: Bool
    @State var permissions = Set<String>()
    
-   init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)])?, Int, Double)>, logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likability: Binding<Double?>, choices: Binding<(Double, [(String, URL?)])?>, words: Binding<[Word]>, active: Bool, pause: Bool, idle: Binding<Bool>, changing: Binding<Bool>, loading: Binding<(Bool, UInt64)>, discoveries: Binding<[Word]>, temperature: Double, accent: UIColor, scale: Double, mute: Bool) {
+   init(prompt: Binding<(String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)], UUID?)?, Int, Double)>, logs: Binding<[(id: UUID?, parent: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>, resource: Binding<(old: String, new: String)>, attributes: Binding<[String]>, types: Binding<Int>, labels: Binding<[String]>, likability: Binding<Double?>, choices: Binding<(Double, [(String, URL?)], UUID?)?>, words: Binding<[Word]>, active: Bool, pause: Bool, idle: Binding<Bool>, changing: Binding<Bool>, loading: Binding<(Bool, UInt64)>, discoveries: Binding<[Word]>, temperature: Double, accent: UIColor, scale: Double, mute: Bool) {
       self._prompt = prompt
       self._logs = logs
       self._resource = resource
@@ -3443,46 +3455,14 @@ struct Stage: UIViewRepresentable {
                                  
                                  if let data = try? encoder.encode(storedWords) {
                                     if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                                       let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
-                                       
-                                       if FileManager.default.fileExists(atPath: path) {
-                                          if let file = FileHandle(forWritingAtPath: path) {
-                                             defer {
-                                                try? file.close()
-                                             }
-                                             
-                                             try? file.truncate(atOffset: 0)
-                                             try? file.write(contentsOf: data)
-                                          }
-                                       } else {
-                                          FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                                       }
+                                       _ = self.save(data, to: url.appending(path: "words.json", directoryHint: .notDirectory))
                                     }
                                     
                                     if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
                                        let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
-                                       let documentsPath = documentsUrl.path(percentEncoded: false)
-                                       let url = documentsUrl.appending(path: ".words.json", directoryHint: .inferFromPath)
-                                       let path = url.path(percentEncoded: false)
-                                       
-                                       if !FileManager.default.fileExists(atPath: documentsPath) {
-                                          try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
-                                       }
-                                       
-                                       if FileManager.default.fileExists(atPath: path) {
-                                          if let file = FileHandle(forWritingAtPath: path) {
-                                             defer {
-                                                try? file.close()
-                                             }
-                                             
-                                             try? file.truncate(atOffset: 0)
-                                             try? file.write(contentsOf: data)
-                                          }
-                                       } else {
-                                          FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                                       }
-                                       
-                                       if let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
+                                       let url = documentsUrl.appending(path: ".words.json", directoryHint: .notDirectory)
+
+                                       if self.save(data, to: url), let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
                                           try? NSFileVersion.removeOtherVersionsOfItem(at: url)
                                           
                                           if let conflictVersions = NSFileVersion.unresolvedConflictVersionsOfItem(at: url) {
@@ -3673,6 +3653,37 @@ struct Stage: UIViewRepresentable {
       }
    }
    
+   private nonisolated func save(_ data: Data, to url: URL) -> Bool {
+      let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+      defer {
+         try? FileManager.default.removeItem(at: temporaryURL)
+      }
+
+      guard (try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? data.write(to: temporaryURL)) != nil else {
+         return false
+      }
+
+      let path = url.path(percentEncoded: false)
+      var isDirectory: ObjCBool = false
+
+      if !FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
+         if (try? FileManager.default.moveItem(at: temporaryURL, to: url)) != nil {
+            return true
+         }
+
+         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+            return false
+         }
+      }
+
+      guard !isDirectory.boolValue else {
+         return false
+      }
+
+      return (try? (FileManager.default.replaceItemAt(url, withItemAt: temporaryURL) ?? url)) != nil
+   }
+
    func makeCoordinator() -> Coordinator {
       return Coordinator(self)
    }
@@ -4065,46 +4076,14 @@ struct Stage: UIViewRepresentable {
                         
                         if let data = try? encoder.encode(storedWords) {
                            if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                              let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
-                              
-                              if FileManager.default.fileExists(atPath: path) {
-                                 if let file = FileHandle(forWritingAtPath: path) {
-                                    defer {
-                                       try? file.close()
-                                    }
-                                    
-                                    try? file.truncate(atOffset: 0)
-                                    try? file.write(contentsOf: data)
-                                 }
-                              } else {
-                                 FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                              }
+                              _ = self.save(data, to: url.appending(path: "words.json", directoryHint: .notDirectory))
                            }
                            
                            if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
                               let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
-                              let documentsPath = documentsUrl.path(percentEncoded: false)
-                              let url = documentsUrl.appending(path: ".words.json", directoryHint: .inferFromPath)
-                              let path = url.path(percentEncoded: false)
-                              
-                              if !FileManager.default.fileExists(atPath: documentsPath) {
-                                 try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
-                              }
-                              
-                              if FileManager.default.fileExists(atPath: path) {
-                                 if let file = FileHandle(forWritingAtPath: path) {
-                                    defer {
-                                       try? file.close()
-                                    }
-                                    
-                                    try? file.truncate(atOffset: 0)
-                                    try? file.write(contentsOf: data)
-                                 }
-                              } else {
-                                 FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                              }
-                              
-                              if let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
+                              let url = documentsUrl.appending(path: ".words.json", directoryHint: .notDirectory)
+
+                              if self.save(data, to: url), let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
                                  try? NSFileVersion.removeOtherVersionsOfItem(at: url)
                                  
                                  if let conflictVersions = NSFileVersion.unresolvedConflictVersionsOfItem(at: url) {
@@ -4321,7 +4300,8 @@ struct Stage: UIViewRepresentable {
                }
             }
             
-            if let encodedFrames = self?.encode(hasher.finalize()), let documentUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            if let self, let documentUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+               let encodedFrames = self.encode(hasher.finalize())
                let payload = encodedFrames.suffix(16)
                var isNew = true
                
@@ -4350,13 +4330,13 @@ struct Stage: UIViewRepresentable {
                      CGImageDestinationAddImage(destination, frame.image, [kCGImagePropertyPNGDictionary: [kCGImagePropertyAPNGDelayTime: frame.delay]] as CFDictionary)
                   }
                   
-                  if CGImageDestinationFinalize(destination) {
-                     FileManager.default.createFile(atPath: documentUrl.appending(path: "\(encodedFrames).png", directoryHint: .inferFromPath).path(percentEncoded: false), contents: data as Data, attributes: nil)
-                     
+                  let url = documentUrl.appending(path: "\(encodedFrames).png", directoryHint: .notDirectory)
+
+                  if CGImageDestinationFinalize(destination), self.save(data as Data, to: url) {
                      let image = UIImage(systemName: "arrow.down.doc", withConfiguration: UIImage.SymbolConfiguration(font: .systemFont(ofSize: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .caption1).pointSize, weight: .bold)))!.applyingSymbolConfiguration(.preferringMonochrome())!
                      
                      await MainActor.run {
-                        guard let uiView = self?.uiView else {
+                        guard let uiView = self.uiView else {
                            return
                         }
                         
@@ -4382,7 +4362,7 @@ struct Stage: UIViewRepresentable {
          
          if let first = queue.first {
             let time: Double
-            let logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
+            let logs: [(id: UUID?, parent: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
             var sequences = [(String, UUID?, String, Sequence, Double?, [(String, URL?)]?)]()
             
             if let word {
@@ -4536,8 +4516,8 @@ struct Stage: UIViewRepresentable {
                      
                      if let memory {
                         await Task.detached {
-                           if let data = memory.data(using: .utf8) {
-                              self.save(data)
+                           if let data = memory.data(using: .utf8), FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+                              _ = self.save(data, to: containerUrl.appending(path: "Documents/MEMORY.md", directoryHint: .notDirectory))
                            }
                         }.value
                      }
@@ -4556,48 +4536,38 @@ struct Stage: UIViewRepresentable {
                               prompt.append("\n\(memory)")
                            }
 
-                           var messages: [[String: Any]] = [["role": "system", "content": prompt], ["role": "user", "content": [["type": "text", "text": content]]]]
-                           var i = logs.count - 1
-                           
-                           while i > 0 {
-                              if logs[i].from == character.name && logs[i].to == first.name,
-                                 let j = logs[..<i].lastIndex(where: { $0.from == first.name && $0.to == nil }) {
-                                 var parts = [[String: Any]]()
-                                 
-                                 if let text = logs[j].content.text {
-                                    parts.append(["type": "text", "text": text])
-                                 }
-                                 
-                                 if let image = logs[j].content.image {
-                                    if let dataURL = (await Task.detached {
-                                       var dataURL: String? = nil
-                                       
-                                       if let resizedImage = self.resize(image: image) {
-                                          dataURL = self.convert(image: resizedImage)
-                                       }
-                                       
-                                       return dataURL
-                                    }.value) {
-                                       parts.append(["type": "image", "image": dataURL])
-                                    }
-                                 }
-                                 
-                                 if !parts.isEmpty {
-                                    if let raw = logs[i].raw {
-                                       messages.insert(["role": "assistant", "content": raw], at: 1)
-                                       messages.insert(["role": "user", "content": parts], at: 1)
-                                    } else if let text = logs[i].content.text {
-                                       messages.insert(["role": "assistant", "content": text], at: 1)
-                                       messages.insert(["role": "user", "content": parts], at: 1)
-                                    }
-                                 }
-                                 
-                                 i = j - 1
-                              } else {
-                                 i -= 1
+                           var messages: [[String: Any]] = [["role": "system", "content": prompt]]
+                           var replies = [UUID: String]()
+
+                           for log in logs where log.from == character.name && log.to == first.name {
+                              if let parent = log.parent, let text = log.raw ?? log.content.text {
+                                 replies[parent] = text
                               }
                            }
-                           
+
+                           for log in logs where log.from == first.name && log.to == nil {
+                              if let id = log.id, let reply = replies[id] {
+                                 var parts = [[String: Any]]()
+
+                                 if let text = log.content.text {
+                                    parts.append(["type": "text", "text": text])
+                                 }
+
+                                 if let image = log.content.image, let dataURL = (await Task.detached {
+                                    self.resize(image: image).flatMap { self.convert(image: $0) }
+                                 }.value) {
+                                    parts.append(["type": "image", "image": dataURL])
+                                 }
+
+                                 if !parts.isEmpty {
+                                    messages.append(["role": "user", "content": parts])
+                                    messages.append(["role": "assistant", "content": reply])
+                                 }
+                              }
+                           }
+
+                           messages.append(["role": "user", "content": [["type": "text", "text": content]]])
+
                            if let (output, content, _, terms, state, _, memory, voice) = await self.generate(messages: messages, voice: mute ? nil : self.sample(path: character.path, sequences: character.sequences), language: character.language, temperature: temperature) {
                               var sequence = Sequence(name: "Activate", state: nil)
                               let id = UUID()
@@ -4678,8 +4648,8 @@ struct Stage: UIViewRepresentable {
                               
                               if let memory {
                                  await Task.detached {
-                                    if let data = memory.data(using: .utf8) {
-                                       self.save(data)
+                                    if let data = memory.data(using: .utf8), FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+                                       _ = self.save(data, to: containerUrl.appending(path: "Documents/MEMORY.md", directoryHint: .notDirectory))
                                     }
                                  }.value
                               }
@@ -4921,8 +4891,8 @@ struct Stage: UIViewRepresentable {
                         }
                      }
                      
-                     self.parent.logs.append((id: nil, from: nil, to: first.name, group: time, raw: nil, content: (text: input, image: nil), choices: nil))
-                     self.parent.logs.append((id: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
+                     self.parent.logs.append((id: nil, parent: nil, from: nil, to: first.name, group: time, raw: nil, content: (text: input, image: nil), choices: nil))
+                     self.parent.logs.append((id: nil, parent: nil, from: first.name, to: nil, group: time, raw: nil, content: (text: content.joined(separator: "\n"), image: nil), choices: nil))
                      self.parent.choices = nil
                      
                      for var sequence in newSequences {
@@ -4960,16 +4930,16 @@ struct Stage: UIViewRepresentable {
                            choices = c.reduce(into: [String](), { x, y in
                               x.append(y.0)
                            })
-                           self.parent.choices = c.isEmpty ? nil : (time, c)
+                           self.parent.choices = c.isEmpty ? nil : (time, c, sequences[i].1)
                         } else {
                            choices = nil
                         }
                         
                         if i > 0 {
-                           self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                           self.parent.logs.append((id: sequences[i].1, parent: sequences[0].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                         } else {
-                           self.parent.logs.append((id: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: input, image: nil), choices: choices))
-                           self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                           self.parent.logs.append((id: nil, parent: nil, from: nil, to: sequences[i].0, group: time, raw: nil, content: (text: input, image: nil), choices: choices))
+                           self.parent.logs.append((id: sequences[i].1, parent: nil, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                         }
                         
                         if let likability = sequences[i].4 {
@@ -5113,8 +5083,8 @@ struct Stage: UIViewRepresentable {
                   
                   if let memory {
                      await Task.detached {
-                        if let data = memory.data(using: .utf8) {
-                           self.save(data)
+                        if let data = memory.data(using: .utf8), FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+                           _ = self.save(data, to: containerUrl.appending(path: "Documents/MEMORY.md", directoryHint: .notDirectory))
                         }
                      }.value
                   }
@@ -5215,8 +5185,8 @@ struct Stage: UIViewRepresentable {
                            
                            if let memory {
                               await Task.detached {
-                                 if let data = memory.data(using: .utf8) {
-                                    self.save(data)
+                                 if let data = memory.data(using: .utf8), FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
+                                    _ = self.save(data, to: containerUrl.appending(path: "Documents/MEMORY.md", directoryHint: .notDirectory))
                                  }
                               }.value
                            }
@@ -5269,15 +5239,15 @@ struct Stage: UIViewRepresentable {
                         choices = c.reduce(into: [String](), { x, y in
                            x.append(y.0)
                         })
-                        self.parent.choices = c.isEmpty ? nil : (time, c)
+                        self.parent.choices = c.isEmpty ? nil : (time, c, sequences[i].1)
                      } else {
                         choices = nil
                      }
                      
                      if i > 0 {
-                        self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                        self.parent.logs.append((id: sequences[i].1, parent: sequences[0].1, from: sequences[i].0, to: sequences[0].0, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                      } else {
-                        self.parent.logs.append((id: sequences[i].1, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
+                        self.parent.logs.append((id: sequences[i].1, parent: nil, from: sequences[i].0, to: nil, group: time, raw: sequences[i].2, content: (text: content.joined(separator: "\n"), image: nil), choices: choices))
                      }
                      
                      if let likability = sequences[i].4 {
@@ -5333,23 +5303,35 @@ struct Stage: UIViewRepresentable {
          return nil
       }
       
-      private nonisolated func save(_ data: Data, to filename: String = "MEMORY.md") {
-         if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
-            let path = containerUrl.appendingPathComponent("Documents/\(filename)").path(percentEncoded: false)
-            
-            if FileManager.default.fileExists(atPath: path) {
-               if let file = FileHandle(forWritingAtPath: path) {
-                  defer {
-                     try? file.close()
-                  }
-                  
-                  try? file.truncate(atOffset: 0)
-                  try? file.write(contentsOf: data)
-               }
-            } else {
-               FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
+      private nonisolated func save(_ data: Data, to url: URL) -> Bool {
+         let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+         defer {
+            try? FileManager.default.removeItem(at: temporaryURL)
+         }
+
+         guard (try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? data.write(to: temporaryURL)) != nil else {
+            return false
+         }
+
+         let path = url.path(percentEncoded: false)
+         var isDirectory: ObjCBool = false
+
+         if !FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
+            if (try? FileManager.default.moveItem(at: temporaryURL, to: url)) != nil {
+               return true
+            }
+
+            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+               return false
             }
          }
+
+         guard !isDirectory.boolValue else {
+            return false
+         }
+
+         return (try? (FileManager.default.replaceItemAt(url, withItemAt: temporaryURL) ?? url)) != nil
       }
       
       private func sample(path: String, sequences: [Sequence]) async -> Data? {
@@ -5610,7 +5592,7 @@ struct Stage: UIViewRepresentable {
 
 struct Prompt: UIViewRepresentable {
    let active: Bool
-   let input: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)])?, Int, Double)?
+   let input: (String?, Word?, Bool, Set<Character>?, (Double, [(String, URL?)], UUID?)?, Int, Double)?
    let accent: UIColor
    let font: UIFont
    
@@ -6249,7 +6231,7 @@ struct Activity: View {
    @Binding private var words: [Word]
    private let scores: [String: (String, Double, [String]?, Date)]
    private let characters: [(name: String, language: String?, sequences: [Sequence])]
-   @Binding private var logs: [(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
+   @Binding private var logs: [(id: UUID?, parent: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]
    @Environment(\.dismiss) private var dismiss
    @Namespace private var topID
    @State private var mode = 0
@@ -6371,7 +6353,7 @@ struct Activity: View {
       }
    }
    
-   init(accent: UIColor, words: Binding<[Word]>, scores: [String: (String, Double, [String]?, Date)], characters: [(name: String, language: String?, sequences: [Sequence])], logs: Binding<[(id: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
+   init(accent: UIColor, words: Binding<[Word]>, scores: [String: (String, Double, [String]?, Date)], characters: [(name: String, language: String?, sequences: [Sequence])], logs: Binding<[(id: UUID?, parent: UUID?, from: String?, to: String?, group: Double, raw: String?, content: (text: String?, image: CGImage?), choices: [String]?)]>) {
       self.accent = accent
       self._words = words
       self.scores = scores
@@ -7026,46 +7008,14 @@ struct Activity: View {
             
             if let data = try? encoder.encode(words) {
                if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                  let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
-                  
-                  if FileManager.default.fileExists(atPath: path) {
-                     if let file = FileHandle(forWritingAtPath: path) {
-                        defer {
-                           try? file.close()
-                        }
-                        
-                        try? file.truncate(atOffset: 0)
-                        try? file.write(contentsOf: data)
-                     }
-                  } else {
-                     FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                  }
+                  _ = self.save(data, to: url.appending(path: "words.json", directoryHint: .notDirectory))
                }
                
                if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
                   let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
-                  let documentsPath = documentsUrl.path(percentEncoded: false)
-                  let url = documentsUrl.appending(path: ".words.json", directoryHint: .inferFromPath)
-                  let path = url.path(percentEncoded: false)
-                  
-                  if !FileManager.default.fileExists(atPath: documentsPath) {
-                     try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
-                  }
-                  
-                  if FileManager.default.fileExists(atPath: path) {
-                     if let file = FileHandle(forWritingAtPath: path) {
-                        defer {
-                           try? file.close()
-                        }
-                        
-                        try? file.truncate(atOffset: 0)
-                        try? file.write(contentsOf: data)
-                     }
-                  } else {
-                     FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                  }
-                  
-                  if let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
+                  let url = documentsUrl.appending(path: ".words.json", directoryHint: .notDirectory)
+
+                  if self.save(data, to: url), let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
                      try? NSFileVersion.removeOtherVersionsOfItem(at: url)
                      
                      if let conflictVersions = NSFileVersion.unresolvedConflictVersionsOfItem(at: url) {
@@ -7078,6 +7028,37 @@ struct Activity: View {
             }
          }.value
       }
+   }
+
+   private nonisolated func save(_ data: Data, to url: URL) -> Bool {
+      let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+      defer {
+         try? FileManager.default.removeItem(at: temporaryURL)
+      }
+
+      guard (try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? data.write(to: temporaryURL)) != nil else {
+         return false
+      }
+
+      let path = url.path(percentEncoded: false)
+      var isDirectory: ObjCBool = false
+
+      if !FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
+         if (try? FileManager.default.moveItem(at: temporaryURL, to: url)) != nil {
+            return true
+         }
+
+         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+            return false
+         }
+      }
+
+      guard !isDirectory.boolValue else {
+         return false
+      }
+
+      return (try? (FileManager.default.replaceItemAt(url, withItemAt: temporaryURL) ?? url)) != nil
    }
    
    private nonisolated func mean(data: [Int]) -> Double {
@@ -7778,46 +7759,14 @@ struct Dictionary: View {
             
             if let data = try? encoder.encode(words) {
                if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                  let path = url.appending(path: "words.json", directoryHint: .inferFromPath).path(percentEncoded: false)
-                  
-                  if FileManager.default.fileExists(atPath: path) {
-                     if let file = FileHandle(forWritingAtPath: path) {
-                        defer {
-                           try? file.close()
-                        }
-                        
-                        try? file.truncate(atOffset: 0)
-                        try? file.write(contentsOf: data)
-                     }
-                  } else {
-                     FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                  }
+                  _ = self.save(data, to: url.appending(path: "words.json", directoryHint: .notDirectory))
                }
                
                if FileManager.default.ubiquityIdentityToken != nil, let containerUrl = FileManager.default.url(forUbiquityContainerIdentifier: nil) {
                   let documentsUrl = containerUrl.appending(path: "Documents", directoryHint: .isDirectory)
-                  let documentsPath = documentsUrl.path(percentEncoded: false)
-                  let url = documentsUrl.appending(path: ".words.json", directoryHint: .inferFromPath)
-                  let path = url.path(percentEncoded: false)
-                  
-                  if !FileManager.default.fileExists(atPath: documentsPath) {
-                     try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: false)
-                  }
-                  
-                  if FileManager.default.fileExists(atPath: path) {
-                     if let file = FileHandle(forWritingAtPath: path) {
-                        defer {
-                           try? file.close()
-                        }
-                        
-                        try? file.truncate(atOffset: 0)
-                        try? file.write(contentsOf: data)
-                     }
-                  } else {
-                     FileManager.default.createFile(atPath: path, contents: data, attributes: nil)
-                  }
-                  
-                  if let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
+                  let url = documentsUrl.appending(path: ".words.json", directoryHint: .notDirectory)
+
+                  if self.save(data, to: url), let currentVersion = NSFileVersion.currentVersionOfItem(at: url), currentVersion.isConflict {
                      try? NSFileVersion.removeOtherVersionsOfItem(at: url)
                      
                      if let conflictVersions = NSFileVersion.unresolvedConflictVersionsOfItem(at: url) {
@@ -7830,6 +7779,37 @@ struct Dictionary: View {
             }
          }.value
       }
+   }
+
+   private nonisolated func save(_ data: Data, to url: URL) -> Bool {
+      let temporaryURL = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .notDirectory)
+
+      defer {
+         try? FileManager.default.removeItem(at: temporaryURL)
+      }
+
+      guard (try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)) != nil, (try? data.write(to: temporaryURL)) != nil else {
+         return false
+      }
+
+      let path = url.path(percentEncoded: false)
+      var isDirectory: ObjCBool = false
+
+      if !FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
+         if (try? FileManager.default.moveItem(at: temporaryURL, to: url)) != nil {
+            return true
+         }
+
+         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+            return false
+         }
+      }
+
+      guard !isDirectory.boolValue else {
+         return false
+      }
+
+      return (try? (FileManager.default.replaceItemAt(url, withItemAt: temporaryURL) ?? url)) != nil
    }
    
    private func startRecognize() {
